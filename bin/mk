@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+EXPECTED="colima-mediakit"
+CURRENT="$(docker context show 2>/dev/null || echo none)"
+if [[ "$CURRENT" != "$EXPECTED" ]]; then
+  echo "✗ السياق الحالي: $CURRENT — المتوقع: $EXPECTED"
+  echo "  colima start mediakit --cpu 4 --memory 8 --disk 80"
+  echo "  docker context use $EXPECTED"
+  exit 1
+fi
+exec docker compose -p pf-mediakit "$@"

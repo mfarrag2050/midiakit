@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AA Media Kit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 14px;
+            background: #f5f7fb;
+            margin: 0;
+            overflow-x: hidden;
+            color: #222;
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 6px 0;
+        }
+        h1 .sub { font-size: 11px; color: #8a90a0; font-weight: 500; }
+
+        /* Photopea bridge buttons */
+        .pp-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .pp-btn {
+            flex: 1;
+            padding: 10px 6px;
+            border-radius: 10px;
+            border: 1px solid #d6dae6;
+            background: white;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            color: #2b7cff;
+            cursor: pointer;
+            transition: 0.15s ease;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .pp-btn:hover { background: #eef4ff; border-color: #2b7cff; }
+        .pp-btn:disabled { opacity: .5; cursor: default; }
+
+        .dimension-select {
+            width: 100%;
+            padding: 11px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: #444;
+            background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%23444" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>') no-repeat right 12px center;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+        .dimension-select:hover { border-color: #2b7cff; }
+        .dimension-select:focus { outline: none; border-color: #2b7cff; box-shadow: 0 0 0 3px rgba(43,124,255,.2); }
+
+        #drop-zone {
+            border: 2px dashed #2b7cff;
+            border-radius: 14px;
+            padding: 28px 14px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #444;
+            transition: 0.2s ease;
+        }
+        #drop-zone:hover { background: #eef4ff; }
+        #fileInput { display: none; }
+
+        #logoWarn {
+            display: none;
+            margin-top: 10px;
+            padding: 9px 11px;
+            border-radius: 10px;
+            background: #ffebe9;
+            color: #b3261e;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        #logoWarn button {
+            margin-top: 8px; width: auto; padding: 7px 12px; font-size: 12px;
+            background: #b3261e; color:#fff;
+        }
+
+        .checkboxes-wrapper {
+            display: flex; flex-wrap: wrap; gap: 10px 18px;
+            align-items: center; margin-top: 14px;
+        }
+        .checkbox-container {
+            display: flex; align-items: center; gap: 7px;
+            font-size: 13px; font-weight: 500; color: #444; cursor: pointer;
+        }
+        .checkbox-container input { cursor: pointer; width: 16px; height: 16px; accent-color: #2b7cff; }
+
+        button {
+            margin-top: 16px; width: 100%; padding: 14px; border-radius: 12px;
+            border: none; font-weight: 600; font-size: 15px; font-family: inherit;
+            background: linear-gradient(135deg, #10b981, #059669); color: white;
+            cursor: pointer; transition: 0.2s ease;
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,.25); }
+        button:disabled { opacity:.7; cursor:default; transform:none; box-shadow:none; }
+
+        #status { margin-top: 10px; font-size: 12px; color: #6b7280; min-height: 16px; text-align:center; }
+
+        #applyCropBtn {
+            margin-top: 0; padding: 10px 0; width: 85px; font-size: 14px;
+            background: linear-gradient(135deg, #2b7cff, #1a5ed8); text-align: center;
+        }
+        #applyCropBtn:hover { box-shadow: 0 6px 18px rgba(43,124,255,.25); }
+
+        #thumbnailContainer {
+            margin-top: 16px; display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 12px;
+        }
+        @media (max-width:600px){ #thumbnailContainer { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; } }
+        .thumb-wrapper { position: relative; width: 100%; aspect-ratio: 3/2; min-width: 0; }
+        .thumb {
+            width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+            border: 1px solid #e5e7eb; cursor: pointer; transition: 0.25s ease;
+        }
+        .thumb:hover { box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+        .remove-btn {
+            position: absolute; top: 4px; right: 4px; background: rgba(255,77,79,.95); color: white;
+            font-size: 11px; width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            font-weight: bold; z-index: 3; line-height: 1;
+        }
+        .cropped-badge, .uncropped-badge {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 2px 0;
+            text-align: center; font-size: 10px; font-weight: 700; white-space: nowrap;
+            border-bottom-left-radius: 10px; border-bottom-right-radius: 10px; z-index: 2;
+        }
+        .cropped-badge { background: rgba(30,142,62,.9); color: #fff; }
+        .uncropped-badge { background: rgba(217,48,37,.88); color: #fff; }
+
+        #previewModal {
+            display: none; position: fixed; inset: 0; backdrop-filter: blur(10px);
+            background: rgba(0,0,0,.65); align-items: center; justify-content: center;
+            flex-direction: column; z-index: 999;
+        }
+        #closeModalBtn {
+            position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
+            background: #ef4444; color: white; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 16px; font-weight: bold;
+            cursor: pointer; transition: 0.2s ease; z-index: 1001; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+        }
+        #closeModalBtn:hover { background: #b91c1c; transform: scale(1.1); }
+        #cropEditorContainer {
+            position: relative; display: inline-block; max-width: 88vw; max-height: 70vh;
+            border-radius: 8px; box-shadow: 0 15px 40px rgba(0,0,0,.45); background: #111; overflow: hidden;
+        }
+        #cropImage { display: block; max-width: 100%; max-height: 70vh; user-select: none; -webkit-user-drag: none; }
+        #cropBox {
+            position: absolute; box-shadow: 0 0 0 9999px rgba(0,0,0,.6);
+            border: 2px solid rgba(255,255,255,.8); cursor: move; box-sizing: border-box;
+        }
+        .grid-line { position: absolute; background: rgba(255,255,255,.65); }
+        .h-line { width: 100%; height: 1px; }
+        .v-line { height: 100%; width: 1px; }
+        #zoomSlider { flex: 1; margin: 0; }
+        .crop-toolbar {
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            margin-top: 22px; width: 90%; max-width: 450px; z-index: 1000;
+        }
+        .preview-btn {
+            background: white; border-radius: 50%; width: 44px; height: 44px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            font-size: 18px; color: #444; box-shadow: 0 4px 12px rgba(0,0,0,.2); transition: 0.2s ease;
+        }
+        .preview-btn:hover { transform: scale(1.1); }
+        #undoCropBtn {
+            margin-top: 0; padding: 10px 0; width: 85px; font-size: 14px;
+            background: linear-gradient(135deg, #ef4444, #b91c1c); text-align: center; display: none;
+        }
+
+        .thumb-wrapper.sortable-ghost { opacity: 0.4; transform: scale(0.95); background: #f0f0f0; }
+        .thumb-wrapper.sortable-drag { cursor: grabbing !important; opacity: 0.9; box-shadow: 0 10px 25px rgba(0,0,0,.3); }
+
+        /* numbered drag handle — grab to reorder (GIF frame order) */
+        .order-chip {
+            position: absolute; top: 4px; left: 4px; z-index: 4;
+            min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+            background: rgba(43,124,255,.95); color: #fff; font-size: 11px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center; gap: 3px;
+            cursor: grab; user-select: none; box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .order-chip:active { cursor: grabbing; }
+        .order-chip .grip { font-size: 10px; opacity: .85; line-height: 1; }
+
+        #gifHint {
+            display: none; margin-top: 14px; padding: 8px 11px; border-radius: 10px;
+            background: #eef4ff; color: #1a5ed8; font-size: 12px; font-weight: 500; line-height: 1.4;
+        }
+        .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .topbar h1 { margin:0; }
+        .lang-toggle { display:inline-flex; border:1px solid #d6dae6; border-radius:8px; overflow:hidden; }
+        .lang-btn { margin:0; width:auto; padding:5px 11px; font-size:12px; font-weight:700; background:#fff; color:#2b7cff; border:none; border-radius:0; cursor:pointer; transition:.15s ease; }
+        .lang-btn:hover { background:#eef4ff; transform:none; box-shadow:none; }
+        .lang-btn.active { background:#2b7cff; color:#fff; }
+        /* ---- Cover tab: fonts, tabs, cover UI ---- */
+        @font-face { font-family:'HNArabic'; src:url('HelveticaNeueLTArabic-Bold.ttf');  font-weight:700; font-display:swap; }
+        @font-face { font-family:'HNArabic'; src:url('HelveticaNeueLTArabic-Roman.ttf'); font-weight:400; font-display:swap; }
+        @font-face { font-family:'HNArabic'; src:url('HelveticaNeueLTArabic-Light.ttf'); font-weight:300; font-display:swap; }
+
+        .tabbar { display:flex; gap:6px; margin-bottom:12px; }
+        .tab { flex:1; margin:0; width:auto; padding:9px; border-radius:10px; border:1px solid #d6dae6; background:#fff; font-family:inherit; font-size:13px; font-weight:700; color:#556; cursor:pointer; transition:.15s ease; }
+        .tab:hover { background:#eef4ff; transform:none; box-shadow:none; }
+        .tab.active { background:#111827; color:#fff; border-color:#111827; }
+        .tabpane[hidden]{ display:none; }
+
+        .cv-label { font-size:12px; font-weight:600; color:#556; margin:14px 0 6px; }
+        .cv-styles { display:flex; gap:6px; flex-wrap:wrap; }
+        .cv-style { flex:1 1 72px; }
+        .cv-style { flex:1; margin:0; width:auto; padding:8px 4px; border-radius:9px; border:1px solid #d6dae6; background:#fff; font-size:12px; font-weight:600; color:#2b7cff; cursor:pointer; transition:.15s ease; }
+        .cv-style:hover { background:#eef4ff; transform:none; box-shadow:none; }
+        .cv-style.active { background:#2b7cff; color:#fff; border-color:#2b7cff; }
+        #cvDrop { border:2px dashed #2b7cff; border-radius:14px; padding:22px 14px; text-align:center; background:#fff; cursor:pointer; font-size:13px; font-weight:500; color:#444; transition:.2s ease; }
+        #cvDrop:hover { background:#eef4ff; }
+        #cvDrop.hasimg { border-style:solid; border-color:#10b981; color:#059669; background:#f0fdf7; }
+        #cvHeadline, #cvKicker, #cvSource { width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:10px; font-family:'HNArabic','Inter',sans-serif; font-size:15px; direction:rtl; box-sizing:border-box; }
+        #cvHeadline { resize:vertical; }
+        #cvHeadline:focus, #cvKicker:focus, #cvSource:focus { outline:none; border-color:#2b7cff; }
+        #cvKickerWrap[hidden], #cvSourceWrap[hidden], #cvStylesRow[hidden] { display:none; }
+        .cv-preview-wrap { margin-top:14px; display:flex; justify-content:center; }
+        #cvPreview { width:270px; height:337.5px; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); }
+        .cv-hint { font-size:11px; color:#8a90a0; text-align:center; margin-top:6px; }
+        #cvPreview { cursor: pointer; }
+        #cvCropModal { display:none; position:fixed; inset:0; backdrop-filter:blur(10px); background:rgba(0,0,0,.65); align-items:center; justify-content:center; flex-direction:column; z-index:1000; }
+        #cvCropClose { position:absolute; top:10px; right:10px; width:32px; height:32px; background:#ef4444; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:bold; cursor:pointer; z-index:1002; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+        #cvCropClose:hover { background:#b91c1c; }
+        #cvCropContainer { position:relative; display:inline-block; max-width:88vw; max-height:70vh; border-radius:8px; box-shadow:0 15px 40px rgba(0,0,0,.45); background:#111; overflow:hidden; }
+        #cvCropImg { display:block; max-width:100%; max-height:70vh; user-select:none; -webkit-user-drag:none; }
+        #cvCropBox { position:absolute; box-shadow:0 0 0 9999px rgba(0,0,0,.6); border:2px solid rgba(255,255,255,.85); cursor:move; box-sizing:border-box; }
+        #cvZoom { flex:1; margin:0; }
+        #cvCropApply { margin-top:0; padding:10px 0; width:90px; font-size:14px; background:linear-gradient(135deg,#2b7cff,#1a5ed8); text-align:center; }
+        .cv-slider-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+        .cv-slim { font-size:12px; color:#556; font-weight:600; min-width:64px; }
+        .cv-slider-row input[type=range] { flex:1; accent-color:#2b7cff; margin:0; cursor:pointer; }
+        .cv-slider-row .cv-slim:last-child { min-width:42px; text-align:right; color:#2b7cff; }
+        .cv-grid { display:block; max-width:980px; margin:0 auto; }
+        .cv-section { background:#fff; border:1px solid #e9ecf3; border-radius:12px; padding:14px; margin-bottom:14px; }
+        .cv-sec-title { font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#9aa1b1; margin-bottom:10px; }
+        .cv-inline-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; flex-wrap:wrap; }
+        .cv-inline-row .cv-hint { margin:0; }
+        .cv-mini-btn { margin-top:12px; width:auto; padding:8px 14px; font-size:12px; font-weight:600; background:#eef4ff; color:#2b7cff; border:1px solid #cfe0ff; border-radius:9px; box-shadow:none; }
+        .cv-mini-btn:hover { background:#e0ecff; transform:none; box-shadow:none; }
+        .cv-mini-btn:disabled { opacity:.4; cursor:not-allowed; }
+        #cvExportBtn:disabled { filter:grayscale(.35); opacity:.5; cursor:not-allowed; box-shadow:none; transform:none; }
+        .pp-btn:disabled { opacity:.4; cursor:not-allowed; }
+        .cv-preview-sticky { display:flex; flex-direction:column; align-items:center; }
+        #cvPreview { width:100%; max-width:340px; aspect-ratio:1080/1350; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; }
+        @media (min-width:760px){
+            .cv-grid { display:grid; grid-template-columns: minmax(0,1fr) 380px; gap:20px; align-items:start; max-width:1000px; }
+            .cv-right { position:sticky; top:8px; }
+            #cvPreview { max-width:380px; }
+        }
+        #cropBox, #cvCropBox { touch-action: none; }
+        @media (max-width:600px){
+            #applyCropBtn, #undoCropBtn, #cvCropApply { padding:13px 0; font-size:15px; }
+            .preview-btn { width:52px; height:52px; font-size:20px; }
+            #closeModalBtn, #cvCropClose { width:40px; height:40px; font-size:18px; }
+            .crop-toolbar { gap:10px; }
+        }
+        .cv-prev-item { display:flex; flex-direction:column; align-items:center; gap:8px; }
+        .cv-prev-label { font-size:11px; font-weight:700; letter-spacing:.03em; color:#556; }
+        #cvPrevSq, #cvPrevPt { width:100%; max-width:300px; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); cursor:pointer; }
+        #cvPrevSq { aspect-ratio:1/1; }
+        #cvPrevPt { aspect-ratio:1080/1440; }
+        .cv-preview-sticky { gap:18px; }
+        #cvVideoSec[hidden] { display:none; }
+        #cvVidSize { padding:8px; border:1px solid #d6dae6; border-radius:8px; font-family:inherit; font-size:13px; background:#fff; color:#111827; }
+        #cvVidCanvas { width:100%; max-width:280px; display:block; margin:12px auto 0; border-radius:10px; border:1px solid #e5e7eb; background:#111; }
+        /* narrow (single-column): previews on top, compact side-by-side */
+        .cv-grid { display:flex; flex-direction:column; }
+        .cv-right { order:-1; margin-bottom:16px; }
+        .cv-preview-sticky { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:14px; }
+        #cvPrevSq, #cvPrevPt { max-width:150px; }
+        @media (min-width:760px){
+            .cv-grid { display:grid; grid-template-columns: minmax(0,1fr) 380px; gap:20px; align-items:start; }
+            .cv-right { order:0; margin-bottom:0; position:sticky; top:8px; }
+            .cv-preview-sticky { flex-direction:column; flex-wrap:nowrap; gap:18px; }
+            #cvPrevSq, #cvPrevPt { max-width:300px; }
+        }
+        #cvBrkModeBar { display:flex; gap:6px; margin-bottom:14px; }
+        #cvBrkModeBar[hidden] { display:none; }
+        .cv-mode-btn { flex:1; margin:0; padding:9px; border-radius:10px; border:1px solid #d6dae6; background:#fff; font-family:inherit; font-size:13px; font-weight:700; color:#556; cursor:pointer; transition:.15s ease; }
+        .cv-mode-btn:hover { background:#eef4ff; transform:none; box-shadow:none; }
+        .cv-mode-btn.active { background:#111827; color:#fff; border-color:#111827; }
+        .cv-seg { border:1px solid #e9ecf3; border-radius:10px; padding:10px; margin-bottom:8px; background:#fafbfe; }
+        .cv-seg-head { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:700; color:#556; margin-bottom:6px; }
+        .cv-seg-dur { color:#2b7cff; }
+        .cv-seg-del { margin:0; width:22px; height:22px; padding:0; border-radius:50%; background:rgba(255,77,79,.9); color:#fff; font-size:11px; box-shadow:none; line-height:1; }
+        .cv-seg-h, .cv-seg-s { width:100%; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; font-family:'HNArabic','Inter',sans-serif; font-size:14px; direction:rtl; box-sizing:border-box; margin-bottom:6px; }
+        .cv-seg-s { margin-bottom:0; }
+        .cv-seg-h { resize:vertical; }
+        #cvVidTotal { text-align:center; }
+        .cv-subhead { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#9aa1b1; margin:16px 0 8px; padding-top:14px; border-top:1px solid #eef0f5; }
+        #cvVidTrimBlock[hidden] { display:none; }
+        .cv-seg-img { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+        .cv-seg-img[hidden] { display:none; }
+        #cvCardTextWrap[hidden], #cvCardSuggestWrap[hidden] { display:none; }
+        #rlCanvas { width:100%; max-width:300px; height:auto; border-radius:10px; border:1px solid #e5e7eb; background:#111; box-shadow:0 6px 18px rgba(0,0,0,.12); }
+        #rlTitle { width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:10px; font-family:'HNArabic','Inter',sans-serif; font-size:15px; direction:rtl; box-sizing:border-box; resize:vertical; }
+        #rlLoc { width:100%; padding:10px 12px; border:2px solid #e5e7eb; border-radius:10px; font-family:'HNArabic','Inter',sans-serif; font-size:15px; direction:rtl; box-sizing:border-box; }
+        #rlTitle:focus, #rlLoc:focus { outline:none; border-color:#2b7cff; }
+        #rlSize, #rlAudio, #rlAudioMode { padding:8px; border:1px solid #d6dae6; border-radius:8px; font-family:inherit; font-size:13px; background:#fff; color:#111827; }
+        #rlAudioSec[hidden], #rlPlayRow[hidden], #rlTitleDurRow[hidden], #rlMotionRow[hidden] { display:none; }
+        .rl-item { border:1px solid #e9ecf3; border-radius:10px; padding:10px; margin-bottom:8px; background:#fafbfe; }
+        .rl-item-head { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#556; margin-bottom:6px; }
+        .rl-item-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .rl-item .cv-mini-btn { padding:4px 9px; font-size:12px; }
+        .rl-item input[type=range] { accent-color:#2b7cff; }
+    </style>
+</head>
+
+<body>
+
+    <div class="topbar">
+        <h1>AA Media Kit <span class="sub">· Photopea</span></h1>
+        <div class="lang-toggle">
+            <button id="langTr" class="lang-btn">TR</button>
+            <button id="langEn" class="lang-btn">EN</button>
+        </div>
+    </div>
+
+    <div class="tabbar">
+        <button id="tabW" class="tab active">Watermark</button>
+        <button id="tabC" class="tab">Cards</button>
+        <button id="tabB" class="tab">Breaking</button>
+        <button id="tabR" class="tab">Reels</button>
+    </div>
+
+    <div id="tab-watermark" class="tabpane">
+
+    <div class="pp-row" id="ppRow">
+        <button class="pp-btn" id="importBtn" title="Photopea'da açık olan görseli buraya al">⤵ Görseli al</button>
+    </div>
+
+    <select id="dimensionSelect" class="dimension-select">
+        <option id="opt720" value="1080x720" selected>1080 x 720 (Yatay)</option>
+        <option id="opt1080" value="1080x1080">1080 x 1080 (Kare)</option>
+        <option id="opt1350" value="1080x1350">1080 x 1350 (Dikey)</option>
+        <option id="opt978" value="978x548">978 x 548 (Yatay)</option>
+    </select>
+
+    <div id="drop-zone">
+        Fotoğrafları sürükleyin, tıklayın veya ZIP yükleyin
+    </div>
+
+    <input type="file" id="fileInput" multiple accept="image/*,.zip">
+
+    <div id="logoWarn"></div>
+
+    <div class="checkboxes-wrapper">
+        <label class="checkbox-container">
+            <input type="checkbox" id="gifCheckbox" /> <span id="lbl_gif">GIF olarak indir</span>
+        </label>
+        <label class="checkbox-container">
+            <input type="checkbox" id="leftLogoCheckbox" /> <span id="lbl_left">Logoyu sola yerleştir</span>
+        </label>
+        <label class="checkbox-container">
+            <input type="checkbox" id="openInPpCheckbox" /> <span id="lbl_openpp">Sonucu Photopea'da aç</span>
+        </label>
+    </div>
+
+    <button id="processBtn">Logo Ekle ve İndir</button>
+    <div id="status"></div>
+
+    <div id="gifHint">🎞️ GIF karesi sırası: numaralı tutamağı (⠿) sürükleyin — 1 ilk kare, 2 ikinci…</div>
+
+    <div id="thumbnailContainer"></div>
+
+    </div><!-- /tab-watermark -->
+
+    <div id="tab-cover" class="tabpane" hidden>
+      <div class="cv-grid">
+        <div class="cv-left">
+
+          <div id="cvBrkModeBar" hidden>
+            <button id="cvModeCard" class="cv-mode-btn active" data-bmode="card">Card</button>
+            <button id="cvModeVideo" class="cv-mode-btn" data-bmode="video">Video</button>
+          </div>
+
+          <div class="cv-section" id="cvPhotoSec">
+            <div class="cv-sec-title" id="cvSecPhoto">Photo</div>
+            <div class="pp-row"><button class="pp-btn" id="cvImportBtn">⤵ Get image</button></div>
+            <div id="cvDrop">Drag a cover photo, or click</div>
+            <input type="file" id="cvFileInput" accept="image/*" style="display:none">
+          </div>
+
+          <div class="cv-section" id="cvTextSec">
+            <div class="cv-sec-title" id="cvSecText">Style & text</div>
+            <div class="cv-styles" id="cvStylesRow">
+              <button class="cv-style" data-style="s01" id="cvS01">Style 01</button>
+              <button class="cv-style active" data-style="s02" id="cvS02">Style 02</button>
+              <button class="cv-style" data-style="s3l" id="cvS3L">3 Lines</button>
+            </div>
+            <div id="cvKickerWrap" hidden>
+              <div class="cv-label" id="cvLblKicker">Top line (kicker)</div>
+              <input type="text" id="cvKicker" placeholder="لا سقف يحميهم..">
+            </div>
+            <div id="cvSourceWrap" hidden>
+              <div class="cv-label" id="cvLblSource">Source</div>
+              <input type="text" id="cvSource" placeholder="مصدر طبي للأناضول">
+            </div>
+            <div id="cvCardSuggestWrap" hidden>
+              <button id="cvSuggestBreaks" class="cv-mini-btn" style="margin-top:10px">Suggest line breaks</button>
+              <span class="cv-hint" id="cvSuggestHint" style="margin-right:8px">Enter = manual line break</span>
+            </div>
+            <div id="cvCardTextWrap" hidden>
+              <div class="cv-slider-row" style="margin-top:10px">
+                <span class="cv-slim" id="cvCardTextLbl">Text size</span>
+                <input type="range" id="cvCardTextSize" min="60" max="130" value="100" style="flex:1">
+                <span class="cv-slim" id="cvCardTextVal">100%</span>
+              </div>
+            </div>
+            <div class="cv-label" id="cvLblHeadline">Headline</div>
+            <textarea id="cvHeadline" rows="2" placeholder="اكتب عنوان الغلاف هنا"></textarea>
+            <div id="cvWordCount" class="cv-hint" style="text-align:right;margin-top:6px;"></div>
+            <div class="cv-inline-row">
+              <label class="checkbox-container"><input type="checkbox" id="cvAllBold" checked> <span id="cvLblAllBold">All bold</span></label>
+              <span class="cv-hint" id="cvBoldHint">Tip: wrap a word in *stars* to bold it</span>
+            </div>
+          </div>
+
+          <div class="cv-section">
+            <div class="cv-sec-title" id="cvLblGrad">Gradient</div>
+            <div class="cv-slider-row"><span class="cv-slim" id="cvLblOpacity">Darkness</span><input type="range" id="cvOpacity" min="20" max="100" value="72"><span class="cv-slim" id="cvOpacityVal">72%</span></div>
+            <div class="cv-slider-row"><span class="cv-slim" id="cvLblReach">Reach</span><input type="range" id="cvReach" min="30" max="100" value="90"><span class="cv-slim" id="cvReachVal">90%</span></div>
+          </div>
+
+          <div class="cv-section" id="cvExportSec">
+            <label class="checkbox-container"><input type="checkbox" id="cvOpenPp"> <span id="cvLblOpen">Open result in Photopea</span></label>
+            <button id="cvExportBtn" disabled>Export cards (X + Instagram)</button>
+            <div id="cvStatus" style="margin-top:10px;font-size:12px;color:#6b7280;text-align:center;min-height:16px;"></div>
+          </div>
+
+          <div class="cv-section" id="cvVideoSec" hidden>
+            <div class="cv-sec-title" id="cvVidTitle">Video (experimental)</div>
+            <video id="cvVideoEl" playsinline muted style="display:none"></video>
+
+            <canvas id="cvVidCanvas" width="1080" height="1920"></canvas>
+            <div style="text-align:center;margin-top:8px">
+              <button id="cvVidPlay" class="cv-mini-btn" disabled>Play</button>
+              <button id="cvVidReplay" class="cv-mini-btn" disabled>Replay</button>
+            </div>
+
+            <div class="cv-subhead" id="cvVidGrpSource">Source</div>
+            <div id="cvVidSrcBar" style="display:flex;gap:6px;margin-bottom:10px">
+              <button class="cv-mode-btn active" data-src="video" id="cvSrcVideo">Video</button>
+              <button class="cv-mode-btn" data-src="image" id="cvSrcImage">Image</button>
+              <button class="cv-mode-btn" data-src="color" id="cvSrcColor">Color</button>
+            </div>
+            <input type="file" id="cvVidInput" accept="video/*" style="display:none">
+            <input type="file" id="cvVidImgInput" accept="image/*" style="display:none">
+            <button id="cvVidChoose" class="cv-mini-btn" style="margin-top:0">Choose video</button>
+            <button id="cvVidImgCrop" class="cv-mini-btn" style="margin-top:0" hidden>Crop image</button>
+            <span id="cvVidName" class="cv-slim" style="margin-left:8px;color:#556"></span>
+            <div class="cv-slim" id="cvVidBgHint" style="margin-top:6px">Color = red background</div>
+            <div id="cvVidTrimBlock" hidden>
+              <div class="cv-label" id="cvVidTrimLbl" style="margin-top:12px">Trim</div>
+              <input type="range" id="cvVidStart" min="0" max="100" value="0" step="0.01" style="width:100%;margin:0">
+              <input type="range" id="cvVidEnd" min="0" max="100" value="100" step="0.01" style="width:100%;margin:4px 0 0">
+              <div class="cv-slim" id="cvVidTrimInfo" style="text-align:center;margin-top:4px">0:00 – 0:00</div>
+            </div>
+
+            <div class="cv-subhead" id="cvVidGrpOutput">Output</div>
+            <div class="cv-slider-row">
+              <span class="cv-slim" id="cvVidSizeLbl">Size</span>
+              <select id="cvVidSize" style="flex:1"><option value="reel">Reels/Stories · 1080×1920</option><option value="sq">X · 1080×1080</option><option value="fe">Feed · 1080×1350</option></select>
+            </div>
+            <div class="cv-slider-row" style="margin-top:8px">
+              <span class="cv-slim" id="cvVidTextLbl">Text size</span>
+              <input type="range" id="cvVidTextSize" min="60" max="130" value="85" style="flex:1">
+              <span class="cv-slim" id="cvVidTextVal">85%</span>
+            </div>
+            <label class="checkbox-container" style="margin-top:10px"><input type="checkbox" id="cvVidMotion" checked> <span id="cvVidMotionLbl">Motion</span></label>
+
+            <div class="cv-subhead" id="cvVidSegLbl">Breaking segments</div>
+            <div id="cvSegList"></div>
+            <button id="cvSegAdd" class="cv-mini-btn" style="margin-top:8px">+ Add breaking</button>
+            <div id="cvVidTotal" class="cv-slim" style="margin-top:8px"></div>
+
+            <div class="cv-subhead" id="cvVidAudioLbl">Audio</div>
+            <select id="cvVidAudio" style="width:100%"></select>
+            <div class="cv-slider-row" style="margin-top:8px">
+              <span class="cv-slim" id="cvVidModeLbl">Mode</span>
+              <select id="cvVidAudioMode" style="flex:1"><option value="mix">Mix</option><option value="replace">Replace</option></select>
+            </div>
+            <div class="cv-slider-row" style="margin-top:8px">
+              <span class="cv-slim" id="cvVidVolLbl">Music</span>
+              <input type="range" id="cvVidVol" min="0" max="100" value="80" style="flex:1">
+              <span class="cv-slim" id="cvVidVolVal">80%</span>
+            </div>
+
+            <button id="cvVidExport" style="margin-top:16px" disabled>Export video</button>
+            <div id="cvVidStatus" style="margin-top:10px;font-size:12px;color:#6b7280;text-align:center;min-height:16px;"></div>
+          </div>
+
+        </div>
+
+        <div class="cv-right">
+          <div class="cv-preview-sticky">
+            <div class="cv-prev-item">
+              <div class="cv-prev-label">X · 1080×1080</div>
+              <canvas id="cvPrevSq" width="1080" height="1080"></canvas>
+              <button id="cvRecropSq" class="cv-mini-btn" disabled>Re-crop</button>
+            </div>
+            <div class="cv-prev-item">
+              <div class="cv-prev-label">Instagram · 1080×1440</div>
+              <canvas id="cvPrevPt" width="1080" height="1440"></canvas>
+              <button id="cvRecropPt" class="cv-mini-btn" disabled>Re-crop</button>
+            </div>
+            <div class="cv-hint" id="cvHint" style="margin-top:4px;">Live preview</div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tab-cover -->
+
+    <div id="tab-reels" class="tabpane" hidden>
+      <div class="cv-grid">
+        <div class="cv-left">
+          <div id="rlModeBar" style="display:flex;gap:6px;margin-bottom:14px">
+            <button id="rlModeVideo" class="cv-mode-btn active">Video</button>
+            <button id="rlModeCover" class="cv-mode-btn">Cover</button>
+          </div>
+
+          <div class="cv-section">
+            <div class="cv-sec-title" id="rlSecSource">Clips</div>
+            <input type="file" id="rlVidInput" accept="video/*" multiple style="display:none">
+            <input type="file" id="rlImgInput" accept="image/*" multiple style="display:none">
+            <button id="rlAddVideo" class="cv-mini-btn" style="margin-top:0">+ Video</button>
+            <button id="rlAddImage" class="cv-mini-btn" style="margin-top:0">+ Image</button>
+            <div id="rlItemList" style="margin-top:10px"></div>
+            <div id="rlTotal" class="cv-slim" style="margin-top:8px;text-align:center"></div>
+          </div>
+
+          <div class="cv-section">
+            <div class="cv-sec-title" id="rlSecText">Text</div>
+            <div class="cv-label" id="rlLblTitle">Title</div>
+            <textarea id="rlTitle" rows="2" placeholder="اكتب العنوان هنا"></textarea>
+            <div id="rlWords" class="cv-hint" style="text-align:right;margin-top:6px;"></div>
+            <button id="rlSuggest" class="cv-mini-btn" style="margin-top:6px">Suggest line breaks</button>
+            <div class="cv-label" id="rlLblLoc">Location badge</div>
+            <input type="text" id="rlLoc" placeholder="إسبانيا">
+            <div class="cv-slider-row" style="margin-top:10px"><span class="cv-slim" id="rlLblTextSize">Text size</span><input type="range" id="rlTextSize" min="60" max="130" value="100" style="flex:1"><span class="cv-slim" id="rlTextVal">100%</span></div>
+          </div>
+
+          <div class="cv-section">
+            <div class="cv-sec-title" id="rlSecOut">Output</div>
+            <div class="cv-slider-row"><span class="cv-slim" id="rlLblSize">Size</span><select id="rlSize" style="flex:1"></select></div>
+            <div class="cv-slider-row" id="rlTitleDurRow" style="margin-top:8px"><span class="cv-slim" id="rlLblDur">Title time</span><input type="range" id="rlTitleDur" min="2" max="12" value="5" style="flex:1"><span class="cv-slim" id="rlDurVal">5s</span></div>
+            <div id="rlMotionRow"><label class="checkbox-container" style="margin-top:10px"><input type="checkbox" id="rlMotion" checked> <span id="rlLblMotion">Motion</span></label></div>
+          </div>
+
+          <div class="cv-section" id="rlAudioSec">
+            <div class="cv-sec-title" id="rlSecAudio">Audio</div>
+            <select id="rlAudio" style="width:100%"></select>
+            <div class="cv-slider-row" style="margin-top:8px"><span class="cv-slim" id="rlLblMode">Mode</span><select id="rlAudioMode" style="flex:1"><option value="mix">Mix</option><option value="replace">Replace</option></select></div>
+            <div class="cv-slider-row" style="margin-top:8px"><span class="cv-slim" id="rlLblVol">Music</span><input type="range" id="rlVol" min="0" max="100" value="80" style="flex:1"><span class="cv-slim" id="rlVolVal">80%</span></div>
+          </div>
+
+          <div class="cv-section">
+            <button id="rlExport">Export video</button>
+            <div id="rlStatus" style="margin-top:10px;font-size:12px;color:#6b7280;text-align:center;min-height:16px;"></div>
+          </div>
+        </div>
+
+        <div class="cv-right">
+          <div class="cv-preview-sticky">
+            <div class="cv-prev-item">
+              <canvas id="rlCanvas" width="1080" height="1920"></canvas>
+              <div id="rlPlayRow">
+                <button id="rlPlay" class="cv-mini-btn">Play</button>
+                <button id="rlReplay" class="cv-mini-btn">Replay</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- /tab-reels -->
+
+    <div id="previewModal">
+        <div id="closeModalBtn">✕</div>
+        <div id="cropEditorContainer">
+            <img id="cropImage">
+            <div id="cropBox">
+                <div class="grid-line h-line" style="top: 33.33%;"></div>
+                <div class="grid-line h-line" style="top: 66.66%;"></div>
+                <div class="grid-line v-line" style="left: 33.33%;"></div>
+                <div class="grid-line v-line" style="left: 66.66%;"></div>
+            </div>
+        </div>
+        <div class="crop-toolbar">
+            <div id="prevBtn" class="preview-btn">&#10094;</div>
+            <input type="range" id="zoomSlider" min="0" max="1" step="0.001" value="0">
+            <button id="applyCropBtn">Kırp</button>
+            <button id="undoCropBtn">Geri Al</button>
+            <div id="nextBtn" class="preview-btn">&#10095;</div>
+        </div>
+    </div>
+
+    <div id="cvCropModal">
+        <div id="cvCropClose">✕</div>
+        <div id="cvCropContainer">
+            <img id="cvCropImg">
+            <div id="cvCropBox">
+                <div class="grid-line h-line" style="top: 33.33%;"></div>
+                <div class="grid-line h-line" style="top: 66.66%;"></div>
+                <div class="grid-line v-line" style="left: 33.33%;"></div>
+                <div class="grid-line v-line" style="left: 66.66%;"></div>
+            </div>
+        </div>
+        <div class="crop-toolbar">
+            <input type="range" id="cvZoom" min="0" max="1" step="0.001" value="0">
+            <button id="cvCropApply">Crop</button>
+        </div>
+    </div>
+
+    <script src="jszip.min.js"></script>
+    <script src="pica.min.js"></script>
+    <script src="gif.js"></script>
+    <script src="Sortable.min.js"></script>
+    <script>
+    /* =====================================================================
+       AA Media Kit — Photopea plugin
+       Ports the Chrome extension's exact pica/canvas pipeline, and swaps
+       the chrome.* APIs for browser downloads + Photopea postMessage.
+       ===================================================================== */
+
+    /* ---- Embedded AA logos (base64) — makes the plugin fully self-contained ---- */
+    const AA_LOGO_MAIN = "data:image/png;base64,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";
+    const AA_LOGO_486  = "data:image/png;base64,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";
+    const AA_LOGO_978  = "data:image/png;base64,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";
+
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("fileInput");
+    const processBtn = document.getElementById("processBtn");
+    const thumbnailContainer = document.getElementById("thumbnailContainer");
+    const dimensionSelect = document.getElementById("dimensionSelect");
+    const gifHint = document.getElementById("gifHint");
+    const gifCheckbox = document.getElementById("gifCheckbox");
+    const leftLogoCheckbox = document.getElementById("leftLogoCheckbox");
+    const statusEl = document.getElementById("status");
+    const logoWarn = document.getElementById("logoWarn");
+
+    const previewModal = document.getElementById("previewModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+    const cropEditorContainer = document.getElementById("cropEditorContainer");
+    const cropImage = document.getElementById("cropImage");
+    const cropBox = document.getElementById("cropBox");
+    const zoomSlider = document.getElementById("zoomSlider");
+    const applyCropBtn = document.getElementById("applyCropBtn");
+    const undoCropBtn = document.getElementById("undoCropBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    let selectedFiles = [];
+    let cropDataArray = [];
+    let currentIndex = 0;
+    let sortableInstance = null;
+
+    const inPhotopea = window.parent && window.parent !== window;
+
+    function setStatus(t) { statusEl.textContent = t || ""; }
+
+    /* ============================ i18n (TR / EN) ============================ */
+    const I18N = {
+      tr: {
+        import:"⤵ Görseli al",
+        import_title:"Photopea'da açık olan görseli buraya al",
+        import_title_off:"Bu buton yalnızca Photopea içinde çalışır",
+        drop:"Fotoğrafları sürükleyin, tıklayın veya ZIP yükleyin",
+        cb_gif:"GIF olarak indir",
+        cb_left:"Logoyu sola yerleştir",
+        cb_openpp:"Sonucu Photopea'da aç",
+        process:"Logo Ekle ve İndir",
+        gifhint:"🎞️ GIF karesi sırası: numaralı tutamağı (⠿) sürükleyin — 1 ilk kare, 2 ikinci…",
+        crop_apply:"Kırp",
+        crop_undo:"Geri Al",
+        b_cropped:"Kırpıldı",
+        b_uncropped:"Kırpılmadı",
+        chip_title:"Sürükleyerek sırayı değiştir",
+        d_h:"Yatay", d_sq:"Kare", d_v:"Dikey",
+        st_addfirst:"Önce fotoğraf ekleyin.",
+        st_logosaved:"Logo kaydedildi ✓",
+        p_processing:"İşleniyor...",
+        p_photos:"İşleniyor (Fotoğraflar)...",
+        p_gif:"GIF Oluşturuluyor...",
+        st_downloaded:"İndirildi ✓",
+        st_gifdl:"GIF indirildi ✓",
+        st_gifopen:"GIF Photopea'da açıldı ✓",
+        st_import_off:"Görsel alma yalnızca Photopea içinde çalışır.",
+        st_importing:"Photopea'dan görsel alınıyor...",
+        st_noresp:"Photopea'dan yanıt gelmedi. Açık bir belge var mı?",
+        st_imported:"Görsel alındı ✓",
+        logo_upload:"Logo yükle",
+        tab_w:"Watermark", tab_c:"Kartlar", tab_b:"Son dakika",
+        cv_sec_brk:"Son dakika metni",
+        cv_vid_title:"Video (deneysel)", cv_vid_choose:"Video seç", cv_vid_size:"Boyut", cv_vid_motion:"Hareket", cv_vid_play:"Oynat", cv_vid_pause:"Duraklat", cv_vid_export:"Videoyu dışa aktar", cv_vid_rec:"Kaydediliyor…", cv_vid_done:"Video indirildi ✓", cv_vid_unsup:"Bu tarayıcı video dışa aktarmayı desteklemiyor",
+        cv_mode_card:"Kart", cv_mode_video:"Video",
+        cv_vid_seg:"Son dakika", cv_vid_add:"+ Son dakika ekle", cv_vid_seglbl:"Son dakika metinleri", cv_vid_grp_source:"Kaynak", cv_vid_grp_output:"Çıktı", cv_vid_textsize:"Metin boyutu", cv_vid_bghint:"Renk = kırmızı arka plan", cv_src_video:"Video", cv_src_image:"Görsel", cv_src_color:"Renk", cv_vid_choose_img:"Görsel seç", cv_vid_cropimg:"Görseli kırp", cv_suggest:"Satırları öner", cv_seg_imgadd:"Görsel ekle", cv_seg_imgchange:"Görseli değiştir", cv_suggest_hint:"Enter = elle satır sonu",
+        tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Kapak", rl_title:"Başlık", rl_loc:"Konum rozeti", rl_dur:"Başlık süresi", rl_clip:"Süre", rl_export_v:"Videoyu dışa aktar", rl_export_c:"Kapağı indir", rl_done_c:"Kapak indirildi ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Kelime: ${n} (en fazla ${mx})`, rl_clips:"Klipler", rl_add_video:"+ Video", rl_add_image:"+ Görsel", rl_total:(n,s)=>`Toplam: ${s}s (${n} klip)`, rl_needclip:"Önce klip ekleyin.", cv_vid_total:(n,s)=>`Toplam: ${s}s (${n} son dakika)`,
+        cv_vid_replay:"Tekrar", cv_vid_trim:"Kırp (süre)", cv_vid_audio:"Ses", cv_vid_mode:"Mod", cv_vid_mix:"Karıştır", cv_vid_replace:"Değiştir", cv_vid_music:"Müzik", cv_vid_none:"— (video sesi)", cv_vid_audioerr:"Ses dosyası bulunamadı",
+        cv_drop:"Kapak fotoğrafını sürükleyin veya tıklayın",
+        cv_drop_ok:"Kapak fotoğrafı hazır ✓",
+        cv_style:"Stil", cv_s02:"Stil 02", cv_s01:"Stil 01", cv_s3l:"3 Satır",
+        cv_kicker:"Üst satır", cv_headline:"Başlık",
+        cv_open:"Sonucu Photopea'da aç", cv_hint:"Canlı önizleme",
+        cv_export:"Kartları indir (X + Instagram)",
+        cv_needphoto:"Önce kapak fotoğrafı ekleyin.",
+        cv_downloaded:"2 kart indirildi ✓",
+        cv_opened:"2 kart Photopea'da açıldı ✓",
+        cv_allbold:"Tümü kalın",
+        cv_bold_hint:"İpucu: *yıldız* = kalın, _alt çizgi_ = vurgu çizgisi",
+        cv_words:(n,lo,hi)=>`Kelime: ${n} (${lo}–${hi} önerilir)`,
+        cv_sample:"Örnek",
+        cv_crop:"Kırp",
+        cv_grad:"Gradyan", cv_darkness:"Koyuluk", cv_reach:"Uzunluk",
+        cv_sec_photo:"Fotoğraf", cv_sec_text:"Stil ve metin", cv_recrop:"Yeniden kırp",
+        cv_brk:"Son dakika", cv_source:"Kaynak",
+        fn_proc:(a,b)=>`İşleniyor... ${a}/${b}`,
+        fn_zip:(n)=>`${n} görsel ZIP olarak indirildi ✓`,
+        fn_open:(n)=>`${n} görsel Photopea'da açıldı ✓`,
+        fn_warn:(u)=>"⚠️ Logo dosyaları bulunamadı. <b>assets/AA-Logo.png</b>, <b>assets/AA-Logo-486.png</b> ve <b>assets/AALogo.png</b> dosyalarını eklentinin barındığı klasöre koyun — ya da aşağıdan bir logo yükleyin (kalıcı olarak kaydedilir).<br><button id='uploadLogoBtn'>"+u+"</button><input type='file' id='logoFileInput' accept='image/png' style='display:none'>"
+      },
+      en: {
+        import:"⤵ Get image",
+        import_title:"Bring the currently open Photopea image here",
+        import_title_off:"This button only works inside Photopea",
+        drop:"Drag photos, click, or upload a ZIP",
+        cb_gif:"Download as GIF",
+        cb_left:"Place logo on the left",
+        cb_openpp:"Open result in Photopea",
+        process:"Add Logo & Download",
+        gifhint:"🎞️ GIF frame order: drag the numbered handle (⠿) — 1 = first frame, 2 = second…",
+        crop_apply:"Crop",
+        crop_undo:"Undo",
+        b_cropped:"Cropped",
+        b_uncropped:"Not cropped",
+        chip_title:"Drag to reorder",
+        d_h:"Horizontal", d_sq:"Square", d_v:"Vertical",
+        st_addfirst:"Add photos first.",
+        st_logosaved:"Logo saved ✓",
+        p_processing:"Processing...",
+        p_photos:"Processing (photos)...",
+        p_gif:"Creating GIF...",
+        st_downloaded:"Downloaded ✓",
+        st_gifdl:"GIF downloaded ✓",
+        st_gifopen:"GIF opened in Photopea ✓",
+        st_import_off:"Getting an image only works inside Photopea.",
+        st_importing:"Getting image from Photopea...",
+        st_noresp:"No response from Photopea. Is a document open?",
+        st_imported:"Image received ✓",
+        logo_upload:"Upload logo",
+        tab_w:"Watermark", tab_c:"Cards", tab_b:"Breaking",
+        cv_sec_brk:"Breaking text",
+        cv_vid_title:"Video (experimental)", cv_vid_choose:"Choose video", cv_vid_size:"Size", cv_vid_motion:"Motion", cv_vid_play:"Play", cv_vid_pause:"Pause", cv_vid_export:"Export video", cv_vid_rec:"Recording…", cv_vid_done:"Video downloaded ✓", cv_vid_unsup:"This browser cannot export video",
+        cv_mode_card:"Card", cv_mode_video:"Video",
+        cv_vid_seg:"Breaking", cv_vid_add:"+ Add breaking", cv_vid_seglbl:"Breaking segments", cv_vid_grp_source:"Source", cv_vid_grp_output:"Output", cv_vid_textsize:"Text size", cv_vid_bghint:"Color = red background", cv_src_video:"Video", cv_src_image:"Image", cv_src_color:"Color", cv_vid_choose_img:"Choose image", cv_vid_cropimg:"Crop image", cv_suggest:"Suggest line breaks", cv_seg_imgadd:"Add image", cv_seg_imgchange:"Change image", cv_suggest_hint:"Enter = manual line break",
+        tab_r:"Reels", rl_mode_video:"Video", rl_mode_cover:"Cover", rl_title:"Title", rl_loc:"Location badge", rl_dur:"Title time", rl_clip:"Duration", rl_export_v:"Export video", rl_export_c:"Export cover", rl_done_c:"Cover downloaded ✓", rl_sample:"عنوان الفيديو هنا", rl_words:(n,mx)=>`Words: ${n} (max ${mx})`, rl_clips:"Clips", rl_add_video:"+ Video", rl_add_image:"+ Image", rl_total:(n,s)=>`Total: ${s}s (${n} clips)`, rl_needclip:"Add a clip first.", cv_vid_total:(n,s)=>`Total: ${s}s (${n} breaking)`,
+        cv_vid_replay:"Replay", cv_vid_trim:"Trim", cv_vid_audio:"Audio", cv_vid_mode:"Mode", cv_vid_mix:"Mix", cv_vid_replace:"Replace", cv_vid_music:"Music", cv_vid_none:"— (video audio)", cv_vid_audioerr:"Audio file not found",
+        cv_drop:"Drag a cover photo, or click",
+        cv_drop_ok:"Cover photo ready ✓",
+        cv_style:"Style", cv_s02:"Style 02", cv_s01:"Style 01", cv_s3l:"3 Lines",
+        cv_kicker:"Top line (kicker)", cv_headline:"Headline",
+        cv_open:"Open result in Photopea", cv_hint:"Live preview",
+        cv_export:"Export cards (X + Instagram)",
+        cv_needphoto:"Add a cover photo first.",
+        cv_downloaded:"2 cards downloaded ✓",
+        cv_opened:"2 cards opened in Photopea ✓",
+        cv_allbold:"All bold",
+        cv_bold_hint:"Tip: *stars* = bold, _underscore_ = accent under word",
+        cv_words:(n,lo,hi)=>`Words: ${n} (${lo}–${hi} recommended)`,
+        cv_sample:"Sample",
+        cv_crop:"Crop",
+        cv_grad:"Gradient", cv_darkness:"Darkness", cv_reach:"Reach",
+        cv_sec_photo:"Photo", cv_sec_text:"Style & text", cv_recrop:"Re-crop",
+        cv_brk:"Breaking", cv_source:"Source",
+        fn_proc:(a,b)=>`Processing... ${a}/${b}`,
+        fn_zip:(n)=>`${n} images downloaded as ZIP ✓`,
+        fn_open:(n)=>`${n} images opened in Photopea ✓`,
+        fn_warn:(u)=>"⚠️ Logo files not found. Put <b>assets/AA-Logo.png</b>, <b>assets/AA-Logo-486.png</b> and <b>assets/AALogo.png</b> in the plugin folder — or upload a logo below (saved permanently).<br><button id='uploadLogoBtn'>"+u+"</button><input type='file' id='logoFileInput' accept='image/png' style='display:none'>"
+      }
+    };
+    let LANG = 'tr';
+    try { LANG = localStorage.getItem('aa_lang') || 'tr'; } catch (e) {}
+    function t(k){ return (I18N[LANG] && I18N[LANG][k] != null) ? I18N[LANG][k] : I18N.tr[k]; }
+
+    function applyLang(){
+      const g = id => document.getElementById(id);
+      g('importBtn').textContent = t('import');
+      g('importBtn').title = inPhotopea ? t('import_title') : t('import_title_off');
+      g('drop-zone').textContent = t('drop');
+      g('lbl_gif').textContent = t('cb_gif');
+      g('lbl_left').textContent = t('cb_left');
+      g('lbl_openpp').textContent = t('cb_openpp');
+      if (!processBtn.disabled) processBtn.textContent = t('process');
+      g('gifHint').textContent = t('gifhint');
+      g('applyCropBtn').textContent = t('crop_apply');
+      g('undoCropBtn').textContent = t('crop_undo');
+      g('opt720').textContent  = "1080 x 720 ("  + t('d_h')  + ")";
+      g('opt1080').textContent = "1080 x 1080 (" + t('d_sq') + ")";
+      g('opt1350').textContent = "1080 x 1350 (" + t('d_v')  + ")";
+      g('opt978').textContent  = "978 x 548 ("   + t('d_h')  + ")";
+      g('tabW').textContent = t('tab_w'); g('tabC').textContent = t('tab_c'); g('tabB').textContent = t('tab_b'); g('tabR').textContent = t('tab_r');
+      if (document.getElementById('rlTitle')){
+        g('rlModeVideo').textContent = t('rl_mode_video'); g('rlModeCover').textContent = t('rl_mode_cover');
+        g('rlSecSource').textContent = t('rl_clips'); g('rlSecText').textContent = t('cv_sec_text'); g('rlSecOut').textContent = t('cv_vid_grp_output'); g('rlSecAudio').textContent = t('cv_vid_audio');
+        g('rlAddVideo').textContent = t('rl_add_video'); g('rlAddImage').textContent = t('rl_add_image');
+        g('rlLblTitle').textContent = t('rl_title'); g('rlLblLoc').textContent = t('rl_loc');
+        g('rlLblTextSize').textContent = t('cv_vid_textsize'); g('rlLblSize').textContent = t('cv_vid_size');
+        g('rlLblDur').textContent = t('rl_dur'); g('rlLblMotion').textContent = t('cv_vid_motion');
+        g('rlLblMode').textContent = t('cv_vid_mode'); g('rlLblVol').textContent = t('cv_vid_music');
+        g('rlSuggest').textContent = t('cv_suggest');
+        g('rlAudioMode').options[0].text = t('cv_vid_mix'); g('rlAudioMode').options[1].text = t('cv_vid_replace');
+        g('rlPlay').textContent = t('cv_vid_play'); g('rlReplay').textContent = t('cv_vid_replay');
+        if (typeof rlPopulateAudio === 'function') rlPopulateAudio();
+        if (typeof rlRenderItems === 'function') rlRenderItems();
+        if (typeof rlApplyMode === 'function') rlApplyMode();
+      }
+      g('cvImportBtn').textContent = t('import');
+      g('cvImportBtn').title = inPhotopea ? t('import_title') : t('import_title_off');
+      if (!cvState.img) g('cvDrop').textContent = t('cv_drop');
+      g('cvLblStyle').textContent = t('cv_style');
+      g('cvS02').textContent = t('cv_s02'); g('cvS01').textContent = t('cv_s01'); g('cvS3L').textContent = t('cv_s3l');
+      g('cvLblKicker').textContent = t('cv_kicker'); g('cvLblSource').textContent = t('cv_source'); if(document.getElementById('cvCardTextLbl')) g('cvCardTextLbl').textContent = t('cv_vid_textsize');
+      if(document.getElementById('cvSuggestBreaks')){ g('cvSuggestBreaks').textContent = t('cv_suggest'); g('cvSuggestHint').textContent = t('cv_suggest_hint'); } g('cvLblHeadline').textContent = t('cv_headline');
+      g('cvLblOpen').textContent = t('cv_open'); g('cvHint').textContent = t('cv_hint');
+      g('cvExportBtn').textContent = t('cv_export');
+      g('cvLblAllBold').textContent = t('cv_allbold');
+      g('cvBoldHint').textContent = t('cv_bold_hint');
+      g('cvCropApply').textContent = t('cv_crop');
+      g('cvLblGrad').textContent = t('cv_grad'); g('cvLblOpacity').textContent = t('cv_darkness'); g('cvLblReach').textContent = t('cv_reach');
+      if (document.getElementById('cvModeCard')) { g('cvModeCard').textContent = t('cv_mode_card'); g('cvModeVideo').textContent = t('cv_mode_video'); }
+      if (document.getElementById('cvVidTitle')) { g('cvVidTitle').textContent = t('cv_vid_title'); g('cvVidChoose').textContent = (typeof cvVidSourceVal !== 'undefined' && cvVidSourceVal === 'image') ? t('cv_vid_choose_img') : t('cv_vid_choose'); g('cvVidSizeLbl').textContent = t('cv_vid_size'); g('cvVidMotionLbl').textContent = t('cv_vid_motion'); g('cvVidExport').textContent = t('cv_vid_export'); if(!cvVidState || !cvVidState.playing) g('cvVidPlay').textContent = t('cv_vid_play'); g('cvVidReplay').textContent = t('cv_vid_replay'); g('cvVidTrimLbl').textContent = t('cv_vid_trim'); g('cvVidAudioLbl').textContent = t('cv_vid_audio'); g('cvVidModeLbl').textContent = t('cv_vid_mode'); g('cvVidVolLbl').textContent = t('cv_vid_music'); g('cvVidAudioMode').options[0].text = t('cv_vid_mix'); g('cvVidAudioMode').options[1].text = t('cv_vid_replace'); if(typeof cvPopulateAudio==='function') cvPopulateAudio(); g('cvVidSegLbl').textContent = t('cv_vid_seglbl'); g('cvSegAdd').textContent = t('cv_vid_add'); g('cvVidGrpSource').textContent = t('cv_vid_grp_source'); g('cvVidGrpOutput').textContent = t('cv_vid_grp_output'); g('cvVidTextLbl').textContent = t('cv_vid_textsize'); g('cvVidBgHint').textContent = t('cv_vid_bghint'); if (document.getElementById('cvSrcVideo')){ g('cvSrcVideo').textContent = t('cv_src_video'); g('cvSrcImage').textContent = t('cv_src_image'); g('cvSrcColor').textContent = t('cv_src_color'); g('cvVidImgCrop').textContent = t('cv_vid_cropimg'); } if(typeof cvRenderSegs==='function') cvRenderSegs(); }
+      g('cvSecPhoto').textContent = t('cv_sec_photo'); g('cvSecText').textContent = (document.getElementById('tabB') && document.getElementById('tabB').classList.contains('active')) ? t('cv_sec_brk') : t('cv_sec_text'); g('cvRecropSq').textContent = t('cv_recrop'); g('cvRecropPt').textContent = t('cv_recrop');
+      if (typeof cvUpdateWordCount === 'function') cvUpdateWordCount();
+      if (typeof cvRender === 'function' && !document.getElementById('tab-cover').hidden) cvRender();
+      g('langTr').classList.toggle('active', LANG === 'tr');
+      g('langEn').classList.toggle('active', LANG === 'en');
+      if (selectedFiles.length) renderThumbnails();
+      updateGifHint();
+    }
+    function setLang(l){ LANG = l; try { localStorage.setItem('aa_lang', l); } catch (e) {} applyLang(); }
+    document.getElementById('langTr').addEventListener('click', () => setLang('tr'));
+    document.getElementById('langEn').addEventListener('click', () => setLang('en'));
+
+    function getTargetDimensions() {
+        const val = dimensionSelect.value;
+        const [w, h] = val.split('x').map(Number);
+        return { w, h };
+    }
+
+    /* ---------- left-logo preference (localStorage instead of chrome.storage) ---------- */
+    try {
+        const saved = localStorage.getItem('aa_leftLogoEnabled');
+        if (saved !== null) leftLogoCheckbox.checked = (saved === 'true');
+    } catch (e) {}
+    leftLogoCheckbox.addEventListener('change', function () {
+        try { localStorage.setItem('aa_leftLogoEnabled', this.checked); } catch (e) {}
+    });
+
+    dimensionSelect.addEventListener("change", () => {
+        for (let i = 0; i < selectedFiles.length; i++) {
+            if (selectedFiles[i].isCropped) {
+                selectedFiles[i] = selectedFiles[i].originalFile || selectedFiles[i];
+                selectedFiles[i].isCropped = false;
+            }
+            if (cropDataArray[i]) cropDataArray[i] = null;
+        }
+        renderThumbnails();
+    });
+
+    /* ============================ FILE INPUT ============================ */
+    dropZone.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", async (e) => { await handleFiles(Array.from(e.target.files)); });
+    dropZone.addEventListener("dragover", (e) => e.preventDefault());
+    dropZone.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        await handleFiles(Array.from(e.dataTransfer.files));
+    });
+
+    async function handleFiles(files) {
+        for (let file of files) {
+            if (file.name && file.name.toLowerCase().endsWith(".zip")) {
+                await extractZip(file);
+            } else if ((file.type && file.type.startsWith("image/")) || file.isImported) {
+                selectedFiles.push(file);
+                cropDataArray.push(null);
+            }
+        }
+        renderThumbnails();
+    }
+
+    async function extractZip(zipFile) {
+        const zip = await JSZip.loadAsync(zipFile);
+        const entries = Object.values(zip.files);
+        for (let entry of entries) {
+            if (!entry.dir && /\.(jpg|jpeg|png|webp)$/i.test(entry.name)) {
+                const blob = await entry.async("blob");
+                const file = new File([blob], entry.name.split('/').pop(), { type: blob.type });
+                selectedFiles.push(file);
+                cropDataArray.push(null);
+            }
+        }
+    }
+
+    /* ============================ THUMBNAILS ============================ */
+    function renderThumbnails() {
+        thumbnailContainer.innerHTML = "";
+        selectedFiles.forEach((file, index) => {
+            const dims = getTargetDimensions();
+            const wrapper = document.createElement("div");
+            wrapper.className = "thumb-wrapper";
+            wrapper.style.aspectRatio = `${dims.w}/${dims.h}`;
+
+            const img = document.createElement("img");
+            img.className = "thumb";
+            img.addEventListener("click", () => openPreview(index));
+
+            // numbered drag handle — grab to reorder (sets the GIF frame order)
+            const chip = document.createElement("div");
+            chip.className = "order-chip";
+            chip.title = t('chip_title');
+            chip.innerHTML = '<span class="grip">⠿</span><span>' + (index + 1) + '</span>';
+
+            const removeBtn = document.createElement("div");
+            removeBtn.className = "remove-btn";
+            removeBtn.innerHTML = "✕";
+            removeBtn.addEventListener("click", (ev) => {
+                ev.stopPropagation();
+                selectedFiles.splice(index, 1);
+                cropDataArray.splice(index, 1);
+                renderThumbnails();
+            });
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(chip);
+            wrapper.appendChild(removeBtn);
+
+            const badge = document.createElement("div");
+            badge.className = file.isCropped ? "cropped-badge" : "uncropped-badge";
+            badge.innerText = file.isCropped ? t('b_cropped') : t('b_uncropped');
+            wrapper.appendChild(badge);
+
+            thumbnailContainer.appendChild(wrapper);
+
+            const reader = new FileReader();
+            reader.onload = (e) => { img.src = e.target.result; };
+            reader.readAsDataURL(file);
+        });
+
+        updateGifHint();
+
+        if (selectedFiles.length > 0 && !sortableInstance) {
+            sortableInstance = new Sortable(thumbnailContainer, {
+                animation: 200,
+                handle: '.order-chip',   // drag only by the numbered handle; clicking the image still opens crop
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    if (evt.oldIndex === evt.newIndex) return;
+                    const draggedFile = selectedFiles.splice(evt.oldIndex, 1)[0];
+                    const draggedCrop = cropDataArray.splice(evt.oldIndex, 1)[0];
+                    selectedFiles.splice(evt.newIndex, 0, draggedFile);
+                    cropDataArray.splice(evt.newIndex, 0, draggedCrop);
+                    renderThumbnails();   // re-number the chips after reordering
+                }
+            });
+        }
+    }
+
+    // The frame-order hint is only relevant when building a GIF from 2+ images.
+    function updateGifHint() {
+        gifHint.style.display = (selectedFiles.length > 1 && gifCheckbox.checked) ? "block" : "none";
+    }
+    gifCheckbox.addEventListener("change", updateGifHint);
+
+    /* ============================ CROP EDITOR ============================ */
+    let boxWidth, boxHeight, boxLeft, boxTop, imgWidth, imgHeight;
+
+    function updateCropBoxDOM() {
+        cropBox.style.width = boxWidth + 'px';
+        cropBox.style.height = boxHeight + 'px';
+        cropBox.style.left = boxLeft + 'px';
+        cropBox.style.top = boxTop + 'px';
+
+        let maxW = imgWidth, maxH = imgHeight;
+        let dims = getTargetDimensions();
+        let cropRatio = dims.w / dims.h;
+        if (cropImage.naturalWidth <= 864 && cropImage.naturalHeight <= 486) {
+            cropRatio = cropImage.naturalWidth / cropImage.naturalHeight;
+        }
+        let maxBoxW = (maxW / maxH > cropRatio) ? maxH * cropRatio : maxW;
+        let cropScale = boxWidth / maxBoxW;
+        let zoomValue = (1.0 - cropScale) / 0.9;
+        if (zoomValue < 0) zoomValue = 0;
+        if (zoomValue > 1) zoomValue = 1;
+        zoomSlider.value = zoomValue;
+
+        cropDataArray[currentIndex] = { boxWidth, boxHeight, boxLeft, boxTop, imgWidth, imgHeight };
+    }
+
+    function initCropBox() {
+        imgWidth = cropImage.clientWidth;
+        imgHeight = cropImage.clientHeight;
+        if (imgWidth === 0 || imgHeight === 0) return;
+
+        let dims = getTargetDimensions();
+        let targetRatio = dims.w / dims.h;
+        if (cropImage.naturalWidth <= 864 && cropImage.naturalHeight <= 486) {
+            targetRatio = cropImage.naturalWidth / cropImage.naturalHeight;
+        }
+
+        if (cropDataArray[currentIndex]) {
+            let saved = cropDataArray[currentIndex];
+            let scale = imgWidth / saved.imgWidth;
+            boxWidth = saved.boxWidth * scale;
+            boxHeight = saved.boxHeight * scale;
+            boxLeft = saved.boxLeft * scale;
+            boxTop = saved.boxTop * scale;
+        } else {
+            if (imgWidth / imgHeight > targetRatio) {
+                boxHeight = imgHeight;
+                boxWidth = boxHeight * targetRatio;
+            } else {
+                boxWidth = imgWidth;
+                boxHeight = boxWidth / targetRatio;
+            }
+            boxLeft = (imgWidth - boxWidth) / 2;
+            boxTop = (imgHeight - boxHeight) / 2;
+        }
+        updateCropBoxDOM();
+    }
+
+    function openPreview(index) { currentIndex = index; updatePreview(); previewModal.style.display = "flex"; }
+
+    function updatePreview() {
+        const isCropped = selectedFiles[currentIndex].isCropped;
+        if (undoCropBtn) undoCropBtn.style.display = isCropped ? "block" : "none";
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            cropImage.onload = function () { initCropBox(); };
+            cropImage.src = e.target.result;
+        };
+        reader.readAsDataURL(selectedFiles[currentIndex]);
+    }
+
+    let isDragging = false, startX, startY, initialLeft, initialTop;
+    cropBox.addEventListener("pointerdown", (e) => {
+        isDragging = true; startX = e.clientX; startY = e.clientY;
+        initialLeft = boxLeft; initialTop = boxTop;
+        try { cropBox.setPointerCapture(e.pointerId); } catch (err) {}
+        e.stopPropagation(); e.preventDefault();
+    });
+    cropBox.addEventListener("pointermove", (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        let dx = e.clientX - startX, dy = e.clientY - startY;
+        boxLeft = initialLeft + dx; boxTop = initialTop + dy;
+        if (boxLeft < 0) boxLeft = 0;
+        if (boxTop < 0) boxTop = 0;
+        if (boxLeft + boxWidth > imgWidth) boxLeft = imgWidth - boxWidth;
+        if (boxTop + boxHeight > imgHeight) boxTop = imgHeight - boxHeight;
+        updateCropBoxDOM();
+    });
+    cropBox.addEventListener("pointerup", () => { isDragging = false; });
+    cropBox.addEventListener("pointercancel", () => { isDragging = false; });
+
+    zoomSlider.addEventListener("input", (e) => {
+        let zoomValue = parseFloat(e.target.value);
+        let scale = 1.0 - (zoomValue * 0.9);
+        let dims = getTargetDimensions();
+        let cropRatio = dims.w / dims.h;
+        if (cropImage.naturalWidth <= 864 && cropImage.naturalHeight <= 486) {
+            cropRatio = cropImage.naturalWidth / cropImage.naturalHeight;
+        }
+        let maxBoxW = (imgWidth / imgHeight > cropRatio) ? imgHeight * cropRatio : imgWidth;
+        let newBoxW = maxBoxW * scale;
+        if (newBoxW < 50) newBoxW = 50;
+        let newBoxH = newBoxW / cropRatio;
+        let cx = boxLeft + boxWidth / 2, cy = boxTop + boxHeight / 2;
+        boxWidth = newBoxW; boxHeight = newBoxH;
+        boxLeft = cx - boxWidth / 2; boxTop = cy - boxHeight / 2;
+        if (boxLeft < 0) boxLeft = 0;
+        if (boxTop < 0) boxTop = 0;
+        if (boxLeft + boxWidth > imgWidth) boxLeft = imgWidth - boxWidth;
+        if (boxTop + boxHeight > imgHeight) boxTop = imgHeight - boxHeight;
+        updateCropBoxDOM();
+    });
+
+    cropEditorContainer.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        let currentZoom = parseFloat(zoomSlider.value);
+        let direction = e.deltaY < 0 ? 1 : -1;
+        currentZoom += direction * 0.015;
+        if (currentZoom < 0) currentZoom = 0;
+        if (currentZoom > 1.0) currentZoom = 1.0;
+        zoomSlider.value = currentZoom;
+        zoomSlider.dispatchEvent(new Event("input"));
+    }, { passive: false });
+
+    applyCropBtn.addEventListener("click", async () => {
+        let dims = getTargetDimensions();
+        let targetW = dims.w, targetH = dims.h;
+        if (cropImage.naturalWidth <= 864 && cropImage.naturalHeight <= 486) {
+            targetW = cropImage.naturalWidth; targetH = cropImage.naturalHeight;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW; canvas.height = targetH;
+        canvas.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" });
+
+        const ratioX = cropImage.naturalWidth / imgWidth;
+        const ratioY = cropImage.naturalHeight / imgHeight;
+        const srcX = boxLeft * ratioX, srcY = boxTop * ratioY;
+        const srcW = boxWidth * ratioX, srcH = boxHeight * ratioY;
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = Math.round(srcW); tempCanvas.height = Math.round(srcH);
+        const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" });
+        tempCtx.drawImage(cropImage, Math.round(srcX), Math.round(srcY), Math.round(srcW), Math.round(srcH), 0, 0, Math.round(srcW), Math.round(srcH));
+
+        const picaRunner = window.pica({ features: ['js', 'wasm'] });
+        await picaRunner.resize(tempCanvas, canvas, { quality: 3, alpha: true });
+
+        canvas.toBlob(blob => {
+            let oldFile = selectedFiles[currentIndex];
+            let newFile = new File([blob], oldFile.name, { type: oldFile.type || "image/jpeg" });
+            newFile.isCropped = true;
+            newFile.originalFile = oldFile.originalFile || oldFile;
+            selectedFiles[currentIndex] = newFile;
+            cropDataArray[currentIndex] = null;
+            renderThumbnails();
+            updatePreview();
+        }, selectedFiles[currentIndex].type || "image/png", 0.95);
+    });
+
+    undoCropBtn.addEventListener("click", () => {
+        let file = selectedFiles[currentIndex];
+        if (file.originalFile) {
+            selectedFiles[currentIndex] = file.originalFile;
+            cropDataArray[currentIndex] = null;
+            renderThumbnails();
+            updatePreview();
+        }
+    });
+
+    prevBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentIndex = (currentIndex - 1 + selectedFiles.length) % selectedFiles.length;
+        updatePreview();
+    });
+    nextBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentIndex = (currentIndex + 1) % selectedFiles.length;
+        updatePreview();
+    });
+    closeModalBtn.addEventListener("click", () => { previewModal.style.display = "none"; });
+    previewModal.addEventListener("mousedown", (e) => { if (e.target === previewModal) previewModal.style.display = "none"; });
+
+    /* ============================ LOGO LOADING ============================ */
+    let cachedLogo = null;        // AA-Logo.png     (1080x720 / 1080x1080 / 1080x1350)
+    let cachedLogo486 = null;     // AA-Logo-486.png (864x486)
+    let cachedAALogo978 = null;   // AALogo.png      (978x548)
+    let logosReady = false;
+    const globalPica = window.pica({ features: ['js', 'wasm'] });
+
+    function loadImg(src) {
+        return new Promise((resolve, reject) => {
+            const im = new Image();
+            im.onload = () => resolve(im);
+            im.onerror = () => reject(new Error("logo load failed: " + src));
+            im.src = src;
+        });
+    }
+
+    async function ensureLogos() {
+        if (logosReady) return true;
+
+        // Custom logo override (uploaded once, saved in localStorage) — used for all sizes.
+        let customSrc = null;
+        try { customSrc = localStorage.getItem('aa_customLogo'); } catch (e) {}
+
+        try {
+            if (customSrc) {
+                const c = await loadImg(customSrc);
+                cachedLogo = cachedLogo486 = cachedAALogo978 = c;
+            } else {
+                cachedLogo      = await loadImg(AA_LOGO_MAIN);
+                cachedLogo486   = await loadImg(AA_LOGO_486).catch(() => cachedLogo);
+                cachedAALogo978 = await loadImg(AA_LOGO_978).catch(() => cachedLogo);
+            }
+            logosReady = true;
+            logoWarn.style.display = "none";
+            return true;
+        } catch (e) {
+            showLogoWarning();
+            return false;
+        }
+    }
+
+    function showLogoWarning() {
+        logoWarn.innerHTML = t('fn_warn')(t('logo_upload'));
+        logoWarn.style.display = "block";
+        const btn = document.getElementById('uploadLogoBtn');
+        const inp = document.getElementById('logoFileInput');
+        btn.onclick = () => inp.click();
+        inp.onchange = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = () => {
+                try { localStorage.setItem('aa_customLogo', r.result); } catch (err) {}
+                logosReady = false;
+                ensureLogos().then(ok => { if (ok) setStatus(t('st_logosaved')); });
+            };
+            r.readAsDataURL(f);
+        };
+    }
+
+    /* ============================ PROCESS ============================ */
+    processBtn.addEventListener("click", async () => {
+        if (selectedFiles.length === 0) { setStatus(t('st_addfirst')); return; }
+
+        const originalText = processBtn.innerText;
+        processBtn.innerText = t('p_processing');
+        processBtn.disabled = true;
+        setStatus("");
+
+        const ok = await ensureLogos();
+        if (!ok) { processBtn.textContent = t('process'); processBtn.disabled = false; return; }
+
+        const isGifMode = document.getElementById("gifCheckbox").checked;
+        const openInPp = document.getElementById("openInPpCheckbox").checked;
+
+        /* -------- GIF mode -------- */
+        if (isGifMode) {
+            processBtn.innerText = t('p_photos');
+            const gif = new window.GIF({ workers: 2, quality: 10, workerScript: 'gif.worker.js' });
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const canvas = await processImage(selectedFiles[i], cropDataArray[i], true);
+                gif.addFrame(canvas, { delay: 2000 });
+            }
+            processBtn.innerText = t('p_gif');
+            gif.on('finished', async function (blob) {
+                let firstFilename = (selectedFiles[0].name || "animasyon").split('.')[0] || "animasyon";
+                if (openInPp && inPhotopea) {
+                    await openBlobInPhotopea(blob);
+                    setStatus(t('st_gifopen'));
+                } else {
+                    downloadBlob(blob, firstFilename + ".gif");
+                    setStatus(t('st_gifdl'));
+                }
+                resetAfterProcess(originalText);
+            });
+            gif.render();
+            return;
+        }
+
+        /* -------- Normal mode -------- */
+        const results = [];       // {name, blob}
+        const CONCURRENCY = 8;
+        for (let i = 0; i < selectedFiles.length; i += CONCURRENCY) {
+            const chunkFiles = selectedFiles.slice(i, i + CONCURRENCY);
+            const chunkCrops = cropDataArray.slice(i, i + CONCURRENCY);
+            const chunkResults = await Promise.all(
+                chunkFiles.map((file, idx) => processImage(file, chunkCrops[idx]))
+            );
+            chunkResults.forEach(r => results.push(r));
+            setStatus(t('fn_proc')(Math.min(i + CONCURRENCY, selectedFiles.length), selectedFiles.length));
+        }
+
+        if (openInPp && inPhotopea) {
+            for (const r of results) { await openBlobInPhotopea(r.blob); }
+            setStatus(t('fn_open')(results.length));
+        } else if (results.length === 1) {
+            downloadBlob(results[0].blob, results[0].name);
+            setStatus(t('st_downloaded'));
+        } else {
+            await downloadAsZip(results);
+            setStatus(t('fn_zip')(results.length));
+        }
+        resetAfterProcess(originalText);
+    });
+
+    function resetAfterProcess(originalText) {
+        selectedFiles = [];
+        cropDataArray = [];
+        thumbnailContainer.innerHTML = "";
+        fileInput.value = "";
+        gifCheckbox.checked = false;
+        gifHint.style.display = "none";
+        processBtn.textContent = t('process');
+        processBtn.disabled = false;
+    }
+
+    // returnCanvas=true -> returns the finished <canvas> (for GIF frames)
+    // otherwise -> returns { name, blob }
+    async function processImage(file, cropData, returnCanvas = false) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const img = new Image();
+                img.onload = async function () {
+                    let dims = getTargetDimensions();
+                    let targetW = dims.w, targetH = dims.h;
+                    if (img.width <= 864 && img.height <= 486) { targetW = img.width; targetH = img.height; }
+
+                    const canvas = document.createElement("canvas");
+                    canvas.width = targetW; canvas.height = targetH;
+                    const ctx = canvas.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" });
+
+                    ctx.fillStyle = "#111";
+                    ctx.fillRect(0, 0, targetW, targetH);
+
+                    let srcX = 0, srcY = 0, srcW = img.width, srcH = img.height;
+                    if (cropData && cropData.boxWidth !== undefined && !file.isCropped) {
+                        const ratioX = img.width / cropData.imgWidth;
+                        const ratioY = img.height / cropData.imgHeight;
+                        srcX = cropData.boxLeft * ratioX;
+                        srcY = cropData.boxTop * ratioY;
+                        srcW = cropData.boxWidth * ratioX;
+                        srcH = cropData.boxHeight * ratioY;
+                    } else {
+                        const targetRatio = targetW / targetH;
+                        const imgRatio = img.width / img.height;
+                        if (imgRatio > targetRatio) {
+                            srcW = img.height * targetRatio;
+                            srcX = (img.width - srcW) / 2;
+                        } else {
+                            srcH = img.width / targetRatio;
+                            srcY = (img.height - srcH) / 2;
+                        }
+                    }
+
+                    const tempCanvas = document.createElement("canvas");
+                    tempCanvas.width = Math.round(srcW);
+                    tempCanvas.height = Math.round(srcH);
+                    const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" });
+                    tempCtx.drawImage(img, Math.round(srcX), Math.round(srcY), Math.round(srcW), Math.round(srcH), 0, 0, Math.round(srcW), Math.round(srcH));
+
+                    let unsharpAmount = 70, unsharpRadius = 0.7;
+                    if (file.isCropped) { unsharpAmount = 35; unsharpRadius = 0.6; }
+
+                    await globalPica.resize(tempCanvas, canvas, {
+                        quality: 3, alpha: true,
+                        unsharpAmount, unsharpRadius, unsharpThreshold: 16
+                    });
+
+                    // pick the logo variant by final canvas size
+                    let currentLogo = cachedLogo;
+                    let is978x548 = false;
+                    if ((dims.w === 864 && dims.h === 486) || (canvas.width === 864 && canvas.height === 486)) {
+                        currentLogo = cachedLogo486;
+                    } else if ((dims.w === 978 && dims.h === 548) || (canvas.width === 978 && canvas.height === 548)) {
+                        currentLogo = cachedAALogo978;
+                        is978x548 = true;
+                    }
+
+                    const isLeftLogo = document.getElementById("leftLogoCheckbox").checked;
+                    let x, y;
+                    if (is978x548) {
+                        x = isLeftLogo ? 50 : canvas.width - currentLogo.width - 50;
+                        y = canvas.height - currentLogo.height - 38;
+                    } else {
+                        x = isLeftLogo ? 53 : canvas.width - currentLogo.width - 53;
+                        y = canvas.height - currentLogo.height - 53;
+                    }
+                    ctx.drawImage(currentLogo, x, y);
+
+                    if (returnCanvas) { resolve(canvas); return; }
+
+                    const outType = (file.type && file.type !== "application/octet-stream") ? file.type : "image/jpeg";
+                    canvas.toBlob(function (blob) {
+                        resolve({ name: logoluName(file.name || "gorsel.jpg"), blob });
+                    }, outType, 0.95);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function logoluName(name) {
+        const i = name.lastIndexOf('.');
+        if (i > 0) return name.slice(0, i) + "-logolu" + name.slice(i);
+        return name + "-logolu.jpg";
+    }
+
+    /* ============================ OUTPUT ============================ */
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    async function downloadAsZip(results) {
+        const zip = new JSZip();
+        const folder = zip.folder("Logolu Fotoğraflar");
+        results.forEach(r => folder.file(r.name, r.blob));
+        const content = await zip.generateAsync({ type: "blob" });
+        downloadBlob(content, "Logolu-Fotograflar.zip");
+    }
+
+    /* ============================ PHOTOPEA BRIDGE ============================ */
+    // Open a produced blob back in Photopea as a new document.
+    async function openBlobInPhotopea(blob) {
+        const buf = await blob.arrayBuffer();
+        window.parent.postMessage(buf, "*");
+        // give Photopea a moment between opens
+        await new Promise(res => setTimeout(res, 400));
+    }
+
+    // Import the currently open Photopea document into the tool.
+    const importBtn = document.getElementById("importBtn");
+    let importTarget = null;   // null | 'wm' | 'cover'
+    let importTimer = null;
+
+    if (!inPhotopea) { importBtn.disabled = true; importBtn.title = t('import_title_off'); }
+
+    function requestPhotopeaImage(target){
+        const say = (target === 'cover') ? cvSetStatus : setStatus;
+        if (!inPhotopea) { say(t('st_import_off')); return; }
+        importTarget = target;
+        say(t('st_importing'));
+        window.parent.postMessage('app.activeDocument.saveToOE("png")', "*");
+        clearTimeout(importTimer);
+        importTimer = setTimeout(() => {
+            if (importTarget) { const tg = importTarget; importTarget = null; (tg === 'cover' ? cvSetStatus : setStatus)(t('st_noresp')); }
+        }, 6000);
+    }
+    importBtn.addEventListener("click", () => requestPhotopeaImage('wm'));
+
+    window.addEventListener("message", async (event) => {
+        const data = event.data;
+        // Photopea returns the exported document as an ArrayBuffer, then a "done" string.
+        if (importTarget && data instanceof ArrayBuffer) {
+            const tg = importTarget; importTarget = null; clearTimeout(importTimer);
+            const blob = new Blob([data], { type: "image/png" });
+            if (tg === 'cover') { cvLoadBlob(blob); cvSetStatus(t('st_imported')); }
+            else {
+                const file = new File([blob], "photopea-" + Date.now() + ".png", { type: "image/png" });
+                file.isImported = true;
+                await handleFiles([file]);
+                setStatus(t('st_imported'));
+            }
+        }
+    });
+
+    /* ============================ KEYBOARD ============================ */
+    document.addEventListener("keydown", (e) => {
+        const tg = e.target, tn = tg && tg.tagName;
+        const typing = (tn === 'TEXTAREA' || tn === 'INPUT' || tn === 'SELECT' || (tg && tg.isContentEditable));
+        if (typing) return;                       // never hijack Enter while typing
+        if (document.getElementById('tab-watermark').hidden) return;   // watermark tab only
+        if (e.key === "Enter" && previewModal.style.display !== "flex") {
+            e.preventDefault();
+            processBtn.click();
+        }
+    });
+
+    /* Pre-load logos quietly on open so the first run is instant / warnings show early. */
+    /* ============================ COVER TAB ============================ */
+    const CV_LOGO = "data:image/png;base64,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";
+    const cvLogo = new Image(); cvLogo.src = CV_LOGO;
+
+    // ===== Dual-size cover: Square 1080x1080 (X) + Portrait 1080x1440 (Instagram) =====
+    const cvSizes = [
+        { key:'sq', W:1080, H:1080, canvas:document.getElementById('cvPrevSq'), rc:document.getElementById('cvRecropSq'), fileTag:'square' },
+        { key:'pt', W:1080, H:1440, canvas:document.getElementById('cvPrevPt'), rc:document.getElementById('cvRecropPt'), fileTag:'portrait' }
+    ];
+    let cvCtx = null, CVW = 1080, CVH = 1440;   // set per render pass
+
+    const cvStatusEl = document.getElementById('cvStatus');
+    const cvHeadlineEl = document.getElementById('cvHeadline');
+    const cvKickerEl = document.getElementById('cvKicker');
+    const cvKickerWrap = document.getElementById('cvKickerWrap');
+    const cvSourceEl = document.getElementById('cvSource');
+    const cvSourceWrap = document.getElementById('cvSourceWrap');
+    const cvDrop = document.getElementById('cvDrop');
+    const cvFileInput = document.getElementById('cvFileInput');
+    const cvState = { style:'s02', img:null, imgURL:null, crop:{ sq:null, pt:null } };
+    const CV_SAMPLE = {
+        head:     "لا سقف يحميهم.. الشتاء يضاعف معاناة _نازحي غزة_",
+        title3l:  "الشتاء يضاعف معاناة نازحي غزة",
+        kicker:   "لا سقف يحميهم..",
+        brk:      "ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع",
+        brkSource:"مصدر طبي للأناضول"
+    };
+    function cvSetStatus(msg){ cvStatusEl.textContent = msg || ''; }
+
+    // tabs (Watermark / Cards / Breaking) — Cards & Breaking share the cover engine
+    const tabW = document.getElementById('tabW');
+    const tabC = document.getElementById('tabC');
+    const tabB = document.getElementById('tabB');
+    let cvLastCardStyle = 's02';
+    function cvSetActiveStyleBtn(){ document.querySelectorAll('.cv-style').forEach(x => x.classList.toggle('active', x.dataset.style === cvState.style)); }
+    function showTab(which){
+        const cover = (which === 'c' || which === 'b');
+        document.getElementById('tab-watermark').hidden = (which !== 'w');
+        document.getElementById('tab-cover').hidden = !cover;
+        document.getElementById('tab-reels').hidden = (which !== 'r');
+        tabW.classList.toggle('active', which === 'w');
+        tabC.classList.toggle('active', which === 'c');
+        tabB.classList.toggle('active', which === 'b');
+        document.getElementById('tabR').classList.toggle('active', which === 'r');
+        if (which !== 'r' && typeof rlStop === 'function') rlStop();
+        if (which === 'r' && typeof rlPreview === 'function') rlPreview();
+        if (which === 'c'){
+            cvState.style = cvLastCardStyle;
+            document.getElementById('cvStylesRow').hidden = false;
+            document.getElementById('cvSecText').textContent = t('cv_sec_text');
+            cvKickerWrap.hidden = (cvState.style !== 's3l');
+            cvSourceWrap.hidden = true;
+            document.getElementById('cvCardTextWrap').hidden = true;
+            document.getElementById('cvCardSuggestWrap').hidden = true;
+            cvSetActiveStyleBtn();
+            document.getElementById('cvExportBtn').disabled = !cvState.img;
+        } else if (which === 'b'){
+            cvState.style = 'brk';
+            document.getElementById('cvStylesRow').hidden = true;
+            document.getElementById('cvSecText').textContent = t('cv_sec_brk');
+            cvKickerWrap.hidden = true;
+            cvSourceWrap.hidden = false;
+            document.getElementById('cvCardTextWrap').hidden = false;
+            document.getElementById('cvCardSuggestWrap').hidden = false;
+            document.getElementById('cvExportBtn').disabled = false;
+        }
+        cvApplyBrkMode(which === 'b');
+        if (which !== 'b' && typeof cvVidStop === 'function') cvVidStop();
+        if (cover) cvEnsureFontsThenRender();
+    }
+    // Breaking sub-mode: Card (image/red-bg previews) vs Video (Chrome only)
+    let cvBrkMode = 'card';
+    const cvVideoSupported = !!(window.MediaRecorder && document.createElement('canvas').captureStream);
+    function cvApplyBrkMode(isBrk){
+        const bar = document.getElementById('cvBrkModeBar');
+        if (bar) bar.hidden = !isBrk || !cvVideoSupported;
+        const vidMode = isBrk && cvBrkMode === 'video' && cvVideoSupported;
+        const set = (id, hide) => { const el = document.getElementById(id); if (el) el.hidden = hide; };
+        set('cvPhotoSec', vidMode);
+        set('cvExportSec', vidMode);
+        set('cvTextSec', vidMode);
+        const right = document.querySelector('.cv-right'); if (right) right.hidden = vidMode;
+        set('cvVideoSec', !vidMode);
+        if (vidMode){
+            if (typeof cvVidSizeObj === 'function'){ const s = cvVidSizeObj(); const c = document.getElementById('cvVidCanvas'); c.width = s.W; c.height = s.H; }
+            document.getElementById('cvVidPlay').disabled = false;
+            document.getElementById('cvVidReplay').disabled = false;
+            document.getElementById('cvVidExport').disabled = false;
+            if (typeof cvRenderSegs === 'function') cvRenderSegs();
+            if (typeof cvVidPreviewStatic === 'function') cvVidPreviewStatic();
+        }
+        if (!vidMode && typeof cvVidStop === 'function') cvVidStop();
+    }
+    if (!cvVideoSupported){ const mv = document.getElementById('cvModeVideo'); if (mv) mv.style.display = 'none'; cvBrkMode = 'card'; }
+    document.getElementById('cvModeCard').addEventListener('click', () => { cvBrkMode='card'; document.getElementById('cvModeCard').classList.add('active'); document.getElementById('cvModeVideo').classList.remove('active'); cvApplyBrkMode(true); cvRenderAll(); });
+    document.getElementById('cvModeVideo').addEventListener('click', () => { if(!cvVideoSupported) return; cvBrkMode='video'; document.getElementById('cvModeVideo').classList.add('active'); document.getElementById('cvModeCard').classList.remove('active'); cvApplyBrkMode(true); });
+    tabW.addEventListener('click', () => showTab('w'));
+    tabC.addEventListener('click', () => showTab('c'));
+    tabB.addEventListener('click', () => showTab('b'));
+    document.getElementById('tabR').addEventListener('click', () => showTab('r'));
+
+    let cvFontsReady = false;
+    function cvEnsureFontsThenRender(){
+        if (cvFontsReady) { cvRenderAll(); return; }
+        const done = () => { cvFontsReady = true; cvRenderAll(); };
+        if (document.fonts && document.fonts.load) {
+            Promise.all([document.fonts.load('700 80px HNArabic'), document.fonts.load('300 44px HNArabic')]).then(done).catch(done);
+        } else done();
+    }
+    if (cvLogo.complete) {} else cvLogo.onload = () => { if (!document.getElementById('tab-cover').hidden) cvRenderAll(); };
+
+    // style buttons + inputs
+    document.querySelectorAll('.cv-style').forEach(b => {
+        b.addEventListener('click', () => {
+            cvState.style = b.dataset.style; cvLastCardStyle = b.dataset.style;
+            cvSetActiveStyleBtn();
+            cvKickerWrap.hidden = (cvState.style !== 's3l');
+            document.getElementById('cvExportBtn').disabled = !cvState.img;
+            cvRenderAll();
+        });
+    });
+    cvHeadlineEl.addEventListener('input', cvRenderAll);
+    cvKickerEl.addEventListener('input', cvRenderAll);
+    cvSourceEl.addEventListener('input', cvRenderAll);
+    document.getElementById('cvCardTextSize').addEventListener('input', e => { document.getElementById('cvCardTextVal').textContent = e.target.value + '%'; cvRenderAll(); });
+    function cvSuggestLineBreaks(){
+        const raw = cvHeadlineEl.value.replace(/\n+/g, ' ').trim();
+        if (!raw) return;
+        cvCtx = cvSizes[1].canvas.getContext('2d'); CVW = cvSizes[1].W; CVH = cvSizes[1].H;
+        const allBold = document.getElementById('cvAllBold').checked;
+        const cmul = cvCardTextMul();
+        const toks = cvParseTokens(raw).filter(t => !t.br);
+        const f = cvWrapTokens(toks, 900, Math.round(80 * cmul), Math.round(44 * cmul), allBold, 6);
+        const rebuild = ln => ln.map(t => (t.accent ? '_' : '') + ((t.bold && !allBold) ? '*' : '') + t.text + ((t.bold && !allBold) ? '*' : '') + (t.accent ? '_' : '')).join(' ');
+        cvHeadlineEl.value = f.lines.map(rebuild).join('\n');
+        cvRenderAll();
+    }
+    document.getElementById('cvSuggestBreaks').addEventListener('click', cvSuggestLineBreaks);
+    document.getElementById('cvAllBold').addEventListener('change', cvRenderAll);
+
+    // photo input
+    cvDrop.addEventListener('click', () => cvFileInput.click());
+    cvDrop.addEventListener('dragover', e => e.preventDefault());
+    cvDrop.addEventListener('drop', e => { e.preventDefault(); const f = [...e.dataTransfer.files].find(x => x.type && x.type.startsWith('image/')); if (f) cvLoadBlob(f); });
+    cvFileInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) cvLoadBlob(f); });
+
+    function cvLoadBlob(blob){
+        if (cvState.imgURL) { try { URL.revokeObjectURL(cvState.imgURL); } catch (e) {} }
+        const url = URL.createObjectURL(blob);
+        const im = new Image();
+        im.onload = () => {
+            cvState.img = im; cvState.imgURL = url; cvState.crop = { sq:null, pt:null };
+            cvDrop.classList.add('hasimg'); cvDrop.textContent = t('cv_drop_ok');
+            cvSizes.forEach(s => s.rc.disabled = false);
+            document.getElementById('cvExportBtn').disabled = false;
+            cvEnsureFontsThenRender();
+        };
+        im.src = url;
+    }
+
+    document.getElementById('cvImportBtn').addEventListener('click', () => requestPhotopeaImage('cover'));
+    if (!inPhotopea) { const b = document.getElementById('cvImportBtn'); b.disabled = true; b.title = t('import_title_off'); }
+
+    /* --- Crop editor (per size: 'sq' = 1:1, 'pt' = 1080:1440) --- */
+    const cvCropModal = document.getElementById('cvCropModal');
+    const cvCropImg = document.getElementById('cvCropImg');
+    const cvCropBox = document.getElementById('cvCropBox');
+    const cvZoom = document.getElementById('cvZoom');
+    let cvCropTarget = 'pt', cvCropRatioVal = 1080 / 1440;
+    function cvRatio(){ return cvCropRatioVal; }
+    let cvbW, cvbH, cvbL, cvbT, cviW, cviH;
+
+    function cvClampBox(){
+        if (cvbL < 0) cvbL = 0; if (cvbT < 0) cvbT = 0;
+        if (cvbL + cvbW > cviW) cvbL = cviW - cvbW;
+        if (cvbT + cvbH > cviH) cvbT = cviH - cvbH;
+    }
+    function cvBoxDOM(){ cvCropBox.style.width = cvbW + 'px'; cvCropBox.style.height = cvbH + 'px'; cvCropBox.style.left = cvbL + 'px'; cvCropBox.style.top = cvbT + 'px'; }
+    function cvInitCrop(){
+        cviW = cvCropImg.clientWidth; cviH = cvCropImg.clientHeight;
+        if (!cviW || !cviH) return;
+        const R = cvRatio();
+        if (cviW / cviH > R) { cvbH = cviH; cvbW = cvbH * R; } else { cvbW = cviW; cvbH = cvbW / R; }
+        cvbL = (cviW - cvbW) / 2; cvbT = (cviH - cvbH) / 2;
+        cvZoom.value = 0; cvBoxDOM();
+    }
+    let cvCropSegRef = null;
+    function openCvCrop(target, ref){
+        cvCropTarget = target; cvCropSegRef = ref || null;
+        let url;
+        if (target === 'reelitem'){ url = ref && ref.url; const s3 = rlSizeObj(); cvCropRatioVal = s3.W / s3.H; }
+        else if (target === 'vidseg'){ url = ref && ref.imgURL; const s2 = cvVidSizeObj(); cvCropRatioVal = s2.W / s2.H; }
+        else if (target === 'vid'){ url = cvVidImgURL; const s = cvVidSizeObj(); cvCropRatioVal = s.W / s.H; }
+        else { url = cvState.imgURL; cvCropRatioVal = (target === 'sq') ? 1 : (1080 / 1440); }
+        if (!url) return;
+        cvCropImg.onload = cvInitCrop;
+        if (cvCropImg.src !== url) cvCropImg.src = url;
+        cvCropModal.style.display = 'flex';
+        requestAnimationFrame(() => { if (cvCropImg.complete) cvInitCrop(); });
+    }
+
+    let cvDrag = false, cvsx, cvsy, cvil, cvit;
+    cvCropBox.addEventListener('pointerdown', e => { cvDrag = true; cvsx = e.clientX; cvsy = e.clientY; cvil = cvbL; cvit = cvbT; try { cvCropBox.setPointerCapture(e.pointerId); } catch (err) {} e.stopPropagation(); e.preventDefault(); });
+    cvCropBox.addEventListener('pointermove', e => { if (!cvDrag) return; e.preventDefault(); cvbL = cvil + (e.clientX - cvsx); cvbT = cvit + (e.clientY - cvsy); cvClampBox(); cvBoxDOM(); });
+    cvCropBox.addEventListener('pointerup', () => { cvDrag = false; });
+    cvCropBox.addEventListener('pointercancel', () => { cvDrag = false; });
+    cvZoom.addEventListener('input', e => {
+        const z = parseFloat(e.target.value), scale = 1 - z * 0.9, R = cvRatio();
+        const maxW = (cviW / cviH > R) ? cviH * R : cviW;
+        let nw = maxW * scale; if (nw < 50) nw = 50; const nh = nw / R;
+        const cx = cvbL + cvbW / 2, cy = cvbT + cvbH / 2;
+        cvbW = nw; cvbH = nh; cvbL = cx - nw / 2; cvbT = cy - nh / 2; cvClampBox(); cvBoxDOM();
+    });
+    document.getElementById('cvCropContainer').addEventListener('wheel', e => {
+        e.preventDefault(); let z = parseFloat(cvZoom.value) + (e.deltaY < 0 ? 1 : -1) * 0.02; z = Math.max(0, Math.min(1, z)); cvZoom.value = z; cvZoom.dispatchEvent(new Event('input'));
+    }, { passive: false });
+    document.getElementById('cvCropApply').addEventListener('click', () => {
+        const rx = cvCropImg.naturalWidth / cviW, ry = cvCropImg.naturalHeight / cviH;
+        const crop = { sx: cvbL * rx, sy: cvbT * ry, sw: cvbW * rx, sh: cvbH * ry };
+        cvCropModal.style.display = 'none';
+        if (cvCropTarget === 'reelitem'){ if (cvCropSegRef) cvCropSegRef.crop = crop; if (typeof rlPreview === 'function') rlPreview(); }
+        else if (cvCropTarget === 'vidseg'){ if (cvCropSegRef) cvCropSegRef.crop = crop; if (typeof cvVidPreviewStatic === 'function') cvVidPreviewStatic(); }
+        else if (cvCropTarget === 'vid'){ cvVidImgCrop = crop; if (typeof cvVidPreviewStatic === 'function') cvVidPreviewStatic(); }
+        else { cvState.crop[cvCropTarget] = crop; cvRenderAll(); }
+    });
+    function cvCloseCrop(){ cvCropModal.style.display = 'none'; cvRenderAll(); }
+    document.getElementById('cvCropClose').addEventListener('click', cvCloseCrop);
+    cvCropModal.addEventListener('mousedown', e => { if (e.target === cvCropModal) cvCloseCrop(); });
+    cvSizes.forEach(s => {
+        s.canvas.addEventListener('click', () => { if (cvState.img) openCvCrop(s.key); });
+        s.rc.addEventListener('click', () => { if (cvState.img) openCvCrop(s.key); });
+    });
+
+    // gradient
+    const CV_GRAD_SHAPE = [[0,1],[0.20,0.98],[0.40,0.82],[0.60,0.48],[0.80,0.06],[0.92,0]];
+    const CV_GRAD_BAND = [[0,0.08],[0.20,0.5],[0.36,0.92],[0.5,1.0],[0.64,0.92],[0.80,0.5],[1,0.08]];
+    function cvGradient(dir, peak, reach){
+        let g;
+        if (dir === 'center'){
+            g = cvCtx.createLinearGradient(0, 0, 0, CVH);
+            CV_GRAD_BAND.forEach(([f, a]) => g.addColorStop(f, 'rgba(0,0,0,' + (a * peak).toFixed(3) + ')'));
+        } else {
+            g = cvCtx.createLinearGradient(0, dir === 'top' ? 0 : CVH, 0, dir === 'top' ? CVH : 0);
+            CV_GRAD_SHAPE.forEach(([f, a]) => { g.addColorStop(Math.min(1, f / 0.92 * reach), 'rgba(0,0,0,' + (a * peak).toFixed(3) + ')'); });
+            if (reach < 0.999) g.addColorStop(1, 'rgba(0,0,0,0)');
+        }
+        cvCtx.fillStyle = g; cvCtx.fillRect(0, 0, CVW, CVH);
+    }
+    function cvGradParams(){ return { op: parseInt(document.getElementById('cvOpacity').value, 10) / 100, reach: parseInt(document.getElementById('cvReach').value, 10) / 100 }; }
+    function cvSyncGrad(){
+        document.getElementById('cvOpacityVal').textContent = document.getElementById('cvOpacity').value + '%';
+        document.getElementById('cvReachVal').textContent = document.getElementById('cvReach').value + '%';
+        try { localStorage.setItem('aa_cv_op', document.getElementById('cvOpacity').value); localStorage.setItem('aa_cv_reach', document.getElementById('cvReach').value); } catch (e) {}
+        cvRenderAll();
+    }
+    function cvPlaceholderBg(){
+        const g = cvCtx.createLinearGradient(0, 0, 0, CVH);
+        g.addColorStop(0, '#474c55'); g.addColorStop(1, '#15171b');
+        cvCtx.fillStyle = g; cvCtx.fillRect(0, 0, CVW, CVH);
+    }
+    function cvDrawCover(img, crop){
+        let sx, sy, sw, sh;
+        if (crop) { sx = crop.sx; sy = crop.sy; sw = crop.sw; sh = crop.sh; }
+        else {
+            const ir = img.width / img.height, tr = CVW / CVH;
+            if (ir > tr) { sh = img.height; sw = sh * tr; sx = (img.width - sw) / 2; sy = 0; }
+            else { sw = img.width; sh = sw / tr; sx = 0; sy = (img.height - sh) / 2; }
+        }
+        cvCtx.imageSmoothingEnabled = true; cvCtx.imageSmoothingQuality = 'high';
+        cvCtx.drawImage(img, sx, sy, sw, sh, 0, 0, CVW, CVH);
+    }
+
+    function cvWrapFit(text, maxWidth, maxFont, minFont, weight, maxLines){
+        text = (text || '').trim();
+        const build = (fs) => {
+            cvCtx.font = weight + ' ' + fs + 'px HNArabic';
+            const words = text.split(/\s+/).filter(Boolean);
+            const lines = []; let cur = '';
+            for (const w of words){ const test = cur ? cur + ' ' + w : w; if (!cur || cvCtx.measureText(test).width <= maxWidth) cur = test; else { lines.push(cur); cur = w; } }
+            if (cur) lines.push(cur); return lines;
+        };
+        for (let fs = maxFont; fs >= minFont; fs -= 2){ const lines = build(fs); if (lines.length <= maxLines) return { fs, lines, lh: Math.round(fs * 1.34) }; }
+        return { fs: minFont, lines: build(minFont), lh: Math.round(minFont * 1.34) };
+    }
+    function cvAccent(cx, y, w){ cvCtx.fillStyle = '#B1876A'; cvCtx.fillRect(Math.round(cx - w / 2), Math.round(y), Math.round(w), 8); }
+    function cvAccentSpan(x0, x1, y){ cvCtx.fillStyle = '#B1876A'; cvCtx.fillRect(Math.round(x0), Math.round(y), Math.round(x1 - x0), 8); }
+    function cvParseTokens(text){
+        const tokens = [];
+        let bold = false, accent = false, cur = '';
+        const flush = () => { cur.split(/\s+/).filter(Boolean).forEach(w => tokens.push({ text: w, bold, accent })); cur = ''; };
+        const s = text || '';
+        for (let i = 0; i < s.length; i++){
+            const ch = s[i];
+            if (ch === '*'){ flush(); bold = !bold; }
+            else if (ch === '_'){ flush(); accent = !accent; }
+            else if (ch === '\n'){ flush(); tokens.push({ br: true }); }
+            else cur += ch;
+        }
+        flush();
+        return tokens;
+    }
+    function cvWordWidth(tok, fs, allBold){ cvCtx.font = ((tok.bold || allBold) ? '700' : '400') + ' ' + fs + 'px HNArabic'; return cvCtx.measureText(tok.text).width; }
+    function cvSpaceWidth(fs){ cvCtx.font = '400 ' + fs + 'px HNArabic'; return cvCtx.measureText(' ').width || fs * 0.25; }
+    function cvLineWidth(toks, fs, allBold){ if (!toks.length) return 0; let s = 0; toks.forEach(t => s += cvWordWidth(t, fs, allBold)); return s + cvSpaceWidth(fs) * (toks.length - 1); }
+    function cvLayoutHeadline(tokens, boxW, maxFont, minFont, allBold){
+        tokens = tokens.filter(t => !t.br);
+        const n = tokens.length;
+        for (let fs = maxFont; fs >= minFont; fs -= 2){
+            if (n === 0) return { fs, lines: [], lh: Math.round(fs * 1.34) };
+            if (n === 1){ if (cvWordWidth(tokens[0], fs, allBold) <= boxW) return { fs, lines: [tokens], lh: Math.round(fs * 1.34) }; else continue; }
+            let best = null;
+            for (let k = 1; k < n; k++){ const l1 = tokens.slice(0, k), l2 = tokens.slice(k); const w1 = cvLineWidth(l1, fs, allBold), w2 = cvLineWidth(l2, fs, allBold); if (w1 <= boxW && w2 <= boxW && w1 >= w2){ const d = w1 - w2; if (!best || d < best.d) best = { k, d }; } }
+            if (best) return { fs, lines: [tokens.slice(0, best.k), tokens.slice(best.k)], lh: Math.round(fs * 1.34) };
+            for (let k = 1; k < n; k++){ const l1 = tokens.slice(0, k), l2 = tokens.slice(k); if (cvLineWidth(l1, fs, allBold) <= boxW && cvLineWidth(l2, fs, allBold) <= boxW) return { fs, lines: [l1, l2], lh: Math.round(fs * 1.34) }; }
+        }
+        const fs = minFont, lines = [[], []]; let li = 0;
+        tokens.forEach(tk => { if (li === 0 && lines[0].length && cvLineWidth(lines[0].concat(tk), fs, allBold) > boxW) li = 1; lines[li].push(tk); });
+        return { fs, lines, lh: Math.round(fs * 1.34) };
+    }
+    function cvDrawLine(toks, cx, y, fs, allBold){
+        if (!toks.length) return { total: 0, accL: null, accR: null };
+        const widths = toks.map(t => cvWordWidth(t, fs, allBold)); const sp = cvSpaceWidth(fs);
+        const total = widths.reduce((a, b) => a + b, 0) + sp * (toks.length - 1);
+        cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillStyle = '#fff';
+        let x = cx + total / 2, accL = null, accR = null;
+        toks.forEach((t, i) => {
+            cvCtx.font = ((t.bold || allBold) ? '700' : '400') + ' ' + fs + 'px HNArabic';
+            cvCtx.fillText(t.text, x, y);
+            if (t.accent){ const l = x - widths[i], r = x; if (accL === null || l < accL) accL = l; if (accR === null || r > accR) accR = r; }
+            x -= widths[i] + sp;
+        });
+        return { total, accL, accR };
+    }
+    // Breaking wrap: alternating long / short / long lines, with comfortable leading
+    function cvWrapTokens(tokens, boxW, maxFont, minFont, allBold, maxLines){
+        const shortRatio = 0.6, LEAD = 1.42;
+        // Manual mode: the user placed line breaks (Enter) — respect them exactly
+        if (tokens.some(t => t.br)){
+            const manual = []; let cur = [];
+            tokens.forEach(t => { if (t.br){ manual.push(cur); cur = []; } else cur.push(t); });
+            manual.push(cur);
+            const lines = manual.filter(l => l.length);
+            for (let fs = maxFont; fs >= minFont; fs -= 2){
+                if (lines.every(l => cvLineWidth(l, fs, allBold) <= boxW)) return { fs, lines, lh: Math.round(fs * LEAD) };
+            }
+            return { fs: minFont, lines, lh: Math.round(minFont * LEAD) };
+        }
+        const build = (fs) => {
+            const lines = []; let cur = [], li = 0;
+            const limit = () => (li % 2 === 0) ? boxW : boxW * shortRatio;
+            tokens.forEach(tk => {
+                const test = cur.concat(tk);
+                if (!cur.length || cvLineWidth(test, fs, allBold) <= limit()) cur = test;
+                else { lines.push(cur); cur = [tk]; li++; }
+            });
+            if (cur.length) lines.push(cur);
+            return lines;
+        };
+        for (let fs = maxFont; fs >= minFont; fs -= 2){ const lines = build(fs); if (lines.length <= maxLines) return { fs, lines, lh: Math.round(fs * LEAD) }; }
+        return { fs: minFont, lines: build(minFont), lh: Math.round(minFont * LEAD) };
+    }
+    function cvDrawLineRightEdge(toks, rx, y, fs, allBold){
+        if (!toks.length) return 0;
+        const widths = toks.map(t => cvWordWidth(t, fs, allBold)); const sp = cvSpaceWidth(fs);
+        cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillStyle = '#fff';
+        let x = rx;
+        toks.forEach((t, i) => { cvCtx.font = ((t.bold || allBold) ? '700' : '400') + ' ' + fs + 'px HNArabic'; cvCtx.fillText(t.text, x, y); x -= widths[i] + sp; });
+        return widths.reduce((a, b) => a + b, 0) + sp * (toks.length - 1);
+    }
+    function cvRoundRect(x, y, w, h, r){
+        cvCtx.beginPath();
+        if (cvCtx.roundRect) { cvCtx.roundRect(x, y, w, h, r); }
+        else { cvCtx.moveTo(x + r, y); cvCtx.arcTo(x + w, y, x + w, y + h, r); cvCtx.arcTo(x + w, y + h, x, y + h, r); cvCtx.arcTo(x, y + h, x, y, r); cvCtx.arcTo(x, y, x + w, y, r); cvCtx.closePath(); }
+    }
+    function cvBadge(rx, bottomY){
+        const fs = 48, pad = 28, bh = 66, r = 12;
+        cvCtx.font = '700 ' + fs + 'px HNArabic';
+        const label = 'عاجل', tw = cvCtx.measureText(label).width, w = tw + pad * 2;
+        const x = rx - w, y = bottomY - bh;
+        cvCtx.fillStyle = '#C1012F'; cvRoundRect(x, y, w, bh, r); cvCtx.fill();
+        cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'center'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'middle';
+        cvCtx.fillText(label, x + w / 2, y + bh / 2 + 3);
+    }
+    function cvUpdateWordCount(){
+        const el = document.getElementById('cvWordCount'); if (!el) return;
+        const n = cvParseTokens(cvHeadlineEl.value).filter(t => !t.br).length;
+        const brk = cvState.style === 'brk';
+        const lo = brk ? 12 : 6, hi = brk ? 20 : 8;
+        el.textContent = t('cv_words')(n, lo, hi);
+        el.style.color = (n >= lo && n <= hi) ? '#059669' : '#d97706';
+    }
+
+    function cvBreakingBg(){
+        cvCtx.fillStyle = '#C82626'; cvCtx.fillRect(0, 0, CVW, CVH);
+        if (cvLogo.complete && cvLogo.naturalWidth) {
+            const sz = CVW * 0.95, lx = (CVW - sz) / 2 - CVW * 0.12, ly = (CVH - sz) / 2;
+            const mono = document.createElement('canvas'); mono.width = CVW; mono.height = CVH;
+            const mctx = mono.getContext('2d');
+            mctx.drawImage(cvLogo, lx, ly, sz, sz);
+            mctx.globalCompositeOperation = 'source-in';
+            mctx.fillStyle = '#C21C1C'; mctx.fillRect(0, 0, CVW, CVH);
+            cvCtx.save(); cvCtx.globalAlpha = 0.55; cvCtx.drawImage(mono, 0, 0); cvCtx.restore();
+        }
+    }
+
+    function cvCardTextMul(){ const el = document.getElementById('cvCardTextSize'); return el ? (parseInt(el.value, 10) || 100) / 100 : 1; }
+    // Draw the full card into one size
+    function cvRenderInto(size){
+        cvCtx = size.canvas.getContext('2d'); CVW = size.W; CVH = size.H;
+        const cx = CVW / 2, boxW = 880;
+        const isSquare = (CVH <= 1200);
+        cvCtx.clearRect(0, 0, CVW, CVH);
+        cvCtx.fillStyle = '#111'; cvCtx.fillRect(0, 0, CVW, CVH);
+        const demo = (!cvState.img && cvHeadlineEl.value.trim() === '' && (cvState.style !== 's3l' || cvKickerEl.value.trim() === '') && (cvState.style !== 'brk' || cvSourceEl.value.trim() === ''));
+        const brkNoPhoto = (cvState.style === 'brk' && !cvState.img);
+        if (cvState.img) cvDrawCover(cvState.img, cvState.crop[size.key]);
+        else if (brkNoPhoto) cvBreakingBg();
+        else cvPlaceholderBg();
+        if (!brkNoPhoto) { const gp = cvGradParams(); const gdir = (cvState.style === 's01' || cvState.style === 'brk') ? 'bottom' : (isSquare ? 'center' : 'top'); cvGradient(gdir, gp.op, gp.reach); }
+
+        const allBold = document.getElementById('cvAllBold').checked;
+        const headSrc = demo ? (cvState.style === 's3l' ? CV_SAMPLE.title3l : (cvState.style === 'brk' ? CV_SAMPLE.brk : CV_SAMPLE.head)) : cvHeadlineEl.value;
+        const kickSrc = demo ? CV_SAMPLE.kicker : cvKickerEl.value;
+        const tokens = cvParseTokens(headSrc);
+
+        if (cvState.style === 's02'){
+            const f = cvLayoutHeadline(tokens, boxW, 96, 40, allBold);
+            const nL2 = Math.max(f.lines.length, 1);
+            const y0 = isSquare ? (Math.round((CVH - (f.fs + (nL2 - 1) * f.lh + 30)) / 2) + f.fs) : (150 + f.fs);
+            let accentDrawn = false, lastW = 0, lastY = y0;
+            f.lines.forEach((ln, i) => {
+                const yy = y0 + i * f.lh;
+                const r = cvDrawLine(ln, cx, yy, f.fs, allBold);
+                lastW = r.total; lastY = yy;
+                if (r.accL !== null){ cvAccentSpan(r.accL, r.accR, yy + Math.round(f.fs * 0.24)); accentDrawn = true; }
+            });
+            if (!accentDrawn && f.lines.length) cvAccent(cx, lastY + 22, Math.min(Math.max(lastW, 140), 620));
+        } else if (cvState.style === 's01'){
+            const f = cvLayoutHeadline(tokens, boxW, 96, 40, allBold);
+            const nL = Math.max(f.lines.length, 1);
+            const firstY = (CVH - 350) - (nL - 1) * f.lh;
+            let accentDrawn = false, firstW = 0;
+            f.lines.forEach((ln, i) => {
+                const yy = firstY + i * f.lh;
+                const r = cvDrawLine(ln, cx, yy, f.fs, allBold);
+                if (i === 0) firstW = r.total;
+                if (r.accL !== null){ cvAccentSpan(r.accL, r.accR, yy + Math.round(f.fs * 0.24)); accentDrawn = true; }
+            });
+            if (!accentDrawn && f.lines.length) cvAccent(cx, firstY - f.fs - 20, Math.min(Math.max(firstW, 140), 460));
+        } else if (cvState.style === 's3l'){
+            const kf = cvWrapFit(kickSrc, 760, 60, 28, '300', 1);
+            const tfPre = cvLayoutHeadline(tokens, boxW, 84, 40, allBold);
+            const nT = Math.max(tfPre.lines.length, 1);
+            const blockH3 = kf.fs + 56 + tfPre.fs + (nT - 1) * tfPre.lh;
+            const baseTop = isSquare ? Math.round((CVH - blockH3) / 2) : 140;
+            const ky = baseTop + kf.fs; let kw = 0;
+            if (kf.lines[0]) { cvCtx.font = '300 ' + kf.fs + 'px HNArabic'; cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'center'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillText(kf.lines[0], cx, ky); kw = cvCtx.measureText(kf.lines[0]).width; }
+            if (kf.lines[0]) cvAccent(cx, ky + 18, Math.min(Math.max(kw, 140), 480));
+            const tf = tfPre;
+            const ty = ky + 56 + tf.fs;
+            tf.lines.forEach((ln, i) => { cvDrawLine(ln, cx, ty + i * tf.lh, tf.fs, allBold); });
+        } else {  // brk
+            const rx = CVW - 71, bw = 900;
+            const cmul = cvCardTextMul();
+            const f = cvWrapTokens(tokens, bw, Math.round(80 * cmul), Math.round(44 * cmul), allBold, 6);
+            const nL = Math.max(f.lines.length, 1);
+            const lastBaseline = CVH - 200;
+            const firstY = lastBaseline - (nL - 1) * f.lh;
+            f.lines.forEach((ln, i) => cvDrawLineRightEdge(ln, rx, firstY + i * f.lh, f.fs, allBold));
+            cvBadge(rx, firstY - f.fs - 28);
+            const src = (demo ? CV_SAMPLE.brkSource : cvSourceEl.value).trim();
+            if (src) { cvCtx.font = '700 ' + Math.round(34 * cmul) + 'px HNArabic'; cvCtx.fillStyle = '#fff'; cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'alphabetic'; cvCtx.fillText(src, rx, CVH - 135); }
+        }
+
+        if (cvLogo.complete && cvLogo.naturalWidth) cvCtx.drawImage(cvLogo, 51, CVH - 51 - 63, 63, 63);
+
+        if (demo){
+            cvCtx.save();
+            cvCtx.font = '400 27px HNArabic'; cvCtx.textAlign = 'right'; cvCtx.direction = 'rtl'; cvCtx.textBaseline = 'top';
+            const label = t('cv_sample'); const w = cvCtx.measureText(label).width;
+            cvCtx.fillStyle = 'rgba(0,0,0,0.45)'; cvCtx.fillRect(CVW - 34 - w - 20, 30, w + 30, 46);
+            cvCtx.fillStyle = 'rgba(255,255,255,0.9)'; cvCtx.fillText(label, CVW - 44, 40);
+            cvCtx.restore();
+        }
+    }
+    function cvRenderAll(){ cvSizes.forEach(cvRenderInto); cvUpdateWordCount(); }
+    function cvRender(){ cvRenderAll(); }
+
+    document.getElementById('cvOpacity').addEventListener('input', cvSyncGrad);
+    document.getElementById('cvReach').addEventListener('input', cvSyncGrad);
+    (function(){
+        try { const o = localStorage.getItem('aa_cv_op'); const r = localStorage.getItem('aa_cv_reach'); if (o) document.getElementById('cvOpacity').value = o; if (r) document.getElementById('cvReach').value = r; } catch (e) {}
+        document.getElementById('cvOpacityVal').textContent = document.getElementById('cvOpacity').value + '%';
+        document.getElementById('cvReachVal').textContent = document.getElementById('cvReach').value + '%';
+    })();
+
+    // export BOTH sizes as two separate PNG files (or open both in Photopea)
+    function cvExport(openInPp){
+        if (!cvState.img && cvState.style !== 'brk') { cvSetStatus(t('cv_needphoto')); return; }
+        cvRenderAll();
+        const stamp = Date.now();
+        cvSizes.forEach((size, idx) => {
+            size.canvas.toBlob(async (blob) => {
+                if (openInPp && inPhotopea) { await openBlobInPhotopea(blob); }
+                else { setTimeout(() => downloadBlob(blob, 'AA-Cover-' + size.fileTag + '-' + stamp + '.png'), idx * 250); }
+            }, 'image/png', 0.95);
+        });
+        cvSetStatus((openInPp && inPhotopea) ? t('cv_opened') : t('cv_downloaded'));
+    }
+    document.getElementById('cvExportBtn').addEventListener('click', () => cvExport(document.getElementById('cvOpenPp').checked));
+
+    /* ===== Breaking VIDEO export (experimental) — MediaRecorder + animated overlay ===== */
+    const cvVideoEl = document.getElementById('cvVideoEl');
+    const cvVidCanvas = document.getElementById('cvVidCanvas');
+    const cvVidCtx = cvVidCanvas.getContext('2d');
+    const cvVidState = { loaded:false, playing:false, raf:0, dur:0, start:0, end:0, audioCtx:null, audioSrc:null };
+    const cvAudioCache = {};
+    // Audio tracks bundled in the repo /audio folder (edit this list to match your files)
+    const AUDIO_TRACKS = [
+        { file:'audio/AA-60-SANIYE-2021_01.wav', label:'AA 60 sn' }
+    ];
+    function cvVidStatus(m){ const el=document.getElementById('cvVidStatus'); if(el) el.textContent=m||''; }
+    function cvVidSizeObj(){ const v = document.getElementById('cvVidSize').value; if (v==='sq') return {W:1080,H:1080}; if (v==='fe') return {W:1080,H:1350}; return {W:1080,H:1920}; }
+    function cvVidTextMul(){ return (parseInt(document.getElementById('cvVidTextSize').value, 10) || 100) / 100; }
+    function cvFmt(s){ s=Math.max(0,s||0); const m=Math.floor(s/60), x=Math.floor(s%60); return m+':'+(x<10?'0':'')+x; }
+    function cvVidStop(){ cvVidState.playing=false; cancelAnimationFrame(cvVidState.raf); try{ cvVideoEl.pause(); }catch(e){} const b=document.getElementById('cvVidPlay'); if(b) b.textContent=t('cv_vid_play'); }
+
+    function cvPopulateAudio(){
+        const sel=document.getElementById('cvVidAudio'); if(!sel) return;
+        sel.innerHTML='';
+        const none=document.createElement('option'); none.value=''; none.textContent=t('cv_vid_none'); sel.appendChild(none);
+        AUDIO_TRACKS.forEach(a=>{ const o=document.createElement('option'); o.value=a.file; o.textContent=a.label; sel.appendChild(o); });
+    }
+    cvPopulateAudio();
+
+    // ===== Multi-segment breaking video (each 7–10s auto) + color-bg support =====
+    let cvVidImg = null, cvVidImgURL = null, cvVidImgCrop = null, cvVidSourceVal = 'video';
+    function cvVidSource(){ return cvVidSourceVal; }
+    function cvVidHasVideo(){ return cvVidSourceVal === 'video' && cvVidState.loaded && cvVideoEl.videoWidth > 0; }
+    let cvSegments = [{ headline:'', source:'', img:null, imgURL:null, crop:null }];
+    function cvSegImage(seg){ return seg && seg.img ? { img: seg.img, crop: seg.crop } : { img: cvVidImg, crop: cvVidImgCrop }; }
+    let cvVidClock = 0;
+    function cvSegDur(seg){ const n = cvParseTokens((seg && seg.headline) || '').length; return Math.max(7, Math.min(10, 7 + Math.max(0, n - 8) * 0.3)); }
+    function cvSegTimeline(){ let ts = 0; const arr = []; cvSegments.forEach(s => { const d = cvSegDur(s); arr.push({ start: ts, end: ts + d, dur: d, seg: s }); ts += d; }); return { arr, total: ts }; }
+
+    function cvVidUpdateTotal(){ const el = document.getElementById('cvVidTotal'); if (!el) return; const tl = cvSegTimeline(); el.textContent = t('cv_vid_total')(cvSegments.length, Math.round(tl.total)); }
+    function cvRenderSegs(){
+        const list = document.getElementById('cvSegList'); if (!list) return;
+        list.innerHTML = '';
+        cvSegments.forEach((s, idx) => {
+            const row = document.createElement('div'); row.className = 'cv-seg';
+            const head = document.createElement('div'); head.className = 'cv-seg-head';
+            const nm = document.createElement('span'); nm.textContent = t('cv_vid_seg') + ' ' + (idx + 1);
+            const du = document.createElement('span'); du.className = 'cv-seg-dur'; du.textContent = cvSegDur(s).toFixed(0) + 's';
+            head.appendChild(nm); head.appendChild(du);
+            if (cvSegments.length > 1){ const del = document.createElement('button'); del.className = 'cv-seg-del'; del.innerHTML = '✕'; del.addEventListener('click', () => { cvSegments.splice(idx, 1); cvRenderSegs(); cvVidPreviewStatic(); }); head.appendChild(del); }
+            const ta = document.createElement('textarea'); ta.className = 'cv-seg-h'; ta.rows = 2; ta.dir = 'rtl'; ta.placeholder = t('cv_headline'); ta.value = s.headline;
+            const inp = document.createElement('input'); inp.className = 'cv-seg-s'; inp.dir = 'rtl'; inp.placeholder = t('cv_source'); inp.value = s.source;
+            ta.addEventListener('input', () => { s.headline = ta.value; du.textContent = cvSegDur(s).toFixed(0) + 's'; cvVidUpdateTotal(); cvVidPreviewStatic(); });
+            inp.addEventListener('input', () => { s.source = inp.value; cvVidPreviewStatic(); });
+            const sug = document.createElement('button'); sug.className = 'cv-mini-btn'; sug.style.marginTop = '0'; sug.style.marginBottom = '6px'; sug.textContent = t('cv_suggest');
+            sug.addEventListener('click', () => { cvSuggestSegBreaks(s); ta.value = s.headline; cvVidPreviewStatic(); });
+            row.appendChild(head); row.appendChild(ta); row.appendChild(sug); row.appendChild(inp);
+
+            const imgRow = document.createElement('div'); imgRow.className = 'cv-seg-img';
+            imgRow.hidden = (cvVidSourceVal !== 'image');
+            const pick = document.createElement('button'); pick.className = 'cv-mini-btn'; pick.style.marginTop = '8px';
+            pick.textContent = s.img ? t('cv_seg_imgchange') : t('cv_seg_imgadd');
+            const fin = document.createElement('input'); fin.type = 'file'; fin.accept = 'image/*'; fin.style.display = 'none';
+            pick.addEventListener('click', () => fin.click());
+            fin.addEventListener('change', ev => {
+                const f = ev.target.files[0]; if (!f) return;
+                if (s.imgURL){ try { URL.revokeObjectURL(s.imgURL); } catch (er) {} }
+                s.imgURL = URL.createObjectURL(f);
+                const im = new Image();
+                im.onload = () => { s.img = im; s.crop = null; cvRenderSegs(); cvVidPreviewStatic(); };
+                im.src = s.imgURL;
+            });
+            imgRow.appendChild(pick); imgRow.appendChild(fin);
+            if (s.img){
+                const cr = document.createElement('button'); cr.className = 'cv-mini-btn'; cr.style.marginTop = '8px'; cr.textContent = t('cv_vid_cropimg');
+                cr.addEventListener('click', () => openCvCrop('vidseg', s));
+                const rm = document.createElement('button'); rm.className = 'cv-mini-btn'; rm.style.marginTop = '8px'; rm.textContent = '✕';
+                rm.addEventListener('click', () => { if (s.imgURL){ try { URL.revokeObjectURL(s.imgURL); } catch (er) {} } s.img = null; s.imgURL = null; s.crop = null; cvRenderSegs(); cvVidPreviewStatic(); });
+                imgRow.appendChild(cr); imgRow.appendChild(rm);
+            }
+            row.appendChild(imgRow);
+            list.appendChild(row);
+        });
+        cvVidUpdateTotal();
+    }
+    document.getElementById('cvSegAdd').addEventListener('click', () => { if (cvSegments.length >= 8) return; cvSegments.push({ headline:'', source:'', img:null, imgURL:null, crop:null }); cvRenderSegs(); cvVidPreviewStatic(); });
+
+    // animated breaking overlay for one segment (RTL, motion, fade in/out within seglen)
+    function cvDrawBrkVideoOverlay(ctx, W, H, trel, seglen, motion, headText, srcText, withGradient){
+        const prev = cvCtx, pw = CVW, ph = CVH;
+        cvCtx = ctx; CVW = W; CVH = H;
+        try {
+            if (withGradient){ const gp = cvGradParams(); cvGradient('bottom', gp.op, gp.reach); }
+            const allBold = document.getElementById('cvAllBold').checked;
+            const demo = !((headText || '').trim());
+            const head = demo ? CV_SAMPLE.brk : headText;
+            const src = (demo ? CV_SAMPLE.brkSource : (srcText || '')).trim();
+            const tokens = cvParseTokens(head);
+            const rx = W - 71, bw = 900;
+            const mul = (typeof cvVidTextMul === 'function') ? cvVidTextMul() : 0.85;
+            const f = cvWrapTokens(tokens, bw, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
+            const nL = Math.max(f.lines.length, 1);
+            const firstY = (H - 200) - (nL - 1) * f.lh;
+            const easeOut = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+            const seg = (a, l) => motion ? Math.max(0, Math.min(1, (trel - a) / l)) : 1;
+            let outro = 1;
+            if (motion && seglen > 0 && trel > seglen - 0.5) outro = Math.max(0, (seglen - trel) / 0.5);
+            const bA = easeOut(seg(0, 0.35));
+            const pulse = motion ? (1 + 0.05 * Math.max(0, Math.sin((trel - 0.35) * Math.PI * 2.2))) : 1;
+            const bY = firstY - f.fs - 28;
+            ctx.save(); ctx.globalAlpha = bA * outro;
+            ctx.translate(rx, bY); ctx.scale(pulse, pulse); ctx.translate(-rx, -bY);
+            cvBadge(rx, bY);
+            ctx.restore();
+            f.lines.forEach((ln, i) => {
+                const a = easeOut(seg(0.30 + i * 0.12, 0.42));
+                const dy = motion ? (1 - a) * 26 : 0;
+                ctx.save(); ctx.globalAlpha = a * outro;
+                cvDrawLineRightEdge(ln, rx, firstY + i * f.lh + dy, f.fs, allBold);
+                ctx.restore();
+            });
+            if (src){
+                const a = easeOut(seg(0.30 + nL * 0.12 + 0.05, 0.35));
+                ctx.save(); ctx.globalAlpha = a * outro;
+                ctx.font = '700 ' + Math.round(34 * mul) + 'px HNArabic'; ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.direction = 'rtl'; ctx.textBaseline = 'alphabetic';
+                ctx.fillText(src, rx, H - 135);
+                ctx.restore();
+            }
+            if (cvLogo.complete && cvLogo.naturalWidth){ ctx.save(); ctx.globalAlpha = outro; ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63); ctx.restore(); }
+        } finally { cvCtx = prev; CVW = pw; CVH = ph; }
+    }
+    function cvVidBg(ctx, W, H, T){
+        if (cvVidHasVideo()){
+            const vw = cvVideoEl.videoWidth, vh = cvVideoEl.videoHeight;
+            const ir = vw / vh, tr = W / H; let sw, sh, sx, sy;
+            if (ir > tr){ sh = vh; sw = sh * tr; sx = (vw - sw) / 2; sy = 0; } else { sw = vw; sh = sw / tr; sx = 0; sy = (vh - sh) / 2; }
+            ctx.drawImage(cvVideoEl, sx, sy, sw, sh, 0, 0, W, H); return true;
+        }
+        if (cvVidSourceVal === 'image'){
+            const drawOne = (ref) => {
+                if (!ref || !ref.img) return false;
+                let sx, sy, sw, sh;
+                if (ref.crop){ sx = ref.crop.sx; sy = ref.crop.sy; sw = ref.crop.sw; sh = ref.crop.sh; }
+                else { const ir = ref.img.width / ref.img.height, tr = W / H; if (ir > tr){ sh = ref.img.height; sw = sh * tr; sx = (ref.img.width - sw) / 2; sy = 0; } else { sw = ref.img.width; sh = sw / tr; sx = 0; sy = (ref.img.height - sh) / 2; } }
+                ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(ref.img, sx, sy, sw, sh, 0, 0, W, H); return true;
+            };
+            const tl = cvSegTimeline();
+            let i = 0; for (let k = 0; k < tl.arr.length; k++){ if (T >= tl.arr[k].start && T < tl.arr[k].end){ i = k; break; } i = k; }
+            const curRef = cvSegImage(tl.arr[i] && tl.arr[i].seg);
+            const prevRef = (i > 0) ? cvSegImage(tl.arr[i - 1].seg) : null;
+            const FADE = 0.6, trel = T - (tl.arr[i] ? tl.arr[i].start : 0);
+            if (prevRef && prevRef.img && curRef.img && prevRef.img !== curRef.img && trel < FADE && document.getElementById('cvVidMotion').checked){
+                drawOne(prevRef);
+                ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, trel / FADE)); drawOne(curRef); ctx.restore();
+                return true;
+            }
+            if (drawOne(curRef)) return true;
+        }
+        const prev = cvCtx, pw = CVW, ph = CVH; cvCtx = ctx; CVW = W; CVH = H; cvBreakingBg(); cvCtx = prev; CVW = pw; CVH = ph;
+        return false;
+    }
+    function cvVidActiveSeg(T){ const tl = cvSegTimeline(); for (const s of tl.arr){ if (T >= s.start && T < s.end) return s; } return tl.arr[tl.arr.length - 1] || null; }
+    function cvVidDrawAtT(ctx, W, H, T){
+        const isVid = cvVidBg(ctx, W, H, T);
+        const s = cvVidActiveSeg(T);
+        const trel = s ? (T - s.start) : T;
+        const segdur = s ? s.dur : 8;
+        const head = s ? s.seg.headline : '';
+        const src = s ? s.seg.source : '';
+        cvDrawBrkVideoOverlay(ctx, W, H, trel, segdur, document.getElementById('cvVidMotion').checked, head, src, isVid);
+    }
+    function cvSuggestSegBreaks(seg){
+        const raw = (seg.headline || '').replace(/\n+/g, ' ').trim(); if (!raw) return;
+        const sz = cvVidSizeObj();
+        cvCtx = cvVidCanvas.getContext('2d'); CVW = sz.W; CVH = sz.H;
+        const allBold = document.getElementById('cvAllBold').checked;
+        const mul = cvVidTextMul();
+        const toks = cvParseTokens(raw).filter(t => !t.br);
+        const f = cvWrapTokens(toks, 900, Math.round(80 * mul), Math.round(44 * mul), allBold, 6);
+        const rebuild = ln => ln.map(t => (t.accent ? '_' : '') + ((t.bold && !allBold) ? '*' : '') + t.text + ((t.bold && !allBold) ? '*' : '') + (t.accent ? '_' : '')).join(' ');
+        seg.headline = f.lines.map(rebuild).join('\n');
+    }
+    function cvVidPreviewStatic(){ if (!cvVidCanvas) return; cvVidDrawAtT(cvVidCtx, cvVidCanvas.width, cvVidCanvas.height, 1.4); }
+    function cvVidPreview(){ cvVidPreviewStatic(); }
+    function cvVidLoop(){
+        if (!cvVidState.playing) return;
+        const total = Math.max(0.1, cvSegTimeline().total);
+        let T = (performance.now() - cvVidClock) / 1000;
+        if (T >= total){ cvVidClock = performance.now(); T = 0; }
+        if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; const ts = cvVidState.start || 0; if (cvVideoEl.currentTime >= te) cvVideoEl.currentTime = ts; }
+        cvVidDrawAtT(cvVidCtx, cvVidCanvas.width, cvVidCanvas.height, T);
+        cvVidState.raf = requestAnimationFrame(cvVidLoop);
+    }
+
+    function cvVidUpdateTrim(){
+        let a = parseFloat(document.getElementById('cvVidStart').value) || 0;
+        let b = parseFloat(document.getElementById('cvVidEnd').value) || 0;
+        if (b < a + 0.3) { if (this && this.id === 'cvVidStart') a = Math.max(0, b - 0.3); else b = Math.min(cvVidState.dur, a + 0.3); document.getElementById('cvVidStart').value = a; document.getElementById('cvVidEnd').value = b; }
+        cvVidState.start = a; cvVidState.end = b;
+        document.getElementById('cvVidTrimInfo').textContent = cvFmt(a) + ' – ' + cvFmt(b) + '  (' + cvFmt(b - a) + ')';
+        if (!cvVidState.playing) cvVidPreviewStatic();
+    }
+
+    function cvVidSetSource(src){
+        cvVidSourceVal = src;
+        [['cvSrcVideo','video'],['cvSrcImage','image'],['cvSrcColor','color']].forEach(a => document.getElementById(a[0]).classList.toggle('active', a[1] === src));
+        const isVideo = src === 'video', isImage = src === 'image', isColor = src === 'color';
+        const choose = document.getElementById('cvVidChoose');
+        choose.hidden = isColor;
+        choose.textContent = isImage ? t('cv_vid_choose_img') : t('cv_vid_choose');
+        document.getElementById('cvVidImgCrop').hidden = !(isImage && cvVidImg);
+        if (typeof cvRenderSegs === 'function') cvRenderSegs();
+        document.getElementById('cvVidTrimBlock').hidden = !(isVideo && cvVidState.loaded);
+        if (typeof cvVidStop === 'function') cvVidStop();
+        cvVidPreviewStatic();
+    }
+    document.getElementById('cvSrcVideo').addEventListener('click', () => cvVidSetSource('video'));
+    document.getElementById('cvSrcImage').addEventListener('click', () => cvVidSetSource('image'));
+    document.getElementById('cvSrcColor').addEventListener('click', () => cvVidSetSource('color'));
+    document.getElementById('cvVidChoose').addEventListener('click', () => { if (cvVidSourceVal === 'image') document.getElementById('cvVidImgInput').click(); else document.getElementById('cvVidInput').click(); });
+    document.getElementById('cvVidImgCrop').addEventListener('click', () => { if (cvVidImg) openCvCrop('vid'); });
+    document.getElementById('cvVidImgInput').addEventListener('change', e => {
+        const file = e.target.files[0]; if (!file) return;
+        if (cvVidImgURL){ try { URL.revokeObjectURL(cvVidImgURL); } catch (er) {} }
+        cvVidImgURL = URL.createObjectURL(file);
+        const im = new Image();
+        im.onload = () => { cvVidImg = im; cvVidImgCrop = null; document.getElementById('cvVidName').textContent = file.name; document.getElementById('cvVidImgCrop').hidden = false; document.getElementById('cvVidPlay').disabled = false; document.getElementById('cvVidReplay').disabled = false; document.getElementById('cvVidExport').disabled = false; cvVidPreviewStatic(); };
+        im.src = cvVidImgURL;
+    });
+    document.getElementById('cvVidSize').addEventListener('change', () => { const s = cvVidSizeObj(); cvVidCanvas.width = s.W; cvVidCanvas.height = s.H; cvVidPreviewStatic(); });
+    document.getElementById('cvVidMotion').addEventListener('change', () => cvVidPreviewStatic());
+    document.getElementById('cvVidStart').addEventListener('input', cvVidUpdateTrim);
+    document.getElementById('cvVidEnd').addEventListener('input', cvVidUpdateTrim);
+    document.getElementById('cvVidVol').addEventListener('input', e => { document.getElementById('cvVidVolVal').textContent = e.target.value + '%'; });
+    document.getElementById('cvVidTextSize').addEventListener('input', e => { document.getElementById('cvVidTextVal').textContent = e.target.value + '%'; cvVidPreviewStatic(); });
+
+    document.getElementById('cvVidInput').addEventListener('change', e => {
+        const file = e.target.files[0]; if (!file) return;
+        if (cvVideoEl.src) { try { URL.revokeObjectURL(cvVideoEl.src); } catch (er) {} }
+        cvVideoEl.src = URL.createObjectURL(file);
+        cvVideoEl.load();
+        cvVideoEl.onloadedmetadata = () => {
+            cvVidState.loaded = true; cvVidState.dur = cvVideoEl.duration || 0;
+            cvVidState.start = 0; cvVidState.end = cvVidState.dur;
+            document.getElementById('cvVidName').textContent = file.name;
+            const tb = document.getElementById('cvVidTrimBlock'); if (tb) tb.hidden = false;
+            const st = document.getElementById('cvVidStart'), en = document.getElementById('cvVidEnd');
+            st.max = cvVidState.dur; en.max = cvVidState.dur; st.value = 0; en.value = cvVidState.dur;
+            cvVidUpdateTrim();
+            const s = cvVidSizeObj(); cvVidCanvas.width = s.W; cvVidCanvas.height = s.H;
+            cvVideoEl.currentTime = 0;
+            cvVideoEl.onseeked = () => { cvVidPreviewStatic(); cvVideoEl.onseeked = null; };
+        };
+    });
+
+    function cvVidStartPreview(){
+        cvVidClock = performance.now();
+        if (cvVidHasVideo()){ cvVideoEl.muted = true; cvVideoEl.loop = false; cvVideoEl.currentTime = cvVidState.start || 0; cvVideoEl.play().catch(() => {}); }
+        cvVidState.playing = true;
+        document.getElementById('cvVidPlay').textContent = t('cv_vid_pause');
+        cvVidLoop();
+    }
+    document.getElementById('cvVidPlay').addEventListener('click', () => { if (cvVidState.playing){ cvVidStop(); } else { cvVidStartPreview(); } });
+    document.getElementById('cvVidReplay').addEventListener('click', () => { cvVidClock = performance.now(); if (cvVidHasVideo()) cvVideoEl.currentTime = cvVidState.start || 0; if (!cvVidState.playing) cvVidStartPreview(); });
+
+    async function cvLoadAudioBuffer(fileUrl, ac){
+        if (cvAudioCache[fileUrl]) return cvAudioCache[fileUrl];
+        const resp = await fetch(fileUrl); if (!resp.ok) throw new Error('audio ' + resp.status);
+        const arr = await resp.arrayBuffer();
+        const buf = await ac.decodeAudioData(arr);
+        cvAudioCache[fileUrl] = buf; return buf;
+    }
+
+    async function cvVidExport(){
+        if (!cvVidCanvas.captureStream || !window.MediaRecorder){ cvVidStatus(t('cv_vid_unsup')); return; }
+        cvVidStop();
+        const sz = cvVidSizeObj();
+        const total = Math.max(0.5, cvSegTimeline().total);
+        const off = document.createElement('canvas'); off.width = sz.W; off.height = sz.H;
+        const octx = off.getContext('2d');
+        const vstream = off.captureStream(30);
+
+        const musicFile = document.getElementById('cvVidAudio').value;
+        const mode = document.getElementById('cvVidAudioMode').value;
+        const vol = (parseInt(document.getElementById('cvVidVol').value, 10) || 0) / 100;
+        let audioTracks = [];
+        try {
+            const needVideoAudio = cvVidHasVideo();
+            if ((needVideoAudio || musicFile) && !cvVidState.audioCtx){ cvVidState.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            if (needVideoAudio && cvVidState.audioCtx && !cvVidState.audioSrc){ cvVidState.audioSrc = cvVidState.audioCtx.createMediaElementSource(cvVideoEl); }
+            const ac = cvVidState.audioCtx;
+            if (ac){
+                if (ac.state === 'suspended') await ac.resume();
+                const dest = ac.createMediaStreamDestination();
+                if (needVideoAudio && cvVidState.audioSrc){ const vGain = ac.createGain(); try { cvVidState.audioSrc.disconnect(); } catch (e) {} cvVidState.audioSrc.connect(vGain); vGain.connect(dest); vGain.gain.value = (musicFile && mode === 'replace') ? 0.0 : 1.0; }
+                if (musicFile){
+                    let buf; try { buf = await cvLoadAudioBuffer(musicFile, ac); } catch (err) { cvVidStatus(t('cv_vid_audioerr')); document.getElementById('cvVidExport').disabled = false; return; }
+                    const mNode = ac.createBufferSource(); mNode.buffer = buf; mNode.loop = true; const mGain = ac.createGain(); mNode.connect(mGain); mGain.connect(dest);
+                    const startAc = ac.currentTime + 0.06;
+                    mGain.gain.setValueAtTime(vol, startAc); mGain.gain.setValueAtTime(vol, startAc + Math.max(0, total - 0.6)); mGain.gain.linearRampToValueAtTime(0.0001, startAc + total);
+                    mNode.start(startAc); mNode.stop(startAc + total + 0.05);
+                }
+                audioTracks = dest.stream.getAudioTracks();
+            }
+        } catch (e) { audioTracks = []; }
+
+        const combined = new MediaStream([...vstream.getVideoTracks(), ...audioTracks]);
+        const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+        let rec; try { rec = new MediaRecorder(combined, mime ? { mimeType: mime, videoBitsPerSecond: 9000000 } : {}); } catch (e) { cvVidStatus(t('cv_vid_unsup')); return; }
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop = () => {
+            const type = rec.mimeType || mime || 'video/webm';
+            const blob = new Blob(chunks, { type });
+            const ext = type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+            downloadBlob(blob, 'AA-Breaking-' + Date.now() + '.' + ext);
+            cvVidStatus(t('cv_vid_done'));
+            document.getElementById('cvVidExport').disabled = false;
+        };
+        document.getElementById('cvVidExport').disabled = true;
+        cvVidStatus(t('cv_vid_rec'));
+        cvVidClock = performance.now();
+        if (cvVidHasVideo()){ cvVideoEl.loop = false; cvVideoEl.muted = false; cvVideoEl.currentTime = cvVidState.start || 0; try { await cvVideoEl.play(); } catch (e) {} }
+        rec.start();
+        const step = () => {
+            const T = (performance.now() - cvVidClock) / 1000;
+            if (cvVidHasVideo()){ const te = cvVidState.end || cvVideoEl.duration || total; const ts = cvVidState.start || 0; if (cvVideoEl.currentTime >= te) cvVideoEl.currentTime = ts; }
+            octx.clearRect(0, 0, sz.W, sz.H);
+            cvVidDrawAtT(octx, sz.W, sz.H, Math.min(T, total));
+            cvVidStatus(t('cv_vid_rec') + ' ' + Math.min(100, Math.round(T / total * 100)) + '%');
+            if (T >= total){ try { rec.stop(); } catch (e) {} try { cvVideoEl.pause(); } catch (e) {} return; }
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+    document.getElementById('cvVidExport').addEventListener('click', cvVidExport);
+    cvRenderSegs();
+
+    /* ================= REELS tab — multi-clip playlist ================= */
+    const rlCanvas = document.getElementById('rlCanvas');
+    const rlCtx = rlCanvas.getContext('2d');
+    const rlTitleEl = document.getElementById('rlTitle');
+    const rlLocEl = document.getElementById('rlLoc');
+    const RL_BLUE = '#1D5FC4';
+    const RL_FADE = 0.5;
+    let rlItems = [];
+    const rlState = { mode:'video', playing:false, raf:0, clock:0, audioCtx:null };
+
+    function rlStatus(m){ const e = document.getElementById('rlStatus'); if (e) e.textContent = m || ''; }
+    function rlMul(){ return (parseInt(document.getElementById('rlTextSize').value, 10) || 100) / 100; }
+    function rlMaxWords(){ return rlState.mode === 'cover' ? 4 : 7; }
+    function rlSizeObj(){ const v = document.getElementById('rlSize').value; if (v === 'sq') return { W:1080, H:1080 }; if (v === 'fe') return { W:1080, H:1350 }; return { W:1080, H:1920 }; }
+    function rlTitleDur(){ return parseInt(document.getElementById('rlTitleDur').value, 10) || 5; }
+    function rlItemDur(it){ return it.type === 'image' ? (it.dur || 5) : Math.max(0.3, (it.end || 0) - (it.start || 0)); }
+    function rlTimeline(){ let ts = 0; const arr = []; rlItems.forEach(it => { const d = rlItemDur(it); arr.push({ start: ts, end: ts + d, dur: d, it }); ts += d; }); return { arr, total: ts }; }
+    function rlTotalDur(){ const t = rlTimeline().total; return t > 0 ? t : 10; }
+    function rlStop(){ rlState.playing = false; cancelAnimationFrame(rlState.raf); rlItems.forEach(it => { if (it.el){ try { it.el.pause(); } catch (e) {} it._playing = false; } }); const b = document.getElementById('rlPlay'); if (b) b.textContent = t('cv_vid_play'); }
+
+    function rlUpdateWords(){
+        const el = document.getElementById('rlWords'); if (!el) return;
+        const n = cvParseTokens(rlTitleEl.value).filter(x => !x.br).length;
+        const mx = rlMaxWords();
+        el.textContent = t('rl_words')(n, mx);
+        el.style.color = (n > 0 && n <= mx) ? '#059669' : '#d97706';
+    }
+    function rlFmt(s){ s = Math.max(0, s || 0); const m = Math.floor(s / 60), x = Math.floor(s % 60); return m + ':' + (x < 10 ? '0' : '') + x; }
+
+    /* ---------- playlist ---------- */
+    function rlRenderItems(){
+        const list = document.getElementById('rlItemList'); if (!list) return;
+        list.innerHTML = '';
+        rlItems.forEach((it, idx) => {
+            const row = document.createElement('div'); row.className = 'rl-item';
+            const head = document.createElement('div'); head.className = 'rl-item-head';
+            const nm = document.createElement('span'); nm.className = 'rl-item-name'; nm.textContent = (idx + 1) + '. ' + (it.name || '');
+            const du = document.createElement('span'); du.className = 'cv-seg-dur'; du.textContent = rlItemDur(it).toFixed(1) + 's';
+            head.appendChild(nm); head.appendChild(du);
+            const mk = (txt, fn, cls) => { const b = document.createElement('button'); b.className = 'cv-mini-btn ' + (cls || ''); b.style.marginTop = '0'; b.textContent = txt; b.addEventListener('click', fn); return b; };
+            head.appendChild(mk('↑', () => { if (idx > 0){ const a = rlItems.splice(idx, 1)[0]; rlItems.splice(idx - 1, 0, a); rlRenderItems(); rlPreview(); } }));
+            head.appendChild(mk('↓', () => { if (idx < rlItems.length - 1){ const a = rlItems.splice(idx, 1)[0]; rlItems.splice(idx + 1, 0, a); rlRenderItems(); rlPreview(); } }));
+            head.appendChild(mk('✕', () => { const a = rlItems.splice(idx, 1)[0]; if (a.url){ try { URL.revokeObjectURL(a.url); } catch (e) {} } rlRenderItems(); rlPreview(); }));
+            row.appendChild(head);
+
+            const ctrl = document.createElement('div');
+            if (it.type === 'image'){
+                ctrl.className = 'cv-slider-row';
+                const lb = document.createElement('span'); lb.className = 'cv-slim'; lb.textContent = t('rl_clip');
+                const sl = document.createElement('input'); sl.type = 'range'; sl.min = 2; sl.max = 15; sl.step = 0.5; sl.value = it.dur || 5; sl.style.flex = '1';
+                const vv = document.createElement('span'); vv.className = 'cv-slim'; vv.textContent = (it.dur || 5) + 's';
+                sl.addEventListener('input', () => { it.dur = parseFloat(sl.value); vv.textContent = it.dur + 's'; du.textContent = it.dur.toFixed(1) + 's'; rlUpdateTotal(); rlPreview(); });
+                ctrl.appendChild(lb); ctrl.appendChild(sl); ctrl.appendChild(vv);
+                row.appendChild(ctrl);
+                row.appendChild(mk(t('cv_vid_cropimg'), () => openCvCrop('reelitem', it)));
+            } else {
+                const info = document.createElement('div'); info.className = 'cv-slim'; info.style.textAlign = 'center';
+                const s1 = document.createElement('input'); s1.type = 'range'; s1.min = 0; s1.max = it.natDur || 1; s1.step = 0.05; s1.value = it.start || 0; s1.style.width = '100%';
+                const s2 = document.createElement('input'); s2.type = 'range'; s2.min = 0; s2.max = it.natDur || 1; s2.step = 0.05; s2.value = it.end || (it.natDur || 1); s2.style.width = '100%'; s2.style.marginTop = '4px';
+                const sync = () => {
+                    let a = parseFloat(s1.value), b = parseFloat(s2.value);
+                    if (b < a + 0.3) b = Math.min(it.natDur || 1, a + 0.3);
+                    it.start = a; it.end = b; s1.value = a; s2.value = b;
+                    info.textContent = rlFmt(a) + ' – ' + rlFmt(b) + ' (' + (b - a).toFixed(1) + 's)';
+                    du.textContent = rlItemDur(it).toFixed(1) + 's';
+                    rlUpdateTotal();
+                    if (it.el){ try { it.el.currentTime = a; } catch (e) {} }
+                };
+                s1.addEventListener('input', sync); s2.addEventListener('input', sync);
+                row.appendChild(s1); row.appendChild(s2); row.appendChild(info);
+                sync();
+            }
+            list.appendChild(row);
+        });
+        rlUpdateTotal();
+    }
+    function rlUpdateTotal(){ const el = document.getElementById('rlTotal'); if (el) el.textContent = t('rl_total')(rlItems.length, rlTimeline().total.toFixed(1)); }
+
+    document.getElementById('rlAddVideo').addEventListener('click', () => document.getElementById('rlVidInput').click());
+    document.getElementById('rlAddImage').addEventListener('click', () => document.getElementById('rlImgInput').click());
+    document.getElementById('rlVidInput').addEventListener('change', e => {
+        [...e.target.files].forEach(f => {
+            const url = URL.createObjectURL(f);
+            const el = document.createElement('video'); el.muted = true; el.playsInline = true; el.preload = 'auto'; el.src = url;
+            const it = { type:'video', name:f.name, url, el, start:0, end:5, natDur:5, crop:null };
+            el.onloadedmetadata = () => { it.natDur = el.duration || 5; it.end = it.natDur; el.currentTime = 0; rlRenderItems(); rlPreview(); };
+            rlItems.push(it);
+        });
+        e.target.value = '';
+    });
+    document.getElementById('rlImgInput').addEventListener('change', e => {
+        [...e.target.files].forEach(f => {
+            const url = URL.createObjectURL(f);
+            const im = new Image();
+            const it = { type:'image', name:f.name, url, img:null, dur:5, crop:null };
+            im.onload = () => { it.img = im; rlRenderItems(); rlPreview(); };
+            im.src = url;
+            rlItems.push(it);
+        });
+        e.target.value = '';
+    });
+
+    /* ---------- drawing ---------- */
+    function rlDrawItemBg(ctx, W, H, it){
+        let src = null, nw = 0, nh = 0;
+        if (it){
+            if (it.type === 'video' && it.el && it.el.videoWidth){ src = it.el; nw = it.el.videoWidth; nh = it.el.videoHeight; }
+            else if (it.type === 'image' && it.img){ src = it.img; nw = it.img.width; nh = it.img.height; }
+        }
+        if (!src){ ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H); return; }
+        let sx, sy, sw, sh;
+        if (it.crop){ sx = it.crop.sx; sy = it.crop.sy; sw = it.crop.sw; sh = it.crop.sh; }
+        else { const ir = nw / nh, tr = W / H; if (ir > tr){ sh = nh; sw = sh * tr; sx = (nw - sw) / 2; sy = 0; } else { sw = nw; sh = sw / tr; sx = 0; sy = (nh - sh) / 2; } }
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(src, sx, sy, sw, sh, 0, 0, W, H);
+    }
+    function rlBadge(ctx, W, text, alpha){
+        if (!text || alpha <= 0.01) return;
+        const fs = 36, padX = 22, bh = 58, r = 8, mx = 60, my = 60;
+        ctx.save(); ctx.globalAlpha = alpha;
+        ctx.font = '700 ' + fs + 'px HNArabic';
+        const tw = ctx.measureText(text).width, w = tw + padX * 2, x = W - mx - w, y = my;
+        const prev = cvCtx; cvCtx = ctx; cvRoundRect(x, y, w, bh, r); cvCtx = prev;
+        ctx.fillStyle = RL_BLUE; ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'middle';
+        ctx.fillText(text, x + w / 2, y + bh / 2 + 2);
+        ctx.restore();
+    }
+    function rlDrawTitle(ctx, W, H, alpha){
+        if (alpha <= 0.01) return;
+        const txt = (rlTitleEl.value || '').trim() || t('rl_sample');
+        const prev = cvCtx, pw = CVW, ph = CVH; cvCtx = ctx; CVW = W; CVH = H;
+        try {
+            const mul = rlMul();
+            const f = cvWrapTokens(cvParseTokens(txt), W - 150, Math.round(76 * mul), Math.round(40 * mul), true, 4);
+            const nL = Math.max(f.lines.length, 1);
+            const firstY = Math.round(H * 0.66) - (nL - 1) * f.lh;
+            ctx.save(); ctx.globalAlpha = alpha;
+            ctx.shadowColor = 'rgba(20,30,68,.62)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 2;
+            f.lines.forEach((ln, i) => cvDrawLineRightEdge(ln, W - 70, firstY + i * f.lh, f.fs, true));
+            ctx.restore();
+        } finally { cvCtx = prev; CVW = pw; CVH = ph; }
+    }
+    function rlDrawAt(ctx, W, H, T){
+        const tl = rlTimeline();
+        let idx = -1;
+        for (let k = 0; k < tl.arr.length; k++){ if (T >= tl.arr[k].start && T < tl.arr[k].end){ idx = k; break; } }
+        if (idx < 0) idx = tl.arr.length ? tl.arr.length - 1 : -1;
+        const cur = idx >= 0 ? tl.arr[idx] : null;
+        rlDrawItemBg(ctx, W, H, cur && cur.it);
+        const motion = document.getElementById('rlMotion').checked;
+        if (cur && motion && idx + 1 < tl.arr.length){
+            const tIn = T - (cur.end - RL_FADE);
+            if (tIn > 0){ ctx.save(); ctx.globalAlpha = Math.min(1, tIn / RL_FADE); rlDrawItemBg(ctx, W, H, tl.arr[idx + 1].it); ctx.restore(); }
+        }
+        let a = 1, ba = 1;
+        if (rlState.mode !== 'cover'){
+            const dur = rlTitleDur();
+            if (motion){
+                if (T < 0.45) a = T / 0.45;
+                else if (T > dur - 0.5 && T < dur) a = Math.max(0, (dur - T) / 0.5);
+                else if (T >= dur) a = 0;
+                ba = Math.max(0, Math.min(1, (T - 0.25) / 0.45));
+            } else { a = (T < dur) ? 1 : 0; }
+        }
+        rlDrawTitle(ctx, W, H, a);
+        rlBadge(ctx, W, (rlLocEl.value || '').trim(), ba);
+        if (cvLogo.complete && cvLogo.naturalWidth) ctx.drawImage(cvLogo, 51, H - 51 - 63, 63, 63);
+    }
+    function rlSyncMedia(T){
+        const tl = rlTimeline();
+        tl.arr.forEach(e => {
+            const it = e.it; if (it.type !== 'video' || !it.el) return;
+            const inRange = (T >= e.start - RL_FADE) && (T < e.end);
+            if (inRange){
+                if (!it._playing){ try { it.el.currentTime = (it.start || 0) + Math.max(0, T - e.start); } catch (er) {} it.el.play().catch(() => {}); it._playing = true; }
+                if (it.el.currentTime >= (it.end || it.natDur)) { try { it.el.currentTime = it.start || 0; } catch (er) {} }
+            } else if (it._playing){ try { it.el.pause(); } catch (er) {} it._playing = false; }
+        });
+    }
+    function rlPreview(){ const s = rlSizeObj(); if (rlCanvas.width !== s.W || rlCanvas.height !== s.H){ rlCanvas.width = s.W; rlCanvas.height = s.H; } rlDrawAt(rlCtx, rlCanvas.width, rlCanvas.height, rlState.mode === 'cover' ? 0 : 1.2); }
+    function rlLoop(){
+        if (!rlState.playing) return;
+        const total = Math.max(0.5, rlTimeline().total);
+        let T = (performance.now() - rlState.clock) / 1000;
+        if (T >= total){ rlState.clock = performance.now(); T = 0; rlItems.forEach(it => { if (it.el){ try { it.el.pause(); } catch (e) {} it._playing = false; } }); }
+        rlSyncMedia(T);
+        rlDrawAt(rlCtx, rlCanvas.width, rlCanvas.height, T);
+        rlState.raf = requestAnimationFrame(rlLoop);
+    }
+
+    /* ---------- modes ---------- */
+    function rlApplyMode(){
+        const cover = rlState.mode === 'cover';
+        document.getElementById('rlModeVideo').classList.toggle('active', !cover);
+        document.getElementById('rlModeCover').classList.toggle('active', cover);
+        document.getElementById('rlAudioSec').hidden = cover;
+        document.getElementById('rlPlayRow').hidden = cover;
+        document.getElementById('rlTitleDurRow').hidden = cover;
+        document.getElementById('rlMotionRow').hidden = cover;
+        const sel = document.getElementById('rlSize'), cur = sel.value;
+        sel.innerHTML = '';
+        const opts = cover ? [['fe','Feed · 1080×1350'],['sq','X · 1080×1080'],['reel','Story · 1080×1920']]
+                           : [['reel','Reels/Stories · 1080×1920'],['sq','X · 1080×1080'],['fe','Feed · 1080×1350']];
+        opts.forEach(o => { const el = document.createElement('option'); el.value = o[0]; el.textContent = o[1]; sel.appendChild(el); });
+        if (opts.some(o => o[0] === cur)) sel.value = cur;
+        document.getElementById('rlExport').textContent = cover ? t('rl_export_c') : t('rl_export_v');
+        rlStop(); rlUpdateWords(); rlPreview();
+    }
+    document.getElementById('rlModeVideo').addEventListener('click', () => { rlState.mode = 'video'; rlApplyMode(); });
+    document.getElementById('rlModeCover').addEventListener('click', () => { rlState.mode = 'cover'; rlApplyMode(); });
+    rlTitleEl.addEventListener('input', () => { rlUpdateWords(); rlPreview(); });
+    rlLocEl.addEventListener('input', rlPreview);
+    document.getElementById('rlTextSize').addEventListener('input', e => { document.getElementById('rlTextVal').textContent = e.target.value + '%'; rlPreview(); });
+    document.getElementById('rlTitleDur').addEventListener('input', e => { document.getElementById('rlDurVal').textContent = e.target.value + 's'; });
+    document.getElementById('rlSize').addEventListener('change', rlPreview);
+    document.getElementById('rlMotion').addEventListener('change', rlPreview);
+    document.getElementById('rlVol').addEventListener('input', e => { document.getElementById('rlVolVal').textContent = e.target.value + '%'; });
+    document.getElementById('rlSuggest').addEventListener('click', () => {
+        const raw = rlTitleEl.value.replace(/\n+/g, ' ').trim(); if (!raw) return;
+        const s = rlSizeObj(); cvCtx = rlCtx; CVW = s.W; CVH = s.H;
+        const f = cvWrapTokens(cvParseTokens(raw).filter(x => !x.br), s.W - 150, Math.round(76 * rlMul()), Math.round(40 * rlMul()), true, 4);
+        rlTitleEl.value = f.lines.map(ln => ln.map(x => (x.accent ? '_' : '') + x.text + (x.accent ? '_' : '')).join(' ')).join('\n');
+        rlUpdateWords(); rlPreview();
+    });
+    function rlStartPlay(){ rlState.clock = performance.now(); rlState.playing = true; document.getElementById('rlPlay').textContent = t('cv_vid_pause'); rlLoop(); }
+    document.getElementById('rlPlay').addEventListener('click', () => { if (rlState.playing) rlStop(); else rlStartPlay(); });
+    document.getElementById('rlReplay').addEventListener('click', () => { rlStop(); rlStartPlay(); });
+
+    /* ---------- export ---------- */
+    async function rlExport(){
+        const s = rlSizeObj();
+        if (rlState.mode === 'cover'){
+            const off = document.createElement('canvas'); off.width = s.W; off.height = s.H;
+            rlDrawAt(off.getContext('2d'), s.W, s.H, 0);
+            off.toBlob(b => { downloadBlob(b, 'AA-Cover-' + Date.now() + '.png'); rlStatus(t('rl_done_c')); }, 'image/png', 0.95);
+            return;
+        }
+        if (!rlItems.length){ rlStatus(t('rl_needclip')); return; }
+        if (!rlCanvas.captureStream || !window.MediaRecorder){ rlStatus(t('cv_vid_unsup')); return; }
+        rlStop();
+        const total = Math.max(0.5, rlTimeline().total);
+        const off = document.createElement('canvas'); off.width = s.W; off.height = s.H;
+        const octx = off.getContext('2d');
+        const vstream = off.captureStream(30);
+        const musicFile = document.getElementById('rlAudio').value;
+        const vol = (parseInt(document.getElementById('rlVol').value, 10) || 0) / 100;
+        let audioTracks = [];
+        try {
+            if (musicFile){
+                if (!rlState.audioCtx) rlState.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const ac = rlState.audioCtx;
+                if (ac.state === 'suspended') await ac.resume();
+                const dest = ac.createMediaStreamDestination();
+                let buf; try { buf = await cvLoadAudioBuffer(musicFile, ac); } catch (err) { rlStatus(t('cv_vid_audioerr')); return; }
+                const n = ac.createBufferSource(); n.buffer = buf; n.loop = true; const g = ac.createGain(); n.connect(g); g.connect(dest);
+                const st = ac.currentTime + 0.06;
+                g.gain.setValueAtTime(vol, st); g.gain.setValueAtTime(vol, st + Math.max(0, total - 0.6)); g.gain.linearRampToValueAtTime(0.0001, st + total);
+                n.start(st); n.stop(st + total + 0.05);
+                audioTracks = dest.stream.getAudioTracks();
+            }
+        } catch (e) { audioTracks = []; }
+        const combined = new MediaStream([...vstream.getVideoTracks(), ...audioTracks]);
+        const mime = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+        let rec; try { rec = new MediaRecorder(combined, mime ? { mimeType: mime, videoBitsPerSecond: 9000000 } : {}); } catch (e) { rlStatus(t('cv_vid_unsup')); return; }
+        const chunks = [];
+        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+        rec.onstop = () => {
+            const type = rec.mimeType || mime || 'video/webm';
+            const ext = type.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+            downloadBlob(new Blob(chunks, { type }), 'AA-Reel-' + Date.now() + '.' + ext);
+            rlStatus(t('cv_vid_done')); document.getElementById('rlExport').disabled = false;
+            rlItems.forEach(it => { if (it.el){ try { it.el.pause(); } catch (e) {} it._playing = false; } });
+        };
+        document.getElementById('rlExport').disabled = true;
+        rlStatus(t('cv_vid_rec'));
+        const clock = performance.now();
+        rec.start();
+        const step = () => {
+            const T = (performance.now() - clock) / 1000;
+            rlSyncMedia(Math.min(T, total));
+            octx.clearRect(0, 0, s.W, s.H);
+            rlDrawAt(octx, s.W, s.H, Math.min(T, total));
+            rlStatus(t('cv_vid_rec') + ' ' + Math.min(100, Math.round(T / total * 100)) + '%');
+            if (T >= total){ try { rec.stop(); } catch (e) {} return; }
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+    document.getElementById('rlExport').addEventListener('click', rlExport);
+    function rlPopulateAudio(){
+        const sel = document.getElementById('rlAudio'); if (!sel) return;
+        sel.innerHTML = '';
+        const none = document.createElement('option'); none.value = ''; none.textContent = t('cv_vid_none'); sel.appendChild(none);
+        AUDIO_TRACKS.forEach(a => { const o = document.createElement('option'); o.value = a.file; o.textContent = a.label; sel.appendChild(o); });
+    }
+    rlPopulateAudio(); rlRenderItems(); rlApplyMode();
+
+    ensureLogos();
+    applyLang();
+    </script>
+</body>
+
+</html>
