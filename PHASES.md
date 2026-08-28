@@ -2,8 +2,8 @@
 
 > ملف حيّ. يُحدَّث في نهاية كل جلسة عمل. الحقول: `☐` لم يبدأ · `◐` جارٍ · `☑` مكتمل.
 
-**آخر تحديث:** 2026-08-28 — المرحلة 1، الخطوة الأولى: البنية + طبقة النص. workspace pnpm يعمل، `parseTokens` و `Measurer` و `wrapAlternating` و `layoutBalanced` منقولة من `reference/aa-media-kit.html` بلا `ctx` عام. 21 اختبار vitest أخضر. فحص نقاء المحرك آلي (يفشل عند `document/window/localStorage` أو `let/var` على مستوى الوحدة).
-**المرحلة الحالية:** 1 — طبقة النص مكتملة. لم تُنقل بعد: BiDi، الطبقات، حل `brand.*`، تحميل الخطوط، لقطات مرجعية، `renderFrame` الموحّد.
+**آخر تحديث:** 2026-08-28 — المرحلة 1، خطوة ثالثة: `DEFAULT_BRAND` مُصدَّر رسمياً من `packages/shared` (هوية محايدة رمادية، IBM Plex Sans Arabic، بلا شعار) — `TEST_BRAND` محذوف، الاختبارات تستورده مباشرة. طبقة تحميل الخطوط: `FontLoader` قابل للحقن (`createBrowserFontLoader` يستقبل `FontFaceSet` من الاستدعاء، `createManualFontLoader` للاختبار)، مع `createGatedMeasurer` يرمي قبل جاهزية الخط لتنفيذ ADR-006. اختبار الأقواس على حدود المقاطع يوثّق D-01. 56 اختبار vitest أخضر. فحص النقاء آلي.
+**المرحلة الحالية:** 1 — طبقة النص + BiDi + رسم السطر + تحميل الخطوط جاهز. لم تُنقل بعد: الطبقات، حل `brand.*`، `detectFontCaps`، لقطات مرجعية، `renderFrame` الموحّد.
 **الحالة العامة:** كود المنتج بدأ. الأداة القديمة `reference/aa-media-kit.html` تعمل مستقلة عن المحرك الجديد.
 
 ---
@@ -62,19 +62,42 @@
 - ☑ `Measurer` — واجهة قابلة للحقن: `createCanvasMeasurer(ctx, brand)` للإنتاج، `createSyntheticMeasurer()` للاختبار
 - ☑ `wrapAlternating` — من `cvWrapTokens`، `shortRatio` و `lineHeightRatio` وسيطان
 - ☑ `layoutBalanced` — من `cvLayoutHeadline`، `measure` يُمرَّر
-- ☐ `drawLineRTL` + `drawLineCentered` — لاحقاً (لم تُنقل في هذه الجلسة، كما طُلب)
+- ☑ `drawLineRTL` + `drawLineCentered` — من `cvDrawLineRightEdge` و `cvDrawLine`. `CanvasDrawContext` واجهة أدنى (تعمل مع Canvas في المتصفح و skia-canvas في Node بلا `lib.dom`). كلتا الدالتين تُعيدان `{width, accentFrom, accentTo}` — حتى RTL تحسب حدود التمييز الآن (الأصل لم يفعل، مواصفة 05 تطلبها)
+- ☑ `mock-ctx` — يسجّل كل نداء `fillText` بحالته وقت الرسم (font/fillStyle/textAlign/direction/textBaseline)، بلا Canvas حقيقي. للاختبار فقط
 - ☑ فحص نقاء آلي (`scripts/check-engine-purity.mjs`): يمنع `document/window/localStorage/navigator/self/globalThis` و `let/var` على مستوى الوحدة
 
 ## BiDi (إلزامي قبل أول عرض)
-- ☐ `splitBidiRuns(text): Run[]`
-- ☐ `orderRuns(runs, base='rtl')`
-- ☐ `mapNumerals(text, 'arabic'|'latin')`
+- ☑ `splitBidiRuns(text): Run[]` — تصنيف Unicode مبسّط، المحايدات تلتصق بالمقطع السابق
+- ☑ `orderRuns(runs, base='rtl')` — يعكس ترتيب الكلمات داخل مقاطع LTR فقط (لا حروف الكلمة)، الفراغات المحيطية محفوظة
+- ☑ `mapNumerals(text, 'arabic'|'latin')` — grapheme واحد بواحد، لا كسر للقياس
+- ☑ `preprocessBidi` — دالة تركيبية تُشغَّل **قبل `parseTokens`** (طبقة لا حقن): mapNumerals → splitBidiRuns → orderRuns → دمج
+- ☑ اختبار قبول: «مؤتمر Brussels للسلام» يعطي fillText بالترتيب `[مؤتمر, Brussels, للسلام]` والإحداثيات x تنازلية من اليمين
+- ☑ توثيق سلوك الأقواس على حدود المقاطع (اختبار «تقرير (Reuters) من غزة») — الحد المعروف مسجَّل في D-01
+- ☐ ربط `preprocessBidi` بالواجهة الحالية (نقطة الدخول الوحيدة قبل `parseTokens`) — يُنجَز مع خطوة الربط أدناه
+
+### قيد ترتيب استدعاء `preprocessBidi` — لا يُخالَف
+
+**`preprocessBidi` تُستدعى على النص الخام قبل `parseTokens` وقبل أي لف
+(`wrapAlternating` / `layoutBalanced`).**
+
+- **السبب:** الدالة تعمل على مقاطع نصية متجاورة وتعكس ترتيب كلمات مقاطع
+  LTR داخل السياق RTL. اللف يقسّم النص إلى أسطر مستقلة قد يقع بعضها كاملاً
+  داخل مقطع LTR واحد؛ استدعاء `preprocessBidi` على كل سطر منفصلاً يعكس
+  ترتيب كلمات ذلك السطر بمعزل عن المقطع الأصلي، فتصبح كلمة كانت الأخيرة
+  في السطر الأول بلا صلة بموقع كلمات السطر الثاني. يكسر ترتيب الأسطر
+  **بشكل لا يُصلح** — لا معلومات كافية بعد اللف لاستعادة النية الأصلية.
+- **الترتيب الوحيد الصحيح:** `text → mapNumerals → splitBidiRuns →
+  orderRuns → join → parseTokens → wrap*` — واحدة، بهذا التسلسل، ولا
+  استدعاء ثانٍ لأي دالة BiDi بعد `parseTokens`.
+- **الأثر على الحقن:** الواجهة الحالية تستدعي `preprocessBidi` مرة عند
+  تغيّر النص لا في مسار الرسم. أي مسار جديد (طبقة، محرّر، رندر خادم)
+  يمرّ بنفس نقطة الدخول.
 
 ## الهوية
-- ☐ `BrandKit` كامل من القيم المستخرجة (ملف 03)
-- ☐ `DEFAULT_BRAND` محايد تماماً — اختبار صحة الفصل
+- ☑ `BrandKit` كامل من القيم المستخرجة (ملف 03) — `packages/shared/src/brand-kit.ts`
+- ☑ `DEFAULT_BRAND` محايد تماماً — `packages/shared/src/default-brand.ts` (رمادي، IBM Plex Sans Arabic، بلا شعار). اختبار صحة الفصل نجح: الاختبارات تحقن هوية بديلة بتغيير `colors.text` وتتحقّق أن fillStyle تبعها
 - ☐ `resolve(brand, path)` لحل مراجع `brand.*`
-- ☐ `loadBrandFonts` عبر `FontFace` + **انتظار الجاهزية قبل أي `measureText`**
+- ☑ `loadBrandFonts` عبر `FontFaceSet` — `FontLoader` قابل للحقن على نمط Measurer، مع `createGatedMeasurer` يرمي إن استُدعي القياس قبل الجاهزية (تنفيذ ADR-006 اختبارياً)
 - ☐ `detectFontCaps` عند رفع الخط
 
 ## الطبقات
@@ -341,3 +364,18 @@
 | — | **الخط الزمني الكامل من الإصدار الأول** | قرار المالك. يُلغي القاعدة 9 السابقة. +6–8 أسابيع، مرحلة 3.7، ملف 10. التنفيذ بمحرّك حركة عربي لا نسخة من محرّر أجنبي |
 | — | فك ترميز مسبق + قرص 500GB | الخط الزمني يعيد القرص جزئياً إلى المعادلة (ADR-008 يبقى للتجميع النهائي). `edit` بعامل واحد |
 | — | المعاينة بجودة أقل أثناء التشغيل | أربعة مسارات بستين إطاراً تتلعثم على أجهزة متوسطة. المطابقة البكسلية عند التوقف |
+| 2026-08-28 | BiDi طبقة **قبل** `parseTokens` لا داخله | الحل داخل المفسّر يخلط الطباعة بالنحو ويكسر نقاءه. الطبقة الخارجية تُعيد سلسلة نصية جاهزة؛ كلفتها استدعاء إضافي فقط |
+| 2026-08-28 | `CanvasDrawContext` واجهة أدنى لا `CanvasRenderingContext2D` | نفس الكود يعمل في المتصفح و skia-canvas في Node بلا `lib.dom` في `packages/engine`. يبقي المحرك محايداً بيئياً |
+
+---
+
+# دَين تقني — تحت المراقبة
+
+| # | البند | الأثر | متى يُحسم |
+|---|---|---|---|
+| D-01 | `splitBidiRuns` تصنيف مبسّط لا كامل — لا يعالج AL/EN/ES/CS/ON بالتفصيل ولا mirroring للأقواس | سيناريو نادر: علامة ترقيم في حدود المقاطع قد تلتصق بالجهة الخطأ | عند ورود أول شكوى بصرية من العميل الأول أو عند دمج نموذج التشكيل |
+| D-02 | `orderRuns` يعكس الكلمات، لا يبني شجرة embedding levels كاملة | كلمة LTR واحدة تظل بلا عكس (صحيح). سلسلتان LTR متجاورتان لا تحدثان في الأخبار العربية عملياً | مع الكشيدة (المرحلة 3.5) — نراجع كامل مسار النص معاً |
+| D-03 | `preprocessBidi` غير مربوط بمسار الأداة الحالية بعد | لا أثر — الأداة القديمة تعمل بمسارها؛ الربط في خطوة «الربط» ضمن نفس المرحلة 1 | ضمن بوابة المرحلة 1 |
+| D-04 | `mock-ctx.measureText` يُعيد `text.length * 5` (كافٍ لتلبية العقد فقط) | لا اختبار يعتمد عليه — القياس يأتي من `createSyntheticMeasurer`. حماية من الاستخدام الخاطئ مستقبلاً | إن ظهر اختبار يعتمد `ctx.measureText` مباشرة نستبدله بمقياس صناعي مطابق |
+| D-05 | `mock-ctx` لا يغطي `save/restore/translate/rotate/globalAlpha/fillRect` — فقط `fillText`+حالة النص | لا رسم للطبقات بعد؛ عند نقل `image/solid/badge` نحتاج توسيع الـmock أو الانتقال إلى بيئة اختبار ثانية | مع بداية طبقة الطبقات (المرحلة 1 لاحقاً) |
+| D-06 | ~~`TEST_BRAND` مكرَّر جزئياً مع `DEFAULT_BRAND`~~ | ~~ازدواجية بسيطة الآن~~ | **مُحسَم 2026-08-28:** `DEFAULT_BRAND` مُصدَّر من `packages/shared`، `TEST_BRAND` محذوف، الاختبارات تستورده مباشرة |

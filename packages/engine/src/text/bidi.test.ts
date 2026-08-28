@@ -129,3 +129,48 @@ describe('preprocessBidi — end-to-end', () => {
     expect(texts).not.toContain('2026');
   });
 });
+
+// ── سلوك معروف الحد: الأقواس على حدود المقاطع (D-01) ────
+//
+// «تقرير (Reuters) من غزة»:
+//   splitBidiRuns يصنّف كل قوس كمحايد يلتصق بالمقطع السابق.
+//   ⇒ '(' يبقى مع مقطع RTL «تقرير »، فيصير المقطع «تقرير (».
+//   ⇒ ')' يبقى مع مقطع LTR «Reuters»، فيصير «Reuters) ».
+//   المقطعان الناتجان غير متماثلين حول اسم Reuters؛ التطبيق الكامل
+//   لـUnicode BiDi يطابق الأقواس ويعكسها (mirror) عند حدود اتجاه معاكس.
+//   نحن لا نفعل ذلك بعد — D-01 يوثّق هذا التبسيط.
+//
+// الاختبار أدناه **يوثّق** المخرج الحالي لا يبرّره. عند تحسين D-01
+// سيفشل ويُحدَّث حينها لتصبح مطابقة الأقواس بالسلوك المتوقّع الجديد.
+describe('preprocessBidi — الأقواس على حدود المقاطع (D-01)', () => {
+  it('يُبقي «(» مع المقطع العربي السابق و«)» مع Reuters', () => {
+    const runs = splitBidiRuns('تقرير (Reuters) من غزة');
+    expect(runs.map((r) => ({ text: r.text, dir: r.dir }))).toEqual([
+      { text: 'تقرير (', dir: 'rtl' },
+      { text: 'Reuters) ', dir: 'ltr' },
+      { text: 'من غزة', dir: 'rtl' },
+    ]);
+  });
+
+  it('orderRuns لا يفصل القوسين عن مقطعيهما', () => {
+    // كلمة LTR وحيدة «Reuters)» ⇒ لا يوجد ما يُعكس داخل المقطع.
+    // القوس المفتوح يبقى ملتصقاً بالنص العربي قبله.
+    const out = preprocessBidi('تقرير (Reuters) من غزة');
+    expect(out).toBe('تقرير (Reuters) من غزة');
+  });
+
+  it('parseTokens يعطي كلمة واحدة «(Reuters)» ملتصقاً بالقوسين', () => {
+    // parseTokens يفصل على الفراغ فقط، فالقوسان جزء من التوكن.
+    const out = preprocessBidi('تقرير (Reuters) من غزة');
+    const tokens = parseTokens(out).filter((t) => 'text' in t);
+    expect(tokens.map((t) => (t as { text: string }).text)).toEqual([
+      'تقرير',
+      '(Reuters)',
+      'من',
+      'غزة',
+    ]);
+    // ملاحظة: البصريات على Canvas مع direction='rtl' قد تُظهر القوسين
+    // في الجهة الخطأ بصرياً حول Reuters. يُعالَج بتصنيف BiDi كامل
+    // (mirroring + paren-matching) — انظر D-01 في PHASES.md.
+  });
+});

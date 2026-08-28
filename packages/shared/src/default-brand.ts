@@ -1,17 +1,30 @@
-// نموذج BrandKit للاختبارات فقط — لا يُصدَّر من الحزمة.
-// قيمه محايدة (رمادية/بيضاء بسيطة) — الغرض تغذية توقيعات الدوال، لا محاكاة هوية.
+// DEFAULT_BRAND — الهوية الافتراضية المحايدة تماماً.
+// المرجع: docs/03-brand-kit-spec.md §«الهوية الافتراضية».
+//
+// الغرض: يعمل المنتج من أول ثانية قبل رفع العميل أي شيء.
+// اختبار صحة الفصل: إن احتاج المحرك قيمة من هوية معيّنة لكي يعمل،
+// فالفصل لم يكتمل.
+//
+// قيود التصميم:
+//   • ألوان رمادية بدرجات متمايزة (لا مطابقة لأي هوية عميل).
+//   • خط مفتوح: IBM Plex Sans Arabic — عبر Google Fonts أو Local.
+//   • لا شعار (url فارغ) — حراسات الرسم تتخطاه.
+//   • كل الأبعاد والحركة مساوية لقيم المواصفة (المرحلة 0 نقلتها من الأصل
+//     كقيم عامّة، ليست ملكاً لهوية بعينها).
+//
+// **تستورده الاختبارات مباشرة.** لا نسخة اختبار موازية.
 
-import type { BrandKit } from '@pf-mediakit/shared';
+import type { BrandKit } from './brand-kit.js';
 
-export const TEST_BRAND: BrandKit = {
-  id: 'test',
-  name: 'Test',
+export const DEFAULT_BRAND: BrandKit = {
+  id: 'default',
+  name: 'Default',
   version: 1,
   direction: 'rtl',
   locale: 'ar',
   fonts: {
     primary: {
-      family: 'TestFont',
+      family: 'IBM Plex Sans Arabic',
       source: 'builtin',
       licenseAck: true,
       weights: {
@@ -29,14 +42,14 @@ export const TEST_BRAND: BrandKit = {
     },
   },
   colors: {
-    text: '#FFFFFF',
-    accent: '#B1876A',
-    urgentBadge: '#C1012F',
-    urgentBg: '#C82626',
-    urgentBgTint: '#C21C1C',
-    locationBadge: '#1D5FC4',
-    surface: '#111111',
-    placeholder: ['#474C55', '#15171B'],
+    text: '#F5F5F5',
+    accent: '#B8B8B8',
+    urgentBadge: '#404040',
+    urgentBg: '#333333',
+    urgentBgTint: '#2A2A2A',
+    locationBadge: '#4A4A4A',
+    surface: '#1A1A1A',
+    placeholder: ['#3A3A3A', '#1A1A1A'],
   },
   logo: {
     url: '',

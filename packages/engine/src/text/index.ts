@@ -23,3 +23,13 @@ export {
   type BidiDir,
   type PreprocessBidiOptions,
 } from './bidi.js';
+export {
+  createBrowserFontLoader,
+  createManualFontLoader,
+  createGatedMeasurer,
+  fontStringsForBrand,
+  type FontLoader,
+  type FontLoadResult,
+  type FontFaceSetLike,
+  type ManualFontLoader,
+} from './font-loader.js';

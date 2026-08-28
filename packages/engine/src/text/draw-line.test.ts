@@ -4,7 +4,7 @@ import { preprocessBidi } from './bidi.js';
 import { createSyntheticMeasurer } from './measurer.js';
 import { drawLineRTL, drawLineCentered } from './draw-line.js';
 import { createMockCtx } from './mock-ctx.js';
-import { TEST_BRAND } from './test-brand.js';
+import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import type { BrandKit } from '@pf-mediakit/shared';
 
 const measure = createSyntheticMeasurer();
@@ -13,7 +13,7 @@ describe('drawLineRTL', () => {
   it('يضبط الاتجاه والمحاذاة والقاعدة إلى RTL/right/alphabetic', () => {
     const ctx = createMockCtx();
     const toks = parseTokens('مرحباً');
-    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     const call = ctx.fillTextCalls[0]!;
     expect(call.textAlign).toBe('right');
@@ -25,24 +25,30 @@ describe('drawLineRTL', () => {
     const toks = parseTokens('مرحباً');
 
     const ctxA = createMockCtx();
-    drawLineRTL(ctxA, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    drawLineRTL(ctxA, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     const custom: BrandKit = {
-      ...TEST_BRAND,
-      colors: { ...TEST_BRAND.colors, text: '#123456' },
+      ...DEFAULT_BRAND,
+      colors: { ...DEFAULT_BRAND.colors, text: '#123456' },
     };
     const ctxB = createMockCtx();
     drawLineRTL(ctxB, measure, toks, 1000, 200, 80, false, custom);
 
-    expect(ctxA.fillTextCalls[0]!.fillStyle).toBe('#FFFFFF');
+    // القيمة الأولى تخرج من DEFAULT_BRAND.colors.text — لا تُثبَّت في الاختبار
+    // كي يبقى الاختبار توثيقاً للفصل، لا لقيمة محايدة معيّنة.
+    expect(ctxA.fillTextCalls[0]!.fillStyle).toBe(DEFAULT_BRAND.colors.text);
     expect(ctxB.fillTextCalls[0]!.fillStyle).toBe('#123456');
+    // تأكيد الفصل: القيمتان مختلفتان.
+    expect(ctxA.fillTextCalls[0]!.fillStyle).not.toBe(
+      ctxB.fillTextCalls[0]!.fillStyle
+    );
   });
 
   it('يرسم الكلمات من اليمين إلى اليسار (x تنازلي)', () => {
     const ctx = createMockCtx();
     // مرّر التوكنز جاهزة — parseTokens يعطي الترتيب الرسمي RTL.
     const toks = parseTokens('واحد اثنان ثلاثة');
-    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     const xs = ctx.fillTextCalls.map((c) => c.x);
     // يجب أن يبدأ من rightX تماماً، ثم ينزل يساراً.
@@ -55,7 +61,7 @@ describe('drawLineRTL', () => {
     const ctx = createMockCtx();
     const processed = preprocessBidi('مؤتمر Brussels للسلام');
     const toks = parseTokens(processed);
-    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     const texts = ctx.fillTextCalls.map((c) => c.text);
     expect(texts).toEqual(['مؤتمر', 'Brussels', 'للسلام']);
@@ -71,7 +77,7 @@ describe('drawLineRTL', () => {
     const ctx = createMockCtx();
     const processed = preprocessBidi('التقرير 2026 خطير');
     const toks = parseTokens(processed);
-    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     const texts = ctx.fillTextCalls.map((c) => c.text);
     expect(texts).toContain('2026');
@@ -87,7 +93,7 @@ describe('drawLineRTL', () => {
     //   x -= 40 + 20 = 60 → x=940 لـ«ب» (تشغل [900, 940]).
     //   x -= 60 → x=880 لـ«ج».
     const toks = parseTokens('أ _ب_ ج');
-    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     expect(r.accentFrom).toBe(900);
     expect(r.accentTo).toBe(940);
@@ -97,7 +103,7 @@ describe('drawLineRTL', () => {
     const ctx = createMockCtx();
     // «_أ_ _ب_» — كلتاهما مميّزتان.
     const toks = parseTokens('_أ_ _ب_');
-    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
 
     // «أ» يشغل [960,1000]، «ب» يشغل [900,940]. التمييز الكلي: [900,1000].
     expect(r.accentFrom).toBe(900);
@@ -107,14 +113,14 @@ describe('drawLineRTL', () => {
   it('لا كلمة مميّزة ⇒ accentFrom/accentTo = null', () => {
     const ctx = createMockCtx();
     const toks = parseTokens('أ ب ج');
-    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, TEST_BRAND);
+    const r = drawLineRTL(ctx, measure, toks, 1000, 200, 80, false, DEFAULT_BRAND);
     expect(r.accentFrom).toBeNull();
     expect(r.accentTo).toBeNull();
   });
 
   it('توكنز فارغة ⇒ عرض صفر وحدود null', () => {
     const ctx = createMockCtx();
-    const r = drawLineRTL(ctx, measure, [], 1000, 200, 80, false, TEST_BRAND);
+    const r = drawLineRTL(ctx, measure, [], 1000, 200, 80, false, DEFAULT_BRAND);
     expect(r.width).toBe(0);
     expect(r.accentFrom).toBeNull();
     expect(r.accentTo).toBeNull();
@@ -137,7 +143,7 @@ describe('drawLineCentered', () => {
       200,
       80,
       false,
-      TEST_BRAND
+      DEFAULT_BRAND
     );
 
     expect(r.width).toBe(160);
@@ -149,8 +155,8 @@ describe('drawLineCentered', () => {
   it('يستعمل brand.colors.text', () => {
     const ctx = createMockCtx();
     const toks = parseTokens('عنوان');
-    drawLineCentered(ctx, measure, toks, 500, 200, 80, false, TEST_BRAND);
-    expect(ctx.fillTextCalls[0]!.fillStyle).toBe('#FFFFFF');
+    drawLineCentered(ctx, measure, toks, 500, 200, 80, false, DEFAULT_BRAND);
+    expect(ctx.fillTextCalls[0]!.fillStyle).toBe(DEFAULT_BRAND.colors.text);
   });
 
   it('حدود التمييز محسوبة حول centerX', () => {
@@ -165,7 +171,7 @@ describe('drawLineCentered', () => {
       200,
       80,
       false,
-      TEST_BRAND
+      DEFAULT_BRAND
     );
     expect(r.accentFrom).toBe(480);
     expect(r.accentTo).toBe(520);
