@@ -2,8 +2,8 @@
 
 > ملف حيّ. يُحدَّث في نهاية كل جلسة عمل. الحقول: `☐` لم يبدأ · `◐` جارٍ · `☑` مكتمل.
 
-**آخر تحديث:** 2026-08-28 — المرحلة 1، خطوة ثالثة: `DEFAULT_BRAND` مُصدَّر رسمياً من `packages/shared` (هوية محايدة رمادية، IBM Plex Sans Arabic، بلا شعار) — `TEST_BRAND` محذوف، الاختبارات تستورده مباشرة. طبقة تحميل الخطوط: `FontLoader` قابل للحقن (`createBrowserFontLoader` يستقبل `FontFaceSet` من الاستدعاء، `createManualFontLoader` للاختبار)، مع `createGatedMeasurer` يرمي قبل جاهزية الخط لتنفيذ ADR-006. اختبار الأقواس على حدود المقاطع يوثّق D-01. 56 اختبار vitest أخضر. فحص النقاء آلي.
-**المرحلة الحالية:** 1 — طبقة النص + BiDi + رسم السطر + تحميل الخطوط جاهز. لم تُنقل بعد: الطبقات، حل `brand.*`، `detectFontCaps`، لقطات مرجعية، `renderFrame` الموحّد.
+**آخر تحديث:** 2026-08-28 — المرحلة 1، خطوة رابعة: **الطبقات البصرية الأساسية** — `packages/engine/src/layers/` فيها ستّ دوال نقية `(ctx, size, brand, params) → void`: `drawImage` (cover + crop)، `drawSolid` (لون من `brand.colors`)، `drawGradient` (shape/band من `brand.gradient`)، `drawAccentBar`/`drawAccentSpan` (من `brand.colors.accent` وارتفاع `brand.typography.accentBar.height`)، `drawBadge` + مسار مستدير `roundRect` مع تراجع `arcTo` (كل القياسات من `brand.badges.urgent`)، `drawLogo` (حجم/هامش/موضع من `brand.logo` مع حراسة صامتة عند غياب الصورة). `CanvasDrawContext` وُسِّع ليشمل fillRect/drawImage/createLinearGradient/save/restore/globalAlpha/path (حسم D-05). `mock-ctx` يسجّل جميع أنواع العمليات مع حالتها اللحظية. لا مفسّر قوالب بعد. 96 اختبار vitest أخضر. فحص النقاء آلي.
+**المرحلة الحالية:** 1 — طبقة النص + BiDi + رسم السطر + تحميل الخطوط + الطبقات البصرية الأساسية جاهزة. لم يُنقل بعد: مفسّر القوالب/JSON، حل `brand.*`، `detectFontCaps`، طبقتا watermark/kicker/source، لقطات مرجعية، `renderFrame` الموحّد.
 **الحالة العامة:** كود المنتج بدأ. الأداة القديمة `reference/aa-media-kit.html` تعمل مستقلة عن المحرك الجديد.
 
 ---
@@ -109,7 +109,14 @@
 
 ## الطبقات
 - ☐ تفكيك `cvRenderInto` إلى مفسّر طبقات
-- ☐ `image` · `solid` · `watermark` · `gradient` · `headline` · `kicker` · `source` · `badge` · `accent` · `logo`
+- ☑ `image` — `layers/image.ts` (cover + crop اختياري، من `cvDrawCover`)
+- ☑ `solid` — `layers/solid.ts` (لون من `brand.colors[colorKey]`)
+- ☑ `gradient` — `layers/gradient.ts` (shape/band من `brand.gradient`، top/bottom/center، من `cvGradient`)
+- ☑ `accent` — `layers/accent.ts` (`drawAccentBar` + `drawAccentSpan` من `brand.colors.accent`، ارتفاع من `brand.typography.accentBar.height`)
+- ☑ `badge` — `layers/badge.ts` (كل القياسات من `brand.badges.urgent`، مسار مستدير عبر `roundRect` مع تراجع `arcTo`)
+- ☑ `logo` — `layers/logo.ts` (حجم/هامش/موضع من `brand.logo` مع حراسة صامتة عند غياب الصورة)
+- ☐ `watermark` — الشعار المائي داخل خلفية العاجل (`cvBreakingBg` — يتطلب composite/tint)
+- ☐ `headline` · `kicker` · `source` — طبقات نصية مركّبة تستدعي `layoutBalanced`/`wrapAlternating` + `drawLine*`
 
 ## الربط
 - ☐ الواجهة الحالية تعمل فوق المحرك الجديد **بلا أي تغيير مرئي**
@@ -375,6 +382,8 @@
 | 2026-08-28 | `CanvasDrawContext` واجهة أدنى لا `CanvasRenderingContext2D` | نفس الكود يعمل في المتصفح و skia-canvas في Node بلا `lib.dom` في `packages/engine`. يبقي المحرك محايداً بيئياً |
 | 2026-08-28 | كتالوج خطوط مستضاف ذاتياً (7 خطوط) | لا CDN جوجل: الخادم لا يقرأ CSS، والتطابق البكسلي شرط، وتحديث جوجل الصامت يكسر كسور السطور |
 | 2026-08-28 | لا مكتبة موسيقى في الإصدار الأول | Content ID يقرأ البصمات لا الرخص — حتى CC0 قد يُطالَب به ضد العميل. رفع العميل هو المسار |
+| 2026-08-28 | الطبقات دوال منفصلة أولاً، لا مفسّر قوالب | كل طبقة `(ctx, size, brand, params) → void` تُختبَر مستقلة قبل بناء مفسّر JSON فوقها. أرخص للاختبار، أوضح للفصل عن الهوية، لا تراكم حالة |
+| 2026-08-28 | ألوان التدرّج (`rgba(0,0,0,α)`) ليست هوية بل تعريف «التغميق» | التدرّج قناع تعتيم. `shape/band` هوية؛ الأسود المشفف تعريف الأداة نفسها. مطابق للأصل — لا انحراف عن السلوك، ولا مثبت هوية جديد |
 
 ---
 
@@ -386,5 +395,5 @@
 | D-02 | `orderRuns` يعكس الكلمات، لا يبني شجرة embedding levels كاملة | كلمة LTR واحدة تظل بلا عكس (صحيح). سلسلتان LTR متجاورتان لا تحدثان في الأخبار العربية عملياً | مع الكشيدة (المرحلة 3.5) — نراجع كامل مسار النص معاً |
 | D-03 | `preprocessBidi` غير مربوط بمسار الأداة الحالية بعد | لا أثر — الأداة القديمة تعمل بمسارها؛ الربط في خطوة «الربط» ضمن نفس المرحلة 1 | ضمن بوابة المرحلة 1 |
 | D-04 | `mock-ctx.measureText` يُعيد `text.length * 5` (كافٍ لتلبية العقد فقط) | لا اختبار يعتمد عليه — القياس يأتي من `createSyntheticMeasurer`. حماية من الاستخدام الخاطئ مستقبلاً | إن ظهر اختبار يعتمد `ctx.measureText` مباشرة نستبدله بمقياس صناعي مطابق |
-| D-05 | `mock-ctx` لا يغطي `save/restore/translate/rotate/globalAlpha/fillRect` — فقط `fillText`+حالة النص | لا رسم للطبقات بعد؛ عند نقل `image/solid/badge` نحتاج توسيع الـmock أو الانتقال إلى بيئة اختبار ثانية | مع بداية طبقة الطبقات (المرحلة 1 لاحقاً) |
+| D-05 | ~~`mock-ctx` لا يغطي `save/restore/translate/rotate/globalAlpha/fillRect`~~ | ~~مطلوب مع الطبقات~~ | **مُحسَم 2026-08-28:** `mock-ctx` وسّع ليغطي fillRect و drawImage و createLinearGradient (تدرّج مسجَّل يحمل نقاط التوقّف) و save/restore و globalAlpha و beginPath/fill/moveTo/closePath/arcTo/roundRect و imageSmoothing. `translate/rotate` غير مطلوبين بعد (لا طبقة تستعملهما) — يُضافان عند الحاجة |
 | D-06 | ~~`TEST_BRAND` مكرَّر جزئياً مع `DEFAULT_BRAND`~~ | ~~ازدواجية بسيطة الآن~~ | **مُحسَم 2026-08-28:** `DEFAULT_BRAND` مُصدَّر من `packages/shared`، `TEST_BRAND` محذوف، الاختبارات تستورده مباشرة |

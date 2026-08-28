@@ -16,16 +16,87 @@ import { isBreak, isWord } from '@pf-mediakit/shared';
 import type { Measurer } from './measurer.js';
 
 /**
+ * الحد الأدنى من واجهات Canvas الرسومية التي نستهلكها.
+ * تعريفات مستقلة عن `lib.dom` حتى يبقى المحرك محايداً بيئياً
+ * (متصفح، skia-canvas، أي backend مستقبلي).
+ */
+export interface CanvasGradientLike {
+  addColorStop(offset: number, color: string): void;
+}
+
+/**
+ * الحد الأدنى من الصورة القابلة للرسم.
+ * HTMLImageElement, HTMLCanvasElement, ImageBitmap, skia-canvas Image
+ * كلها تُوفّر width و height.
+ */
+export interface ImageLike {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
  * السطح الأدنى من Canvas الذي نحتاجه للرسم — لا نستورد lib.dom.
  * يتوافق مع CanvasRenderingContext2D في المتصفح و skia-canvas في Node.
+ *
+ * يجمع كل ما تستهلكه طبقات النص وطبقات البصر الأخرى (`layers/*`) في
+ * عقد واحد. `fillStyle` يقبل سلسلة أو تدرّجاً — سلوك Canvas القياسي.
  */
 export interface CanvasDrawContext {
+  // نص وطباعة
   font: string;
-  fillStyle: string;
+  fillStyle: string | CanvasGradientLike;
   textAlign: string;
   direction: string;
   textBaseline: string;
   fillText(text: string, x: number, y: number): void;
+  measureText(text: string): { readonly width: number };
+
+  // مضلعات ومسارات
+  fillRect(x: number, y: number, w: number, h: number): void;
+  beginPath(): void;
+  fill(): void;
+  moveTo(x: number, y: number): void;
+  closePath(): void;
+  arcTo(x1: number, y1: number, x2: number, y2: number, r: number): void;
+  // roundRect اختياري: skia-canvas والمتصفحات الحديثة يوفّرونه؛
+  // إن غاب نستخدم arcTo يدوياً (نفس أسلوب الأصل — INVENTORY 1852–1856).
+  roundRect?(x: number, y: number, w: number, h: number, r: number): void;
+
+  // صور
+  drawImage(image: ImageLike, dx: number, dy: number): void;
+  drawImage(
+    image: ImageLike,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number
+  ): void;
+  drawImage(
+    image: ImageLike,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number
+  ): void;
+  imageSmoothingEnabled: boolean;
+  imageSmoothingQuality: 'low' | 'medium' | 'high';
+
+  // تدرّجات
+  createLinearGradient(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+  ): CanvasGradientLike;
+
+  // حالة
+  save(): void;
+  restore(): void;
+  globalAlpha: number;
 }
 
 export interface DrawLineResult {

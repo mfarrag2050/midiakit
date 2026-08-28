@@ -12,6 +12,8 @@ export {
   drawLineRTL,
   drawLineCentered,
   type CanvasDrawContext,
+  type CanvasGradientLike,
+  type ImageLike,
   type DrawLineResult,
 } from './draw-line.js';
 export {
