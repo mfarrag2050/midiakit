@@ -2,6 +2,7 @@ node_modules/
 .env*
 !.env.example
 dist/
+out/
 .tmp/
 *.log
 .DS_Store

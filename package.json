@@ -11,11 +11,16 @@
     "typecheck": "pnpm -r typecheck",
     "check:engine-purity": "node scripts/check-engine-purity.mjs",
     "test": "pnpm check:engine-purity && vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "preview": "node --import tsx scripts/preview.mjs"
   },
   "devDependencies": {
     "typescript": "5.6.3",
     "vitest": "2.1.9",
-    "@types/node": "20.17.10"
+    "@types/node": "20.17.10",
+    "skia-canvas": "3.0.8",
+    "tsx": "4.19.2",
+    "@pf-mediakit/engine": "workspace:*",
+    "@pf-mediakit/shared": "workspace:*"
   }
 }
