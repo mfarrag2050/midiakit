@@ -2,9 +2,9 @@
 
 > ملف حيّ. يُحدَّث في نهاية كل جلسة عمل. الحقول: `☐` لم يبدأ · `◐` جارٍ · `☑` مكتمل.
 
-**آخر تحديث:** 2026-08-28 — التنظيف القانوني (المرحلة 0). حُذفت أصول الأناضول والخط التجاري من `main`، وحُفظت النسخة الأصلية على فرع `aa-internal` (محلي).
-**المرحلة الحالية:** 0 — بقيت مهام: صياغة بند إقرار ترخيص الخطوط + شعار محايد افتراضي (الأداة تعمل الآن بلا شعار حتى يرفع العميل شعاره).
-**الحالة العامة:** عميل حقيقي جاهز للعرض. لم يُكتب كود منتج بعد.
+**آخر تحديث:** 2026-08-28 — المرحلة 1، الخطوة الأولى: البنية + طبقة النص. workspace pnpm يعمل، `parseTokens` و `Measurer` و `wrapAlternating` و `layoutBalanced` منقولة من `reference/aa-media-kit.html` بلا `ctx` عام. 21 اختبار vitest أخضر. فحص نقاء المحرك آلي (يفشل عند `document/window/localStorage` أو `let/var` على مستوى الوحدة).
+**المرحلة الحالية:** 1 — طبقة النص مكتملة. لم تُنقل بعد: BiDi، الطبقات، حل `brand.*`، تحميل الخطوط، لقطات مرجعية، `renderFrame` الموحّد.
+**الحالة العامة:** كود المنتج بدأ. الأداة القديمة `reference/aa-media-kit.html` تعمل مستقلة عن المحرك الجديد.
 
 ---
 
@@ -13,7 +13,7 @@
 | # | المرحلة | المدة | البوابة | الحالة |
 |---|---|---|---|---|
 | 0 | التنظيف القانوني | أسبوعان | لا خط تجاري ولا أصل أناضول | ◐ |
-| 1 | استخراج المحرك + BiDi | 4 أسابيع | هويتان مختلفتان بلا لمس كود | ☐ |
+| 1 | استخراج المحرك + BiDi | 4 أسابيع | هويتان مختلفتان بلا لمس كود | ◐ |
 | 2 | القوالب بيانات | أسبوعان | قالب خامس بملف JSON فقط | ☐ |
 | 3 | الرندر على الخادم | 3 أسابيع | MP4 من CLI + معيار الذروة | ☐ |
 | 3.2 | لوحات التحكم | أسبوعان | العميل يرى موقعه في الطابور | ☐ |
@@ -52,15 +52,18 @@
 أصعب مسافة في المشروع؛ ما بعدها هندسة عادية.
 
 ## البنية
-- ☐ `pnpm workspaces` + `packages/engine` بـ TypeScript
-- ☐ `packages/shared` للأنواع
+- ☑ `pnpm workspaces` + `packages/engine` بـ TypeScript (صارم: `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`)
+- ☑ `packages/shared` للأنواع
+- ☑ Node 20.18.1 عبر nvm، pnpm@9.15.4 عبر corepack
+- ☑ vitest 2.1.9، جميع الاختبارات في Node بلا متصفح
 
 ## طبقة النص
-- ☐ `parseTokens` — نقل مباشر من `cvParseTokens`
-- ☐ `Measurer` — تجميع `cvWordWidth` + `cvSpaceWidth` + `cvLineWidth` في كائن يحمل `ctx` و `brand`
-- ☐ `wrapAlternating` — من `cvWrapTokens`، `shortRatio` و `LEAD` وسيطان لا ثابتان
-- ☐ `layoutBalanced` — من `cvLayoutHeadline`، تمرير `measure` بدل `cvCtx` العام
-- ☐ `drawLineRTL` + `drawLineCentered`
+- ☑ `parseTokens` — نقل مباشر من `cvParseTokens` (INVENTORY الأسطر 1769–1783)
+- ☑ `Measurer` — واجهة قابلة للحقن: `createCanvasMeasurer(ctx, brand)` للإنتاج، `createSyntheticMeasurer()` للاختبار
+- ☑ `wrapAlternating` — من `cvWrapTokens`، `shortRatio` و `lineHeightRatio` وسيطان
+- ☑ `layoutBalanced` — من `cvLayoutHeadline`، `measure` يُمرَّر
+- ☐ `drawLineRTL` + `drawLineCentered` — لاحقاً (لم تُنقل في هذه الجلسة، كما طُلب)
+- ☑ فحص نقاء آلي (`scripts/check-engine-purity.mjs`): يمنع `document/window/localStorage/navigator/self/globalThis` و `let/var` على مستوى الوحدة
 
 ## BiDi (إلزامي قبل أول عرض)
 - ☐ `splitBidiRuns(text): Run[]`
