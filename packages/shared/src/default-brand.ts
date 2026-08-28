@@ -73,6 +73,7 @@ export const DEFAULT_BRAND: BrandKit = {
       boxWidth: 900,
       shortLineRatio: 0.6,
       maxLines: 6,
+      wrapMode: 'optimal',
     },
     kicker: { max: 60, min: 28, weight: 300, boxWidth: 760, gapBelow: 56 },
     title3l: { max: 84, min: 40 },

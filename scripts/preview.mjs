@@ -27,10 +27,12 @@ import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import {
+  resolveBrand,
   preprocessBidi,
   parseTokens,
   createCanvasMeasurer,
   wrapAlternating,
+  wrapOptimal,
   drawLineRTL,
   drawSolid,
   drawGradient,
@@ -55,7 +57,12 @@ const canvas = new Canvas(SIZE.w, SIZE.h);
 const ctx = canvas.getContext('2d');
 
 // نستعمل الهوية الافتراضية — اختبار صحّة الفصل: كل قيمة رسم تخرج منها.
-const brand = DEFAULT_BRAND;
+// resolveBrand يُطبَّق **مرة واحدة قبل الرندر** (تُطبق قاعدة docs/03):
+// كل مرجع (`colors.urgentBadge`) يصير قيمته الحرفية (`#C1012F`) قبل
+// أي طبقة، فلا يبتلع Canvas سلسلة مرجع غير صالحة ويتحوّل خطأ الهوية
+// إلى لون عشوائي غير مكشوف. إن كان في الهوية مرجع مكسور، يظهر الخطأ
+// هنا لا في منتصف إطار 900 من فيديو.
+const brand = resolveBrand(DEFAULT_BRAND);
 
 // ── 3. طبقة الخلفية ───────────────────────────────────
 drawSolid(ctx, SIZE, brand, { colorKey: 'urgentBg' });
@@ -73,10 +80,15 @@ const processed = preprocessBidi(text, {
 const tokens = parseTokens(processed);
 const measure = createCanvasMeasurer(ctx, brand);
 
-const { max, min, boxWidth, maxLines, lineHeight, shortLineRatio } =
+const { max, min, boxWidth, maxLines, lineHeight, shortLineRatio, wrapMode } =
   brand.typography.breaking;
 
-const wrap = wrapAlternating(
+// اختيار الخوارزمية من الهوية (`brand.typography.breaking.wrapMode`).
+// الافتراضي 'optimal' — DP يمنع سطر الكلمة الواحدة واليتيم الأخير.
+// 'alternating' جشِعة، محفوظة للتوافق ومقارنة الأداء (@deprecated).
+const wrapper = wrapMode === 'alternating' ? wrapAlternating : wrapOptimal;
+
+const wrap = wrapper(
   tokens,
   boxWidth,
   max,
@@ -133,5 +145,13 @@ await canvas.toFile(OUT);
 
 console.log(`[preview] كُتب: ${OUT}`);
 console.log(
-  `[preview] ${wrap.lines.length} سطر · fs=${wrap.fontSize}px · lh=${wrap.lineHeight}px`
+  `[preview] wrapMode=${wrapMode} · ${wrap.lines.length} سطر · fs=${wrap.fontSize}px · lh=${wrap.lineHeight}px`
 );
+wrap.lines.forEach((ln, i) => {
+  const w = measure.line(ln, wrap.fontSize, false);
+  const lim = i % 2 === 0 ? boxWidth : boxWidth * shortLineRatio;
+  console.log(
+    `  ${i + 1}. [${ln.length} كلمة · ${w.toFixed(0)}/${lim}px · ${((w / lim) * 100).toFixed(0)}%] ` +
+      ln.map((t) => t.text).join(' ')
+  );
+});

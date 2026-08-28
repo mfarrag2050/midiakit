@@ -7,6 +7,7 @@ export {
   type SyntheticMeasureOptions,
 } from './measurer.js';
 export { wrapAlternating } from './wrap-alternating.js';
+export { wrapOptimal } from './wrap-optimal.js';
 export { layoutBalanced } from './layout-balanced.js';
 export {
   drawLineRTL,

@@ -83,6 +83,13 @@ export interface TypographyHeadline {
   readonly boxWidth: number;
 }
 
+/**
+ * أسلوب اللف. الافتراضي `optimal` — برمجة ديناميكية تختار أقل كلفة
+ * إجمالية وتمنع سطر الكلمة الواحدة والسطر الأخير اليتيم.
+ * `alternating` جشِع، محفوظ للتوافق مع الأصل فقط (@deprecated).
+ */
+export type WrapMode = 'optimal' | 'alternating';
+
 export interface TypographyBreaking {
   readonly max: number;
   readonly min: number;
@@ -90,6 +97,7 @@ export interface TypographyBreaking {
   readonly boxWidth: number;
   readonly shortLineRatio: number;
   readonly maxLines: number;
+  readonly wrapMode: WrapMode;
 }
 
 export interface TypographyKicker {

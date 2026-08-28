@@ -110,4 +110,82 @@ describe('wrapAlternating', () => {
     const r = wrapAlternating(tokens, 200, 80, 40, false, 2, 0.6, 1.42, measure);
     expect(r.fontSize).toBe(40);
   });
+
+  // ── invariants الحيوية للنمط الهرمي ─────────────────────
+  //
+  // wrapAlternating جشعة: تُبني الأسطر كلمةً كلمة، تُغلق السطر عند أول
+  // كلمة تتجاوز الحد الحالي (boxW في الفرد، boxW×shortRatio في الزوج)،
+  // ثم تفتح سطراً جديداً بمؤشر مقلوب. لا backtracking.
+  //
+  // النتيجة: النمط الهرمي المتناوب يتحقّق **عند حجم كلمات مناسب** — لا
+  // ضمان مطلق. راجع الاختبار الأخير للدَين المعروف.
+
+  it('12 كلمة بأحجام معتدلة تعطي تناوباً نظيفاً بلا سطر بكلمة واحدة', () => {
+    // كلمات مختارة لتُظهر النمط الهرمي عند boxW=900, shortRatio=0.6:
+    // القياس الصناعي: char=0.5·fs, space=0.25·fs.
+    const tokens = parseTokens(
+      'مؤتمر السلام الدولي يعقد قمة هامة في بروكسل الأسبوع القادم بمشاركة عربية'
+    );
+    const boxW = 900;
+    const shortRatio = 0.6;
+    const r = wrapAlternating(
+      tokens,
+      boxW,
+      80,
+      40,
+      false,
+      6,
+      shortRatio,
+      1.42,
+      measure
+    );
+
+    // (١) لا سطر بكلمة واحدة.
+    r.lines.forEach((line, i) => {
+      expect(line.length, `السطر ${i + 1} بكلمة واحدة`).toBeGreaterThan(1);
+    });
+
+    // (٢) الأسطر الزوجية (index فردي: 1, 3, 5) ≤ boxW × shortRatio.
+    r.lines.forEach((line, i) => {
+      if (i % 2 === 1) {
+        const w = measure.line(line, r.fontSize, false);
+        expect(w).toBeLessThanOrEqual(boxW * shortRatio + 0.5);
+      }
+    });
+
+    // (٣) الأسطر الفردية (index زوجي: 0, 2, 4) ≤ boxW.
+    r.lines.forEach((line, i) => {
+      if (i % 2 === 0) {
+        const w = measure.line(line, r.fontSize, false);
+        expect(w).toBeLessThanOrEqual(boxW + 0.5);
+      }
+    });
+  });
+
+  it('توثيق دَين معروف: كلمة عريضة (>50% من الحد القصير) قد تُنتج سطر كلمة واحدة', () => {
+    // كلمات كل واحدة ~200 وحدة عند fs=80 (charWidth=0.5 ⇒ 5 حروف = 200).
+    // shortLimit = 540. أي كلمتين متجاورتين تعطيان 200+20+200 = 420 ≤ 540
+    // ⇒ التناوب النظيف. لا نُثبت هنا حالة الفشل، بل نوثّقها:
+    //
+    // إن كانت الكلمة الأولى في السطر القصير > (limit − space − أوسع كلمة تالية)،
+    // تبقى وحيدة. هذا سلوك الأصل حرفياً (تحقيق: scripts/verify-wrap-fidelity.mjs)
+    // وهو دَين مُوثَّق مع الكسر الدلالي في المرحلة 3.5.
+    //
+    // الاختبار يوثّق فقط أن wrapAlternating يقبل حالات النص التي يفشل فيها
+    // الاعتماد على «لا سطر بكلمة واحدة» — لا يفرض ضمانة الأصل لم يقدّمها.
+    const tokens = parseTokens(
+      // 8 كلمات كل واحدة 7 حروف ⇒ عرض 280 عند fs=80.
+      // shortLimit=540: كلمة أولى 280، +space 20 +280 = 580 > 540 ⇒ سطر بكلمة واحدة.
+      'أسبوعاً كثيراً شهراً موعداً قصيراً طويلاً عديدة سنوات'
+    );
+    const r = wrapAlternating(tokens, 900, 80, 40, false, 6, 0.6, 1.42, measure);
+
+    // نتحقّق فقط أن الخوارزمية أنتجت مخرجاً مقبولاً بنيوياً — كل الأسطر ≤ boxW.
+    r.lines.forEach((line) => {
+      expect(measure.line(line, r.fontSize, false)).toBeLessThanOrEqual(900.5);
+    });
+
+    // ملاحظة توثيقية: قد يكون فيه سطر بكلمة واحدة — هذا مقبول للنقل الأمين.
+    // fix حقيقي يأتي عبر رتيب `breakPenalty` في المرحلة 3.5.
+  });
 });

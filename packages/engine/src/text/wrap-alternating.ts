@@ -11,11 +11,20 @@
 //   • البحث عن fs يبدأ من maxFont وينزل بخطوة 2px حتى minFont؛
 //     يعيد أول fs يعطي عدد أسطر ≤ maxLines.
 //   • إن لم يوجد: يعيد minFont مع البنية المُنتَجة عنده.
+//
+// **@deprecated** — احتفظنا بها للتوافق مع نقل الأصل ولأغراض المقارنة.
+// الاستخدام الجديد ينبغي أن يمرّ عبر `wrapOptimal` (الافتراضي في
+// `brand.typography.breaking.wrapMode`). الجشِعة تسمح بسطر بكلمة واحدة
+// عبر `curLine.length === 0 ||` وهو نمط مرفوض في الطباعة الصحفية.
 
 import type { Token, WrapResult } from '@pf-mediakit/shared';
 import { isBreak, isWord } from '@pf-mediakit/shared';
 import type { Measurer } from './measurer.js';
 
+/**
+ * @deprecated استخدم `wrapOptimal` — الجشِعة تسمح بسطر كلمة واحدة
+ * وهو غير مقبول طباعياً. تبقى هذه للتوافق ومقارنة الأداء فقط.
+ */
 export function wrapAlternating(
   tokens: readonly Token[],
   boxW: number,
