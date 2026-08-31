@@ -1,17 +1,16 @@
 // verify-snapshot — يقارن مخرجات المعاينة الحالية بلقطات ذهبية
 // محفوظة في `snapshots/`. يحمي من تغيّر أنبوب الرندر عرَضاً.
 //
-// **الاستخدام:** `node scripts/verify-snapshot.mjs`
-//   يشغّل preview لكل هوية، ثم يقارن preview-<brand>.png بايت-بايت
-//   مع `snapshots/preview-<brand>.png`.
+// **الاستخدام:** `pnpm verify:snapshot`
+//   يشغّل preview لكل هوية × كل قالب، ثم يقارن كل `preview-<brand>[-<tpl>].png`
+//   بايت-بايت مع نظيره في `snapshots/`.
 //
 // **متى يفشل:**
 //   • renderFrame أنتج شيئاً مختلفاً عن اللقطة (رسم جديد، خلل فادح).
 //   • تغيّر خفي في skia-canvas أو دالة طبقة أو الهوية.
 //
-// **متى يُحدَّث المرجع:** بعد قرار مالك واضح بتحسين المخرج — يُنسَخ
-// `out/preview-<brand>.png` إلى `snapshots/preview-<brand>.png` ويوثَّق
-// السبب في PHASES.md.
+// **متى يُحدَّث المرجع:** بعد قرار مالك واضح بتحسين المخرج — تُنسَخ
+// المخرجات من `out/` إلى `snapshots/` ويوثَّق السبب في PHASES.md.
 
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -25,12 +24,25 @@ const OUT = join(ROOT, 'out');
 const SNAP = join(ROOT, 'snapshots');
 
 const BRANDS = ['default', 'client-demo'];
+const TEMPLATES = ['breaking', 'card_centered', 'card_bottom', 'card_kicker', 'reel', 'plain'];
 
-// (١) تجديد المخرجات
+// اسم الملف: template=breaking ⇒ preview-<brand>.png، الباقي ⇒ preview-<brand>-<tpl-with-dashes>.png
+const filenameFor = (brand, tpl) =>
+  tpl === 'breaking'
+    ? `preview-${brand}.png`
+    : `preview-${brand}-${tpl.replace(/_/g, '-')}.png`;
+
+// (١) تجديد المخرجات — --template=all لكل هوية
 for (const brand of BRANDS) {
   const result = spawnSync(
     'node',
-    ['--import', 'tsx', join(ROOT, 'scripts/preview.mjs'), `--brand=${brand}`],
+    [
+      '--import',
+      'tsx',
+      join(ROOT, 'scripts/preview.mjs'),
+      `--brand=${brand}`,
+      '--template=all',
+    ],
     { cwd: ROOT, encoding: 'utf8', stdio: 'inherit' }
   );
   if (result.status !== 0) {
@@ -39,34 +51,40 @@ for (const brand of BRANDS) {
   }
 }
 
-// (٢) المقارنة البايتية
+// (٢) المقارنة البايتية — 12 ملفاً (6 قوالب × 2 هويتين)
 let failures = 0;
+let passed = 0;
 for (const brand of BRANDS) {
-  const actualPath = join(OUT, `preview-${brand}.png`);
-  const expectedPath = join(SNAP, `preview-${brand}.png`);
-  if (!existsSync(expectedPath)) {
-    console.error(
-      `[verify-snapshot] لقطة مفقودة: ${expectedPath} — إن كان هذا مقصوداً، انسخ out/ إلى snapshots/ ووثّق`
-    );
-    failures++;
-    continue;
-  }
-  const [actual, expected] = await Promise.all([
-    readFile(actualPath),
-    readFile(expectedPath),
-  ]);
-  if (actual.length !== expected.length || !actual.equals(expected)) {
-    console.error(
-      `[verify-snapshot] فشل: ${brand} — البايتات مختلفة (فعلي=${actual.length}b متوقّع=${expected.length}b)`
-    );
-    failures++;
-  } else {
-    console.log(`[verify-snapshot] ✓ ${brand} — ${actual.length} بايت مطابق`);
+  for (const tpl of TEMPLATES) {
+    const name = filenameFor(brand, tpl);
+    const actualPath = join(OUT, name);
+    const expectedPath = join(SNAP, name);
+    if (!existsSync(expectedPath)) {
+      console.error(
+        `[verify-snapshot] لقطة مفقودة: snapshots/${name} — إن كان هذا مقصوداً، انسخ من out/ ووثّق`
+      );
+      failures++;
+      continue;
+    }
+    const [actual, expected] = await Promise.all([
+      readFile(actualPath),
+      readFile(expectedPath),
+    ]);
+    if (actual.length !== expected.length || !actual.equals(expected)) {
+      console.error(
+        `[verify-snapshot] ✗ ${name} — فروق (فعلي=${actual.length}b متوقّع=${expected.length}b)`
+      );
+      failures++;
+    } else {
+      passed++;
+    }
   }
 }
 
+console.log(
+  `\n[verify-snapshot] ${passed} مطابقة · ${failures} إخفاق · من ${BRANDS.length * TEMPLATES.length} لقطة`
+);
 if (failures > 0) {
-  console.error(`\n[verify-snapshot] ${failures} إخفاق. راجع الفروق البصرية قبل تحديث المرجع.`);
+  console.error('راجع الفروق البصرية قبل تحديث المرجع.');
   process.exit(1);
 }
-console.log('\n[verify-snapshot] كل اللقطات مطابقة.');

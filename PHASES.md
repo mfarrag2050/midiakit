@@ -9,7 +9,7 @@
 
 **التحسينات المعمارية التي أعقبت الكشيدة:** (١) `wrapOptimal.fsRange` يقصر البحث داخل النطاق المفضّل أولاً، والتراجع للمدى الكامل عند الفشل. (٢) قبول ما-بعد-الكشيدة عبر `justifyCapacityConfig` — wrap يقدّر السعة عبر `estimateLineCapacity` قبل قبول (fs, boxW, k). (٣) `justifyLine.minLineFill` أُعيد تفسيرها كـ«ملء بعد الكشيدة» لا خام — بدون ذلك تظهر فجوة سلوكية بين wrap و justifyLine. (٤) مسافة المصدر `fs × 1.4` بدل `0.9`. (٥) `estimateLineCapacity` مُصدَّر من `kashida.ts` كمصدر وحيد. **161 اختبار vitest أخضر** (20 جديد للكشيدة).
 
-**المرحلة الحالية:** المراحل 0 ☑، 1 ☑، 1.5 ☑ (الكشيدة)، **2 ☑** (القوالب بيانات — مكتملة 2026-08-31). التالي: المرحلة 3 (الرندر على الخادم — CLI + FFmpeg + طوابير) أو إكمال أنواع الطبقات المؤجَّلة (kicker/accent/watermark) عند الحاجة لتشغيل بقية القوالب الأربعة بصرياً.
+**المرحلة الحالية:** المراحل 0 ☑، 1 ☑، 1.5 ☑ (الكشيدة)، **2 ☑** (القوالب بيانات — مكتملة 2026-08-31، أُغلق الدَين نفس اليوم بإضافة منفّذات kicker + accent + watermark، فأصبحت القوالب الستة تُرسم كاملة على الهويتين — 12 لقطة ذهبية). التالي: المرحلة 3 (الرندر على الخادم — CLI + FFmpeg + طوابير). فرع `kind: video` للـbreaking و `clipstream` للـreel يبقيان مؤجّلين للمرحلة 3 (يحتاجان FFmpeg — قرار صحيح، ليس دَيناً).
 
 **اختبار البوابة (2026-08-31، بعد جلسة الجدارة):** أُنشئت هوية ثانية `brands/client-demo.json` (طيف — Almarai، أزرق غامق/عنبر، شارة "خبر عاجل"، `headlineFsRatio=[0.075,0.095]`، `boxWidthRange=[0.68,0.86]`). `pnpm preview -- --brand=default` أنتج fs=74/boxW=950/IBM Plex/عاجل رمادي؛ `--brand=client-demo` أنتج fs=66/boxW=929/Almarai/خبر عاجل عنبر. `git diff HEAD packages/` = **صفر تغيير**. الفصل بين المحرك والهوية مُثبَت آلياً لا بادّعاء.
 
@@ -183,6 +183,15 @@
 
 ## دَين مقصود (مقبول)
 - المسار (ب) محاور التطويل المتغيرة (LTAT/RTAT) و(ج) HarfBuzz + فرع التبرير — يبقيان في المرحلة 3.5 عند الحاجة إلى جودة أعلى لخطوط بعينها. المسار (أ) الحالي كافٍ للعميل الأول.
+
+**دَين المرحلة 2 المكتشف عند إغلاقها ثم المُحسَم في نفس اليوم:**
+- ☑ منفّذ `kicker` — نصّ سطر واحد بوزن مختلف من `brand.typography.kicker`، يُخزّن bounds في `RenderState.kicker` لاستعمال accent/headline لاحقاً.
+- ☑ منفّذ `accent` — ثلاثة أوضاع: `underline` (خط تحت الكيكر أو العنوان)، `above-first-line` (شريط قصير فوق أول سطر عنوان)، `span` (شرائط تحت الكلمات المُعلَّمة `_word_` باستعمال accent bounds المُرجَعة من `drawLine*`).
+- ☑ منفّذ `watermark` — يرسم صورة شعار مقياساً/إزاحة/شفافية بحسب `brand.logo.watermark`. تراجع صامت عند غياب الصورة. **دَين مؤجَّل داخل الدَين:** التلوين (tint) بـcomposite operations — يُنفَّذ عند أول عميل بشعار حقيقي.
+- ☑ `normalizeHeadlineFont` في `render.ts` — تكوينات الخط الأخرى (headline, title3l) تحمل max/min/lineHeight/boxWidth فقط؛ knobs التخطيط تُوَرَّث من `brand.typography.breaking`. تفادى توسيع كل تكوين في shared.
+- ☑ `TypographyReelTitle` وسّعت في shared لحمل knobs التخطيط الكاملة (reel له قيم مختلفة، فتوريث من breaking غير مناسب).
+- ☑ `HeadlineAnchor` وسّع بـ`below-kicker` — يقرأ `RenderState.kicker.bottom + gapBelow`.
+- ☑ `KickerLayer.verticalAnchor` (اختياري، افتراضي 0.4).
 
 ---
 
@@ -462,6 +471,10 @@
 | 2026-08-31 | مطابقة بكسلية بعد refactor إلى renderFrame — MD5 قبل=بعد | `preview-default.png` قبل الاعتماد على renderFrame كان `a05e5cb8c777e1390779b018656cdd74`؛ بعد الاعتماد الكامل نفس المجموع تماماً. `snapshots/preview-{default,client-demo}.png` كلقطات ذهبية + `pnpm verify:snapshot` كبوابة تلقائية |
 | 2026-08-31 | إبقاء بعض أنواع الطبقات (`kicker`, `accent`, `watermark`) بلا رسم في MVP | القالبَان card_kicker و card_bottom يستعملانهما — لكن الرسم مؤجَّل. المتحقق يقبلها (بنية صالحة)، المفسّر يتخطاها بلا رمي (`return` هادئ) كي لا يكسر بقية الطبقات. تنفَّذ الرسم عند طلبها من قالب حي. جدير بالذكر: watermark ليس فقط للتراجع — قد يظهر في `fallback` breaking المستقبلي |
 | 2026-08-31 | **بوابة المرحلة 2 مُتحقّقة** — `plain.json` (قالب خامس) بلا كود | `packages/templates/src/templates/plain.json` استُورد في `packages/templates/src/index.ts`، ومرّ بـ`validateTemplate` عند الاستيراد، ورُسم عبر `pnpm preview -- --template=plain`. صفر تعديل في `packages/engine/src/render.ts` بعد تجاوز MVP. الإثبات: أي قالب يستعمل أنواع الطبقات المدعومة يُضاف بملف JSON واحد |
+| 2026-08-31 | **إغلاق دَين المرحلة 2** — منفّذات kicker/accent/watermark | `render.ts` امتدّ ليدعم الطبقات الثلاث المؤجَّلة. الآن كل القوالب الستة تُرسم كاملة. accent يعمل بثلاثة أوضاع (underline/above-first-line/span)؛ span يستعمل `accentFrom/accentTo` من `drawLine*` المُرجَعة عبر تراكم في `RenderState.headlineAccentSpans`. watermark يرسم بشفافية فقط — التلوين مؤجَّل عند أول عميل بشعار |
+| 2026-08-31 | `normalizeHeadlineFont` — headline/title3l يورّثان knobs التخطيط من `breaking` | البديل: توسيع كل TypographyXxx في shared لحمل headlineFsRatio, boxWidthRange, minLines, … — يُنتج تكراراً في كل brand. الحل: `renderFrame` يقرأ max/min/lineHeight/boxWidth من التكوين المطلوب، ويُوَرَّث الباقي من `brand.typography.breaking`. `TypographyReelTitle` استثناء — قيمه مختلفة (fs أصغر، shortLineRatio للريلز) فوُسِّعت في shared. → `docs/LESSONS.md#L-01` (لا نقل حرفي بلا فحص — التكرار عيب) |
+| 2026-08-31 | `HeadlineAnchor.below-kicker` + `KickerLayer.verticalAnchor` | التتابع kicker → accent(underline) → headline(below-kicker) يعمل نظيفاً عبر `RenderState.kicker`. القوالب card_kicker وأمثالها تحقّق تخطيطاً محكماً بلا حساب مواضع في القالب نفسه — كل شيء نسبي |
+| 2026-08-31 | 12 لقطة ذهبية (6 قوالب × 2 هويتين) في `snapshots/` | `pnpm verify:snapshot` يعيد تشغيل preview مع `--template=all` لكل هوية، ثم يقارن كل ملف بايت-بايت. جولة أولى: 12 مطابقة · 0 إخفاق. أيّ regression في renderFrame أو أي طبقة سيَظهر فوراً |
 
 ## منقوضة (أرشيف — لا تُحذف)
 

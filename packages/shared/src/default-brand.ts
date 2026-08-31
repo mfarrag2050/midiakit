@@ -101,6 +101,15 @@ export const DEFAULT_BRAND: BrandKit = {
       maxLines: 4,
       boxInset: 150,
       verticalAnchor: 0.66,
+      // حقول تخطيط headline — يستعملها `renderFrame` مباشرةً كما في breaking
+      lineHeight: 1.36,
+      boxWidth: 780,
+      shortLineRatio: 0.6, // للنمط alternating (نمط الريلز التقليدي)
+      minLines: 1,
+      preferredLines: 2,
+      readableMinRatio: 0.045,
+      headlineFsRatio: [0.055, 0.075], // على 1920 (reel) = 106-144، على 1080 (feed) = 59-81
+      boxWidthRange: [0.68, 0.86],
     },
     accentBar: { height: 8, minWidth: 140, maxWidth: 620 },
     lineHeightMode: 'dynamic',

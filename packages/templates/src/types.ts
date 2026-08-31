@@ -85,7 +85,12 @@ export interface GradientLayer extends LayerCommon {
   readonly reach?: number;
 }
 
-export type HeadlineAnchor = 'centerLower' | 'bottom' | 'top' | 'middle';
+export type HeadlineAnchor =
+  | 'centerLower'
+  | 'bottom'
+  | 'top'
+  | 'middle'
+  | 'below-kicker';
 export type WrapMode = 'uniform' | 'alternating' | 'balanced';
 
 export interface HeadlineLayer extends LayerCommon {
@@ -139,6 +144,11 @@ export interface KickerLayer extends LayerCommon {
   readonly field: string;
   readonly align?: 'right' | 'center';
   readonly font: string;
+  /**
+   * الموضع العمودي لخط الأساس ككسور من ارتفاع القماش (0.4 = 40% من
+   * الأعلى — منطقة الكيكر التقليدية). افتراضي 0.40.
+   */
+  readonly verticalAnchor?: number;
 }
 
 export interface AccentLayer extends LayerCommon {

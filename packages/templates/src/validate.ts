@@ -173,11 +173,11 @@ function validateLayer(raw: unknown, path: string): Layer {
       const anchor = o['anchor'];
       if (
         !isString(anchor) ||
-        !['centerLower', 'bottom', 'top', 'middle'].includes(anchor)
+        !['centerLower', 'bottom', 'top', 'middle', 'below-kicker'].includes(anchor)
       ) {
         bail(
           `${path}.anchor`,
-          `يجب أن يكون centerLower|bottom|top|middle، وُجد ${String(anchor)}`
+          `يجب أن يكون centerLower|bottom|top|middle|below-kicker، وُجد ${String(anchor)}`
         );
       }
       if (anchor === 'centerLower' && !isNumber(o['verticalAnchor'])) {
@@ -228,6 +228,9 @@ function validateLayer(raw: unknown, path: string): Layer {
     case 'kicker': {
       if (!isString(o['field'])) bail(`${path}.field`, 'kicker يتطلب field');
       if (!isString(o['font'])) bail(`${path}.font`, 'يجب أن يكون مرجع brand.*');
+      if (o['verticalAnchor'] !== undefined && !isNumber(o['verticalAnchor'])) {
+        bail(`${path}.verticalAnchor`, 'يجب أن يكون رقم (نسبة من ارتفاع القماش)');
+      }
       return raw as KickerLayer;
     }
     case 'accent': {

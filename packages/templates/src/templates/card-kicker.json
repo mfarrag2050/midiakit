@@ -18,15 +18,21 @@
       ]
     },
     { "type": "gradient", "direction": "center", "onlyIf": "hasImage" },
-    { "type": "kicker", "field": "kicker", "align": "center", "font": "brand.typography.kicker" },
+    {
+      "type": "kicker",
+      "field": "kicker",
+      "align": "center",
+      "font": "brand.typography.kicker",
+      "verticalAnchor": 0.42
+    },
     { "type": "accent", "mode": "underline", "target": "kicker" },
     {
       "type": "headline",
       "field": "headline",
       "wrap": "uniform",
       "align": "center",
-      "anchor": "middle",
-      "font": "brand.typography.title3l",
+      "anchor": "below-kicker",
+      "font": "brand.typography.breaking",
       "justify": "brand.typography.justify"
     },
     { "type": "logo" }

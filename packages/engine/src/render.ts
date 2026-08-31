@@ -16,10 +16,12 @@
 //   • تحميل الأصول — المستدعي يمرّرها في `assets`.
 
 import type {
+  AccentLayer,
   BadgeLayer,
   GradientLayer,
   HeadlineLayer,
   ImageLayer,
+  KickerLayer,
   Layer,
   LayerOnlyIf,
   LogoLayer,
@@ -31,7 +33,14 @@ import type {
 import type { BrandKit, UrgentBadge } from '@pf-mediakit/shared';
 
 import { resolve } from './brand/resolve.js';
-import { drawBadge, drawGradient, drawImage, drawLogo } from './layers/index.js';
+import {
+  drawAccentBar,
+  drawAccentSpan,
+  drawBadge,
+  drawGradient,
+  drawImage,
+  drawLogo,
+} from './layers/index.js';
 import type { CanvasSize, ImageCrop } from './layers/image.js';
 import type { GradientDirection } from './layers/gradient.js';
 import {
@@ -87,10 +96,34 @@ interface HeadlineBounds {
   readonly left: number;
   /** حجم الخط المُختار — يستعمله المصدر لحساب مسافة `fs × ratio`. */
   readonly fontSize: number;
+  /** الحافة الأفقية للأول baseline — للتموضع المتقدّم. */
+  readonly firstBaseline: number;
+}
+
+interface KickerBounds {
+  readonly top: number;
+  readonly bottom: number;
+  readonly left: number;
+  readonly right: number;
+  readonly centerX: number;
+  readonly width: number;
+  readonly baselineY: number;
+  readonly fontSize: number;
+  /** المسافة القياسية المفضّلة تحته (من brand.typography.kicker.gapBelow). */
+  readonly gapBelow: number;
+}
+
+interface AccentSpanBounds {
+  readonly from: number;
+  readonly to: number;
+  readonly y: number;
 }
 
 interface RenderState {
   headline?: HeadlineBounds;
+  kicker?: KickerBounds;
+  /** تجميع حدود التمييز (`_word_`) من كل سطر عنوان — لـaccent span. */
+  headlineAccentSpans?: readonly AccentSpanBounds[];
 }
 
 // ── مساعدات ────────────────────────────────────────────
@@ -177,10 +210,165 @@ function runLogo(_layer: LogoLayer, args: RenderFrameArgs): void {
   drawLogo(args.ctx, args.size, args.brand, {});
 }
 
-function runWatermark(_layer: WatermarkLayer, _args: RenderFrameArgs): void {
-  // سيُنفَّذ عند وصول طبقة الشعار المائي (Phase 2 body — لم يبدأ).
-  // نتراجع صامتاً بدل الرمي؛ القوالب قد تُسند watermark للـfallback ونحن
-  // نتخطاها بلا كسر بقية الطبقات.
+/**
+ * الشعار المائي داخل خلفية العاجل — درسم صورة الشعار بمقياس/إزاحة/شفافية.
+ *
+ * السلوك:
+ *   • `brand.logo.watermark.enabled = false` ⇒ لا يرسم.
+ *   • لا صورة شعار متاحة (`assets.images.logo` غائبة) ⇒ تراجع صامت (مثل drawLogo).
+ *   • خلاف ذلك: يرسم بمقاس نسبي `scale × size.w` وإزاحة نسبية
+ *     `offsetX × size.w` وشفافية `opacity`.
+ *
+ * **دَين مؤجَّل:** التلوين (`tint`) بـcomposite operations. حالياً يرسم
+ * بالشفافية فقط. يُنفَّذ عند أول عميل حقيقي بشعار — إمّا:
+ *   • عبر offscreen canvas + `destination-in` لتطبيق اللون.
+ *   • أو عبر `filter: 'brightness(0) invert(1) drop-shadow(...)'` (skia-canvas).
+ */
+function runWatermark(layer: WatermarkLayer, args: RenderFrameArgs): void {
+  const wm = args.brand.logo.watermark;
+  if (!wm.enabled) return;
+  const key = (layer.from ?? 'brand.logo').replace(/^brand\./, '').split('.')[0];
+  const image =
+    args.assets?.images?.[layer.from ?? 'logo'] ?? args.assets?.images?.[key];
+  if (!image) return; // تراجع صامت — الهوية الافتراضية بلا شعار
+
+  const targetW = args.size.w * wm.scale;
+  const aspect = image.height / image.width;
+  const targetH = targetW * aspect;
+  const x = args.size.w * wm.offsetX; // نسبة (سالبة = يسار الحافة)
+  const y = (args.size.h - targetH) / 2;
+
+  args.ctx.save();
+  const prev = args.ctx.globalAlpha;
+  args.ctx.globalAlpha = prev * wm.opacity;
+  args.ctx.drawImage(image, x, y, targetW, targetH);
+  args.ctx.globalAlpha = prev;
+  args.ctx.restore();
+}
+
+// ── الكيكر (kicker) ───────────────────────────────────
+
+interface KickerFontCfg {
+  readonly max: number;
+  readonly min: number;
+  readonly weight: number;
+  readonly boxWidth: number;
+  readonly gapBelow: number;
+}
+
+function runKicker(
+  layer: KickerLayer,
+  args: RenderFrameArgs,
+  state: RenderState
+): void {
+  const { ctx, brand, size, content } = args;
+  const text = content[layer.field];
+  if (typeof text !== 'string' || text.length === 0) return;
+
+  const fontCfg = resolveRef(brand, layer.font) as KickerFontCfg;
+  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
+
+  // بحث بسيط: أكبر fs ضمن max/min يسع boxWidth (لا نحتاج DP هنا —
+  // الكيكر عادة كلمتان). خطوة 2 مطابقة لأسلوب wrap للـheadline اليدوي.
+  let chosenFs = fontCfg.max;
+  ctx.font = `${fontCfg.weight} ${chosenFs}px ${family}`;
+  while (ctx.measureText(text).width > fontCfg.boxWidth && chosenFs > fontCfg.min) {
+    chosenFs -= 2;
+    ctx.font = `${fontCfg.weight} ${chosenFs}px ${family}`;
+  }
+  const measuredWidth = ctx.measureText(text).width;
+
+  const centerX = size.w / 2;
+  const verticalAnchor = layer.verticalAnchor ?? 0.4;
+  const baselineY = size.h * verticalAnchor;
+
+  ctx.fillStyle = brand.colors.text;
+  ctx.direction = 'rtl';
+  ctx.textBaseline = 'alphabetic';
+  if (layer.align === 'right') {
+    ctx.textAlign = 'right';
+    const rx = size.w - (size.w - fontCfg.boxWidth) / 2;
+    ctx.fillText(text, rx, baselineY);
+    state.kicker = {
+      top: baselineY - chosenFs,
+      bottom: baselineY,
+      right: rx,
+      left: rx - measuredWidth,
+      centerX: rx - measuredWidth / 2,
+      width: measuredWidth,
+      baselineY,
+      fontSize: chosenFs,
+      gapBelow: fontCfg.gapBelow,
+    };
+  } else {
+    ctx.textAlign = 'center';
+    ctx.fillText(text, centerX, baselineY);
+    state.kicker = {
+      top: baselineY - chosenFs,
+      bottom: baselineY,
+      left: centerX - measuredWidth / 2,
+      right: centerX + measuredWidth / 2,
+      centerX,
+      width: measuredWidth,
+      baselineY,
+      fontSize: chosenFs,
+      gapBelow: fontCfg.gapBelow,
+    };
+  }
+}
+
+// ── التمييز (accent) ───────────────────────────────────
+
+function runAccent(
+  layer: AccentLayer,
+  args: RenderFrameArgs,
+  state: RenderState
+): void {
+  switch (layer.mode) {
+    case 'underline': {
+      // خط أفقي تحت العنصر المستهدف
+      const target = layer.target ?? 'kicker';
+      const bounds = target === 'kicker' ? state.kicker : state.headline;
+      if (!bounds) return; // ترتيب طبقات غير صالح — نتراجع صامتاً
+      const centerX =
+        'centerX' in bounds ? bounds.centerX : (bounds.left + bounds.right) / 2;
+      const width = 'width' in bounds ? bounds.width : bounds.right - bounds.left;
+      const yBase =
+        'baselineY' in bounds
+          ? bounds.baselineY + Math.round(bounds.fontSize * 0.12)
+          : bounds.bottom + Math.round(bounds.fontSize * 0.12);
+      drawAccentBar(args.ctx, args.size, args.brand, {
+        cx: centerX,
+        y: yBase,
+        w: width,
+      });
+      return;
+    }
+    case 'above-first-line': {
+      // شريط قصير فوق أول سطر من العنوان (نمط تحرير)
+      const bounds = state.headline;
+      if (!bounds) return;
+      const width = args.brand.typography.accentBar.minWidth;
+      const cx = (bounds.left + bounds.right) / 2;
+      // شريط فوق الحدّ العلوي بمسافة معقولة (≈ ارتفاع السطر × 0.25)
+      const y = bounds.top - Math.round(bounds.fontSize * 0.35);
+      drawAccentBar(args.ctx, args.size, args.brand, { cx, y, w: width });
+      return;
+    }
+    case 'span': {
+      // شرائط تحت الكلمات المُعلَّمة بـ`_word_` داخل العنوان
+      const spans = state.headlineAccentSpans;
+      if (!spans || spans.length === 0) return; // لا كلمات مميّزة
+      for (const s of spans) {
+        drawAccentSpan(args.ctx, args.size, args.brand, {
+          x0: s.from,
+          x1: s.to,
+          y: s.y,
+        });
+      }
+      return;
+    }
+  }
 }
 
 // ── العنوان ────────────────────────────────────────────
@@ -199,6 +387,38 @@ interface HeadlineFontCfg {
   readonly boxWidthRange: readonly [number, number];
 }
 
+/**
+ * يدمج تكوين خط العنوان (مثل `brand.typography.headline` أو `title3l`)
+ * مع `brand.typography.breaking` لسدّ الحقول الناقصة. النتيجة: كل تكوين
+ * font يحتاج فقط `max/min/lineHeight/boxWidth`؛ كل knobs تخطيط اللف
+ * (headlineFsRatio, boxWidthRange, minLines, …) تُوَرَّث من breaking إن غابت.
+ *
+ * السبب: TypographyHeadline و TypographyTitle3L في `brand-kit.ts` بسيطة
+ * (لا تحمل knobs التخطيط)؛ توسيعها في shared يعني تكرار قيم في كل
+ * `brand`. الوراثة من `breaking` تُبقي الإعداد جاف.
+ */
+function normalizeHeadlineFont(
+  brand: BrandKit,
+  raw: Record<string, unknown>
+): HeadlineFontCfg {
+  const fb = brand.typography.breaking;
+  return {
+    max: (raw['max'] as number) ?? fb.max,
+    min: (raw['min'] as number) ?? fb.min,
+    boxWidth: (raw['boxWidth'] as number) ?? fb.boxWidth,
+    lineHeight: (raw['lineHeight'] as number) ?? fb.lineHeight,
+    shortLineRatio: (raw['shortLineRatio'] as number) ?? fb.shortLineRatio,
+    maxLines: (raw['maxLines'] as number) ?? fb.maxLines,
+    minLines: (raw['minLines'] as number) ?? fb.minLines,
+    preferredLines: (raw['preferredLines'] as number) ?? fb.preferredLines,
+    readableMinRatio: (raw['readableMinRatio'] as number) ?? fb.readableMinRatio,
+    headlineFsRatio:
+      (raw['headlineFsRatio'] as readonly [number, number]) ?? fb.headlineFsRatio,
+    boxWidthRange:
+      (raw['boxWidthRange'] as readonly [number, number]) ?? fb.boxWidthRange,
+  };
+}
+
 function runHeadline(
   layer: HeadlineLayer,
   args: RenderFrameArgs,
@@ -210,7 +430,8 @@ function runHeadline(
 
   const measure: Measurer = createCanvasMeasurer(ctx, brand);
 
-  const fontCfg = resolveRef(brand, layer.font) as HeadlineFontCfg;
+  const rawFontCfg = resolveRef(brand, layer.font) as Record<string, unknown>;
+  const fontCfg = normalizeHeadlineFont(brand, rawFontCfg);
   const justifyCfg =
     layer.justify !== undefined
       ? (resolveRef(brand, layer.justify) as BrandKit['typography']['justify'])
@@ -267,14 +488,15 @@ function runHeadline(
   const centerX = size.w / 2;
   const nLines = wrap.lines.length;
 
-  // موضع y — يعتمد anchor
+  // موضع y — يعتمد anchor. `below-kicker` يستعمل RenderState.kicker.
   const anchorY = computeHeadlineAnchorY(
     layer.anchor,
     layer.verticalAnchor,
     size,
     nLines,
     wrap.lineHeight,
-    wrap.fontSize
+    wrap.fontSize,
+    state
   );
   const firstBaseline = anchorY;
   const lastBaseline = firstBaseline + (nLines - 1) * wrap.lineHeight;
@@ -292,12 +514,20 @@ function runHeadline(
     )
   );
 
+  const accentSpans: AccentSpanBounds[] = [];
   linesJustified.forEach((ln, i) => {
     const y = firstBaseline + i * wrap.lineHeight;
-    if (layer.align === 'center') {
-      drawLineCentered(ctx, measure, ln, centerX, y, wrap.fontSize, false, brand);
-    } else {
-      drawLineRTL(ctx, measure, ln, rightX, y, wrap.fontSize, false, brand);
+    const result =
+      layer.align === 'center'
+        ? drawLineCentered(ctx, measure, ln, centerX, y, wrap.fontSize, false, brand)
+        : drawLineRTL(ctx, measure, ln, rightX, y, wrap.fontSize, false, brand);
+    if (result.accentFrom !== null && result.accentTo !== null) {
+      // درسم الشريط أسفل خط الأساس بمقدار متناسق (≈ 0.1 × fs).
+      accentSpans.push({
+        from: result.accentFrom,
+        to: result.accentTo,
+        y: y + Math.round(wrap.fontSize * 0.1),
+      });
     }
   });
 
@@ -307,7 +537,9 @@ function runHeadline(
     right: rightX,
     left: rightX - chosenBoxW,
     fontSize: wrap.fontSize,
+    firstBaseline,
   };
+  state.headlineAccentSpans = accentSpans;
 }
 
 /**
@@ -318,6 +550,9 @@ function runHeadline(
  * • `middle`: نفس المفهوم عند 0.5.
  * • `bottom`: آخر baseline عند 85% من الارتفاع (يترك مساحة لـsource/logo).
  * • `top`: أول baseline عند 15% من الارتفاع.
+ * • `below-kicker`: أول baseline بعد الكيكر بمسافة `kicker.gapBelow`.
+ *   يتطلّب طبقة `kicker` مرسومة قبل هذه — RenderState.kicker يجب أن يكون
+ *   مهيَّأ.
  */
 function computeHeadlineAnchorY(
   anchor: HeadlineLayer['anchor'],
@@ -325,7 +560,8 @@ function computeHeadlineAnchorY(
   size: CanvasSize,
   nLines: number,
   lineHeight: number,
-  _fontSize: number
+  fontSize: number,
+  state: RenderState
 ): number {
   switch (anchor) {
     case 'centerLower': {
@@ -343,6 +579,16 @@ function computeHeadlineAnchorY(
     }
     case 'top':
       return size.h * 0.15;
+    case 'below-kicker': {
+      const k = state.kicker;
+      if (!k) {
+        throw new Error(
+          '[renderFrame] headline anchor=below-kicker قبل رسم kicker — راجع ترتيب الطبقات'
+        );
+      }
+      // أول baseline = أسفل الكيكر + gapBelow + fontSize (لأن baseline في الأسفل)
+      return k.baselineY + k.gapBelow + fontSize;
+    }
   }
 }
 
@@ -449,9 +695,10 @@ function executeLayer(
       runWatermark(layer, args);
       return;
     case 'kicker':
+      runKicker(layer, args, state);
+      return;
     case 'accent':
-      // مؤجَّل — القوالب card_kicker و card_bottom يستعملانه.
-      // renderFrame الحالي لا يرسمها؛ تُرفَع في المرحلة 2 عند تشغيلها.
+      runAccent(layer, args, state);
       return;
   }
 }

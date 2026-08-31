@@ -173,6 +173,17 @@ export interface TypographyReelTitle {
   readonly maxLines: number;
   readonly boxInset: number;
   readonly verticalAnchor: number;
+  // ── حقول تخطيط headline (تتوافق مع TypographyBreaking) ──────
+  // مطلوبة كي يعمل `renderFrame` على قوالب الريلز — الحقول الأصلية
+  // (max, min, maxLines, boxInset, verticalAnchor) وحدها لا تكفي.
+  readonly lineHeight: number;
+  readonly boxWidth: number;
+  readonly shortLineRatio: number;
+  readonly minLines: number;
+  readonly preferredLines: number;
+  readonly readableMinRatio: number;
+  readonly headlineFsRatio: readonly [number, number];
+  readonly boxWidthRange: readonly [number, number];
 }
 
 export interface TypographyAccentBar {

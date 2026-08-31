@@ -1,13 +1,15 @@
-// scripts/preview.mjs — معاينة متعدّدة الهويات والقوالب عبر renderFrame.
+// scripts/preview.mjs — معاينة كل القوالب لكل الهويات عبر renderFrame.
 //
 // **الاستخدام:**
-//   pnpm preview                                    # brand=default template=breaking
+//   pnpm preview                                          # brand=default template=breaking
 //   pnpm preview -- --brand=client-demo
-//   pnpm preview -- --template=plain               # يثبت بوابة المرحلة 2
-//   pnpm preview -- --brand=client-demo --template=plain
+//   pnpm preview -- --template=plain
+//   pnpm preview -- --brand=client-demo --template=all    # كل القوالب لهذه الهوية
 //
 // **بوابة المرحلة 2 (2026-08-31):** إضافة قالب `plain` (خامس بعد الأربعة
 // الأصلية) بلا سطر كود — يُرسم من JSON فقط عبر renderFrame.
+// **إغلاق الدَين (2026-08-31 لاحقة):** أُضيفت منفّذات kicker + accent
+// + watermark، فأصبحت كل القوالب الستة تُرسم كاملة.
 
 import { Canvas, FontLibrary } from 'skia-canvas';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -41,7 +43,7 @@ function parseArgs() {
 
 const CLI = parseArgs();
 
-// ── تحميل الهوية والقالب ──────────────────────────────
+// ── تحميل الهوية ──────────────────────────────────────
 async function loadBrandRaw(name) {
   if (name === 'default') return DEFAULT_BRAND;
   const path = join(ROOT, 'brands', `${name}.json`);
@@ -51,13 +53,6 @@ async function loadBrandRaw(name) {
 
 const brandRaw = await loadBrandRaw(CLI.brand);
 const brand = resolveBrand(brandRaw);
-
-const template = TEMPLATES[CLI.template];
-if (!template) {
-  throw new Error(
-    `[preview] template=${CLI.template} غير معروف. المتاح: ${Object.keys(TEMPLATES).join(', ')}`
-  );
-}
 
 // ── تسجيل الخط ديناميكياً ─────────────────────────────
 const FONTS_DIR = join(ROOT, 'assets/fonts');
@@ -90,13 +85,29 @@ if (fontPaths.length > 0) {
 }
 
 // ── الثوابت ───────────────────────────────────────────
-const SIZE = { w: 1080, h: 1350 };
-const CONTENT = {
-  headline:
-    'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع',
-  source: 'مصدر طبي للأناضول',
+const HEADLINE_LONG =
+  'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع';
+const HEADLINE_MED = 'مؤتمر السلام الدولي ينطلق _غداً_ في بروكسل';
+const HEADLINE_SHORT = 'قمة عربية طارئة';
+const TITLE_REEL = 'الحرب في غزة';
+const KICKER_TEXT = 'تقرير خاص';
+const LOCATION = 'غزة';
+const SOURCE_TEXT = 'مصدر طبي للأناضول';
+
+/**
+ * محتوى مناسب لكل قالب — يعكس ما ستفعله الواجهة عند استيفاء الحقول.
+ * أيّ قالب يستعمل كلمة مميّزة `_word_` يبيّن التمييز البصري (accent span).
+ */
+const CONTENT_BY_TEMPLATE = {
+  breaking: { headline: HEADLINE_LONG, source: SOURCE_TEXT },
+  card_centered: { headline: HEADLINE_MED }, // يحوي _غداً_ لإبراز accent span
+  card_bottom: { headline: HEADLINE_MED },
+  card_kicker: { kicker: KICKER_TEXT, headline: HEADLINE_SHORT },
+  reel: { title: TITLE_REEL, location: LOCATION },
+  plain: { headline: HEADLINE_LONG },
 };
 
+const SIZE = { w: 1080, h: 1350 };
 const OUT_DIR = join(ROOT, 'out');
 if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
 
@@ -110,17 +121,18 @@ if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
   );
 }
 
-console.log(
-  `[preview] brand=${brand.id} · template=${template.id} · قماش=${SIZE.w}×${SIZE.h}`
-);
-
-// ── دالة الرندر — مغلَّفة حول renderFrame ─────────────
-async function renderCard({ label, outPath, kashidaOn }) {
+// ── دالة الرندر ───────────────────────────────────────
+async function renderOne(templateId, kashidaOn) {
+  const template = TEMPLATES[templateId];
+  if (!template) {
+    throw new Error(
+      `[preview] template=${templateId} غير معروف. المتاح: ${Object.keys(TEMPLATES).join(', ')}`
+    );
+  }
+  const content = CONTENT_BY_TEMPLATE[templateId] ?? {};
   const canvas = new Canvas(SIZE.w, SIZE.h);
   const ctx = canvas.getContext('2d');
 
-  // نبدّل mode=none لتعطيل الكشيدة (تُغلَّف بـ shallow clone كي لا نغيّر
-  // الهوية الأصلية — الالتزام بـL-04: لا حالة مشتركة صامتة).
   const brandForFrame = kashidaOn
     ? brand
     : {
@@ -136,26 +148,27 @@ async function renderCard({ label, outPath, kashidaOn }) {
     size: SIZE,
     template,
     brand: brandForFrame,
-    content: CONTENT,
+    content,
   });
 
+  const suffix = templateId === 'breaking' ? '' : `-${templateId.replace(/_/g, '-')}`;
+  const kashidaSuffix = kashidaOn ? '' : '-nokashida';
+  const outPath = join(OUT_DIR, `preview-${CLI.brand}${suffix}${kashidaSuffix}.png`);
   await canvas.toFile(outPath);
-  console.log(`   ${label} → ${outPath}`);
+  return outPath;
 }
 
 // ── تنفيذ ─────────────────────────────────────────────
-const suffix = CLI.template === 'breaking' ? '' : `-${CLI.template}`;
-const outMain = join(OUT_DIR, `preview-${CLI.brand}${suffix}.png`);
-const outNoK = join(OUT_DIR, `preview-${CLI.brand}${suffix}-nokashida.png`);
+const templatesToRun =
+  CLI.template === 'all' ? Object.keys(TEMPLATES) : [CLI.template];
 
-await renderCard({
-  label: `${brand.name} · ${template.name} · الكشيدة مفعّلة`,
-  outPath: outMain,
-  kashidaOn: true,
-});
+console.log(
+  `[preview] brand=${brand.id} · قوالب=${templatesToRun.join(',')} · قماش=${SIZE.w}×${SIZE.h}`
+);
 
-await renderCard({
-  label: `${brand.name} · ${template.name} · بلا كشيدة`,
-  outPath: outNoK,
-  kashidaOn: false,
-});
+for (const tplId of templatesToRun) {
+  const outK = await renderOne(tplId, true);
+  const outN = await renderOne(tplId, false);
+  console.log(`   ${tplId.padEnd(14)} → ${outK.replace(ROOT + '/', '')} (kashida)`);
+  console.log(`   ${' '.repeat(14)}   ${outN.replace(ROOT + '/', '')} (بلا)`);
+}

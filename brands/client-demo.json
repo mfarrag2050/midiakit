@@ -71,8 +71,16 @@
     "title3l":   { "max": 84, "min": 40 },
     "source":    { "size": 38, "weight": 700 },
     "reelTitle": {
-      "max": 76, "min": 40, "maxLines": 4,
-      "boxInset": 150, "verticalAnchor": 0.66
+      "max": 88, "min": 44, "maxLines": 4,
+      "boxInset": 150, "verticalAnchor": 0.66,
+      "lineHeight": 1.32,
+      "boxWidth": 800,
+      "shortLineRatio": 0.6,
+      "minLines": 1,
+      "preferredLines": 2,
+      "readableMinRatio": 0.045,
+      "headlineFsRatio": [0.06, 0.08],
+      "boxWidthRange": [0.68, 0.86]
     },
     "accentBar": { "height": 10, "minWidth": 160, "maxWidth": 640 },
     "lineHeightMode": "dynamic",
