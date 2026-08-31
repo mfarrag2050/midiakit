@@ -20,3 +20,8 @@ export {
   type BuildRenderPlanArgs,
 } from './render-plan.js';
 export * from './timeline/index.js';
+export {
+  loadDefaultLexicon,
+  normalize as normalizeArabic,
+  type Lexicon,
+} from './arabic-lexicon/index.js';

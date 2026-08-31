@@ -50,3 +50,10 @@ export {
   type JustifyLineOptions,
   type DetectedFontCaps,
 } from './kashida.js';
+export {
+  breakPenalty,
+  BREAK_INFINITY,
+  BREAK_STRONG,
+  BREAK_MEDIUM,
+  BREAK_NEUTRAL,
+} from './semantic-break.js';
