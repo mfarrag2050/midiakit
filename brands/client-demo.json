@@ -1,0 +1,158 @@
+{
+  "id": "client-demo",
+  "name": "طيف — عميل تجريبي",
+  "version": 1,
+  "direction": "rtl",
+  "locale": "ar",
+
+  "fonts": {
+    "primary": {
+      "family": "Almarai",
+      "source": "builtin",
+      "licenseAck": true,
+      "weights": {
+        "light": { "url": "assets/fonts/Almarai-Light.ttf", "value": 300 },
+        "regular": { "url": "assets/fonts/Almarai-Regular.ttf", "value": 400 },
+        "bold": { "url": "assets/fonts/Almarai-Bold.ttf", "value": 700 }
+      }
+    },
+    "fallback": "sans-serif",
+    "capabilities": {
+      "kashida": true,
+      "kashidaMethod": "tatweel",
+      "variableAxes": [],
+      "diacriticsSafe": true
+    }
+  },
+
+  "colors": {
+    "text": "#F8F4E9",
+    "accent": "#E8815A",
+    "urgentBadge": "#FFB100",
+    "urgentBg": "#0B2340",
+    "urgentBgTint": "#14315B",
+    "locationBadge": "#4A9EA1",
+    "surface": "#0B2340",
+    "placeholder": ["#193760", "#0B2340"]
+  },
+
+  "logo": {
+    "url": "",
+    "size": 72,
+    "margin": 60,
+    "position": "bottom-left",
+    "watermark": {
+      "enabled": false,
+      "scale": 0.95,
+      "offsetX": -0.12,
+      "opacity": 0.55,
+      "tint": "colors.urgentBgTint"
+    }
+  },
+
+  "typography": {
+    "headline":  { "max": 96, "min": 40, "lineHeight": 1.30, "boxWidth": 880 },
+    "breaking":  {
+      "max": 96,
+      "min": 44,
+      "lineHeight": 1.36,
+      "boxWidth": 900,
+      "shortLineRatio": 1.0,
+      "maxLines": 5,
+      "minLines": 2,
+      "preferredLines": 3,
+      "readableMinRatio": 0.05,
+      "targetFill": 0.9,
+      "wrapMode": "uniform",
+      "headlineFsRatio": [0.075, 0.095],
+      "boxWidthRange": [0.68, 0.86]
+    },
+    "kicker":    { "max": 60, "min": 28, "weight": 300, "boxWidth": 760, "gapBelow": 56 },
+    "title3l":   { "max": 84, "min": 40 },
+    "source":    { "size": 38, "weight": 700 },
+    "reelTitle": {
+      "max": 76, "min": 40, "maxLines": 4,
+      "boxInset": 150, "verticalAnchor": 0.66
+    },
+    "accentBar": { "height": 10, "minWidth": 160, "maxWidth": 640 },
+    "lineHeightMode": "dynamic",
+    "justify": {
+      "mode": "kashida",
+      "maxStretchPerSite": 0.35,
+      "maxSitesPerWord": 1,
+      "minLineFill": 0.82,
+      "lastLine": "natural"
+    },
+    "semanticBreaks": { "enabled": false, "useModel": "never" },
+    "diacritics":     { "enabled": false, "mode": "full" },
+    "bidi":           { "enabled": true, "numerals": "arabic" }
+  },
+
+  "badges": {
+    "urgent": {
+      "label": "خبر عاجل",
+      "fontSize": 44,
+      "height": 72,
+      "paddingX": 34,
+      "radius": 6,
+      "fill": "colors.urgentBadge",
+      "textColor": "colors.urgentBg"
+    },
+    "location": {
+      "fontSize": 36,
+      "height": 58,
+      "paddingX": 22,
+      "radius": 8,
+      "fill": "colors.locationBadge",
+      "textColor": "colors.text",
+      "margin": { "x": 60, "y": 60 },
+      "anchor": "top-right"
+    }
+  },
+
+  "gradient": {
+    "defaultOpacity": 0.60,
+    "defaultReach": 0.80,
+    "shape": [[0,1],[0.20,0.98],[0.40,0.82],[0.60,0.48],[0.80,0.06],[0.92,0]],
+    "band":  [[0,0.08],[0.20,0.5],[0.36,0.92],[0.5,1.0],[0.64,0.92],[0.80,0.5],[1,0.08]]
+  },
+
+  "shadows": {
+    "reelTitle": { "color": "rgba(11,35,64,0.62)", "blur": 24, "offsetY": 2 }
+  },
+
+  "margins": {
+    "contentRight": 90,
+    "breakingBaseline": 220,
+    "sourceBaseline": 150,
+    "badgeGap": 36,
+    "cardTopPortrait": 170,
+    "cardBottomS01": 350
+  },
+
+  "motion": {
+    "segmentMin": 7,
+    "segmentMax": 10,
+    "segmentWordBase": 8,
+    "segmentWordStep": 0.3,
+    "crossfade": 0.6,
+    "reelCrossfade": 0.5,
+    "titleFadeIn": 0.45,
+    "titleFadeOut": 0.5,
+    "badgeDelay": 0.25,
+    "badgeFade": 0.45,
+    "lineStagger": 0.12,
+    "lineFade": 0.42,
+    "outro": 0.5,
+    "badgePulse": 0.05
+  },
+
+  "outputs": {
+    "x":         { "w": 1080, "h": 1080 },
+    "instagram": { "w": 1080, "h": 1440 },
+    "feed":      { "w": 1080, "h": 1350 },
+    "reel":      { "w": 1080, "h": 1920 }
+  },
+
+  "audio": []
+}

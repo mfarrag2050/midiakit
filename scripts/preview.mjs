@@ -1,19 +1,22 @@
-// scripts/preview.mjs — مقارنة دائمة: كشيدة على/بلا كشيدة.
+// scripts/preview.mjs — معاينة متعدّدة الهويات.
 //
-// **الإعداد المعتمد (قرار المالك 2026-08-31 بعد المقارنة البصرية):**
-//   maxSitesPerWord = 1 (قيمة docs/03، أُكِّدت بالتجريب)
-//   fs ≈ 74 (6.9% من القماش) داخل `headlineFsRatio = [0.065, 0.085]`
-//   boxWidth ≈ 950 (88%) داخل `boxWidthRange = [0.72, 0.88]`
-//   3 أسطر — النمط الصحفي القياسي للعاجل
+// **الاستخدام:**
+//   pnpm preview                              # هوية DEFAULT_BRAND
+//   pnpm preview -- --brand=default
+//   pnpm preview -- --brand=client-demo       # brands/client-demo.json
 //
-// المخرَجان:
-//   • out/preview.png            — الكشيدة مفعّلة.
-//   • out/preview-nokashida.png  — نفس التخطيط، بلا تطويلات (المرجع).
+// **بوابة المرحلة 1:** «تشغيل الأداة بهويتين مختلفتين دون لمس كود
+// الرسم». إثبات الفصل بين المحرك والهوية — كل الاختلاف يأتي من
+// `BrandKit`، لا من تفريعات في المحرك.
+//
+// **المخرجات:**
+//   • out/preview-<brand>.png            — الكشيدة مفعّلة
+//   • out/preview-<brand>-nokashida.png  — مرجع بلا كشيدة
 
 import { Canvas, FontLibrary } from 'skia-canvas';
-import { mkdir } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve as pathResolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
@@ -35,17 +38,64 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-// ── تسجيل الخط ─────────────────────────────────────────
+// ── وسائط سطر الأوامر ─────────────────────────────────
+const brandArg = (() => {
+  for (const arg of process.argv.slice(2)) {
+    const m = arg.match(/^--brand=(.+)$/);
+    if (m) return m[1];
+  }
+  return 'default';
+})();
+
+// ── تحميل الهوية ──────────────────────────────────────
+async function loadBrandRaw(name) {
+  if (name === 'default') return DEFAULT_BRAND;
+  const path = join(ROOT, 'brands', `${name}.json`);
+  if (!existsSync(path)) {
+    throw new Error(`[preview] brands/${name}.json غير موجود`);
+  }
+  const raw = await readFile(path, 'utf8');
+  return JSON.parse(raw);
+}
+
+const brandRaw = await loadBrandRaw(brandArg);
+const brand = resolveBrand(brandRaw);
+
+// ── تسجيل الخط ديناميكياً من brand.fonts.primary.weights ─
+//
+// إن كانت weights.*.url فارغة (حالة DEFAULT_BRAND)، نستعمل خط IBM Plex
+// المحلي كتراجع صامت — لأن DEFAULT_BRAND معماري لا ملفاتي.
 const FONTS_DIR = join(ROOT, 'assets/fonts');
-FontLibrary.use('IBM Plex Sans Arabic', [
+const IBM_PLEX_FALLBACK = [
   join(FONTS_DIR, 'IBMPlexSansArabic-Light.ttf'),
   join(FONTS_DIR, 'IBMPlexSansArabic-Regular.ttf'),
   join(FONTS_DIR, 'IBMPlexSansArabic-Bold.ttf'),
-]);
+];
 
+function resolveFontPath(url) {
+  if (!url) return null;
+  return isAbsolute(url) ? url : pathResolve(ROOT, url);
+}
+
+const weights = brand.fonts.primary.weights;
+const fontPaths = [weights.light.url, weights.regular.url, weights.bold.url]
+  .map(resolveFontPath)
+  .filter(Boolean);
+
+if (fontPaths.length > 0) {
+  FontLibrary.use(brand.fonts.primary.family, fontPaths);
+  console.log(
+    `[preview] font: ${brand.fonts.primary.family} (${fontPaths.length} أوزان من brand.json)`
+  );
+} else {
+  FontLibrary.use(brand.fonts.primary.family, IBM_PLEX_FALLBACK);
+  console.log(
+    `[preview] font: ${brand.fonts.primary.family} (تراجع IBM Plex — brand بلا مسارات)`
+  );
+}
+
+// ── الثوابت المشتركة ──────────────────────────────────
 const SIZE = { w: 1080, h: 1350 };
-const brand = resolveBrand(DEFAULT_BRAND);
-
 const TEXT =
   'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع';
 const SOURCE = 'مصدر طبي للأناضول';
@@ -71,7 +121,6 @@ const {
 
 const readableMin = Math.round(SIZE.w * readableMinRatio);
 
-// ── مرشحو boxWidth: 10 قيم موزّعة داخل النطاق ─────────
 const [bwMinRatio, bwMaxRatio] = boxWidthRange;
 const BW_STEPS = 10;
 const boxWidthCandidates = [];
@@ -81,7 +130,6 @@ for (let i = 0; i < BW_STEPS; i++) {
   boxWidthCandidates.push(Math.round(SIZE.w * ratio));
 }
 
-// ── نطاق fs المفضّل (من headlineFsRatio × عرض القماش) ─
 const fsRange = [
   Math.round(SIZE.w * headlineFsRatio[0]),
   Math.round(SIZE.w * headlineFsRatio[1]),
@@ -99,10 +147,10 @@ const fsRange = [
 }
 
 console.log(
-  `[preview] قماش=${SIZE.w}×${SIZE.h} · fsRange=[${fsRange[0]}, ${fsRange[1]}]px · boxWidthCandidates=[${boxWidthCandidates[0]}..${boxWidthCandidates[boxWidthCandidates.length - 1]}] (${boxWidthCandidates.length} قيمة)`
+  `[preview] brand=${brand.id} · قماش=${SIZE.w}×${SIZE.h} · fsRange=[${fsRange[0]}, ${fsRange[1]}]px · boxWidthCandidates=[${boxWidthCandidates[0]}..${boxWidthCandidates[boxWidthCandidates.length - 1]}]`
 );
 console.log(
-  `[preview] justify: mode=${brand.typography.justify.mode} · maxStretchPerSite=${brand.typography.justify.maxStretchPerSite} · maxSitesPerWord=${brand.typography.justify.maxSitesPerWord} · minLineFill=${brand.typography.justify.minLineFill}`
+  `[preview] justify: mode=${brand.typography.justify.mode} · maxSitesPerWord=${brand.typography.justify.maxSitesPerWord} · minLineFill=${brand.typography.justify.minLineFill}`
 );
 
 // ── معالجة النص مرة واحدة ─────────────────────────────
@@ -121,13 +169,9 @@ async function renderCard({ label, outPath, kashidaOn }) {
     mode: kashidaOn ? 'kashida' : 'none',
   };
 
-  // (١) الخلفية والتدرّج
   drawSolid(ctx, SIZE, brand, { colorKey: 'urgentBg' });
   drawGradient(ctx, SIZE, brand, { direction: 'bottom' });
 
-  // (٢) اللف يستكشف (fs, boxW, k) داخل النطاقين المفضّلين. نمرّر
-  //     capacityConfig حتى للنسخة «بلا كشيدة» لضمان تكافؤ التخطيط —
-  //     الفرق يبقى في مرحلة التبرير فقط، فيبين أثر الكشيدة نقياً.
   const wrap = wrapOptimal(
     tokensCached,
     boxWidth,
@@ -159,7 +203,6 @@ async function renderCard({ label, outPath, kashidaOn }) {
     measure.line(ln, wrap.fontSize, false)
   );
 
-  // (٣) تبرير كل سطر بالكشيدة (ما عدا الأخير)
   const linesJustified = wrap.lines.map((line, i) =>
     justifyLine(
       line,
@@ -173,7 +216,6 @@ async function renderCard({ label, outPath, kashidaOn }) {
     )
   );
 
-  // (٤) التخطيط: صندوق مركّز أفقياً
   const boxOffsetX = (SIZE.w - chosenBoxW) / 2;
   const rightX = SIZE.w - boxOffsetX;
   const nLines = linesJustified.length;
@@ -194,14 +236,12 @@ async function renderCard({ label, outPath, kashidaOn }) {
     );
   });
 
-  // (٥) الشارة فوق أول سطر
   drawBadge(ctx, SIZE, brand, {
     badge: brand.badges.urgent,
     rx: rightX,
     bottomY: firstBaseline - wrap.fontSize - brand.margins.badgeGap,
   });
 
-  // (٦) المصدر — fs × 1.4 للتنفّس البصري
   const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
   const sourceBaseline = lastBaseline + wrap.fontSize * SOURCE_GAP_RATIO;
   ctx.font = `${brand.typography.source.weight} ${brand.typography.source.size}px ${family}`;
@@ -215,7 +255,6 @@ async function renderCard({ label, outPath, kashidaOn }) {
 
   await canvas.toFile(outPath);
 
-  // (٧) تقرير تفصيلي
   const postWidths = linesJustified.map((ln) =>
     measure.line(ln, wrap.fontSize, false)
   );
@@ -235,16 +274,22 @@ async function renderCard({ label, outPath, kashidaOn }) {
       `   ${i + 1}. [${ln.length} كلمة]${marker} ملء ${preFillPct.toFixed(0)}%${arrow}  ${ln.map((t) => t.text).join(' ')}`
     );
   });
+
+  return { fontSize: wrap.fontSize, boxWidth: chosenBoxW, nLines };
 }
 
-await renderCard({
-  label: 'الكشيدة مفعّلة',
-  outPath: join(OUT_DIR, 'preview.png'),
+const withK = await renderCard({
+  label: `${brand.name} — الكشيدة مفعّلة`,
+  outPath: join(OUT_DIR, `preview-${brand.id}.png`),
   kashidaOn: true,
 });
 
-await renderCard({
-  label: 'بلا كشيدة (المرجع)',
-  outPath: join(OUT_DIR, 'preview-nokashida.png'),
+const noK = await renderCard({
+  label: `${brand.name} — بلا كشيدة (المرجع)`,
+  outPath: join(OUT_DIR, `preview-${brand.id}-nokashida.png`),
   kashidaOn: false,
 });
+
+console.log(
+  `\n[preview] brand=${brand.id} · نتيجة: fs=${withK.fontSize} · boxW=${withK.boxWidth} · أسطر=${withK.nLines}`
+);
