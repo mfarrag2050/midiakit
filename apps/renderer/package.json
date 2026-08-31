@@ -7,7 +7,10 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./cli": "./src/cli.ts"
+    "./cli": "./src/cli.ts",
+    "./queues": "./src/queues.ts",
+    "./worker": "./src/worker.ts",
+    "./validate": "./src/validate.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -15,6 +18,8 @@
   "dependencies": {
     "@pf-mediakit/shared": "workspace:*",
     "@pf-mediakit/engine": "workspace:*",
-    "@pf-mediakit/templates": "workspace:*"
+    "@pf-mediakit/templates": "workspace:*",
+    "bullmq": "5.34.0",
+    "ioredis": "5.4.1"
   }
 }
