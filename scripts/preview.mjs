@@ -1,17 +1,14 @@
-// scripts/preview.mjs — أول مخرج بصري للمحرك + بديل للمقارنة.
+// scripts/preview.mjs — مقارنة دائمة: كشيدة على/بلا كشيدة.
 //
-// **اختبار صحة معماري:** يُشغّل طبقات packages/engine مباشرةً من Node
-// عبر skia-canvas بلا DOM ولا واجهة.
+// **الإعداد المعتمد (قرار المالك 2026-08-31 بعد المقارنة البصرية):**
+//   maxSitesPerWord = 1 (قيمة docs/03، أُكِّدت بالتجريب)
+//   fs ≈ 74 (6.9% من القماش) داخل `headlineFsRatio = [0.065, 0.085]`
+//   boxWidth ≈ 950 (88%) داخل `boxWidthRange = [0.72, 0.88]`
+//   3 أسطر — النمط الصحفي القياسي للعاجل
 //
-// **يُخرج ملفَّين للمقارنة البصرية:**
-//   • out/preview.png    — بالإعداد الجديد (أولوية الملء ثم المقروئية،
-//                          مع targetFill=0.9 وswap-down ±6px/+15%).
-//   • out/preview-alt.png — بأكبر fs ممكن دون قاعدة swap-down ولا هدف
-//                          ملء صريح — أي «الخيار الطباعي التقليدي».
-//                          يُستعمل للمقارنة البصرية فقط.
-//
-// النموذج: بطاقة عاجل بمقاس Instagram العمودي (1080×1350).
-// انظر تعليقات القرارات في التعليق أعلى مسار الرندر.
+// المخرَجان:
+//   • out/preview.png            — الكشيدة مفعّلة.
+//   • out/preview-nokashida.png  — نفس التخطيط، بلا تطويلات (المرجع).
 
 import { Canvas, FontLibrary } from 'skia-canvas';
 import { mkdir } from 'node:fs/promises';
@@ -25,13 +22,14 @@ import {
   preprocessBidi,
   parseTokens,
   createCanvasMeasurer,
-  wrapAlternating,
   wrapOptimal,
   drawLineRTL,
   drawSolid,
   drawGradient,
   drawBadge,
   drawLogo,
+  detectFontCaps,
+  justifyLine,
 } from '@pf-mediakit/engine';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,7 +50,7 @@ const TEXT =
   'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع';
 const SOURCE = 'مصدر طبي للأناضول';
 const CENTER_LOWER_Y = 0.62;
-const SOURCE_GAP_RATIO = 0.9;
+const SOURCE_GAP_RATIO = 1.4;
 
 const OUT_DIR = join(ROOT, 'out');
 if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
@@ -61,70 +59,129 @@ const {
   max,
   min,
   boxWidth,
+  boxWidthRange,
+  headlineFsRatio,
   maxLines,
   minLines,
   preferredLines,
   readableMinRatio,
-  targetFill,
   lineHeight,
   shortLineRatio,
-  wrapMode,
 } = brand.typography.breaking;
 
-// readableMin يُشتقّ من عرض القماش (لا رقم مطلق).
 const readableMin = Math.round(SIZE.w * readableMinRatio);
 
-// ── دالة الرندر: نسختان بمعاملات مختلفة للاختيار ─────
-async function renderCard({ label, outPath, wrapOptions }) {
+// ── مرشحو boxWidth: 10 قيم موزّعة داخل النطاق ─────────
+const [bwMinRatio, bwMaxRatio] = boxWidthRange;
+const BW_STEPS = 10;
+const boxWidthCandidates = [];
+for (let i = 0; i < BW_STEPS; i++) {
+  const t = i / (BW_STEPS - 1);
+  const ratio = bwMinRatio + t * (bwMaxRatio - bwMinRatio);
+  boxWidthCandidates.push(Math.round(SIZE.w * ratio));
+}
+
+// ── نطاق fs المفضّل (من headlineFsRatio × عرض القماش) ─
+const fsRange = [
+  Math.round(SIZE.w * headlineFsRatio[0]),
+  Math.round(SIZE.w * headlineFsRatio[1]),
+];
+
+// ── كشف قدرات الخط لمرة واحدة ─────────────────────────
+{
+  const probeCanvas = new Canvas(10, 10);
+  const probeCtx = probeCanvas.getContext('2d');
+  const probeMeasure = createCanvasMeasurer(probeCtx, brand);
+  const detected = detectFontCaps(probeMeasure, 80);
+  console.log(
+    `[preview] detectFontCaps: kashida=${detected.kashida} method=${detected.kashidaMethod}`
+  );
+}
+
+console.log(
+  `[preview] قماش=${SIZE.w}×${SIZE.h} · fsRange=[${fsRange[0]}, ${fsRange[1]}]px · boxWidthCandidates=[${boxWidthCandidates[0]}..${boxWidthCandidates[boxWidthCandidates.length - 1]}] (${boxWidthCandidates.length} قيمة)`
+);
+console.log(
+  `[preview] justify: mode=${brand.typography.justify.mode} · maxStretchPerSite=${brand.typography.justify.maxStretchPerSite} · maxSitesPerWord=${brand.typography.justify.maxSitesPerWord} · minLineFill=${brand.typography.justify.minLineFill}`
+);
+
+// ── معالجة النص مرة واحدة ─────────────────────────────
+const tokensCached = parseTokens(
+  preprocessBidi(TEXT, { numerals: brand.typography.bidi.numerals })
+);
+
+// ── دالة رندر بطاقة واحدة ─────────────────────────────
+async function renderCard({ label, outPath, kashidaOn }) {
   const canvas = new Canvas(SIZE.w, SIZE.h);
   const ctx = canvas.getContext('2d');
   const measure = createCanvasMeasurer(ctx, brand);
+
+  const justifyCfg = {
+    ...brand.typography.justify,
+    mode: kashidaOn ? 'kashida' : 'none',
+  };
 
   // (١) الخلفية والتدرّج
   drawSolid(ctx, SIZE, brand, { colorKey: 'urgentBg' });
   drawGradient(ctx, SIZE, brand, { direction: 'bottom' });
 
-  // (٢) العنوان — لفّ باستخدام خيارات نسخة معيّنة
-  const processed = preprocessBidi(TEXT, {
-    numerals: brand.typography.bidi.numerals,
-  });
-  const tokens = parseTokens(processed);
+  // (٢) اللف يستكشف (fs, boxW, k) داخل النطاقين المفضّلين. نمرّر
+  //     capacityConfig حتى للنسخة «بلا كشيدة» لضمان تكافؤ التخطيط —
+  //     الفرق يبقى في مرحلة التبرير فقط، فيبين أثر الكشيدة نقياً.
+  const wrap = wrapOptimal(
+    tokensCached,
+    boxWidth,
+    max,
+    min,
+    false,
+    maxLines,
+    shortLineRatio,
+    lineHeight,
+    measure,
+    'uniform',
+    {
+      minLines,
+      preferredLines,
+      readableMin,
+      preferLargestFs: true,
+      absoluteMinFill: brand.typography.justify.minLineFill,
+      boxWidthCandidates,
+      fsRange,
+      justifyCapacityConfig: {
+        cfg: brand.typography.justify,
+        fontCaps: brand.fonts.capabilities,
+      },
+    }
+  );
 
-  const wrap =
-    wrapMode === 'alternating'
-      ? wrapAlternating(
-          tokens,
-          boxWidth,
-          max,
-          min,
-          false,
-          maxLines,
-          shortLineRatio,
-          lineHeight,
-          measure
-        )
-      : wrapOptimal(
-          tokens,
-          boxWidth,
-          max,
-          min,
-          false,
-          maxLines,
-          shortLineRatio,
-          lineHeight,
-          measure,
-          'uniform',
-          wrapOptions
-        );
+  const chosenBoxW = wrap.boxWidth;
+  const preFillWidths = wrap.lines.map((ln) =>
+    measure.line(ln, wrap.fontSize, false)
+  );
 
-  // (٣) التخطيط: anchor centerLower
-  const rightX = SIZE.w - brand.margins.contentRight;
-  const nLines = wrap.lines.length;
+  // (٣) تبرير كل سطر بالكشيدة (ما عدا الأخير)
+  const linesJustified = wrap.lines.map((line, i) =>
+    justifyLine(
+      line,
+      chosenBoxW,
+      wrap.fontSize,
+      false,
+      justifyCfg,
+      brand.fonts.capabilities,
+      measure,
+      { isLast: i === wrap.lines.length - 1 }
+    )
+  );
+
+  // (٤) التخطيط: صندوق مركّز أفقياً
+  const boxOffsetX = (SIZE.w - chosenBoxW) / 2;
+  const rightX = SIZE.w - boxOffsetX;
+  const nLines = linesJustified.length;
   const centerY = SIZE.h * CENTER_LOWER_Y;
   const firstBaseline = centerY - ((nLines - 1) * wrap.lineHeight) / 2;
   const lastBaseline = firstBaseline + (nLines - 1) * wrap.lineHeight;
 
-  wrap.lines.forEach((ln, i) => {
+  linesJustified.forEach((ln, i) => {
     drawLineRTL(
       ctx,
       measure,
@@ -137,14 +194,14 @@ async function renderCard({ label, outPath, wrapOptions }) {
     );
   });
 
-  // (٤) الشارة فوق أول سطر
+  // (٥) الشارة فوق أول سطر
   drawBadge(ctx, SIZE, brand, {
     badge: brand.badges.urgent,
     rx: rightX,
     bottomY: firstBaseline - wrap.fontSize - brand.margins.badgeGap,
   });
 
-  // (٥) المصدر أسفل السطر الأخير بمسافة نسبية
+  // (٦) المصدر — fs × 1.4 للتنفّس البصري
   const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
   const sourceBaseline = lastBaseline + wrap.fontSize * SOURCE_GAP_RATIO;
   ctx.font = `${brand.typography.source.weight} ${brand.typography.source.size}px ${family}`;
@@ -158,62 +215,36 @@ async function renderCard({ label, outPath, wrapOptions }) {
 
   await canvas.toFile(outPath);
 
-  // (٦) تقرير الأرقام
-  const widths = wrap.lines.map((ln) => measure.line(ln, wrap.fontSize, false));
-  const mean = widths.reduce((a, b) => a + b, 0) / widths.length;
-  const variance =
-    widths.reduce((s, w) => s + (w - mean) ** 2, 0) / widths.length;
-  const stddev = Math.sqrt(variance);
-  const minFill = Math.min(...widths.map((w) => w / boxWidth));
-
+  // (٧) تقرير تفصيلي
+  const postWidths = linesJustified.map((ln) =>
+    measure.line(ln, wrap.fontSize, false)
+  );
   console.log(`\n── ${label} → ${outPath}`);
   console.log(
-    `   ${nLines} سطر · fs=${wrap.fontSize}px · lh=${wrap.lineHeight}px`
+    `   fs=${wrap.fontSize}px (${((wrap.fontSize / SIZE.w) * 100).toFixed(1)}% من القماش) · boxWidth=${chosenBoxW}px (${((chosenBoxW / SIZE.w) * 100).toFixed(0)}%) · ${nLines} سطر`
   );
-  wrap.lines.forEach((ln, i) => {
-    const w = widths[i];
+  linesJustified.forEach((ln, i) => {
+    const pre = preFillWidths[i];
+    const post = postWidths[i];
+    const preFillPct = (pre / chosenBoxW) * 100;
+    const postFillPct = (post / chosenBoxW) * 100;
+    const delta = post - pre;
+    const marker = i === nLines - 1 ? ' (أخير)' : '';
+    const arrow = delta > 0.5 ? ` → ${postFillPct.toFixed(0)}% (+${delta.toFixed(0)}px)` : '';
     console.log(
-      `   ${i + 1}. [${ln.length} كلمة · ${w.toFixed(0)}/${boxWidth}px · ${((w / boxWidth) * 100).toFixed(0)}%] ` +
-        ln.map((t) => t.text).join(' ')
+      `   ${i + 1}. [${ln.length} كلمة]${marker} ملء ${preFillPct.toFixed(0)}%${arrow}  ${ln.map((t) => t.text).join(' ')}`
     );
   });
-  console.log(
-    `   إحصاء: متوسّط=${mean.toFixed(0)}px · انحراف=${stddev.toFixed(0)}px (${((stddev / mean) * 100).toFixed(1)}%) · أدنى ملء=${(minFill * 100).toFixed(1)}%`
-  );
-
-  return { fontSize: wrap.fontSize, nLines, minFill, stddevRatio: stddev / mean };
 }
 
-// ── (أ) الإعداد الجديد: الملء ثم المقروئية ─────────────
-console.log(
-  `[preview] قماش=${SIZE.w}×${SIZE.h} · readableMin=${readableMin}px (=${SIZE.w}×${readableMinRatio}) · targetFill=${targetFill}`
-);
-
-const primary = await renderCard({
-  label: 'الإعداد الجديد (أولوية الملء)',
+await renderCard({
+  label: 'الكشيدة مفعّلة',
   outPath: join(OUT_DIR, 'preview.png'),
-  wrapOptions: { minLines, preferredLines, readableMin, targetFill },
+  kashidaOn: true,
 });
 
-// ── (ب) البديل: أكبر fs ممكن بلا قاعدة swap ولا targetFill ─
-// نُعطّل قاعدة التبديل نزولاً (swapMinFillGain=∞) وهدف الملء (targetFill=∞).
-// النتيجة: الخوارزمية تبقى عند أكبر fs مقبول — «الخيار الطباعي التقليدي».
-const alt = await renderCard({
-  label: 'البديل (أكبر fs مقبول، بلا هدف ملء)',
-  outPath: join(OUT_DIR, 'preview-alt.png'),
-  wrapOptions: {
-    minLines,
-    preferredLines,
-    readableMin,
-    targetFill: 999, // مستحيل — يمنع مسار target-hit
-    swapMinFillGain: 999, // مستحيل — يمنع swap-down
-  },
+await renderCard({
+  label: 'بلا كشيدة (المرجع)',
+  outPath: join(OUT_DIR, 'preview-nokashida.png'),
+  kashidaOn: false,
 });
-
-console.log('\n── مقارنة ──');
-console.log(
-  `الجديد: fs=${primary.fontSize} أسطر=${primary.nLines} أدنى ملء=${(primary.minFill * 100).toFixed(1)}% انحراف=${(primary.stddevRatio * 100).toFixed(1)}%`
-);
-console.log(
-  `البديل: fs=${alt.fontSize} أسطر=${alt.nLines} أدنى ملء=${(alt.minFill * 100).toFixed(1)}% انحراف=${(alt.stddevRatio * 100).toFixed(1)}%`
-);

@@ -59,6 +59,7 @@ export function wrapAlternating(
           fontSize: fs,
           lines,
           lineHeight: Math.round(fs * lineHeightRatio),
+          boxWidth: boxW,
         };
       }
     }
@@ -66,6 +67,7 @@ export function wrapAlternating(
       fontSize: minFont,
       lines,
       lineHeight: Math.round(minFont * lineHeightRatio),
+      boxWidth: boxW,
     };
   }
 
@@ -99,6 +101,7 @@ export function wrapAlternating(
         fontSize: fs,
         lines,
         lineHeight: Math.round(fs * lineHeightRatio),
+        boxWidth: boxW,
       };
     }
   }
@@ -108,5 +111,6 @@ export function wrapAlternating(
     fontSize: minFont,
     lines,
     lineHeight: Math.round(minFont * lineHeightRatio),
+    boxWidth: boxW,
   };
 }

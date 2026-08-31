@@ -35,7 +35,9 @@ export const DEFAULT_BRAND: BrandKit = {
     },
     fallback: 'sans-serif',
     capabilities: {
-      kashida: false,
+      // IBM Plex Sans Arabic يرسم U+0640 بعرض معقول — مؤكَّد يدوياً.
+      // العملاء الذين يرفعون خطاً مخصصاً يمرّون بـ detectFontCaps.
+      kashida: true,
       kashidaMethod: 'tatweel',
       variableAxes: [],
       diacriticsSafe: true,
@@ -78,9 +80,17 @@ export const DEFAULT_BRAND: BrandKit = {
       maxLines: 6,
       minLines: 2,             // منع سطر واحد في العنوان
       preferredLines: 3,       // النمط الصحفي القياسي
-      readableMinRatio: 0.045, // نسبة من عرض القماش — 4.5% (48.6px @1080)
-      targetFill: 0.9,         // ملء مستهدف — الحلّ الذي يبلغه يفوز
+      readableMinRatio: 0.045, // نسبة من عرض القماش — 4.5% (48.6px @1080) — أرضية طوارئ فقط
+      targetFill: 0.9,         // ملء مستهدف — يُستعمل في المسارات غير preferLargestFs
       wrapMode: 'uniform',
+      // نطاق حجم الخط المفضّل [min, max] كنسبتين من عرض القماش.
+      // على 1080: 70 إلى 92px — النطاق الصحفي القياسي لبطاقة العاجل.
+      // الأولوية: البحث داخله أولاً، ثم التراجع إلى [minFont, maxFont] إن فشل.
+      headlineFsRatio: [0.065, 0.085],
+      // نطاق عرض الصندوق [min, max] كنسبتين من عرض القماش.
+      // على 1080: 778 إلى 950. القيمة السفلى تسمح للف اختيار عرض أضيق
+      // يعطي ملء طبيعي أعلى (بالاشتراك مع كشيدة تصل إلى 100%).
+      boxWidthRange: [0.72, 0.88],
     },
     kicker: { max: 60, min: 28, weight: 300, boxWidth: 760, gapBelow: 56 },
     title3l: { max: 84, min: 40 },
@@ -95,7 +105,11 @@ export const DEFAULT_BRAND: BrandKit = {
     accentBar: { height: 8, minWidth: 140, maxWidth: 620 },
     lineHeightMode: 'dynamic',
     justify: {
-      mode: 'space',
+      // القيم مطابقة لـ docs/03 §justify.
+      // mode='kashida' لأن الخط الافتراضي (IBM Plex) يدعمه — للخطوط
+      // المرفوعة، detectFontCaps يعيد capabilities.kashida=false والتراجع
+      // إلى 'space' يحدث صامتاً داخل justifyLine.
+      mode: 'kashida',
       maxStretchPerSite: 0.35,
       maxSitesPerWord: 1,
       minLineFill: 0.82,

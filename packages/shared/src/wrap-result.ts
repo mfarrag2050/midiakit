@@ -8,4 +8,11 @@ export interface WrapResult {
   readonly fontSize: number;
   readonly lines: readonly (readonly Token[])[];
   readonly lineHeight: number;
+  /**
+   * عرض الصندوق المُختار للرسم بالبكسل. يساوي `boxW` المُمرَّر ما لم
+   * يُوسَّع اللف عبر `boxWidthCandidates` — عندئذ يكون واحداً من
+   * المرشحين اختارته الخوارزمية. المستدعي يستعمله لتحديد `rightX`
+   * وتمريره كـ `targetWidth` إلى `justifyLine`.
+   */
+  readonly boxWidth: number;
 }

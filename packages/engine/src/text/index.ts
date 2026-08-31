@@ -40,3 +40,13 @@ export {
   type FontFaceSetLike,
   type ManualFontLoader,
 } from './font-loader.js';
+export {
+  kashidaSites,
+  pickDistributedSites,
+  justifyLine,
+  estimateLineCapacity,
+  detectFontCaps,
+  TATWEEL,
+  type JustifyLineOptions,
+  type DetectedFontCaps,
+} from './kashida.js';

@@ -120,6 +120,33 @@ export interface TypographyBreaking {
    */
   readonly targetFill: number;
   readonly wrapMode: WrapMode;
+  /**
+   * **نطاق حجم الخط المفضّل** كنسبتين من عرض القماش (min, max).
+   * على 1080px: `[0.065, 0.085]` = 70-92px — النطاق الصحفي القياسي
+   * لبطاقة العاجل العربية.
+   *
+   * الأولوية في `wrapOptimal` (مع `preferLargestFs`):
+   *   1) البحث **داخل هذا النطاق** أولاً عن حلٍّ مقبول.
+   *   2) الفشل ⇒ التراجع إلى `[minFont, maxFont]` ككل.
+   *
+   * `readableMinRatio` يبقى أرضية طوارئ (اختصاراً لمقروئية دنيا)،
+   * لا نطاقاً مفضّلاً. الحدّ الأعلى `max` (نموذجياً 80) يقيّد ceiling
+   * فعلياً حتى لو أعطى النسبة العليا رقماً أكبر.
+   */
+  readonly headlineFsRatio: readonly [number, number];
+  /**
+   * نطاق عرض الصندوق كنسبتين من عرض القماش (min, max).
+   * عند التمكين، `wrapOptimal` يستكشف عدة عروض داخل النطاق ويختار
+   * التركيبة (fs, boxWidth, k) الأفضل بدلاً من ثبات boxWidth واحد.
+   *
+   * السبب المعماري: كشيدة أداة ضبط دقيق (آخر 5-15%)؛ إن ثبت boxWidth
+   * قد يخلق فجوة تفوق سعة الكشيدة (56-112px قبالة عجز 300px). عرض
+   * أضيق يعطي ملء طبيعي أعلى ⇒ الكشيدة تُكمل، لا تسدّ فراغاً هائلاً.
+   *
+   * افتراضي `[0.72, 0.88]` — على 1080px يعطي 778 إلى 950px.
+   * الحد الأعلى قريب من boxWidth الأصلي (900 = 83% × 1080).
+   */
+  readonly boxWidthRange: readonly [number, number];
 }
 
 export interface TypographyKicker {

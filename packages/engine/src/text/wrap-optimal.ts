@@ -27,9 +27,15 @@
 // دالة الكلفة تُبقى كما هي — تُوجّه اختيار التقسيم ضمن fs معيّن، لا
 // اختيار fs. هذا الفصل هو التصحيح الجوهري.
 
-import type { Token, WrapResult } from '@pf-mediakit/shared';
+import type {
+  FontCaps,
+  JustifyConfig,
+  Token,
+  WrapResult,
+} from '@pf-mediakit/shared';
 import { isBreak, isWord } from '@pf-mediakit/shared';
 import type { Measurer } from './measurer.js';
+import { estimateLineCapacity } from './kashida.js';
 
 /** وضع اللف — يقابل `brand.typography.breaking.wrapMode`. */
 export type OptimalMode = 'uniform' | 'alternating';
@@ -61,6 +67,64 @@ export interface WrapOptimalOptions {
   swapMaxFsDiff?: number;
   /** مكسب الملء المطلوب لتفعيل التبديل نزولاً. افتراضي 0.15. */
   swapMinFillGain?: number;
+  /**
+   * تفضيل الخط الأكبر بلا شرط ملء أو انحراف — يُستعمل عندما تكون
+   * مسؤولية الملء على `justifyLine` (الكشيدة) لا على اللف.
+   *
+   * السلوك عند التفعيل:
+   *   • قيود القبول تتقلّص إلى: كل الأسطر ضمن `boxW`، لا سطر بكلمة
+   *     واحدة، `k ∈ [minLines, maxLines]`.
+   *   • يُختار **أكبر fs** له حلّ مقبول؛ عند التعادل، الأقرب إلى
+   *     `preferredLines`.
+   *   • تُتجاوز `stddevMax` و `absoluteMinFill` و `lastMinRatio` و
+   *     `targetFill` و «التبديل نزولاً» — لأن الكشيدة ستُبرِّر الأسطر
+   *     بعد اللف.
+   *
+   * افتراضي `false` — للحفاظ على السلوك الحالي حين لا كشيدة.
+   */
+  preferLargestFs?: boolean;
+  /**
+   * قائمة عروض صندوق مرشّحة (بالبكسل). عند تمريرها مع `preferLargestFs`،
+   * يستكشف اللف عدة عروض ويختار التركيبة `(fs, boxWidth, k)` التي:
+   *   1) تعطي أكبر `fs`، ثم
+   *   2) أكبر `boxWidth` (حضور بصري أقوى)، ثم
+   *   3) أدنى انحراف بين الأسطر، ثم
+   *   4) أقرب إلى `preferredLines`.
+   *
+   * **السبب المعماري:** كشيدة أداة ضبط دقيق. عرض صندوق ثابت قد يخلق
+   * فجوة تفوق سعتها؛ عرض أضيق يعطي ملء طبيعي ≥ 0.82 فتُكمل الكشيدة.
+   *
+   * تُشتقّ عادةً من `brand.typography.breaking.boxWidthRange × canvas.w`.
+   * الترتيب المُدخل غير مهمّ — تُفرَز داخلياً من الأكبر إلى الأصغر.
+   */
+  boxWidthCandidates?: readonly number[];
+  /**
+   * **نطاق حجم الخط المفضّل** بالبكسل — يُشتقّ من
+   * `brand.typography.breaking.headlineFsRatio × canvas.w`.
+   *
+   * السلوك مع `preferLargestFs`:
+   *   • **الطور الأول:** يقصر بحث fs على `[max(effectiveMin, fsRange[0]),
+   *     min(maxFont, fsRange[1])]` ويطبّق قبولاً كاملاً (post-kashida
+   *     ≥ absoluteMinFill، لا سطر بكلمة واحدة، stddev ≤ stddevMax).
+   *   • **الطور الثاني (تراجع):** إن فشل، يُعاد البحث على المدى الكامل
+   *     `[effectiveMinFs, maxFont]` بنفس القبول — تنازل عن التفضيل، لا
+   *     عن الجودة.
+   */
+  fsRange?: readonly [number, number];
+  /**
+   * تكوين الكشيدة لتقدير سعة التمدد لكل سطر أثناء اختيار (fs, boxW, k).
+   *
+   * عند تمريره: القبول يستعمل `(rawWidth + capacity) / boxW` بدلاً من
+   * `rawWidth / boxW`. السبب: كشيدة تسدّ آخر 5-15%؛ لو ثبت اللف على
+   * ملء ≥ 0.82 خام، لا حاجة لها — والقيود لا تعكس دورها الحقيقي.
+   *
+   * السعة تُحسَب: `Σ_words min(kashidaSites(word).length, maxSitesPerWord)
+   * × maxTatweelsPerSite × tatweelUnit` — مطابقة لسلوك `justifyLine`.
+   */
+  justifyCapacityConfig?: {
+    readonly cfg: JustifyConfig;
+    readonly fontCaps: FontCaps;
+  };
 }
 
 // ── أوزان دالة كلفة uniform (تُوجّه DP داخل fs, k) ────────
@@ -98,6 +162,42 @@ interface AcceptCriteria {
   readonly stddevMax: number;
   readonly absoluteMinFill: number;
   readonly lastMinRatio: number;
+}
+
+/**
+ * أدنى ملء بعد الكشيدة بين كل الأسطر (السطر الأخير مستثنى — طبيعي).
+ * يُستعمل داخل قبول `preferLargestFs` بديلاً عن `metrics.minFill` الخام.
+ * السعة تُقدَّر عبر `estimateLineCapacity` من kashida.ts (مصدر وحيد).
+ */
+function minPostKashidaFill(
+  lines: readonly (readonly Token[])[],
+  widths: readonly number[],
+  boxW: number,
+  fs: number,
+  allBold: boolean,
+  cfg: JustifyConfig,
+  fontCaps: FontCaps,
+  measure: Measurer,
+  lastLineNatural: boolean
+): number {
+  let min = 1;
+  for (let i = 0; i < lines.length; i++) {
+    const isLast = i === lines.length - 1;
+    // آخر سطر طبيعي مستثنى — لا كشيدة تُطبَّق عليه.
+    if (isLast && lastLineNatural) continue;
+    const raw = widths[i]!;
+    const cap = estimateLineCapacity(
+      lines[i]!,
+      fs,
+      allBold,
+      cfg,
+      fontCaps,
+      measure
+    );
+    const fill = boxW > 0 ? Math.min(1, (raw + cap) / boxW) : 0;
+    if (fill < min) min = fill;
+  }
+  return min;
 }
 
 function lineLimit(
@@ -394,6 +494,7 @@ export function wrapOptimal(
   };
   const swapMaxFsDiff = options.swapMaxFsDiff ?? 6;
   const swapMinFillGain = options.swapMinFillGain ?? 0.15;
+  const preferLargestFs = options.preferLargestFs ?? false;
 
   // ── الوضع اليدوي: احترام \n ─────────────────────────
   const hasManualBreaks = tokens.some(isBreak);
@@ -417,6 +518,7 @@ export function wrapOptimal(
           fontSize: fs,
           lines,
           lineHeight: Math.round(fs * lineHeightRatio),
+          boxWidth: boxW,
         };
       }
     }
@@ -424,6 +526,7 @@ export function wrapOptimal(
       fontSize: minFont,
       lines,
       lineHeight: Math.round(minFont * lineHeightRatio),
+      boxWidth: boxW,
     };
   }
 
@@ -433,6 +536,7 @@ export function wrapOptimal(
       fontSize: maxFont,
       lines: [],
       lineHeight: Math.round(maxFont * lineHeightRatio),
+      boxWidth: boxW,
     };
   }
 
@@ -444,6 +548,7 @@ export function wrapOptimal(
           fontSize: fs,
           lines: [words],
           lineHeight: Math.round(fs * lineHeightRatio),
+          boxWidth: boxW,
         };
       }
     }
@@ -451,16 +556,135 @@ export function wrapOptimal(
       fontSize: minFont,
       lines: [words],
       lineHeight: Math.round(minFont * lineHeightRatio),
+      boxWidth: boxW,
     };
   }
 
   const effectiveMinFs = Math.max(minFont, readableMin);
 
-  const toResult = (r: SolveResult): WrapResult => ({
+  const toResult = (r: SolveResult, bw: number = boxW): WrapResult => ({
     fontSize: r.fontSize,
     lines: r.lines,
     lineHeight: Math.round(r.fontSize * lineHeightRatio),
+    boxWidth: bw,
   });
+
+  // ── (٠) وضع preferLargestFs: مسؤولية الملء على justifyLine (كشيدة) ─
+  //
+  // بحث ثنائي الأطوار:
+  //   الطور 1: fs محصور بـ `fsRange` (النطاق الصحفي المفضّل).
+  //   الطور 2: تراجع إلى المدى الكامل [effectiveMinFs, maxFont].
+  //
+  // قبول موحّد في الطورين:
+  //   • كل الأسطر ضمن `bw` (قيد صلب داخل DP).
+  //   • لا سطر بكلمة واحدة.
+  //   • `k ∈ [minLines, maxLines]`.
+  //   • انحراف ≤ `stddevMax` (افتراضي 0.15).
+  //   • إن مُرِّرت `justifyCapacityConfig`: أدنى ملء **بعد الكشيدة** ≥
+  //     `absoluteMinFill` (السطر الأخير مستثنى إن `lastLine='natural'`).
+  //     خلاف ذلك: أدنى ملء **خام** ≥ `absoluteMinFill`.
+  //
+  // ترتيب الفوز: أكبر fs → أكبر boxWidth → أدنى انحراف → أقرب preferredLines.
+  if (preferLargestFs) {
+    const floorForPrefer = options.absoluteMinFill ?? 0.5;
+    const stddevMax = options.stddevMax ?? 0.15;
+    const boxWidths =
+      options.boxWidthCandidates && options.boxWidthCandidates.length > 0
+        ? [...new Set(options.boxWidthCandidates)].sort((a, b) => b - a)
+        : [boxW];
+    const capCfg = options.justifyCapacityConfig;
+    const lastLineNatural = capCfg?.cfg.lastLine === 'natural';
+
+    interface Cross {
+      readonly fs: number;
+      readonly bw: number;
+      readonly k: number;
+      readonly res: SolveResult;
+      readonly metrics: Metrics;
+      readonly minPostFill: number;
+    }
+
+    const searchIn = (fsLo: number, fsHi: number): readonly Cross[] => {
+      const out: Cross[] = [];
+      const lo = Math.max(effectiveMinFs, fsLo);
+      const hi = Math.min(maxFont, fsHi);
+      if (lo > hi) return out;
+      for (const bw of boxWidths) {
+        for (let fs = hi; fs >= lo; fs -= 2) {
+          const perK = solveDPPerK(
+            words,
+            fs,
+            bw,
+            shortRatio,
+            maxLines,
+            allBold,
+            measure,
+            mode
+          );
+          for (let k = Math.max(minLines, 1); k <= maxLines; k++) {
+            const r = perK[k];
+            if (!r) continue;
+            if (r.lines.some((l) => l.length === 1)) continue;
+            const metrics = computeMetrics(r, fs, bw, allBold, measure);
+            if (metrics.stddevRatio > stddevMax) continue;
+
+            let postFill: number;
+            if (capCfg) {
+              postFill = minPostKashidaFill(
+                r.lines,
+                metrics.widths,
+                bw,
+                fs,
+                allBold,
+                capCfg.cfg,
+                capCfg.fontCaps,
+                measure,
+                lastLineNatural
+              );
+            } else {
+              postFill = metrics.minFill;
+            }
+            if (postFill < floorForPrefer) continue;
+
+            out.push({ fs, bw, k, res: r, metrics, minPostFill: postFill });
+          }
+        }
+      }
+      return out;
+    };
+
+    const pickWinner = (
+      candidates: readonly Cross[]
+    ): Cross | null => {
+      if (candidates.length === 0) return null;
+      const sorted = [...candidates].sort((a, b) => {
+        if (a.fs !== b.fs) return b.fs - a.fs;
+        if (a.bw !== b.bw) return b.bw - a.bw;
+        if (a.metrics.stddevRatio !== b.metrics.stddevRatio) {
+          return a.metrics.stddevRatio - b.metrics.stddevRatio;
+        }
+        const dA = Math.abs(a.k - preferredLines);
+        const dB = Math.abs(b.k - preferredLines);
+        return dA - dB;
+      });
+      return sorted[0]!;
+    };
+
+    // الطور 1: داخل fsRange (إن قُدّم)
+    if (options.fsRange) {
+      const [lo, hi] = options.fsRange;
+      const phase1 = searchIn(lo, hi);
+      const w1 = pickWinner(phase1);
+      if (w1) return toResult(w1.res, w1.bw);
+    }
+
+    // الطور 2: المدى الكامل
+    const phase2 = searchIn(effectiveMinFs, maxFont);
+    const w2 = pickWinner(phase2);
+    if (w2) return toResult(w2.res, w2.bw);
+
+    // لا حلّ عند أي (fs, bw) — نسقط إلى مسار التراجع أدناه.
+  }
 
   // ── (١) اجمع كل المرشحين (fs, k) المقبولين
   //         نُبقي كل الأزواج، لا نُلغي k المرغوبة قبل فحص التارجت.
@@ -580,5 +804,6 @@ export function wrapOptimal(
     fontSize: effectiveMinFs,
     lines: words.map((w) => [w]),
     lineHeight: Math.round(effectiveMinFs * lineHeightRatio),
+    boxWidth: boxW,
   };
 }
