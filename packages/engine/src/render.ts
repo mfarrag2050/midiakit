@@ -326,17 +326,21 @@ function runAccent(
 ): void {
   switch (layer.mode) {
     case 'underline': {
-      // خط أفقي تحت العنصر المستهدف
+      // خط أفقي تحت العنصر المستهدف — يجب أن يقع **بعد الحرف النازل**
+      // (ي، ق، ن — نسبتها ≈ 0.20-0.25 من fs في IBM Plex/Almarai). 0.12
+      // كانت متعسفة وأنتجت تقاطعاً بصرياً مع النازل. 0.32 تعطي فراغاً
+      // نظيفاً ومسافة قراءة معقولة.
       const target = layer.target ?? 'kicker';
       const bounds = target === 'kicker' ? state.kicker : state.headline;
       if (!bounds) return; // ترتيب طبقات غير صالح — نتراجع صامتاً
       const centerX =
         'centerX' in bounds ? bounds.centerX : (bounds.left + bounds.right) / 2;
       const width = 'width' in bounds ? bounds.width : bounds.right - bounds.left;
+      const descenderClearance = Math.round(bounds.fontSize * 0.32);
       const yBase =
         'baselineY' in bounds
-          ? bounds.baselineY + Math.round(bounds.fontSize * 0.12)
-          : bounds.bottom + Math.round(bounds.fontSize * 0.12);
+          ? bounds.baselineY + descenderClearance
+          : bounds.bottom + descenderClearance;
       drawAccentBar(args.ctx, args.size, args.brand, {
         cx: centerX,
         y: yBase,

@@ -32,7 +32,7 @@
       "wrap": "uniform",
       "align": "center",
       "anchor": "below-kicker",
-      "font": "brand.typography.breaking",
+      "font": "brand.typography.title3l",
       "justify": "brand.typography.justify"
     },
     { "type": "logo" }

@@ -93,7 +93,7 @@ export const DEFAULT_BRAND: BrandKit = {
       boxWidthRange: [0.72, 0.88],
     },
     kicker: { max: 60, min: 28, weight: 300, boxWidth: 760, gapBelow: 56 },
-    title3l: { max: 84, min: 40 },
+    title3l: { max: 84, min: 40, minLines: 1, preferredLines: 2 },
     source: { size: 34, weight: 700 },
     reelTitle: {
       max: 76,

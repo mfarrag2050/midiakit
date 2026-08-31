@@ -160,6 +160,13 @@ export interface TypographyKicker {
 export interface TypographyTitle3L {
   readonly max: number;
   readonly min: number;
+  /**
+   * title3l للعناوين القصيرة داخل card_kicker — عادةً 1-2 سطر. المحرك
+   * يورّث knobs التخطيط الأخرى من `breaking`، لكن `minLines/preferredLines`
+   * يجب أن تختلف: قبول سطر واحد، وتفضيل 1-2 لا 3.
+   */
+  readonly minLines: number;
+  readonly preferredLines: number;
 }
 
 export interface TypographySource {

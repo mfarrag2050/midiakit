@@ -68,7 +68,7 @@
       "boxWidthRange": [0.68, 0.86]
     },
     "kicker":    { "max": 60, "min": 28, "weight": 300, "boxWidth": 760, "gapBelow": 56 },
-    "title3l":   { "max": 84, "min": 40 },
+    "title3l":   { "max": 92, "min": 44, "minLines": 1, "preferredLines": 2 },
     "source":    { "size": 38, "weight": 700 },
     "reelTitle": {
       "max": 88, "min": 44, "maxLines": 4,
