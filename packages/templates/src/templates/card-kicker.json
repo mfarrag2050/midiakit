@@ -1,0 +1,34 @@
+{
+  "id": "card_kicker",
+  "name": "بطاقة ذات كيكر",
+  "kind": "static",
+  "sizes": ["x", "instagram"],
+  "fields": [
+    { "key": "kicker", "type": "text", "required": true },
+    { "key": "headline", "type": "richtext", "required": true, "wordRange": [4, 10] },
+    { "key": "image", "type": "image", "required": false }
+  ],
+  "layers": [
+    {
+      "type": "image",
+      "field": "image",
+      "fit": "cover",
+      "fallback": [
+        { "type": "solid", "fill": "brand.colors.surface" }
+      ]
+    },
+    { "type": "gradient", "direction": "center", "onlyIf": "hasImage" },
+    { "type": "kicker", "field": "kicker", "align": "center", "font": "brand.typography.kicker" },
+    { "type": "accent", "mode": "underline", "target": "kicker" },
+    {
+      "type": "headline",
+      "field": "headline",
+      "wrap": "uniform",
+      "align": "center",
+      "anchor": "middle",
+      "font": "brand.typography.title3l",
+      "justify": "brand.typography.justify"
+    },
+    { "type": "logo" }
+  ]
+}

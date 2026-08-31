@@ -1,0 +1,28 @@
+{
+  "id": "plain",
+  "name": "بسيط — إثبات بوابة المرحلة 2",
+  "kind": "static",
+  "sizes": ["x", "instagram", "feed"],
+  "fields": [
+    {
+      "key": "headline",
+      "type": "richtext",
+      "required": true,
+      "wordRange": [4, 16]
+    }
+  ],
+  "layers": [
+    { "type": "solid", "fill": "brand.colors.surface" },
+    {
+      "type": "headline",
+      "field": "headline",
+      "wrap": "uniform",
+      "align": "right",
+      "anchor": "centerLower",
+      "verticalAnchor": 0.5,
+      "font": "brand.typography.breaking",
+      "justify": "brand.typography.justify"
+    },
+    { "type": "logo" }
+  ]
+}

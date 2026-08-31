@@ -1,0 +1,37 @@
+{
+  "id": "reel",
+  "name": "ريلز",
+  "kind": "video",
+  "sizes": ["reel", "x", "feed"],
+  "fields": [
+    { "key": "title", "type": "richtext", "required": true, "wordRange": [1, 7] },
+    { "key": "location", "type": "text", "required": false },
+    {
+      "key": "clips",
+      "type": "medialist",
+      "required": true,
+      "accepts": ["video", "image"]
+    }
+  ],
+  "layers": [
+    { "type": "solid", "fill": "brand.colors.surface" },
+    {
+      "type": "headline",
+      "field": "title",
+      "wrap": "alternating",
+      "align": "right",
+      "anchor": "centerLower",
+      "verticalAnchor": 0.66,
+      "font": "brand.typography.reelTitle",
+      "justify": "brand.typography.justify"
+    },
+    {
+      "type": "badge",
+      "use": "brand.badges.location",
+      "field": "location",
+      "anchor": "above-headline",
+      "gap": "brand.margins.badgeGap"
+    },
+    { "type": "logo" }
+  ]
+}

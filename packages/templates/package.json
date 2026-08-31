@@ -1,19 +1,17 @@
 {
-  "name": "@pf-mediakit/engine",
+  "name": "@pf-mediakit/templates",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./text": "./src/text/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pf-mediakit/shared": "workspace:*",
-    "@pf-mediakit/templates": "workspace:*"
+    "@pf-mediakit/shared": "workspace:*"
   }
 }

@@ -9,9 +9,19 @@
 
 **التحسينات المعمارية التي أعقبت الكشيدة:** (١) `wrapOptimal.fsRange` يقصر البحث داخل النطاق المفضّل أولاً، والتراجع للمدى الكامل عند الفشل. (٢) قبول ما-بعد-الكشيدة عبر `justifyCapacityConfig` — wrap يقدّر السعة عبر `estimateLineCapacity` قبل قبول (fs, boxW, k). (٣) `justifyLine.minLineFill` أُعيد تفسيرها كـ«ملء بعد الكشيدة» لا خام — بدون ذلك تظهر فجوة سلوكية بين wrap و justifyLine. (٤) مسافة المصدر `fs × 1.4` بدل `0.9`. (٥) `estimateLineCapacity` مُصدَّر من `kashida.ts` كمصدر وحيد. **161 اختبار vitest أخضر** (20 جديد للكشيدة).
 
-**المرحلة الحالية:** بعد إعادة ترتيب البوابات — المرحلة 1 (طبقة النص + BiDi + الطبقات البصرية + حل المراجع + أول مخرج بصري) ☑، المرحلة **1.5 (الكشيدة)** ☑ — قُدِّمت من 3.5 لأنها لافتة المنتج. التالي: المرحلة 2 (القوالب بيانات).
+**المرحلة الحالية:** المراحل 0 ☑، 1 ☑، 1.5 ☑ (الكشيدة)، **2 ☑** (القوالب بيانات — مكتملة 2026-08-31). التالي: المرحلة 3 (الرندر على الخادم — CLI + FFmpeg + طوابير) أو إكمال أنواع الطبقات المؤجَّلة (kicker/accent/watermark) عند الحاجة لتشغيل بقية القوالب الأربعة بصرياً.
 
 **اختبار البوابة (2026-08-31، بعد جلسة الجدارة):** أُنشئت هوية ثانية `brands/client-demo.json` (طيف — Almarai، أزرق غامق/عنبر، شارة "خبر عاجل"، `headlineFsRatio=[0.075,0.095]`، `boxWidthRange=[0.68,0.86]`). `pnpm preview -- --brand=default` أنتج fs=74/boxW=950/IBM Plex/عاجل رمادي؛ `--brand=client-demo` أنتج fs=66/boxW=929/Almarai/خبر عاجل عنبر. `git diff HEAD packages/` = **صفر تغيير**. الفصل بين المحرك والهوية مُثبَت آلياً لا بادّعاء.
+
+**بوابة المرحلة 2 (2026-08-31، لاحقة):** ☑ `packages/templates` جديدة تحمل: TEMPLATE_SCHEMA (JSON Schema draft-07 كبيانات)، `validateTemplate` (متحقق يدوي يُستدعى وقت التحميل مع مسار الخطأ التفصيلي)، وستة قوالب مبنيّة (breaking، card_centered، card_bottom، card_kicker، reel، plain) — كلها تمرّ بالتحقق عند الاستيراد. `packages/engine/src/render.ts` جديدة تحمل `renderFrame({ctx, size, template, brand, content, assets})` — مفسّر طبقات يدعم `onlyIf` (hasImage/isSquare/isPortrait) و `fallback` recursive، ويتتبّع `RenderState` للتموضع المتقاطع (headline bounds → badge/source). preview.mjs يستدعي `renderFrame` بدل الاستدعاء اليدوي. **إثبات المطابقة البكسلية:** `md5 out/preview-default.png` قبل وبعد = `a05e5cb8c777e1390779b018656cdd74` (بايت-بايت). `pnpm verify:snapshot` يجدّد المخرجات ويقارنها بايتاً-بايت مع `snapshots/preview-*.png` — الجولة الأولى: default ✓ 71162 بايت، client-demo ✓ 59207 بايت. **إثبات البوابة (قالب خامس بلا كود):** `packages/templates/src/templates/plain.json` (solid+headline+logo، verticalAnchor=0.5) — `pnpm preview -- --template=plain --brand=<name>` يرسمه دون سطر إضافي في `packages/engine`.
+
+**بيانات الفروق حسب القالب/الهوية:**
+- default × breaking: fs=74، boxW=950، 3 أسطر، ملء 99/83/73%.
+- client-demo × breaking: fs=66، boxW=929، 3 أسطر، ملء 97/84/76%.
+- default × plain (الجديد): يرسم على الخلفية الرمادية بلا شارة/مصدر.
+- client-demo × plain (الجديد): يرسم على الخلفية البحرية Almarai — دليل نقي على فصل الطبقات عن الهوية.
+
+**172 اختبار vitest أخضر** (11 جديد لـtemplates: يحمّل ويتحقّق ويرفض المدخلات المعطوبة).
 **الحالة العامة:** كود المنتج بدأ. الأداة القديمة `reference/aa-media-kit.html` تعمل مستقلة عن المحرك الجديد.
 
 ---
@@ -23,7 +33,7 @@
 | 0 | التنظيف القانوني | أسبوعان | لا خط تجاري ولا أصل أناضول | ☑ |
 | 1 | استخراج المحرك + BiDi | 4 أسابيع | هويتان مختلفتان بلا لمس كود | ☑ |
 | **1.5** | **الكشيدة (قُدِّمت من 3.5)** | **أسبوعان** | **سطر مبرَّر بحافة يسرى مستقيمة عند fs مقروء** | **☑** |
-| 2 | القوالب بيانات | أسبوعان | قالب خامس بملف JSON فقط | ☐ |
+| 2 | القوالب بيانات | أسبوعان | قالب خامس بملف JSON فقط | ☑ |
 | 3 | الرندر على الخادم | 3 أسابيع | MP4 من CLI + معيار الذروة | ☐ |
 | 3.2 | لوحات التحكم | أسبوعان | العميل يرى موقعه في الطابور | ☐ |
 | 3.5 | الخندق التنافسي (الكسر الدلالي + التشكيل) | أسبوعان | لا كسر داخل وحدة معنى · تشكيل بلا تصادم | ☐ |
@@ -178,16 +188,16 @@
 
 # المرحلة 2 — القوالب بيانات
 
-- ☐ JSON Schema للقالب + مُتحقق عند الحفظ
-- ☐ تحويل `card_centered` (s02)
-- ☐ تحويل `card_bottom` (s01)
-- ☐ تحويل `card_kicker` (3Lines)
-- ☐ تحويل `breaking` (ثابت + فيديو)
-- ☐ تحويل `reel`
-- ☐ مفسّر الطبقات يقرأ JSON بدل الدوال
-- ☐ `onlyIf` (hasImage · isSquare · isPortrait) و `fallback`
+- ☑ JSON Schema للقالب + مُتحقق يُستدعى وقت التحميل (`packages/templates/src/{schema,validate}.ts`). المتحقق يدوي بلا Ajv (شجرة تبعيات نظيفة)، ينشر SCHEMA كبيانات لمن يريد ajv خارجياً.
+- ☑ تحويل `card_centered` (JSON، يمرّ التحقق — الرندر مؤجَّل حتى تصبح accent/kicker مدعومة).
+- ☑ تحويل `card_bottom` (JSON، يمرّ التحقق).
+- ☑ تحويل `card_kicker` (JSON، يمرّ التحقق).
+- ☑ تحويل `breaking` (ثابت — يُرسم بالكامل عبر `renderFrame`). فرع الفيديو (`kind: video`) مؤجَّل للمرحلة 3.
+- ☑ تحويل `reel` (JSON، يمرّ التحقق — clipstream مؤجَّل).
+- ☑ **مفسّر الطبقات** `packages/engine/src/render.ts` — `renderFrame({ctx, size, template, brand, content, assets})` يقرأ layers بالترتيب ويدعم `onlyIf` و `fallback` recursive و RenderState للتتبّع المتقاطع.
+- ☑ `onlyIf` (hasImage · isSquare · isPortrait) و `fallback` — منفَّذان.
 
-**البوابة:** إضافة قالب خامس **بملف JSON فقط**، بلا سطر كود.
+**البوابة:** ☑ **مُتحقّقة 2026-08-31.** `packages/templates/src/templates/plain.json` (قالب خامس: solid + headline + logo) رُسِم بكل من `--brand=default` و `--brand=client-demo` عبر `pnpm preview -- --template=plain` — صفر سطر جديد في `packages/engine`. `pnpm verify:snapshot` يقارن preview-default.png و preview-client-demo.png بايت-بايت مع `snapshots/*.png` — كل الجولات مطابقة.
 
 ---
 
@@ -447,6 +457,11 @@
 | 2026-08-31 | **`maxSitesPerWord = 1` مؤكَّد بالتجريب البصري لا بالتقدير** | ثلاثية A/B/C: A (sites=1)، B (sites=2)، C (بلا كشيدة). المالك رأى B وقال «مشوّهة لا مبرَّرة» — أربعة تطويلات في كلمة واحدة تبدو خطأً. قيمة docs/03 صمدت. → `docs/LESSONS.md#L-06` |
 | 2026-08-31 | إعداد A هو المعتمد: fs≈74 (6.9%)، boxW≈950 (88%)، 3 أسطر | نتيجة الحسم البصري بعد التجريب. `preview-default.png` + `preview-default-nokashida.png` مقارنة دائمة في `out/`. → `docs/LESSONS.md#L-03` |
 | 2026-08-31 | **بوابة المرحلة 1 مُتحقّقة بإثبات آلي** — `brands/client-demo.json` كهوية ثانية | `pnpm preview -- --brand=default` مقابل `--brand=client-demo` أنتج مخرجَين مختلفَين تماماً (خط، ألوان، حجم، بوكس، شارة). `git diff HEAD packages/` = صفر — الفصل ليس ادّعاء بل أثر مُلاحَظ بأداة تتبّع. بنود الربط بالأداة القديمة (`cvCtx`، `getElementById`، الواجهة فوق المحرك) نُقلت إلى المراحل 2/4 — البوابة عن الفصل لا التكامل مع الأداة الموروثة |
+| 2026-08-31 | حزمة `@pf-mediakit/templates` مستقلة — types + schema + validator + سجل قوالب | الأنواع في templates لا في shared (قرار المالك). المتحقق **يدوي بلا Ajv** — يُبقي شجرة التبعيات نظيفة (لا حزم runtime في engine/shared/templates). المخطط منشور كبيانات (JSON Schema draft-07) لمن أراد ajv خارجياً. كل قالب مُتحقَّق منه **عند الاستيراد الأول** — لا تحقق في مسار الرندر (حرج للـ60fps) |
+| 2026-08-31 | `renderFrame` مفسّر طبقات — engine يعتمد templates لأنواع فقط | engine يستهلك `Template` و `Layer` كأنواع من `@pf-mediakit/templates` عبر `import type`. صفر runtime dep إضافي. الطبقات نفسها تُنفَّذ بنداءات على `layers/*` و `text/*` القائمة (لم يُغيَّر أي منها) |
+| 2026-08-31 | مطابقة بكسلية بعد refactor إلى renderFrame — MD5 قبل=بعد | `preview-default.png` قبل الاعتماد على renderFrame كان `a05e5cb8c777e1390779b018656cdd74`؛ بعد الاعتماد الكامل نفس المجموع تماماً. `snapshots/preview-{default,client-demo}.png` كلقطات ذهبية + `pnpm verify:snapshot` كبوابة تلقائية |
+| 2026-08-31 | إبقاء بعض أنواع الطبقات (`kicker`, `accent`, `watermark`) بلا رسم في MVP | القالبَان card_kicker و card_bottom يستعملانهما — لكن الرسم مؤجَّل. المتحقق يقبلها (بنية صالحة)، المفسّر يتخطاها بلا رمي (`return` هادئ) كي لا يكسر بقية الطبقات. تنفَّذ الرسم عند طلبها من قالب حي. جدير بالذكر: watermark ليس فقط للتراجع — قد يظهر في `fallback` breaking المستقبلي |
+| 2026-08-31 | **بوابة المرحلة 2 مُتحقّقة** — `plain.json` (قالب خامس) بلا كود | `packages/templates/src/templates/plain.json` استُورد في `packages/templates/src/index.ts`، ومرّ بـ`validateTemplate` عند الاستيراد، ورُسم عبر `pnpm preview -- --template=plain`. صفر تعديل في `packages/engine/src/render.ts` بعد تجاوز MVP. الإثبات: أي قالب يستعمل أنواع الطبقات المدعومة يُضاف بملف JSON واحد |
 
 ## منقوضة (أرشيف — لا تُحذف)
 
