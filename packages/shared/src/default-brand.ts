@@ -71,9 +71,16 @@ export const DEFAULT_BRAND: BrandKit = {
       min: 44,
       lineHeight: 1.42,
       boxWidth: 900,
-      shortLineRatio: 0.6,
+      // shortLineRatio يبقى في المخطط للتوافق مع wrapMode='alternating'
+      // فقط. القرار الطباعي: 1.0 (بلا تقصير) — النمط الافتراضي uniform
+      // يجعل كل الأسطر تستهدف boxWidth. الأسلوب الهرمي مرفوض تجارياً.
+      shortLineRatio: 1.0,
       maxLines: 6,
-      wrapMode: 'optimal',
+      minLines: 2,             // منع سطر واحد في العنوان
+      preferredLines: 3,       // النمط الصحفي القياسي
+      readableMinRatio: 0.045, // نسبة من عرض القماش — 4.5% (48.6px @1080)
+      targetFill: 0.9,         // ملء مستهدف — الحلّ الذي يبلغه يفوز
+      wrapMode: 'uniform',
     },
     kicker: { max: 60, min: 28, weight: 300, boxWidth: 760, gapBelow: 56 },
     title3l: { max: 84, min: 40 },

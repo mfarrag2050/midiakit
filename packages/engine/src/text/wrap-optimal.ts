@@ -1,46 +1,84 @@
-// wrapOptimal — لف سطور بالبرمجة الديناميكية على نمط هرمي بديل.
+// wrapOptimal — لف سطور بأولوية «الملء ثم المقروئية».
 //
-// **الغرض:** يُنتج تقسيماً *أمثلياً* للسطور بأقل كلفة إجمالية، بديلاً
-// عن `wrapAlternating` الجشِعة (نقل حرفي للأصل — كانت تسمح صراحة بسطر
-// بكلمة واحدة عبر `!cur.length ||`).
+// **قرار المالك (2026-08-28، الإصدار الثالث):**
+// المقروئية شرط، لكن الملء أثرها البصري أكبر بكثير من فرق fs ضمن نطاق آمن.
+// الفروق البصرية:
+//   • فرق 2–6px في fs = **غير مرئي** فعلياً على الشاشة
+//   • فرق 15%+ في ملء السطر = **مرئي بوضوح** (سطور فارغة تبدو محبوسة)
 //
-// **المنهج:**
-//   1) لكل حجم خط `fs` من `maxFont` نزولاً إلى `minFont` بخطوة 2:
-//      نبني جدول `dp[i][k]` = أقل كلفة لتقسيم أول `i` كلمة إلى `k` سطر.
-//      إن وُجد `k ≤ maxLines` بكلفة منتهية، نُرجع أفضل تقسيم لذلك `fs`.
-//   2) لم ينجح أي `fs`؟ نتراجع إلى `minFont` بميزانية أسطر موسّعة (حتى
-//      عدد الكلمات) — دائماً قابل للتحقيق طالما أضخم كلمة ≤ `boxW`.
+// **الآلية الجديدة:**
+//   1) `readableMin` صار **نسبة من عرض القماش** (`readableMinRatio`)،
+//      يُحسَب كـ `canvasWidth × ratio` من قِبل المستدعي (preview.mjs).
+//      على 1080px بنسبة 0.045 = 48.6px. القاعدة تُطبَّق كأرضية صلبة.
+//   2) `targetFill` هدف صريح (0.90). **الحلّ الذي يبلغه بأيّ fs ضمن
+//      النطاق الآمن يفوز** على حلّ بخط أكبر وملء أدنى.
+//   3) عند غياب حلٍّ يبلغ الهدف: يُختار أكبر fs نظيف، ثم تُطبَّق قاعدة
+//      «التبديل نزولاً»: إن كان حلّ بـfs أدنى بفارق ≤ 6px يعطي ملء
+//      أعلى بـ 15%+، يُختار بدلاً منه.
 //
-// **دالة الكلفة** — عناصر تُجمَع خطياً:
-//   • انحراف تربيعي عن حدّ السطر (يدفع نحو ملء السطر لحدّه)
-//   • عقوبة سطر بكلمة واحدة (ثقيلة، ليست مانعة — يستطيع DP اختيارها
-//     لو كانت الكلمة أعرض من حدّ السطر التالي وحدها)
-//   • عقوبة سطر أخير يتيم (كلمة واحدة أو ملء أقل من 40%)
-//   • عقوبة تفاوت غير منتظم: سطر زوجي (قصير) أعرض من سابقه الفردي
-//     يكسر النمط الهرمي
-//   • تجاوز `maxLines` مانع خلال البحث الأمثلي (يظهر التراجع لاحقاً)
+// **معيار «النظافة» (شرط قبول أساسي):**
+//   • لا سطر بكلمة واحدة
+//   • عدد الأسطر ∈ [minLines, maxLines]
+//   • انحراف معياري ≤ stddevMax (افتراضي 15%)
+//   • السطر الأخير ≥ lastMinRatio من المتوسّط (افتراضي 60%)
+//   • أدنى ملء ≥ 50% (أرضية «لا يبدو مُهملاً»)
 //
-// **النمط الهرمي محفوظ:** سطر بفهرس زوجي (0،2،4…) حدّه `boxW`،
-// وسطر فردي (1،3،5…) حدّه `boxW × shortRatio`. القاعدة ذاتها في
-// `wrapAlternating` — الفرق أن DP يوزّع الكلمات ليقترب من الحدّين معاً
-// بدل الالتصاق بأول تقسيم يعمل.
+// **دور DP:** يبقى داخل كل زوج (fs, k) لإيجاد أفضل تقسيم للـ k أسطر.
+// دالة الكلفة تُبقى كما هي — تُوجّه اختيار التقسيم ضمن fs معيّن، لا
+// اختيار fs. هذا الفصل هو التصحيح الجوهري.
 
 import type { Token, WrapResult } from '@pf-mediakit/shared';
 import { isBreak, isWord } from '@pf-mediakit/shared';
 import type { Measurer } from './measurer.js';
 
-// ── أوزان دالة الكلفة (قابلة للضبط لاحقاً من الهوية) ─────
-//
-// الأرقام نسبية — القيمة المطلقة لا تهم، فقط ترتيب الأحجام:
-//   انحراف كامل (سطر فارغ) = 100
-//   سطر بكلمة واحدة        = 800  (8× الانحراف الأقصى)
-//   يتيم أخير              = 1600 (16× — أشد ما نتجنّبه)
-//   خرق الهرم (زوجي > فردي) = 400
-const W_UNDERFILL = 100;
-const W_SINGLE_WORD = 800;
-const W_ORPHAN = 1600;
-const W_PYRAMID_BREAK = 400;
-const ORPHAN_FILL_THRESHOLD = 0.4;
+/** وضع اللف — يقابل `brand.typography.breaking.wrapMode`. */
+export type OptimalMode = 'uniform' | 'alternating';
+
+/** خيارات لضبط سلوك الاختيار (تُمرَّر من الهوية عبر preview.mjs مثلاً). */
+export interface WrapOptimalOptions {
+  /** الحدّ الأدنى لعدد الأسطر. افتراضي 1. */
+  minLines?: number;
+  /** العدد المفضّل من الأسطر عند تكافؤ الحلول. افتراضي = maxLines (لا تفضيل). */
+  preferredLines?: number;
+  /** أرضية صلبة لحجم الخط بالبكسل. افتراضي = minFont. */
+  readableMin?: number;
+  /**
+   * الملء المستهدف — الحلّ الذي يبلغه بأيّ fs ضمن النطاق الآمن يفوز
+   * على حلّ بخط أكبر وملء أدنى. افتراضي 0.9.
+   */
+  targetFill?: number;
+  /** انحراف معياري أقصى (نسبة من المتوسّط) لقبول الحلّ. افتراضي 0.15. */
+  stddevMax?: number;
+  /** أدنى ملء مطلق لأي سطر (أرضية «لا يبدو مُهملاً»). افتراضي 0.5. */
+  absoluteMinFill?: number;
+  /** أدنى نسبة للسطر الأخير من متوسّط الأسطر. افتراضي 0.6. */
+  lastMinRatio?: number;
+  /**
+   * فارق fs الأقصى لقاعدة «التبديل نزولاً» (بكسلات).
+   * إن كان حلّ بـfs أدنى بفارق ≤ هذا الرقم يعطي ملء أعلى بمقدار
+   * `swapMinFillGain`، يُختار بدلاً من الأكبر. افتراضي 6.
+   */
+  swapMaxFsDiff?: number;
+  /** مكسب الملء المطلوب لتفعيل التبديل نزولاً. افتراضي 0.15. */
+  swapMinFillGain?: number;
+}
+
+// ── أوزان دالة كلفة uniform (تُوجّه DP داخل fs, k) ────────
+const U_UNDERFILL_SEVERE = 5000;
+const U_UNDERFILL_SEVERE_THRESHOLD = 0.6;
+const U_UNDERFILL_MILD = 500;
+const U_UNDERFILL_MILD_THRESHOLD = 0.8;
+const U_VARIANCE = 2000;
+const U_SINGLE_WORD = 8000;
+const U_LAST_ORPHAN = 3000;
+const U_LAST_MIN_RATIO = 0.6;
+
+// ── أوزان دالة كلفة alternating (الموروثة) ──────────────
+const A_UNDERFILL = 100;
+const A_SINGLE_WORD = 800;
+const A_ORPHAN = 1600;
+const A_PYRAMID_BREAK = 400;
+const A_ORPHAN_FILL_THRESHOLD = 0.4;
 
 const INF = Number.POSITIVE_INFINITY;
 
@@ -50,11 +88,64 @@ interface Cell {
   lineWidth: number;
 }
 
-function lineLimit(lineIdx: number, boxW: number, shortRatio: number): number {
+interface SolveResult {
+  fontSize: number;
+  lines: Token[][];
+  totalCost: number;
+}
+
+interface AcceptCriteria {
+  readonly stddevMax: number;
+  readonly absoluteMinFill: number;
+  readonly lastMinRatio: number;
+}
+
+function lineLimit(
+  lineIdx: number,
+  boxW: number,
+  shortRatio: number,
+  mode: OptimalMode
+): number {
+  if (mode === 'uniform') return boxW;
   return lineIdx % 2 === 0 ? boxW : boxW * shortRatio;
 }
 
-function costOfLine(params: {
+// ── دوال كلفة السطر (تُوجّه DP الداخلي) ────────────────
+
+function costUniform(params: {
+  width: number;
+  boxW: number;
+  wordCount: number;
+  isLast: boolean;
+  lineIdx: number;
+  prevLineWidth: number;
+}): number {
+  const { width, boxW, wordCount, isLast, lineIdx, prevLineWidth } = params;
+  let cost = 0;
+  const fill = width / boxW;
+  if (fill < U_UNDERFILL_SEVERE_THRESHOLD) {
+    const under = U_UNDERFILL_SEVERE_THRESHOLD - fill;
+    cost += under * under * U_UNDERFILL_SEVERE;
+  } else if (fill < U_UNDERFILL_MILD_THRESHOLD) {
+    const under = U_UNDERFILL_MILD_THRESHOLD - fill;
+    cost += under * under * U_UNDERFILL_MILD;
+  }
+  if (wordCount === 1) cost += U_SINGLE_WORD;
+  if (lineIdx > 0) {
+    const diff = (width - prevLineWidth) / boxW;
+    cost += diff * diff * U_VARIANCE;
+  }
+  if (isLast && prevLineWidth > 0) {
+    const ratio = width / prevLineWidth;
+    if (ratio < U_LAST_MIN_RATIO) {
+      const under = U_LAST_MIN_RATIO - ratio;
+      cost += under * under * U_LAST_ORPHAN;
+    }
+  }
+  return cost;
+}
+
+function costAlternating(params: {
   width: number;
   limit: number;
   wordCount: number;
@@ -63,60 +154,49 @@ function costOfLine(params: {
   prevLineWidth: number;
   prevLimit: number;
 }): number {
-  const { width, limit, wordCount, isLast, lineIdx, prevLineWidth, prevLimit } =
-    params;
-
+  const {
+    width,
+    limit,
+    wordCount,
+    isLast,
+    lineIdx,
+    prevLineWidth,
+    prevLimit,
+  } = params;
   const fillRatio = width / limit;
   const underfill = Math.max(0, 1 - fillRatio);
-  let cost = underfill * underfill * W_UNDERFILL;
-
-  if (wordCount === 1) cost += W_SINGLE_WORD;
-
+  let cost = underfill * underfill * A_UNDERFILL;
+  if (wordCount === 1) cost += A_SINGLE_WORD;
   if (isLast) {
-    if (wordCount === 1 || fillRatio < ORPHAN_FILL_THRESHOLD) {
-      cost += W_ORPHAN;
+    if (wordCount === 1 || fillRatio < A_ORPHAN_FILL_THRESHOLD) {
+      cost += A_ORPHAN;
     }
   }
-
-  // خرق الهرم: سطر زوجي (قصير) أعرض من سابقه الفردي (طويل).
-  // الشرط lineIdx > 0 يستثني السطر الأول، والفهرس الفردي = خانة قصيرة
-  // في النمط (limit أصغر). النمط يقتضي: طويل ≥ قصير + هامش.
-  if (lineIdx > 0 && lineIdx % 2 === 1) {
-    // limit الحالي < prevLimit (طويل)، لكن العرض الفعلي قد يقلب ذلك
+  if (lineIdx > 0 && lineIdx % 2 === 1 && prevLimit > limit) {
     if (width > prevLineWidth) {
       const excess = (width - prevLineWidth) / limit;
-      cost += excess * excess * W_PYRAMID_BREAK;
+      cost += excess * excess * A_PYRAMID_BREAK;
     }
   }
-
-  // مرجع صامت — نمرّر prevLimit لكيلا يشتكي المصنّف من متغير غير مستعمل،
-  // وقد يفيد في تعديلات لاحقة (مثل عقوبة تسلسلي فارغ).
-  void prevLimit;
-
   return cost;
 }
 
-interface SolveResult {
-  fontSize: number;
-  lines: Token[][];
-  totalCost: number;
-}
+// ── DP يعيد أفضل تقسيم لكل k في [1, maxLines] ─────────
 
-function solveDP(
+function solveDPPerK(
   words: readonly Token[],
   fs: number,
   boxW: number,
   shortRatio: number,
   maxLines: number,
   allBold: boolean,
-  measure: Measurer
-): SolveResult | null {
+  measure: Measurer,
+  mode: OptimalMode
+): (SolveResult | null)[] {
   const n = words.length;
-  if (n === 0) {
-    return { fontSize: fs, lines: [], totalCost: 0 };
-  }
+  const results: (SolveResult | null)[] = new Array(maxLines + 1).fill(null);
+  if (n === 0) return results;
 
-  // dp[i][k] = أفضل حالة لتقسيم أول i كلمة إلى k سطر
   const dp: Cell[][] = Array.from({ length: n + 1 }, () =>
     Array.from({ length: maxLines + 1 }, () => ({
       total: INF,
@@ -128,9 +208,9 @@ function solveDP(
 
   for (let k = 1; k <= maxLines; k++) {
     const lineIdx = k - 1;
-    const limit = lineLimit(lineIdx, boxW, shortRatio);
+    const limit = lineLimit(lineIdx, boxW, shortRatio, mode);
     const prevLimit =
-      k >= 2 ? lineLimit(lineIdx - 1, boxW, shortRatio) : boxW;
+      k >= 2 ? lineLimit(lineIdx - 1, boxW, shortRatio, mode) : boxW;
 
     for (let i = 1; i <= n; i++) {
       let best = dp[i]![k]!;
@@ -139,18 +219,28 @@ function solveDP(
         if (prev.total === INF) continue;
         const slice = words.slice(j, i);
         const w = measure.line(slice, fs, allBold);
-        if (w > limit) continue; // قيد صلب
+        if (w > limit) continue;
 
-        const isLast = i === n; // مؤقتاً — سنُصححها بعد اختيار k النهائي
-        const c = costOfLine({
-          width: w,
-          limit,
-          wordCount: slice.length,
-          isLast,
-          lineIdx,
-          prevLineWidth: prev.lineWidth,
-          prevLimit,
-        });
+        const isLast = i === n;
+        const c =
+          mode === 'uniform'
+            ? costUniform({
+                width: w,
+                boxW,
+                wordCount: slice.length,
+                isLast,
+                lineIdx,
+                prevLineWidth: prev.lineWidth,
+              })
+            : costAlternating({
+                width: w,
+                limit,
+                wordCount: slice.length,
+                isLast,
+                lineIdx,
+                prevLineWidth: prev.lineWidth,
+                prevLimit,
+              });
         const total = prev.total + c;
         if (total < best.total) {
           best = { total, prevJ: j, lineWidth: w };
@@ -160,48 +250,125 @@ function solveDP(
     }
   }
 
-  // اختر k بأقل كلفة إجمالية عند i = n
-  let bestK = -1;
-  let bestTotal = INF;
+  // Trace back لكل k فيه حلّ منتهي
   for (let k = 1; k <= maxLines; k++) {
     const cell = dp[n]![k]!;
-    if (cell.total < bestTotal) {
-      bestTotal = cell.total;
-      bestK = k;
+    if (cell.total === INF) continue;
+    const linesReversed: Token[][] = [];
+    let i = n;
+    let curK = k;
+    while (curK > 0) {
+      const c = dp[i]![curK]!;
+      const j = c.prevJ;
+      linesReversed.push(words.slice(j, i));
+      i = j;
+      curK--;
     }
+    results[k] = {
+      fontSize: fs,
+      lines: linesReversed.reverse(),
+      totalCost: cell.total,
+    };
   }
-  if (bestK < 0 || bestTotal === INF) return null;
 
-  // استعادة الأسطر بالسير عكسياً
-  const linesReversed: Token[][] = [];
-  let i = n;
-  let k = bestK;
-  while (k > 0) {
-    const cell = dp[i]![k]!;
-    const j = cell.prevJ;
-    linesReversed.push(words.slice(j, i));
-    i = j;
-    k--;
-  }
-  const lines = linesReversed.reverse();
-  return { fontSize: fs, lines, totalCost: bestTotal };
+  return results;
 }
 
+// ── قياس + معيار قبول ─────────────────────────────────
+
+interface Metrics {
+  widths: number[];
+  mean: number;
+  stddev: number;
+  stddevRatio: number;
+  minFill: number;
+  lastRatio: number;
+}
+
+function computeMetrics(
+  res: SolveResult,
+  fs: number,
+  boxW: number,
+  allBold: boolean,
+  measure: Measurer
+): Metrics {
+  const widths = res.lines.map((l) => measure.line(l, fs, allBold));
+  const mean = widths.reduce((a, b) => a + b, 0) / widths.length;
+  const variance =
+    widths.reduce((s, w) => s + (w - mean) ** 2, 0) / widths.length;
+  const stddev = Math.sqrt(variance);
+  return {
+    widths,
+    mean,
+    stddev,
+    stddevRatio: mean === 0 ? 0 : stddev / mean,
+    minFill: boxW === 0 ? 0 : Math.min(...widths.map((w) => w / boxW)),
+    lastRatio: mean === 0 ? 0 : widths[widths.length - 1]! / mean,
+  };
+}
+
+function isAcceptable(
+  res: SolveResult,
+  metrics: Metrics,
+  criteria: AcceptCriteria,
+  mode: OptimalMode,
+  boxW: number,
+  shortRatio: number,
+  fs: number,
+  allBold: boolean,
+  measure: Measurer
+): boolean {
+  // منع سطر بكلمة واحدة — قيد صلب
+  if (res.lines.some((l) => l.length === 1)) return false;
+
+  if (mode === 'uniform') {
+    if (metrics.stddevRatio > criteria.stddevMax) return false;
+    if (metrics.minFill < criteria.absoluteMinFill) return false;
+    if (metrics.lastRatio < criteria.lastMinRatio) return false;
+    return true;
+  }
+
+  // Alternating: كل سطر يفحص ملء موقعه (فردي/زوجي)
+  for (let i = 0; i < res.lines.length; i++) {
+    const w = measure.line(res.lines[i]!, fs, allBold);
+    const limit = lineLimit(i, boxW, shortRatio, mode);
+    const fill = w / limit;
+    const isLast = i === res.lines.length - 1;
+    const floor = isLast ? 0.4 : 0.7;
+    if (fill < floor) return false;
+  }
+  return true;
+}
+
+// ── اختيار k مفضّل عند fs معيّن ────────────────────────
+
+function pickPreferredK(
+  candidates: readonly { k: number; res: SolveResult; metrics: Metrics }[],
+  preferredLines: number
+): { k: number; res: SolveResult; metrics: Metrics } {
+  const sorted = [...candidates].sort((a, b) => {
+    const dA = Math.abs(a.k - preferredLines);
+    const dB = Math.abs(b.k - preferredLines);
+    if (dA !== dB) return dA - dB;
+    return b.k - a.k; // تعادل: أكثر أسطر
+  });
+  return sorted[0]!;
+}
+
+interface FsCandidate {
+  fs: number;
+  k: number;
+  res: SolveResult;
+  metrics: Metrics;
+}
+
+// ── الواجهة العامة ─────────────────────────────────────
+
 /**
- * لف الأسطر بالبرمجة الديناميكية — الأسلوب الافتراضي.
+ * لف الأسطر مع أولوية «الملء ثم المقروئية».
  *
- * توقيع مطابق لـ `wrapAlternating` — قابل للتبديل مباشرة.
- * يحترم `\n` اليدوي بنفس طريقة الجشِع (بحث عن أكبر `fs` يسع كل السطور).
- *
- * @param tokens الكلمات + فواصل السطور اليدوية
- * @param boxW عرض السطر الطويل (فردي 0،2،4…)
- * @param maxFont أكبر حجم يُجرَّب
- * @param minFont أصغر حجم مسموح
- * @param allBold إجبار جميع الكلمات على وزن عريض
- * @param maxLines سقف الأسطر خلال البحث الأمثلي (يُوسَّع عند الحاجة تراجعاً)
- * @param shortRatio نسبة السطر القصير (زوجي 1،3،5…) من `boxW`
- * @param lineHeightRatio نسبة ارتفاع السطر إلى `fs`
- * @param measure واجهة القياس المحقونة
+ * @param mode 'uniform' (افتراضي) أو 'alternating' (موروث)
+ * @param options ضبط دقيق لقيود عدد الأسطر والملء والمقروئية
  */
 export function wrapOptimal(
   tokens: readonly Token[],
@@ -212,9 +379,23 @@ export function wrapOptimal(
   maxLines: number,
   shortRatio: number,
   lineHeightRatio: number,
-  measure: Measurer
+  measure: Measurer,
+  mode: OptimalMode = 'uniform',
+  options: WrapOptimalOptions = {}
 ): WrapResult {
-  // ── الوضع اليدوي: احترام \n (نفس منطق wrapAlternating) ───
+  const minLines = options.minLines ?? 1;
+  const preferredLines = options.preferredLines ?? maxLines;
+  const readableMin = options.readableMin ?? minFont;
+  const targetFill = options.targetFill ?? 0.9;
+  const criteria: AcceptCriteria = {
+    stddevMax: options.stddevMax ?? 0.15,
+    absoluteMinFill: options.absoluteMinFill ?? 0.5,
+    lastMinRatio: options.lastMinRatio ?? 0.6,
+  };
+  const swapMaxFsDiff = options.swapMaxFsDiff ?? 6;
+  const swapMinFillGain = options.swapMinFillGain ?? 0.15;
+
+  // ── الوضع اليدوي: احترام \n ─────────────────────────
   const hasManualBreaks = tokens.some(isBreak);
   if (hasManualBreaks) {
     const manual: Token[][] = [];
@@ -255,7 +436,7 @@ export function wrapOptimal(
     };
   }
 
-  // حالة عائدة: كلمة واحدة (لا اختيار طباعياً — تُرجَع كما هي بأكبر خط يسع)
+  // كلمة واحدة: لا خيار طباعياً
   if (words.length === 1) {
     for (let fs = maxFont; fs >= minFont; fs -= 2) {
       if (measure.line(words, fs, allBold) <= boxW) {
@@ -273,93 +454,131 @@ export function wrapOptimal(
     };
   }
 
-  // ── معيار النظافة الطباعية ───────────────────────────
-  // «نظيف» = لا سطر بكلمة واحدة، السطر الأخير ليس يتيماً،
-  // وكل الأسطر غير الأخيرة فِيلها ≥ MIN_FILL_NONLAST (≈ ±30% من الحدّ).
-  // يُقارَب بذلك هدف المستخدم «±15% من الحد المستهدف» — لكن نتساهل
-  // 30% كي لا يفشل النصّ القصير الذي لا يبلغ ملء الحدّ في أي حجم.
-  const MIN_FILL_NONLAST = 0.7;
-  const MIN_FILL_LAST = 0.4;
+  const effectiveMinFs = Math.max(minFont, readableMin);
 
-  const isTypographicallyClean = (
-    res: SolveResult,
-    fs: number
-  ): boolean => {
-    const n = res.lines.length;
-    for (let i = 0; i < n; i++) {
-      const line = res.lines[i]!;
-      if (line.length === 1) return false;
-      const w = measure.line(line, fs, allBold);
-      const limit = lineLimit(i, boxW, shortRatio);
-      const fill = w / limit;
-      const isLast = i === n - 1;
-      const floor = isLast ? MIN_FILL_LAST : MIN_FILL_NONLAST;
-      if (fill < floor) return false;
-    }
-    return true;
-  };
+  const toResult = (r: SolveResult): WrapResult => ({
+    fontSize: r.fontSize,
+    lines: r.lines,
+    lineHeight: Math.round(r.fontSize * lineHeightRatio),
+  });
 
-  // ── البحث الأمثلي: من الأكبر إلى الأصغر ─────────────
-  // نمسك أفضل حلّ نظيف (أكبر fs يعطي نظافة) — أفضل من مجرد أول حلّ ممكن.
-  // في الوقت نفسه نمسك أفضل حلّ بالكلفة كتراجع لو لم يوجد نظيف أبداً.
-  let bestClean: SolveResult | null = null;
-  let bestByCost: SolveResult | null = null;
-
-  for (let fs = maxFont; fs >= minFont; fs -= 2) {
-    const res = solveDP(words, fs, boxW, shortRatio, maxLines, allBold, measure);
-    if (res === null) continue;
-
-    if (bestByCost === null || res.totalCost < bestByCost.totalCost) {
-      bestByCost = res;
-    }
-
-    if (isTypographicallyClean(res, fs)) {
-      // أكبر fs نظيف يفوز — نتوقّف عند أول نظافة نصادفها
-      bestClean = res;
-      break;
+  // ── (١) اجمع كل المرشحين (fs, k) المقبولين
+  //         نُبقي كل الأزواج، لا نُلغي k المرغوبة قبل فحص التارجت.
+  const allPairs: FsCandidate[] = [];
+  for (let fs = maxFont; fs >= effectiveMinFs; fs -= 2) {
+    const perK = solveDPPerK(
+      words,
+      fs,
+      boxW,
+      shortRatio,
+      maxLines,
+      allBold,
+      measure,
+      mode
+    );
+    for (let k = Math.max(minLines, 1); k <= maxLines; k++) {
+      const r = perK[k];
+      if (!r) continue;
+      const metrics = computeMetrics(r, fs, boxW, allBold, measure);
+      if (
+        isAcceptable(
+          r,
+          metrics,
+          criteria,
+          mode,
+          boxW,
+          shortRatio,
+          fs,
+          allBold,
+          measure
+        )
+      ) {
+        allPairs.push({ fs, k, res: r, metrics });
+      }
     }
   }
 
-  if (bestClean !== null) {
-    return {
-      fontSize: bestClean.fontSize,
-      lines: bestClean.lines,
-      lineHeight: Math.round(bestClean.fontSize * lineHeightRatio),
-    };
+  if (allPairs.length > 0) {
+    // ── (٢أ) يبلغ الملء المستهدف؟ رتّب: أكبر fs، ثم الأقرب لـpreferredLines
+    const targetHits = allPairs.filter(
+      (c) => c.metrics.minFill >= targetFill
+    );
+    if (targetHits.length > 0) {
+      const sorted = [...targetHits].sort((a, b) => {
+        if (a.fs !== b.fs) return b.fs - a.fs;
+        const dA = Math.abs(a.k - preferredLines);
+        const dB = Math.abs(b.k - preferredLines);
+        if (dA !== dB) return dA - dB;
+        return b.k - a.k;
+      });
+      return toResult(sorted[0]!.res);
+    }
+
+    // ── (٢ب) لا يبلغ أحد الهدف. اختر k المفضّل عند كل fs، ثم الأكبر
+    //         مع تطبيق قاعدة التبديل نزولاً (±6px، +15% ملء)
+    const bestPerFs: FsCandidate[] = [];
+    const fsSet = [...new Set(allPairs.map((c) => c.fs))].sort((a, b) => b - a);
+    for (const fs of fsSet) {
+      const atFs = allPairs.filter((c) => c.fs === fs);
+      const preferred = pickPreferredK(atFs, preferredLines);
+      bestPerFs.push({
+        fs,
+        k: preferred.k,
+        res: preferred.res,
+        metrics: preferred.metrics,
+      });
+    }
+
+    let best = bestPerFs[0]!; // أكبر fs
+    for (let i = 1; i < bestPerFs.length; i++) {
+      const c = bestPerFs[i]!;
+      if (best.fs - c.fs > swapMaxFsDiff) break;
+      if (c.metrics.minFill >= best.metrics.minFill + swapMinFillGain) {
+        best = c;
+      }
+    }
+    return toResult(best.res);
   }
 
-  if (bestByCost !== null) {
-    return {
-      fontSize: bestByCost.fontSize,
-      lines: bestByCost.lines,
-      lineHeight: Math.round(bestByCost.fontSize * lineHeightRatio),
-    };
-  }
-
-  // ── تراجع: عند minFont، وسّع ميزانية الأسطر إلى n ─────
-  // (كل كلمة على سطرها ضمانة نظرية طالما أضخم كلمة ≤ boxW)
-  const fallback = solveDP(
+  // ── (٣) لا مرشّح مقبول — تراجع: أفضل ما يعطيه DP عند effectiveMinFs
+  const perK = solveDPPerK(
     words,
-    minFont,
+    effectiveMinFs,
+    boxW,
+    shortRatio,
+    maxLines,
+    allBold,
+    measure,
+    mode
+  );
+  let bestFallback: SolveResult | null = null;
+  for (let k = Math.max(minLines, 1); k <= maxLines; k++) {
+    const r = perK[k];
+    if (r && (bestFallback === null || r.totalCost < bestFallback.totalCost)) {
+      bestFallback = r;
+    }
+  }
+  if (bestFallback) return toResult(bestFallback);
+
+  // ── (٤) توسيع ميزانية الأسطر عند effectiveMinFs كضمان الوصول
+  const perKExpanded = solveDPPerK(
+    words,
+    effectiveMinFs,
     boxW,
     shortRatio,
     Math.max(maxLines, words.length),
     allBold,
-    measure
+    measure,
+    mode
   );
-  if (fallback !== null) {
-    return {
-      fontSize: minFont,
-      lines: fallback.lines,
-      lineHeight: Math.round(minFont * lineHeightRatio),
-    };
+  for (let k = 1; k < perKExpanded.length; k++) {
+    if (perKExpanded[k]) return toResult(perKExpanded[k]!);
   }
 
-  // ── تراجع أخير: كل كلمة سطراً منفصلاً ────────────────
-  // نصل هنا فقط لو كلمة أعرض من boxW عند minFont — خط أو حجم غير صالحين.
+  // ── (٥) الملاذ: كلمة واحدة لكل سطر
   return {
-    fontSize: minFont,
+    fontSize: effectiveMinFs,
     lines: words.map((w) => [w]),
-    lineHeight: Math.round(minFont * lineHeightRatio),
+    lineHeight: Math.round(effectiveMinFs * lineHeightRatio),
   };
 }

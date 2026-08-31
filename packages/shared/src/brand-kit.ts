@@ -84,11 +84,13 @@ export interface TypographyHeadline {
 }
 
 /**
- * أسلوب اللف. الافتراضي `optimal` — برمجة ديناميكية تختار أقل كلفة
- * إجمالية وتمنع سطر الكلمة الواحدة والسطر الأخير اليتيم.
- * `alternating` جشِع، محفوظ للتوافق مع الأصل فقط (@deprecated).
+ * أسلوب اللف. الافتراضي `uniform` — كل الأسطر تستهدف نفس العرض
+ * (`boxWidth`) وتُختار برمجة ديناميكية تعاقب التفاوت والملء الضعيف.
+ * القرار طباعي: الصحافة العربية المحترفة تفضّل أسطراً متقاربة الطول
+ * لا نمطاً هرمياً متذبذباً. `alternating` نمط موروث من الأداة القديمة
+ * (نمط هرمي بـ `shortLineRatio`)؛ يبقى للتوافق فقط ولمن أراده صراحةً.
  */
-export type WrapMode = 'optimal' | 'alternating';
+export type WrapMode = 'uniform' | 'alternating';
 
 export interface TypographyBreaking {
   readonly max: number;
@@ -97,6 +99,26 @@ export interface TypographyBreaking {
   readonly boxWidth: number;
   readonly shortLineRatio: number;
   readonly maxLines: number;
+  /** أدنى عدد أسطر مقبول (يمنع سطراً واحداً «هابطاً» في العنوان الرئيسي). */
+  readonly minLines: number;
+  /**
+   * العدد المفضّل من الأسطر. عند تعدّد الحلول النظيفة عند نفس حجم الخط،
+   * يُختار الأقرب إلى هذا العدد. لا يُلزم — يُوجّه فقط.
+   */
+  readonly preferredLines: number;
+  /**
+   * الحدّ الأدنى للمقروئية **كنسبة من عرض القماش (Canvas)** لا رقم مطلق.
+   * الفكرة: يتكيّف مع مقاسات المخرجات المختلفة. عند 1080px بمعامل 0.045
+   * = 48.6px. القاعدة تُطبَّق فقط كأرضية صلبة عند فشل كل الخيارات؛
+   * الاختيار الرئيسي يفضّل الملء العالي حتى مع خط أصغر بقليل.
+   */
+  readonly readableMinRatio: number;
+  /**
+   * الملء المستهدف — نسبة من `boxWidth`. الحلّ الذي يبلغه بأي `fs` ضمن
+   * النطاق الآمن يفوز على حلّ بخط أكبر وملء أدنى. مبرّر: فرق 6px بين
+   * حجمين لا يُرى، لكن فرق 15% في الملء يُرى بوضوح.
+   */
+  readonly targetFill: number;
   readonly wrapMode: WrapMode;
 }
 
