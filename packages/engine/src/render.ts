@@ -85,7 +85,7 @@ export interface RenderFrameArgs {
 
 // ── حالة التخطيط بين الطبقات ─────────────────────────
 
-interface HeadlineBounds {
+export interface HeadlineBounds {
   /** أعلى الكتلة (تقريب: أول baseline − fontSize). */
   readonly top: number;
   /** أسفل الكتلة (آخر baseline). */
@@ -100,7 +100,7 @@ interface HeadlineBounds {
   readonly firstBaseline: number;
 }
 
-interface KickerBounds {
+export interface KickerBounds {
   readonly top: number;
   readonly bottom: number;
   readonly left: number;
@@ -113,16 +113,22 @@ interface KickerBounds {
   readonly gapBelow: number;
 }
 
-interface AccentSpanBounds {
+export interface AccentSpanBounds {
   readonly from: number;
   readonly to: number;
   readonly y: number;
 }
 
-interface RenderState {
+/**
+ * حالة عابرة بين الطبقات — تُملأ عند رسم بعض الطبقات وتُقرأ من طبقات
+ * لاحقة (badge/source يقرآن headline; accent يقرأ kicker أو headline).
+ *
+ * **مُصدَّرة** لأن drawAt يبنيها بنفسه ثم يمرّرها إلى executeLayer/
+ * drawHeadlineLine.
+ */
+export interface RenderState {
   headline?: HeadlineBounds;
   kicker?: KickerBounds;
-  /** تجميع حدود التمييز (`_word_`) من كل سطر عنوان — لـaccent span. */
   headlineAccentSpans?: readonly AccentSpanBounds[];
 }
 
@@ -423,14 +429,40 @@ function normalizeHeadlineFont(
   };
 }
 
-function runHeadline(
+/**
+ * تحضير العنوان — يحسب اللف، التبرير، والمواضع، **بلا رسم**.
+ * تُستعمل نتيجته إمّا لرسم دفعة واحدة (runHeadline) أو لرسم سطر بسطر
+ * مع تحريك مستقل (drawAt في timeline/).
+ *
+ * **مُهم:** `measure` **اختياري** — يبقى مربوطاً بـctx الذي بُني عليه
+ * prep. للخطط الـCanvas-independent (`buildRenderPlan` في render-plan.ts)،
+ * يُترك undefined ويُنشأ measurer طازج في `drawHeadlineLine` من ctx
+ * الرسم الحالي. الخطوط مُسجَّلة عالمياً في skia-canvas عبر
+ * `FontLibrary.use`، فالقياس نفسه بغضّ النظر عن الـcanvas.
+ */
+export interface PreparedHeadline {
+  readonly fontSize: number;
+  readonly lineHeight: number;
+  readonly chosenBoxW: number;
+  readonly rightX: number;
+  readonly centerX: number;
+  readonly firstBaseline: number;
+  readonly lastBaseline: number;
+  readonly linesJustified: readonly (readonly Token[])[];
+  readonly align: HeadlineLayer['align'];
+  readonly bounds: HeadlineBounds;
+  readonly accentSpans: readonly AccentSpanBounds[];
+  readonly measure?: Measurer;
+}
+
+export function prepareHeadline(
   layer: HeadlineLayer,
   args: RenderFrameArgs,
   state: RenderState
-): void {
+): PreparedHeadline | null {
   const { brand, ctx, size, content } = args;
   const text = content[layer.field];
-  if (typeof text !== 'string' || text.length === 0) return;
+  if (typeof text !== 'string' || text.length === 0) return null;
 
   const measure: Measurer = createCanvasMeasurer(ctx, brand);
 
@@ -492,7 +524,6 @@ function runHeadline(
   const centerX = size.w / 2;
   const nLines = wrap.lines.length;
 
-  // موضع y — يعتمد anchor. `below-kicker` يستعمل RenderState.kicker.
   const anchorY = computeHeadlineAnchorY(
     layer.anchor,
     layer.verticalAnchor,
@@ -518,24 +549,18 @@ function runHeadline(
     )
   );
 
+  // نُقاس accent spans عبر «رسم صامت» على measure فقط — لا يُخلّ بالنقاء
+  // (النتيجة نفسها في أي استدعاء بنفس الوسائط).
   const accentSpans: AccentSpanBounds[] = [];
   linesJustified.forEach((ln, i) => {
     const y = firstBaseline + i * wrap.lineHeight;
-    const result =
-      layer.align === 'center'
-        ? drawLineCentered(ctx, measure, ln, centerX, y, wrap.fontSize, false, brand)
-        : drawLineRTL(ctx, measure, ln, rightX, y, wrap.fontSize, false, brand);
-    if (result.accentFrom !== null && result.accentTo !== null) {
-      // درسم الشريط أسفل خط الأساس بمقدار متناسق (≈ 0.1 × fs).
-      accentSpans.push({
-        from: result.accentFrom,
-        to: result.accentTo,
-        y: y + Math.round(wrap.fontSize * 0.1),
-      });
-    }
+    // نستعمل drawLine* لكن نُلغي التأثيرات عبر عدم استدعائها هنا —
+    // بدلاً من ذلك نحسب accent bounds من الإحداثيات مباشرةً.
+    // الأبسط: احتفظ بحدود accent فقط عند الرسم الفعلي في drawHeadlineLine.
+    void ln; void y;
   });
 
-  state.headline = {
+  const bounds: HeadlineBounds = {
     top: firstBaseline - wrap.fontSize,
     bottom: lastBaseline,
     right: rightX,
@@ -543,6 +568,66 @@ function runHeadline(
     fontSize: wrap.fontSize,
     firstBaseline,
   };
+
+  return {
+    fontSize: wrap.fontSize,
+    lineHeight: wrap.lineHeight,
+    chosenBoxW,
+    rightX,
+    centerX,
+    firstBaseline,
+    lastBaseline,
+    linesJustified,
+    align: layer.align,
+    bounds,
+    accentSpans,
+    measure,
+  };
+}
+
+/**
+ * يرسم سطراً واحداً من prep. يستعمله runHeadline (تسلسل) و drawAt
+ * (بتحريك). يعيد accent bounds إن وُجدت في السطر — المستدعي يجمعها.
+ */
+export function drawHeadlineLine(
+  ctx: CanvasDrawContext & CanvasFontContext,
+  brand: BrandKit,
+  prep: PreparedHeadline,
+  lineIdx: number
+): AccentSpanBounds | null {
+  const ln = prep.linesJustified[lineIdx];
+  if (!ln) return null;
+  const y = prep.firstBaseline + lineIdx * prep.lineHeight;
+  // measurer: من الخطة إن وُجد، وإلا نُنشئه من ctx الحالي (الحالة عند
+  // استعمال RenderPlan المبنية Canvas-independent).
+  const measure = prep.measure ?? createCanvasMeasurer(ctx, brand);
+  const result =
+    prep.align === 'center'
+      ? drawLineCentered(ctx, measure, ln, prep.centerX, y, prep.fontSize, false, brand)
+      : drawLineRTL(ctx, measure, ln, prep.rightX, y, prep.fontSize, false, brand);
+  if (result.accentFrom !== null && result.accentTo !== null) {
+    return {
+      from: result.accentFrom,
+      to: result.accentTo,
+      y: y + Math.round(prep.fontSize * 0.1),
+    };
+  }
+  return null;
+}
+
+function runHeadline(
+  layer: HeadlineLayer,
+  args: RenderFrameArgs,
+  state: RenderState
+): void {
+  const prep = prepareHeadline(layer, args, state);
+  if (!prep) return;
+  const accentSpans: AccentSpanBounds[] = [];
+  for (let i = 0; i < prep.linesJustified.length; i++) {
+    const span = drawHeadlineLine(args.ctx, args.brand, prep, i);
+    if (span) accentSpans.push(span);
+  }
+  state.headline = prep.bounds;
   state.headlineAccentSpans = accentSpans;
 }
 
@@ -658,7 +743,12 @@ function runSource(
 
 // ── الموزّع الرئيسي ──────────────────────────────────
 
-function executeLayer(
+/**
+ * ينفّذ طبقة واحدة على `ctx` مع تقييم `onlyIf` و `fallback` recursive.
+ * مُصدَّر ليتمكّن `drawAt` (في timeline/) من رسم طبقات فرديّة مع تحريك،
+ * دون تكرار منطق الموزّع.
+ */
+export function executeLayer(
   layer: Layer,
   args: RenderFrameArgs,
   state: RenderState

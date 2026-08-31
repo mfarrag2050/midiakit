@@ -13,7 +13,8 @@
     "test": "pnpm check:engine-purity && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
-    "verify:snapshot": "node scripts/verify-snapshot.mjs"
+    "verify:snapshot": "node scripts/verify-snapshot.mjs",
+    "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
   "devDependencies": {
     "typescript": "5.6.3",
@@ -23,6 +24,7 @@
     "tsx": "4.19.2",
     "@pf-mediakit/engine": "workspace:*",
     "@pf-mediakit/shared": "workspace:*",
-    "@pf-mediakit/templates": "workspace:*"
+    "@pf-mediakit/templates": "workspace:*",
+    "@pf-mediakit/renderer": "workspace:*"
   }
 }

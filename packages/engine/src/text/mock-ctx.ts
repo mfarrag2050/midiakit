@@ -76,6 +76,16 @@ export interface SaveOp {
 export interface RestoreOp {
   readonly type: 'restore';
 }
+export interface TranslateOp {
+  readonly type: 'translate';
+  readonly x: number;
+  readonly y: number;
+}
+export interface ScaleOp {
+  readonly type: 'scale';
+  readonly sx: number;
+  readonly sy: number;
+}
 
 export type CtxOp =
   | FillTextOp
@@ -83,7 +93,9 @@ export type CtxOp =
   | DrawImageOp
   | FillPathOp
   | SaveOp
-  | RestoreOp;
+  | RestoreOp
+  | TranslateOp
+  | ScaleOp;
 
 // ── تدرّج زائف يسجّل نقاط التوقف ───────────────────────
 
@@ -294,6 +306,12 @@ export function createMockCtx(): MockCtx {
     },
     set globalAlpha(v: number) {
       state.globalAlpha = v;
+    },
+    translate(x: number, y: number): void {
+      ops.push({ type: 'translate', x, y });
+    },
+    scale(sx: number, sy: number): void {
+      ops.push({ type: 'scale', sx, sy });
     },
 
     // ── ملخّصات للتأكيد ────────────────

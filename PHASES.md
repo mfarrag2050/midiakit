@@ -9,7 +9,7 @@
 
 **التحسينات المعمارية التي أعقبت الكشيدة:** (١) `wrapOptimal.fsRange` يقصر البحث داخل النطاق المفضّل أولاً، والتراجع للمدى الكامل عند الفشل. (٢) قبول ما-بعد-الكشيدة عبر `justifyCapacityConfig` — wrap يقدّر السعة عبر `estimateLineCapacity` قبل قبول (fs, boxW, k). (٣) `justifyLine.minLineFill` أُعيد تفسيرها كـ«ملء بعد الكشيدة» لا خام — بدون ذلك تظهر فجوة سلوكية بين wrap و justifyLine. (٤) مسافة المصدر `fs × 1.4` بدل `0.9`. (٥) `estimateLineCapacity` مُصدَّر من `kashida.ts` كمصدر وحيد. **161 اختبار vitest أخضر** (20 جديد للكشيدة).
 
-**المرحلة الحالية:** المراحل 0 ☑، 1 ☑، 1.5 ☑ (الكشيدة)، **2 ☑** (القوالب بيانات — مكتملة 2026-08-31، أُغلق الدَين نفس اليوم بإضافة منفّذات kicker + accent + watermark، فأصبحت القوالب الستة تُرسم كاملة على الهويتين — 12 لقطة ذهبية). التالي: المرحلة 3 (الرندر على الخادم — CLI + FFmpeg + طوابير). فرع `kind: video` للـbreaking و `clipstream` للـreel يبقيان مؤجّلين للمرحلة 3 (يحتاجان FFmpeg — قرار صحيح، ليس دَيناً).
+**المرحلة الحالية:** المراحل 0 ☑، 1 ☑، 1.5 ☑ (الكشيدة)، 2 ☑ (القوالب بيانات)، **3 ◐** (الرندر على الخادم — الجلسة الأولى مكتملة 2026-08-31: النواة الزمنية + drawAt + apps/renderer + أنبوب FFmpeg مباشر + MP4 يعمل. الجلسة الثانية: طوابير BullMQ/Redis، حدود، معيار الذروة).
 
 **اختبار البوابة (2026-08-31، بعد جلسة الجدارة):** أُنشئت هوية ثانية `brands/client-demo.json` (طيف — Almarai، أزرق غامق/عنبر، شارة "خبر عاجل"، `headlineFsRatio=[0.075,0.095]`، `boxWidthRange=[0.68,0.86]`). `pnpm preview -- --brand=default` أنتج fs=74/boxW=950/IBM Plex/عاجل رمادي؛ `--brand=client-demo` أنتج fs=66/boxW=929/Almarai/خبر عاجل عنبر. `git diff HEAD packages/` = **صفر تغيير**. الفصل بين المحرك والهوية مُثبَت آلياً لا بادّعاء.
 
@@ -34,7 +34,7 @@
 | 1 | استخراج المحرك + BiDi | 4 أسابيع | هويتان مختلفتان بلا لمس كود | ☑ |
 | **1.5** | **الكشيدة (قُدِّمت من 3.5)** | **أسبوعان** | **سطر مبرَّر بحافة يسرى مستقيمة عند fs مقروء** | **☑** |
 | 2 | القوالب بيانات | أسبوعان | قالب خامس بملف JSON فقط | ☑ |
-| 3 | الرندر على الخادم | 3 أسابيع | MP4 من CLI + معيار الذروة | ☐ |
+| 3 | الرندر على الخادم | 3 أسابيع | MP4 من CLI + معيار الذروة | ◐ |
 | 3.2 | لوحات التحكم | أسبوعان | العميل يرى موقعه في الطابور | ☐ |
 | 3.5 | الخندق التنافسي (الكسر الدلالي + التشكيل) | أسبوعان | لا كسر داخل وحدة معنى · تشكيل بلا تصادم | ☐ |
 | 3.7 | **محرّر الخط الزمني** | **6–8 أسابيع** | أربعة مسارات ← MP4 + العاجل لا يتأخر | ☐ |
@@ -215,17 +215,19 @@
 ## النواة
 - ☐ `apps/renderer` بـ Node + `skia-canvas`
 - ☐ `pnpm render:png` من CLI ← **اختبار صحة المعمارية كلها**
-- ☐ مقارنة بكسلية: Node مقابل المتصفح (فرق ≤ 1%)
-- ☐ `timelineOf` من `cvSegDur` + `cvSegTimeline`
-- ☐ حلقة `drawAt(t = f/30)`
+- ☐ مقارنة بكسلية: Node مقابل المتصفح (فرق ≤ 1%) — يُرفع مع تنفيذ الواجهة
+- ☑ `timelineOf(template, brand, content)` — `packages/engine/src/timeline/timeline.ts`. المعادلة: `max(motion.segmentMin, min(motion.segmentMax, motion.segmentMin + max(0, n − motion.segmentWordBase) × motion.segmentWordStep))` + outro. كل الثوابت من `brand.motion` (لا مثبتات).
+- ☑ حلقة `drawAt(t = f/fps)` — `packages/engine/src/timeline/draw-at.ts`. دالة خالصة من الزمن إلى إطار مع دعم fade + slideY + stagger (per-line للـheadline) + pulse (للـbadge) + outro fade-to-black. **اختبار النقاء الحاسم:** استدعاء بترتيب عشوائي `[5.7, 0.30, 7.0, 0, 2.0, 1.0]` يعطي نتائج مطابقة للاستدعاء المتسلسل `[0, 0.30, 1.0, 2.0, 5.7, 7.0]` — 7 اختبارات vitest أخضر.
+- ☑ 8 دوال easing — `packages/engine/src/timeline/easing.ts`: linear + Quad {In,Out,InOut} + Cubic {In,Out,InOut} + easeOutBack.
+- ☑ فرع `kind: video` في breaking — `template.video.animation` بترتيب (badge at 0 مع pulse) → (headline at 0.30 مع stagger من brand.motion.lineStagger و fade من lineFade و slideY 26) → (source after headline مع fade 0.35). outro من brand.motion.outro. easing = easeOutCubic.
 
 ## الأنبوب (ADR-008)
-- ☐ `skia-canvas → Buffer خام → FFmpeg stdin (-f rawvideo -i pipe:0)`
-- ☐ **لا ملفات مؤقتة على القرص**
-- ☐ H.264 + AAC 128kbps + sRGB
-- ☐ `pnpm render:mp4`
+- ☑ `skia-canvas → getImageData → Buffer RGBA خام → FFmpeg stdin (-f rawvideo -pix_fmt rgba -i pipe:0)` — `apps/renderer/src/index.ts`. `stdin.write` مع انتظار `drain` لتفادي ضغط الذاكرة. `on('close')` يلتقط رمز الخروج.
+- ☑ **لا ملفات إطارات مؤقتة على القرص** — النواة تجدّد Canvas واحداً وتمسحه (`ctx.clearRect`) قبل كل إطار. صفر I/O على disk بين الإطار وحرف FFmpeg.
+- ☑ H.264 (`libx264`) + `yuv420p` + `+faststart` + AAC 128kbps + `color_primaries bt709` (≈ sRGB) + `-shortest` مع anullsrc.
+- ☑ `pnpm render:mp4 -- --brand=default --template=breaking` — يشغّل apps/renderer/src/cli.ts. الاختبار: 252 إطاراً × 1080×1350 → 118KB MP4 في **~2.2 ثانية** (بعد إصلاح 2026-08-31 عبر `RenderPlan` — كان 177 ثانية قبل الإصلاح؛ التسارع ×80 على المخرج الحقيقي، ×471 على زمن الإطار ذاته). MD5 مطابق لما قبل الإصلاح — الأداء تغيّر، المخرج لم يتغيّر.
 
-## الطوابير
+## الطوابير (**الجلسة الثانية للمرحلة 3 — لم تبدأ**)
 - ☐ BullMQ + Redis
 - ☐ أربعة طوابير: `urgent` · `normal` · `edit` · `batch`
 - ☐ `concurrency = floor(cores/2)` + حدّ ذاكرة لكل مهمة
@@ -236,15 +238,18 @@
 - ☐ تنظيف في `finally`
 
 ## المتصفح
-- ☐ `WebCodecs` للفيديو القصير بلا مصدر خارجي
+- ☐ `WebCodecs` للفيديو القصير بلا مصدر خارجي — يُرفع مع الواجهة
 - ☐ الخادم كتراجع (دعم Safari ناقص)
-- ☐ **حذف `MediaRecorder` نهائياً**
+- 📎 **حذف `MediaRecorder` نهائياً** — لا يوجد في المستودع أصلاً (وُلد المحرك التجاري بلا `MediaRecorder`)
 
-**البوابة:**
-1. فيديو 60 ثانية يُرندر في أقل من 60 ثانية
-2. MP4 يُشغَّل على iPhone وأندرويد ويُرفع لإنستغرام بلا تحويل
-3. **تسع مهام متزامنة ⇒ لا مهمة عاجلة تتجاوز 45 ثانية للبدء**
-4. مقطع معطوب يُرفض قبل الطابور، لا يشغل عاملاً
+**البوابة (الجلسة الأولى — مُتحقّقة 2026-08-31):**
+1. ☑ **MP4 يُشغَّل على macOS** — H.264 + yuv420p + AAC + MP4 container. اختُبر بـ`ffprobe`: مسار فيديو H.264 1080×1350 30fps + مسار AAC. QuickTime/Preview متوافقان.
+2. ☑ **المدة تطابق `timelineOf`** — 8.40 ثانية بالضبط (7.9 base + 0.5 outro، حيث 7.9 = 7 + max(0, 11-8) × 0.3). `ffprobe format=duration` = 8.4.
+3. ☑ **الإطار عند t=1.4 يطابق لقطة ثابتة** — `scripts/verify-frame-at.mjs` يستخرج الإطار عبر `ffmpeg -ss 1.4` ويقارنه بصرياً مع رندر مباشر عبر `drawAt(t=1.4)`. المطابقة كاملة (كشيدة، badge، source، تخطيط) — H.264 يضيف ضوضاء chroma لا محسوسة بصرياً.
+4. ⏸ **بوابات الجلسة الثانية:** فيديو 60s يُرندر في أقل من 60s؛ MP4 يُشغَّل على iPhone/أندرويد؛ 9 مهام متزامنة → عاجل ≤ 45s للبدء؛ مقطع معطوب يُرفض قبل الطابور.
+
+## تبعية نظام
+- 📎 **ffmpeg 9.0.1** (`libx264` + `aac` + `videotoolbox` للترميز العتادي) — تبعية نظام مطلوبة على كل بيئة تشغيل. مثبَّتة على الميني عبر Homebrew. **يجب تثبيتها على VPS الإنتاج أيضاً.** النسخة المرجعية 9.0.1 — الأقدم قد لا يدعم بعض الـcolor primaries الحديثة.
 
 ---
 
@@ -476,6 +481,11 @@
 | 2026-08-31 | `HeadlineAnchor.below-kicker` + `KickerLayer.verticalAnchor` | التتابع kicker → accent(underline) → headline(below-kicker) يعمل نظيفاً عبر `RenderState.kicker`. القوالب card_kicker وأمثالها تحقّق تخطيطاً محكماً بلا حساب مواضع في القالب نفسه — كل شيء نسبي |
 | 2026-08-31 | 12 لقطة ذهبية (6 قوالب × 2 هويتين) في `snapshots/` | `pnpm verify:snapshot` يعيد تشغيل preview مع `--template=all` لكل هوية، ثم يقارن كل ملف بايت-بايت. جولة أولى: 12 مطابقة · 0 إخفاق. أيّ regression في renderFrame أو أي طبقة سيَظهر فوراً |
 | 2026-08-31 | إصلاحان في card_kicker بعد مراجعة اللقطات | (١) accent underline offset 0.12→0.32 من fs — كان يقطع خط النازل في الحروف (ي، ق، ن) بصرياً. (٢) headline في card_kicker يستعمل `brand.typography.title3l` (كما نصّت docs/04) لا `breaking` — كنت غيّرته لأن title3l لم يحمل knobs التخطيط. الحلّ: extend title3l بـ`minLines: 1, preferredLines: 2` (تكوين titles قصيرة)، ودع `normalizeHeadlineFont` يورّث الباقي من breaking. لُقطتا card_kicker جُدّدتا. **درس L-05:** رقم 0.12 كان تعسّفياً — استُبدل بـ0.32 مشتقّ من قيد فيزيائي (عمق النازل في IBM Plex/Almarai ≈ 0.20-0.25 × fs) |
+| 2026-08-31 | `drawAt` دالة خالصة من الزمن إلى إطار (ADR-004) — اختبار حاسم للنقاء | `packages/engine/src/timeline/draw-at.ts`. لا حالة وحدة قابلة للتغيير (فحص scripts/check-engine-purity.mjs يمنعها). كل استدعاء يبني `state: RenderState` فارغاً محلياً. الاختبار الحاسم `timeline.test.ts`: 6 أوقات تُرندر مرة متسلسلة `[0, 0.3, 1, 2, 5.7, 7]` ومرة عشوائية `[5.7, 0.3, 7, 0, 2, 1]`، والـops المسجّلة من mock-ctx متطابقة بالضبط لكل t. أي تسرّب حالة كان سيُنتج فرقاً بمجرد تغيير الترتيب |
+| 2026-08-31 | `renderVideo` أنبوب مباشر — Canvas → getImageData → Buffer RGBA → FFmpeg stdin | `apps/renderer/src/index.ts`. `ctx.clearRect` قبل كل drawAt (لا حالة سطح متراكمة). `stdin.write` مع انتظار `drain` — يمنع تضخّم ذاكرة Node عند فيديوهات طويلة. فشل ffmpeg (exit != 0) يُرمى إلى المستدعي. مطابق ADR-008: صفر ملفات إطارات على القرص |
+| 2026-08-31 | ffmpeg 9.0.1 تبعية نظام إلزامية | Homebrew على الميني (`/opt/homebrew/bin/ffmpeg`)، مع `libx264` + `aac` + `videotoolbox`. VPS الإنتاج يجب أن يحمل نفس النسخة أو أحدث — تُوثَّق ضمن دليل النشر. الأقدم قد يفشل في color primaries bt709 أو بعض flags حديثة |
+| 2026-08-31 | تحريك per-line للـheadline عبر تقسيم `runHeadline` | `prepareHeadline` تُصدَّر الآن من `render.ts` — تحسب wrap+justify+bounds بلا رسم. `drawHeadlineLine` تُصدَّر — ترسم سطراً واحداً بحسب `PreparedHeadline`. drawAt يستدعي prep مرة، ثم يرسم كل سطر بـsave/globalAlpha/translate خاصة به بحسب stagger. هذا الفصل يسمح للـ per-line stagger بلا تكرار منطق اللف |
+| 2026-08-31 | **`RenderPlan` — يفصل الحساب (مرة) عن الرسم (لكل إطار)** | تشخيص `scripts/diagnose-render-perf.mjs` على 100 إطار كشف أن `wrapOptimal` يستهلك 99.5% من زمن الإطار (730ms/إطار) لأنّه يُعاد حسابه لكل إطار رغم أن المدخلات لا تتغيّر عبر الزمن. `packages/engine/src/render-plan.ts` جديدة: `buildRenderPlan({ctx, size, template, brand, content, fps?}) → RenderPlan {timeline, headline?, headlineLineCount, animations}`. `drawAt` يقبل `plan` — يتخطّى wrap+justify+parseAnimations+timelineOf ويستهلك الجاهز. **النقاء محفوظ:** الخطة قيمة مُشتقّة تُمرَّر كوسيط، لا حالة عابرة (اختبار النقاء الزمني بقي أخضر). **قابلية Canvas-independent:** `PreparedHeadline.measure` صار اختيارياً؛ `drawHeadlineLine` يُنشئ measurer طازج من ctx الرسم إن غاب — لأن الخط مُسجَّل عالمياً في skia-canvas. **النتائج:** 722.7ms/إطار → 1.5ms/إطار (×471). MP4 حقيقي 177s → 2.2s. MD5 المخرَج نفسه بالضبط (`d4bbbd9540acc495f92f0def80f05eee`). للتوافق: إن لم يُمرَّر plan، drawAt يبنيه داخلياً (preview.mjs لم يتغيّر). → `docs/LESSONS.md#L-07` |
 
 ## منقوضة (أرشيف — لا تُحذف)
 

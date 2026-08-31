@@ -11,6 +11,9 @@ importers:
       '@pf-mediakit/engine':
         specifier: workspace:*
         version: link:packages/engine
+      '@pf-mediakit/renderer':
+        specifier: workspace:*
+        version: link:apps/renderer
       '@pf-mediakit/shared':
         specifier: workspace:*
         version: link:packages/shared
@@ -32,6 +35,18 @@ importers:
       vitest:
         specifier: 2.1.9
         version: 2.1.9(@types/node@20.17.10)
+
+  apps/renderer:
+    dependencies:
+      '@pf-mediakit/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@pf-mediakit/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@pf-mediakit/templates':
+        specifier: workspace:*
+        version: link:../../packages/templates
 
   packages/engine:
     dependencies:

@@ -81,13 +81,34 @@
   "typography": {
     "headline":  { "max": 96, "min": 40, "lineHeight": 1.34, "boxWidth": 880 },
     "breaking":  { "max": 80, "min": 44, "lineHeight": 1.42, "boxWidth": 900,
-                   "shortLineRatio": 0.6, "maxLines": 6 },
+                   "wrapMode": "uniform",             // uniform (افتراضي) | alternating (موروث)
+                   "shortLineRatio": 1.0,             // 1.0 يلغي التناوب في الافتراضي؛ 0.6 موروث لـalternating
+                   "maxLines": 6,
+                   "minLines": 2,                     // منع سطر واحد «هابط» من أعلى البطاقة
+                   "preferredLines": 3,               // النمط الصحفي القياسي؛ يُوجّه k عند التعادل
+                   "readableMinRatio": 0.045,         // أرضية طوارئ لحجم الخط كنسبة من عرض القماش (4.5%)
+                   "headlineFsRatio": [0.065, 0.085], // النطاق الصحفي المفضّل — على 1080 = 70-92px
+                   "boxWidthRange":   [0.72, 0.88],   // نطاق عرض الصندوق كنسبة — على 1080 = 778-950px
+                   "targetFill": 0.9,                 // ملء مستهدف في المسارات غير preferLargestFs
+                   "swapMaxFsDiff": 6,                // فارق fs الأقصى لقاعدة «التبديل نزولاً» (بكسل)
+                   "swapMinFillGain": 0.15            // مكسب الملء المطلوب لتفعيل التبديل
+                 },
     "kicker":    { "max": 60, "min": 28, "weight": 300, "boxWidth": 760, "gapBelow": 56 },
-    "title3l":   { "max": 84, "min": 40 },
+    "title3l":   { "max": 84, "min": 40,
+                   "minLines": 1,                    // العناوين القصيرة قد تكفيها سطر واحد
+                   "preferredLines": 2               // النمط الطباعي للـtitles في card_kicker
+                 },
     "source":    { "size": 34, "weight": 700 },
     "reelTitle": { "max": 76, "min": 40, "maxLines": 4, "boxInset": 150,
-                   "verticalAnchor": 0.66 },
-    "accentBar": { "height": 8, "minWidth": 140, "maxWidth": 620 },
+                   "verticalAnchor": 0.66,
+                   // reelTitle يحمل كامل knobs التخطيط لأن قيمه مميّزة عن breaking
+                   "lineHeight": 1.36, "boxWidth": 780, "shortLineRatio": 0.6,
+                   "minLines": 1, "preferredLines": 2, "readableMinRatio": 0.045,
+                   "headlineFsRatio": [0.055, 0.075], "boxWidthRange": [0.68, 0.86]
+                 },
+    "accentBar": { "height": 8, "minWidth": 140, "maxWidth": 620,
+                   "descenderClearance": 0.32        // إزاحة underline تحت خط الأساس كنسبة من fs
+                 },
 
     "lineHeightMode": "dynamic",       // dynamic | fixed
     // dynamic يحسب من actualBoundingBoxAscent — إلزامي عند تفعيل التشكيل
@@ -186,6 +207,19 @@
 - المراجع النصية (`colors.urgentBadge`) تُحلّ وقت الرندر عبر دالة `resolve(brand, path)`.
 - عند غياب أي مفتاح: يُستبدل من `DEFAULT_BRAND` لا يُرمى خطأ.
 - الخطوط تُحمّل ويُنتظر جهوزها قبل أي `measureText` (ADR-006).
+
+---
+
+## `headlineFsRatio` لا يُنسخ بين الهويات
+
+**القاعدة:** `headlineFsRatio` (والنطاق ذاته في `reelTitle`) يعتمد على **عرض الخط** بالدرجة الأولى — عرض الحرف الوسطي، ارتفاع x، جسامة السويقات. النطاق الذي يعمل على IBM Plex Sans Arabic (0.065-0.085) لن يعمل بالضرورة على Almarai (أوسع، فيميل النطاق نحو أرقام أصغر) أو Amiri (أضيق).
+
+**الشاهد المُنفَّذ:** `DEFAULT_BRAND.breaking.headlineFsRatio = [0.065, 0.085]` (IBM Plex). `brands/client-demo.json.breaking.headlineFsRatio = [0.075, 0.095]` (Almarai). فروق ~15%.
+
+**الأثر على المرحلة 4 (محرّر Brand Kit):**
+- بعد رفع الخط، الواجهة تشغّل خوارزمية اقتراح: قِس عرض حرف مرجعي (مثلاً «ح» أو «ن») في نطاق fs من `min` إلى `max`، وقارنه بالمرجع (IBM Plex عند fs=80). اقترح `headlineFsRatio` أعلى للخطوط الأوسع، أدنى للأضيق.
+- الاقتراح **قابل للتحرير** — العميل يعاين ويعدّل قبل الحفظ.
+- **درس L-02** يبقى صالحاً: النطاق نسبة، لا رقم مطلق. لا تُقفل الاقتراح على 70-92px حرفياً.
 
 ---
 

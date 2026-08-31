@@ -286,5 +286,70 @@ export function validateTemplate(raw: unknown): Template {
   }
   o['layers'].forEach((l, i) => validateLayer(l, `layers[${i}]`));
 
+  if (o['video'] !== undefined) validateVideo(o['video'], 'video');
+
   return raw as Template;
+}
+
+// ── تحقق كتلة الفيديو ────────────────────────────────
+
+const EASING_NAMES = [
+  'linear',
+  'easeInQuad',
+  'easeOutQuad',
+  'easeInOutQuad',
+  'easeInCubic',
+  'easeOutCubic',
+  'easeInOutCubic',
+  'easeOutBack',
+];
+
+function validateVideo(raw: unknown, path: string): void {
+  if (!isObj(raw)) bail(path, 'video يجب أن يكون object');
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o['animation'])) {
+    bail(`${path}.animation`, 'يجب أن يكون array');
+  }
+  o['animation'].forEach((a, i) => validateAnimation(a, `${path}.animation[${i}]`));
+
+  const outro = o['outro'];
+  if (!isString(outro) && !isNumber(outro)) {
+    bail(`${path}.outro`, 'يجب أن يكون رقم أو مرجع brand.*');
+  }
+  const easing = o['easing'];
+  if (!isString(easing) || !EASING_NAMES.includes(easing)) {
+    bail(`${path}.easing`, `يجب أن يكون واحداً من: ${EASING_NAMES.join(', ')}`);
+  }
+}
+
+function validateAnimation(raw: unknown, path: string): void {
+  if (!isObj(raw)) bail(path, 'animation يجب أن تكون object');
+  const o = raw as Record<string, unknown>;
+  if (!isString(o['target'])) bail(`${path}.target`, 'يجب أن يكون string');
+  if (o['at'] !== undefined && !isNumber(o['at'])) {
+    bail(`${path}.at`, 'يجب أن يكون رقم');
+  }
+  if (o['after'] !== undefined && !isString(o['after'])) {
+    bail(`${path}.after`, 'يجب أن يكون string (اسم target آخر)');
+  }
+  if (o['at'] === undefined && o['after'] === undefined) {
+    bail(path, 'يجب تحديد at أو after');
+  }
+  const fade = o['fade'];
+  if (!isString(fade) && !isNumber(fade)) {
+    bail(`${path}.fade`, 'يجب أن يكون رقم أو مرجع brand.*');
+  }
+  if (
+    o['stagger'] !== undefined &&
+    !isString(o['stagger']) &&
+    !isNumber(o['stagger'])
+  ) {
+    bail(`${path}.stagger`, 'يجب أن يكون رقم أو مرجع brand.*');
+  }
+  if (o['slideY'] !== undefined && !isNumber(o['slideY'])) {
+    bail(`${path}.slideY`, 'يجب أن يكون رقم');
+  }
+  if (o['pulse'] !== undefined && !isBool(o['pulse'])) {
+    bail(`${path}.pulse`, 'يجب أن يكون boolean');
+  }
 }

@@ -53,5 +53,17 @@
       "font": "brand.typography.source"
     },
     { "type": "logo" }
-  ]
+  ],
+  "video": {
+    "animation": [
+      { "target": "badge",    "at": 0,    "fade": 0.35, "pulse": true },
+      { "target": "headline", "at": 0.30,
+        "stagger": "brand.motion.lineStagger",
+        "fade": "brand.motion.lineFade",
+        "slideY": 26 },
+      { "target": "source",   "after": "headline", "fade": 0.35 }
+    ],
+    "outro": "brand.motion.outro",
+    "easing": "easeOutCubic"
+  }
 }

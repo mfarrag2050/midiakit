@@ -174,6 +174,44 @@ export type Layer =
 
 export type TemplateKind = 'static' | 'video';
 
+// ── تحريك الفيديو ─────────────────────────────────────
+
+export type EasingName =
+  | 'linear'
+  | 'easeInQuad'
+  | 'easeOutQuad'
+  | 'easeInOutQuad'
+  | 'easeInCubic'
+  | 'easeOutCubic'
+  | 'easeInOutCubic'
+  | 'easeOutBack';
+
+/**
+ * حركة طبقة واحدة داخل الفيديو. `target` = نوع طبقة (`badge`,
+ * `headline`, `source`, `logo`، …). `at` توقيت مطلق بالثواني؛ `after`
+ * توقيت نسبي (بعد اكتمال طبقة أخرى) — أحدهما فقط.
+ *
+ * كل حقل زمني (fade, stagger) يقبل رقماً أو مرجع `brand.*` يُحلّ وقت
+ * الرندر (مثل `brand.motion.lineFade`).
+ */
+export interface VideoAnimation {
+  readonly target: string;
+  readonly at?: number;
+  readonly after?: string;
+  readonly fade: number | string;
+  readonly stagger?: number | string;
+  readonly slideY?: number;
+  /** نبضة قصيرة عند الظهور (مثل شارة العاجل). القيمة من `brand.motion.badgePulse`. */
+  readonly pulse?: boolean;
+}
+
+export interface TemplateVideo {
+  readonly animation: readonly VideoAnimation[];
+  /** مدة تلاشي الخروج — رقم أو مرجع `brand.motion.outro`. */
+  readonly outro: number | string;
+  readonly easing: EasingName;
+}
+
 export interface Template {
   readonly id: string;
   readonly name: string;
@@ -181,4 +219,9 @@ export interface Template {
   readonly sizes: readonly string[];
   readonly fields?: readonly TemplateField[];
   readonly layers: readonly Layer[];
+  /**
+   * كتلة الفيديو — مطلوبة عند `kind='video'`، اختيارية على `static`
+   * حيث بعض القوالب تعرض بطاقة أو فيديو (مثل `breaking`).
+   */
+  readonly video?: TemplateVideo;
 }

@@ -97,6 +97,11 @@ export interface CanvasDrawContext {
   save(): void;
   restore(): void;
   globalAlpha: number;
+
+  // تحويلات هندسية (للتحريك في الفيديو — slideY، pulse، إلخ).
+  // متوفّرة في CanvasRenderingContext2D و skia-canvas.
+  translate(x: number, y: number): void;
+  scale(sx: number, sy: number): void;
 }
 
 export interface DrawLineResult {
