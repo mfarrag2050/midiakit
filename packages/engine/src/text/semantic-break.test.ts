@@ -239,7 +239,106 @@ describe('breakPenalty — عناوين حقيقية مقاسة موضعاً ب�
   });
 });
 
-// ── [stage-b] — حالات تحتاج موارد خارجية ─
-// **الحالة 9 من المواصفة:** «الرئيس التركي رجب طيب أردوغان»
-// تحتاج titles.json (الرئيس = لقب) و entities.json (اسم شخص كامل).
-// اختبارها يُضاف في الجزء (ب) بعد تنزيل الموارد.
+// ── القواعد الخارجية (الجزء ب — ExtendedLexicon) ─────
+// نفحص أن قواعد title-name، place-pair، entity-pair تُطبِّق BREAK_STRONG
+// عند تمرير قوائم مصغّرة. الاختبار مستقل عن المحتوى الفعلي للملفات —
+// نحقن قوائم صغيرة يدوية.
+
+import { extendLexicon } from '../arabic-lexicon/extended.js';
+
+const extLex = extendLexicon(lex, {
+  titles: ['الرئيس', 'وزير', 'الأمير', 'الشيخ'],
+  places: ['بيت لحم', 'خان يونس', 'رأس الخيمة', 'دير البلح'],
+  entities: [
+    'منظمة التعاون الإسلامي',
+    'الاتحاد الأوروبي',
+    'حركة حماس',
+  ],
+});
+
+describe('breakPenalty (الجزء ب) — لقب + اسم', () => {
+  it('«الرئيس بشار الأسد» — لا كسر بعد «الرئيس» → 1000', () => {
+    const t = tokens('الرئيس بشار الأسد');
+    expect(breakPenalty(t, 1, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«وزير الخارجية التركي» — لقب «وزير» يمنع الكسر بعده → 1000', () => {
+    const t = tokens('وزير الخارجية التركي');
+    // «وزير» في titles → 1000 (يفوز على isIdafaBareToDef لأن الجزء ب أخصّ).
+    expect(breakPenalty(t, 1, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«الأمير محمد بن سلمان» — بعد «الأمير» → 1000', () => {
+    const t = tokens('الأمير محمد بن سلمان');
+    expect(breakPenalty(t, 1, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('اللقب لا يمنع الكسر عند القاموس الأساسي (لا امتداد)', () => {
+    const t = tokens('الرئيس بشار الأسد');
+    // القاموس الأساسي لا يعرف «الرئيس» كلقب → 0 (لا مانع دلالي).
+    expect(breakPenalty(t, 1, lex)).toBe(BREAK_NEUTRAL);
+  });
+});
+
+describe('breakPenalty (الجزء ب) — أسماء أماكن مركّبة', () => {
+  it('«حدث في بيت لحم» — لا كسر بين «بيت» و«لحم» → 1000', () => {
+    const t = tokens('حدث في بيت لحم');
+    // فحص كسر قبل «لحم» (index 3)
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«قصف طال خان يونس» — لا كسر بين «خان» و«يونس»', () => {
+    const t = tokens('قصف طال خان يونس');
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«شحنة من رأس الخيمة» — لا كسر بين «رأس» و«الخيمة»', () => {
+    const t = tokens('شحنة من رأس الخيمة');
+    // كسر قبل «الخيمة» — index 3
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('اسم غير موجود في القائمة — يعود للسلوك العام', () => {
+    const t = tokens('حدث في مدينة بعيدة');
+    // «مدينة بعيدة» ليست في places → لا قاعدة خارجية، ينزل إلى العام.
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_MEDIUM); // bare+bare
+  });
+});
+
+describe('breakPenalty (الجزء ب) — كيانات مؤسسية', () => {
+  it('«اجتماع منظمة التعاون الإسلامي» — لا كسر داخل الاسم', () => {
+    const t = tokens('اجتماع منظمة التعاون الإسلامي');
+    // كسر قبل «التعاون» (index 2) — داخل الكيان → 1000
+    expect(breakPenalty(t, 2, extLex)).toBe(BREAK_STRONG);
+    // كسر قبل «الإسلامي» (index 3) — بين «التعاون» و«الإسلامي» → 1000
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«قرار الاتحاد الأوروبي» — لا كسر بين «الاتحاد» و«الأوروبي»', () => {
+    const t = tokens('قرار الاتحاد الأوروبي');
+    expect(breakPenalty(t, 2, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«ناطق باسم حركة حماس» — لا كسر بين «حركة» و«حماس»', () => {
+    const t = tokens('ناطق باسم حركة حماس');
+    // 4 tokens: [ناطق, باسم, حركة, حماس] — كسر بين «حركة» و«حماس» عند index=3
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+});
+
+describe('breakPenalty (الجزء ب) — أولوية الأخصّ', () => {
+  it('«عبد الرحمن» — compound-name يبقى 1000 حتى مع lexicon موسَّع', () => {
+    const t = tokens('عبد الرحمن الملك');
+    // compound-name (isCompoundName) يبقى 1000 (نفس L-08).
+    // «عبد» ليس في titles ولا في place-pair ولا entity-pair.
+    expect(breakPenalty(t, 1, extLex)).toBe(BREAK_STRONG);
+  });
+
+  it('«في بيت لحم» — «في» inseparable لكن place-pair يفوز عند index=3', () => {
+    const t = tokens('حدث في بيت لحم');
+    // index 2: بعد «في» → Infinity (particle)
+    expect(breakPenalty(t, 2, extLex)).toBe(BREAK_INFINITY);
+    // index 3: بين «بيت» و«لحم» → 1000 (place-pair)
+    expect(breakPenalty(t, 3, extLex)).toBe(BREAK_STRONG);
+  });
+});

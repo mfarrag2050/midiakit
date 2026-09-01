@@ -7,3 +7,8 @@ out/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# مواد أصلية ضخمة — لا تُتَتبَّع (194MB GeoNames، ملفات RSS متغيّرة).
+# الملفات المُشتقّة (data/external/*.json) هي التي تُتَتبَّع.
+data/external/raw/
+data/external/rss/

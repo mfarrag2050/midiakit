@@ -26,3 +26,9 @@ export {
   normalize as normalizeArabic,
   type Lexicon,
 } from './arabic-lexicon/index.js';
+export {
+  extendLexicon,
+  isExtendedLexicon,
+  type ExtendedLexicon,
+  type ExtendedLexiconData,
+} from './arabic-lexicon/extended.js';

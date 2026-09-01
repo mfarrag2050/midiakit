@@ -84,6 +84,12 @@ export interface RenderFrameArgs {
   readonly content: Readonly<Record<string, unknown>>;
   /** أصول جانبية — الصور خصوصاً (الحقل `image`). */
   readonly assets?: RenderAssets;
+  /**
+   * قاموس مُخصَّص للكسر الدلالي (docs/07 §2). إن مُرِّر ExtendedLexicon
+   * (extendLexicon(base, {titles, places, entities}))، تُطبَّق قواعد
+   * الجزء (ب) — لقب+اسم، اسم مكان مركّب، كيان مؤسسي. الافتراضي: أساسي.
+   */
+  readonly lexicon?: Lexicon;
 }
 
 // ── حالة التخطيط بين الطبقات ─────────────────────────
@@ -527,9 +533,10 @@ export function prepareHeadline(
 
   // الكسر الدلالي (docs/07 §2): يُحسب مصفوفة العقوبات مرة هنا (L-07)
   // إن كان مُفعَّلاً في الهوية. wrapOptimal يستهلكها بلا إعادة حساب.
+  // نمرِّر lexicon الموسَّع إن كان في args — يُفعِّل قواعد الجزء (ب).
   const semanticEnabled = brand.typography.semanticBreaks.enabled;
   const breakPenalties = semanticEnabled
-    ? computeBreakPenalties(tokens)
+    ? computeBreakPenalties(tokens, args.lexicon ?? DEFAULT_ARABIC_LEXICON)
     : undefined;
 
   const wrap = wrapOptimal(

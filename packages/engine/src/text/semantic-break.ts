@@ -26,6 +26,7 @@ import type { Token } from '@pf-mediakit/shared';
 import { isWord } from '@pf-mediakit/shared';
 import type { Lexicon } from '../arabic-lexicon/index.js';
 import { normalize } from '../arabic-lexicon/index.js';
+import { isExtendedLexicon } from '../arabic-lexicon/extended.js';
 
 // ── ثوابت السلّم ──────────────────────────────────────
 
@@ -111,6 +112,21 @@ export function breakPenalty(
   // ويحملان عقوبة أدنى — 1000 لا Infinity). لو فحصنا العام أولاً،
   // لفازت Infinity على «عبد الرحمن» رغم أن التصنيف الصحيح 1000.
   // الحل: افحص المخصص أولاً — كل قاعدة ترجع بمجرد المطابقة.
+
+  // ── القواعد الخارجية (الجزء ب — تحتاج ExtendedLexicon) ─────
+  // ترتيب: place-pair ثم entity-pair ثم title، لأن اسم مكان مركّب
+  // (بيت لحم) أخصّ من كيان (منظمة …)، والاثنان أخصّ من لقب عام.
+  if (isExtendedLexicon(lexicon)) {
+    // (٠أ) اسم جغرافي مركّب — «بيت لحم»، «رأس الخيمة» → 1000
+    if (lexicon.hasPlacePair(prev, curr)) return BREAK_STRONG;
+    // (٠ب) كيان مؤسسي مركّب — «منظمة التعاون الإسلامي» → 1000
+    //      داخل الأزواج المتجاورة لأي اسم كيان معروف.
+    if (lexicon.hasEntityPair(prev, curr)) return BREAK_STRONG;
+    // (٠ج) لقب + اسم — «الرئيس بشار»، «وزير الخارجية» (وزير هنا لقب) → 1000
+    //      يتجاوزه compound-name إذا كان «أبو» (يقع في titles أيضاً)
+    //      لأن العلم المركّب أخصّ.
+    if (lexicon.isTitle(prev)) return BREAK_STRONG;
+  }
 
   // (١) أعلام مركّبة (عبد/أبو/ابن/آل + اسم) → 1000
   //     يسبق كل شيء لأن «أبو» ينتمي أيضاً إلى الأسماء الخمسة (kwsi)،

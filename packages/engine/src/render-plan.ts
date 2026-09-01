@@ -29,6 +29,7 @@ import type {
   CanvasDrawContext,
   CanvasFontContext,
 } from './text/index.js';
+import type { Lexicon } from './arabic-lexicon/index.js';
 import type { CanvasSize } from './layers/image.js';
 import {
   parseAnimations,
@@ -65,6 +66,12 @@ export interface BuildRenderPlanArgs {
   readonly content: Readonly<Record<string, unknown>>;
   readonly assets?: RenderAssets;
   readonly fps?: number;
+  /**
+   * قاموس عربي مُخصَّص. إن مُرِّر ExtendedLexicon (من extendLexicon)،
+   * تُطبَّق قواعد الجزء (ب): title-name, place-pair, entity-pair.
+   * الافتراضي: القاموس الأساسي (الجزء أ فقط) — لا يحتاج تحميل ملفات.
+   */
+  readonly lexicon?: Lexicon;
 }
 
 // ── مساعد: يجرّد `measure` من prep ─────────────────────
@@ -110,7 +117,7 @@ function stripMeasure(prep: PreparedHeadline): PreparedHeadline {
  * يُنَفَّذ **مرة واحدة قبل حلقة الإطار** — كل هذه القيم لا تعتمد على `t`.
  */
 export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
-  const { ctx, size, template, brand, content, assets, fps } = args;
+  const { ctx, size, template, brand, content, assets, fps, lexicon } = args;
   const timeline = timelineOf(template, brand, content, fps ?? 30);
 
   const headlineLayer = template.layers.find(
@@ -127,6 +134,7 @@ export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
       brand,
       content,
       ...(assets && { assets }),
+      ...(lexicon && { lexicon }),
     };
     const raw = prepareHeadline(headlineLayer, rfArgs, scratchState);
     if (raw) headlinePrep = stripMeasure(raw);
