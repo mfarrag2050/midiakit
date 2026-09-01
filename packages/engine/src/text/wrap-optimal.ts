@@ -99,6 +99,22 @@ export interface WrapOptimalOptions {
    */
   boxWidthCandidates?: readonly number[];
   /**
+   * **الكسر الدلالي (docs/07 §2):** عقوبات لكل موقع كسر ممكن. طول
+   * المصفوفة يجب أن يساوي عدد كلمات الإدخال بعد `parseTokens`. كل
+   * قيمة عقوبة الكسر **قبل** الكلمة في الفهرس المقابل.
+   *
+   *   • `Infinity` — استبعاد كامل (لا يُنظر في هذا التقسيم أصلاً)
+   *   • قيمة محدودة — تُضاف إلى كلفة DP كأيّ معاقبة تخطيط
+   *
+   * **مسار التراجع (في preferLargestFs):** إن أدّت `Infinity` إلى غياب
+   * أيّ حلٍّ مقبول، wrap يحاول ثانية بـ `Infinity → 5000` مع تسجيل
+   * تحذير، ثم ثالثة بلا العقوبات (تعطيل الدلالي) مع تحذير آخر.
+   *
+   * **الأداء:** المصفوفة تُحسب مرة في `buildRenderPlan` وتُمرَّر جاهزة
+   * (L-07). حساب `breakPenalty` لكل موضع DP يُعيد ندبة 99.5%.
+   */
+  breakPenalties?: readonly number[];
+  /**
    * **نطاق حجم الخط المفضّل** بالبكسل — يُشتقّ من
    * `brand.typography.breaking.headlineFsRatio × canvas.w`.
    *
@@ -283,6 +299,17 @@ function costAlternating(params: {
 
 // ── DP يعيد أفضل تقسيم لكل k في [1, maxLines] ─────────
 
+/**
+ * ذاكرة قياس مؤقتة لعروض الأسطر داخل نفس (fs, allBold). المفتاح يشمل
+ * `j,i` — نفس الشريحة النصية تُقاس مرات كثيرة عبر تكرارات boxW في
+ * نفس fs. تُبنى فارغة من قِبَل المستدعي وتُمرَّر لكل استدعاءات
+ * solveDPPerK داخل نفس مسار fs — بذلك تُعاد أرقام القياس الغالية
+ * (10 قياس لكل جواز `(j,i)` بدل 1) بسرعة O(1).
+ *
+ * **يجب** أن تكون فارغة عند تغيير `fs` — العروض تعتمد على fs.
+ */
+export type LineMeasureCache = Map<string, number>;
+
 function solveDPPerK(
   words: readonly Token[],
   fs: number,
@@ -291,7 +318,9 @@ function solveDPPerK(
   maxLines: number,
   allBold: boolean,
   measure: Measurer,
-  mode: OptimalMode
+  mode: OptimalMode,
+  breakPenalties?: readonly number[],
+  cache?: LineMeasureCache
 ): (SolveResult | null)[] {
   const n = words.length;
   const results: (SolveResult | null)[] = new Array(maxLines + 1).fill(null);
@@ -317,17 +346,39 @@ function solveDPPerK(
       for (let j = 0; j < i; j++) {
         const prev = dp[j]![k - 1]!;
         if (prev.total === INF) continue;
-        const slice = words.slice(j, i);
-        const w = measure.line(slice, fs, allBold);
+        // الكسر الدلالي: عند إضافة سطر k>=2، الكسر يقع قبل tokens[j].
+        // Infinity ⇒ استبعد التقسيم كلياً (لا نحسب الكلفة). قيمة محدودة
+        // (0 · 400 · 1000 · 5000) تُضاف إلى الكلفة كأيّ معاقبة تخطيط.
+        let breakCost = 0;
+        if (breakPenalties && k >= 2) {
+          const bp = breakPenalties[j] ?? 0;
+          if (bp === INF) continue; // إقصاء
+          breakCost = bp;
+        }
+        // قياس السطر مع cache (تكرار عبر boxW عند نفس fs).
+        let w: number;
+        if (cache) {
+          const key = `${j},${i}`;
+          const cached = cache.get(key);
+          if (cached !== undefined) {
+            w = cached;
+          } else {
+            w = measure.line(words.slice(j, i), fs, allBold);
+            cache.set(key, w);
+          }
+        } else {
+          w = measure.line(words.slice(j, i), fs, allBold);
+        }
         if (w > limit) continue;
 
         const isLast = i === n;
+        const wordCount = i - j; // بديل slice.length — بلا مصفوفة
         const c =
           mode === 'uniform'
             ? costUniform({
                 width: w,
                 boxW,
-                wordCount: slice.length,
+                wordCount,
                 isLast,
                 lineIdx,
                 prevLineWidth: prev.lineWidth,
@@ -335,13 +386,13 @@ function solveDPPerK(
             : costAlternating({
                 width: w,
                 limit,
-                wordCount: slice.length,
+                wordCount,
                 isLast,
                 lineIdx,
                 prevLineWidth: prev.lineWidth,
                 prevLimit,
               });
-        const total = prev.total + c;
+        const total = prev.total + c + breakCost;
         if (total < best.total) {
           best = { total, prevJ: j, lineWidth: w };
         }
@@ -569,22 +620,32 @@ export function wrapOptimal(
     boxWidth: bw,
   });
 
-  // ── (٠) وضع preferLargestFs: مسؤولية الملء على justifyLine (كشيدة) ─
+  // ── (٠) وضع preferLargestFs — تمريرة واحدة، أعلى fs يفوز ─
   //
-  // بحث ثنائي الأطوار:
-  //   الطور 1: fs محصور بـ `fsRange` (النطاق الصحفي المفضّل).
-  //   الطور 2: تراجع إلى المدى الكامل [effectiveMinFs, maxFont].
+  // **الخوارزمية (تمريرة واحدة top-down مع cache قياس):**
+  //   لكل fs من maxFont نزولاً إلى effectiveMinFs (خطوة −2):
+  //     - أنشئ cache قياس فارغ لهذا fs (يُعاد استعماله عبر boxW)
+  //     - لكل مستوى تراجع دلالي [strict, soft(5000), disabled]:
+  //       - لكل bw: احسب DP، اجمع (k) المقبولة
+  //     - إن وُجدت مرشحات عند هذا fs: اختر أفضل بواسطة pickBest واخرج
+  //     - وإلا: انزل fs (softness escalation فشل عند هذا fs)
   //
-  // قبول موحّد في الطورين:
-  //   • كل الأسطر ضمن `bw` (قيد صلب داخل DP).
-  //   • لا سطر بكلمة واحدة.
-  //   • `k ∈ [minLines, maxLines]`.
-  //   • انحراف ≤ `stddevMax` (افتراضي 0.15).
-  //   • إن مُرِّرت `justifyCapacityConfig`: أدنى ملء **بعد الكشيدة** ≥
-  //     `absoluteMinFill` (السطر الأخير مستثنى إن `lastLine='natural'`).
-  //     خلاف ذلك: أدنى ملء **خام** ≥ `absoluteMinFill`.
+  // **قرار معماري (2026-09-01):** softness يسبق fs-drop. سبب:
+  // كسر دلالي غير مثالي (Infinity→5000) أهون من عنوان بخط أصغر بـ20%.
+  // من نتائج القياس على 20 عنواناً: هذا يحوّل 5 عناوين انخفض fs لديها
+  // إلى ≤1 (بوابة المالك).
   //
-  // ترتيب الفوز: أكبر fs → أكبر boxWidth → أدنى انحراف → أقرب preferredLines.
+  // **قرار أدائي (2026-09-01):** تمريرة واحدة (لا مرحلتين fsRange/full)
+  // مع cache قياس لكل fs (تُعاد قياس نفس (j,i) عبر 10 boxW). يخفّض
+  // buildRenderPlan من 1454ms إلى الهدف ≤800ms.
+  //
+  // **قبول عند كل (fs, bw, k):**
+  //   - كل الأسطر ضمن bw (DP يستبعد تلقائياً)
+  //   - لا سطر بكلمة واحدة · k ∈ [minLines, maxLines]
+  //   - انحراف ≤ stddevMax · minPostFill ≥ floorForPrefer (بعد الكشيدة)
+  //
+  // **الفوز داخل نفس fs:** أدنى softness → أكبر bw → أدنى انحراف →
+  // أقرب preferredLines.
   if (preferLargestFs) {
     const floorForPrefer = options.absoluteMinFill ?? 0.5;
     const stddevMax = options.stddevMax ?? 0.15;
@@ -602,63 +663,128 @@ export function wrapOptimal(
       readonly res: SolveResult;
       readonly metrics: Metrics;
       readonly minPostFill: number;
+      readonly softnessLevel: 0 | 1 | 2; // 0=strict, 1=soft, 2=disabled
     }
 
-    const searchIn = (fsLo: number, fsHi: number): readonly Cross[] => {
+    // مستويات التراجع الدلالي — تُطبَّق عند نفس fs قبل السقوط
+    const penaltyLevels: readonly (readonly number[] | undefined)[] =
+      options.breakPenalties
+        ? [
+            options.breakPenalties,
+            options.breakPenalties.map((p) => (p === INF ? 5000 : p)),
+            undefined,
+          ]
+        : [undefined];
+
+    // البحث الجوهري: يعيد المرشحات عند (fs, bw, k, softness) واحد
+    const collectAtFsBw = (
+      fs: number,
+      bw: number,
+      penalties: readonly number[] | undefined,
+      softnessLevel: 0 | 1 | 2,
+      cache: LineMeasureCache
+    ): Cross[] => {
+      const perK = solveDPPerK(
+        words,
+        fs,
+        bw,
+        shortRatio,
+        maxLines,
+        allBold,
+        measure,
+        mode,
+        penalties,
+        cache
+      );
       const out: Cross[] = [];
-      const lo = Math.max(effectiveMinFs, fsLo);
-      const hi = Math.min(maxFont, fsHi);
-      if (lo > hi) return out;
-      for (const bw of boxWidths) {
-        for (let fs = hi; fs >= lo; fs -= 2) {
-          const perK = solveDPPerK(
-            words,
-            fs,
+      for (let k = Math.max(minLines, 1); k <= maxLines; k++) {
+        const r = perK[k];
+        if (!r) continue;
+        if (r.lines.some((l) => l.length === 1)) continue;
+        const metrics = computeMetrics(r, fs, bw, allBold, measure);
+        if (metrics.stddevRatio > stddevMax) continue;
+        let postFill: number;
+        if (capCfg) {
+          postFill = minPostKashidaFill(
+            r.lines,
+            metrics.widths,
             bw,
-            shortRatio,
-            maxLines,
+            fs,
             allBold,
+            capCfg.cfg,
+            capCfg.fontCaps,
             measure,
-            mode
+            lastLineNatural
           );
-          for (let k = Math.max(minLines, 1); k <= maxLines; k++) {
-            const r = perK[k];
-            if (!r) continue;
-            if (r.lines.some((l) => l.length === 1)) continue;
-            const metrics = computeMetrics(r, fs, bw, allBold, measure);
-            if (metrics.stddevRatio > stddevMax) continue;
-
-            let postFill: number;
-            if (capCfg) {
-              postFill = minPostKashidaFill(
-                r.lines,
-                metrics.widths,
-                bw,
-                fs,
-                allBold,
-                capCfg.cfg,
-                capCfg.fontCaps,
-                measure,
-                lastLineNatural
-              );
-            } else {
-              postFill = metrics.minFill;
-            }
-            if (postFill < floorForPrefer) continue;
-
-            out.push({ fs, bw, k, res: r, metrics, minPostFill: postFill });
-          }
+        } else {
+          postFill = metrics.minFill;
         }
+        if (postFill < floorForPrefer) continue;
+        out.push({ fs, bw, k, res: r, metrics, minPostFill: postFill, softnessLevel });
       }
       return out;
     };
 
-    const pickWinner = (
-      candidates: readonly Cross[]
-    ): Cross | null => {
-      if (candidates.length === 0) return null;
-      const sorted = [...candidates].sort((a, b) => {
+    // ── التمريرة الواحدة: اجمع كل fs من maxFont إلى effectiveMinFs ─
+    //
+    // لكل fs، cache قياس واحد (مُعاد الاستعمال عبر 10 boxW + 3 مستويات
+    // تراجع). لكل fs، جرّب المستويات بالترتيب [strict → soft → disabled]
+    // وتوقّف عند أول مستوى ينتج مرشحات. **لا نتوقّف عند أول fs ناجح**
+    // — نجمع كل الأحجام كي نطبّق تفضيل fsRange بعد الجمع.
+    const allCandidates: Cross[] = [];
+    let softenedWarnedOnce = false;
+    let disabledWarnedOnce = false;
+
+    for (let fs = maxFont; fs >= effectiveMinFs; fs -= 2) {
+      const cache: LineMeasureCache = new Map();
+
+      for (let level = 0; level < penaltyLevels.length; level++) {
+        const penalties = penaltyLevels[level];
+        const candidatesAtLevel: Cross[] = [];
+        for (const bw of boxWidths) {
+          const c = collectAtFsBw(fs, bw, penalties, level as 0 | 1 | 2, cache);
+          if (c.length > 0) candidatesAtLevel.push(...c);
+        }
+        if (candidatesAtLevel.length > 0) {
+          allCandidates.push(...candidatesAtLevel);
+          if (level === 1 && !softenedWarnedOnce) {
+            console.warn(
+              `[wrapOptimal] Infinity→5000 عند fs=${fs} — لا كسر نظيف عند هذا الحجم`
+            );
+            softenedWarnedOnce = true;
+          } else if (level === 2 && !disabledWarnedOnce) {
+            console.warn(
+              `[wrapOptimal] الكسر الدلالي مُعطَّل عند fs=${fs} — كل التقسيمات تحوي رابطة نحوية`
+            );
+            disabledWarnedOnce = true;
+          }
+          break; // لا تجرّب مستويات أنعم عند نفس fs
+        }
+      }
+    }
+
+    // ── الترشيح النهائي (post-hoc): fsRange > fs → softness → bw ─
+    if (allCandidates.length > 0) {
+      const fsRangeLo = options.fsRange?.[0];
+      const fsRangeHi = options.fsRange?.[1];
+      const inRange = (fs: number): boolean =>
+        fsRangeLo !== undefined &&
+        fsRangeHi !== undefined &&
+        fs >= fsRangeLo &&
+        fs <= fsRangeHi;
+
+      const sorted = [...allCandidates].sort((a, b) => {
+        // (١) داخل fsRange أولاً (preference صريح)
+        const aIn = inRange(a.fs) ? 1 : 0;
+        const bIn = inRange(b.fs) ? 1 : 0;
+        if (aIn !== bIn) return bIn - aIn;
+        // (٢) أكبر fs — قرار المالك: fs أهم من صرامة الدلالي
         if (a.fs !== b.fs) return b.fs - a.fs;
+        // (٣) أدنى softness — عند نفس fs، الأصرم يفوز
+        if (a.softnessLevel !== b.softnessLevel) {
+          return a.softnessLevel - b.softnessLevel;
+        }
+        // (٤) tiebreakers طباعية
         if (a.bw !== b.bw) return b.bw - a.bw;
         if (a.metrics.stddevRatio !== b.metrics.stddevRatio) {
           return a.metrics.stddevRatio - b.metrics.stddevRatio;
@@ -667,23 +793,11 @@ export function wrapOptimal(
         const dB = Math.abs(b.k - preferredLines);
         return dA - dB;
       });
-      return sorted[0]!;
-    };
-
-    // الطور 1: داخل fsRange (إن قُدّم)
-    if (options.fsRange) {
-      const [lo, hi] = options.fsRange;
-      const phase1 = searchIn(lo, hi);
-      const w1 = pickWinner(phase1);
-      if (w1) return toResult(w1.res, w1.bw);
+      const winner = sorted[0]!;
+      return toResult(winner.res, winner.bw);
     }
 
-    // الطور 2: المدى الكامل
-    const phase2 = searchIn(effectiveMinFs, maxFont);
-    const w2 = pickWinner(phase2);
-    if (w2) return toResult(w2.res, w2.bw);
-
-    // لا حلّ عند أي (fs, bw) — نسقط إلى مسار التراجع أدناه.
+    // لا حلّ عند أيّ fs مع أيّ softness — نسقط لمسار التراجع أدناه.
   }
 
   // ── (١) اجمع كل المرشحين (fs, k) المقبولين

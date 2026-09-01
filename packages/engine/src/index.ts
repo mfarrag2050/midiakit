@@ -6,6 +6,7 @@ export {
   executeLayer,
   prepareHeadline,
   drawHeadlineLine,
+  computeBreakPenalties,
   type RenderFrameArgs,
   type RenderAssets,
   type RenderState,

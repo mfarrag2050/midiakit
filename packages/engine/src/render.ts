@@ -33,6 +33,7 @@ import type {
 import type { BrandKit, UrgentBadge } from '@pf-mediakit/shared';
 
 import { resolve } from './brand/resolve.js';
+import { loadDefaultLexicon, type Lexicon } from './arabic-lexicon/index.js';
 import {
   drawAccentBar,
   drawAccentSpan,
@@ -51,6 +52,8 @@ import {
   justifyLine,
   drawLineRTL,
   drawLineCentered,
+  breakPenalty,
+  BREAK_INFINITY,
   type Measurer,
 } from './text/index.js';
 import type {
@@ -430,6 +433,36 @@ function normalizeHeadlineFont(
 }
 
 /**
+ * القاموس الافتراضي للعربية — يُبنى مرة عند أول استيراد لهذه الوحدة.
+ * يُستعمل تلقائياً في prepareHeadline عند تفعيل semanticBreaks بلا
+ * قاموس مُخصَّص مُمرَّر. الكلفة عند التحميل ≈ 1ms (بناء 16 Set).
+ */
+const DEFAULT_ARABIC_LEXICON: Lexicon = loadDefaultLexicon();
+
+/**
+ * يحسب مصفوفة عقوبات الكسر لكل موضع في `tokens`.
+ * يُستدعى مرة في `buildRenderPlan` (أو `prepareHeadline`) وتُمرَّر
+ * النتيجة إلى `wrapOptimal.breakPenalties` — تفادي إعادة الحساب داخل
+ * حلقة DP (L-07).
+ *
+ * @returns مصفوفة بطول `tokens.length + 1`. index i = عقوبة الكسر
+ *   قبل tokens[i]. index 0 و n = Infinity (لا كسر عند الأطراف).
+ */
+export function computeBreakPenalties(
+  tokens: readonly Token[],
+  lexicon: Lexicon = DEFAULT_ARABIC_LEXICON
+): readonly number[] {
+  const n = tokens.length;
+  const out = new Array<number>(n + 1);
+  out[0] = BREAK_INFINITY; // لا كسر قبل الكلمة الأولى
+  out[n] = BREAK_INFINITY; // لا كسر بعد الكلمة الأخيرة
+  for (let i = 1; i < n; i++) {
+    out[i] = breakPenalty(tokens, i, lexicon);
+  }
+  return out;
+}
+
+/**
  * تحضير العنوان — يحسب اللف، التبرير، والمواضع، **بلا رسم**.
  * تُستعمل نتيجته إمّا لرسم دفعة واحدة (runHeadline) أو لرسم سطر بسطر
  * مع تحريك مستقل (drawAt في timeline/).
@@ -492,6 +525,13 @@ export function prepareHeadline(
   });
   const tokens = parseTokens(processed);
 
+  // الكسر الدلالي (docs/07 §2): يُحسب مصفوفة العقوبات مرة هنا (L-07)
+  // إن كان مُفعَّلاً في الهوية. wrapOptimal يستهلكها بلا إعادة حساب.
+  const semanticEnabled = brand.typography.semanticBreaks.enabled;
+  const breakPenalties = semanticEnabled
+    ? computeBreakPenalties(tokens)
+    : undefined;
+
   const wrap = wrapOptimal(
     tokens,
     fontCfg.boxWidth,
@@ -515,6 +555,7 @@ export function prepareHeadline(
         cfg: justifyCfg,
         fontCaps: brand.fonts.capabilities,
       },
+      ...(breakPenalties && { breakPenalties }),
     }
   );
 
