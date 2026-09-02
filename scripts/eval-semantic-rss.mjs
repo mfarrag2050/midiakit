@@ -55,7 +55,21 @@ const headlines = JSON.parse(readFileSync(join(ROOT, 'data/external/rss-headline
 console.log(`headlines: ${headlines.length}`);
 
 // ── هويّتان: أساسي و ممتدّ ──────────────────────────
-const brandOff = resolveBrand(DEFAULT_BRAND);
+// **باغ 2026-09-02 (كُشف باسترجاع النمط):** DEFAULT_BRAND.enabled
+// تحوّلت إلى true في 4ca3242. brandOff كان يرث الافتراضي فصار on
+// بلا قصد، وقارن السكربت on ضد on (دلتا 0.04% ضجيج). الإصلاح:
+// **فرض enabled=false صراحةً** على brandOff — نفس النمط في
+// find-demo-candidates.mjs. راجع docs/LESSONS.md §L-35.
+const brandOff = resolveBrand({
+  ...DEFAULT_BRAND,
+  typography: {
+    ...DEFAULT_BRAND.typography,
+    semanticBreaks: {
+      ...DEFAULT_BRAND.typography.semanticBreaks,
+      enabled: false,
+    },
+  },
+});
 const brandOn = resolveBrand({
   ...DEFAULT_BRAND,
   typography: {
@@ -133,14 +147,49 @@ for (const item of headlines) {
 }
 console.log(`processed: ${results.length}/${headlines.length}  offFailed=${failedOff}  onFailed=${failedOn}`);
 
-// ── الحساب: البوابات الأربع ──────────────────────────
+// ── تصنيف كل نتيجة (2026-09-02، L-36):
+//   identical      — على وoff أنتجا نفس word-to-line تماماً (بايت-بايت)
+//   visual-only    — نفس word-to-line بعد تجريد الكشيدة (كشيدة فقط)
+//   genuine-reflow — word-to-line اختلف فعلاً
+// **الحكمة:** المتوسط على 265 يخفّف الأثر بحالات لم تتدخّل فيها الميزة.
+// الرقم الحقيقي = متوسط الأثر على genuine-reflow (23) — «تدخّلت فعلاً».
+const TATWEEL = /ـ/g;
+function stripKashida(s) {
+  return s.replace(TATWEEL, '');
+}
+for (const r of results) {
+  if (r.on.split === r.off.split) {
+    r.category = 'identical';
+  } else if (stripKashida(r.on.split) === stripKashida(r.off.split)) {
+    r.category = 'visual-only';
+  } else {
+    r.category = 'genuine-reflow';
+  }
+}
+const identical = results.filter((r) => r.category === 'identical');
+const visualOnly = results.filter((r) => r.category === 'visual-only');
+const genuineReflow = results.filter((r) => r.category === 'genuine-reflow');
 
-// (ج) الملء وانحراف الأطوال — متوسط الفرق
+// ── الحساب: البوابات الأربع + قسم أثر الميزة (L-36) ─
+
+// (ج) الملء وانحراف الأطوال — متوسط الفرق على المجموع (للشفافية)
 const fillDeltas = results.map((r) => r.on.minFill - r.off.minFill);
 const stddevDeltas = results.map((r) => r.on.stddev - r.off.stddev);
 
 const avgFillDelta = fillDeltas.reduce((a, b) => a + b, 0) / fillDeltas.length;
 const avgStddevDelta = stddevDeltas.reduce((a, b) => a + b, 0) / stddevDeltas.length;
+
+// أثر الميزة الفعلي — على genuine-reflow فقط (لا يخفّف بحالات محايدة)
+function mean(arr) {
+  if (arr.length === 0) return 0;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+const grFillDelta = mean(genuineReflow.map((r) => r.on.minFill - r.off.minFill));
+const grStddevDelta = mean(genuineReflow.map((r) => r.on.stddev - r.off.stddev));
+const voFillDelta = mean(visualOnly.map((r) => r.on.minFill - r.off.minFill));
+const voStddevDelta = mean(visualOnly.map((r) => r.on.stddev - r.off.stddev));
+const idFillDelta = mean(identical.map((r) => r.on.minFill - r.off.minFill));
+const idStddevDelta = mean(identical.map((r) => r.on.stddev - r.off.stddev));
 
 // (د) softness regression = نسبة العناوين التي minFill انخفض فيها >2%
 // «softness» = ملء ما بعد الكشيدة (نستعمل minFill كتقدير مباشر — الأدنى
@@ -175,6 +224,24 @@ console.log(`  ⏱   | buildRenderPlan p95 ≤ 800ms  | ${p95.toFixed(0)}ms${' '
 console.log('');
 console.log(`أداء: p50=${p50.toFixed(0)}ms  p95=${p95.toFixed(0)}ms  max=${max.toFixed(0)}ms`);
 console.log(`تراجع فرديّ (>2%): ${regressed.length} من ${results.length}`);
+
+// ── أثر الميزة بالتقسيم (L-36) ─────────────────────
+console.log('');
+console.log('════════ أثر الميزة بالتقسيم (L-36) ════════');
+console.log('المتوسط العام يخفّف الأثر بحالات محايدة — الرقم الحاسم');
+console.log('على genuine-reflow (تدخّلت فيها الميزة فعلاً).');
+console.log('');
+console.log('المجموعة        | العدد | Δ ملء (min)     | Δ اتساق (stddev)');
+console.log('----------------|-------|-----------------|-----------------');
+function fmtPct(v) {
+  const s = (v * 100).toFixed(2) + '%';
+  return s.padStart(9);
+}
+console.log(`genuine-reflow  | ${String(genuineReflow.length).padStart(5)} | ${fmtPct(grFillDelta).padEnd(16)}| ${fmtPct(grStddevDelta)}`);
+console.log(`visual-only     | ${String(visualOnly.length).padStart(5)} | ${fmtPct(voFillDelta).padEnd(16)}| ${fmtPct(voStddevDelta)}`);
+console.log(`identical       | ${String(identical.length).padStart(5)} | ${fmtPct(idFillDelta).padEnd(16)}| ${fmtPct(idStddevDelta)}`);
+console.log(`─────────────────────────────────────────────────────────────`);
+console.log(`المتوسط العام   | ${String(results.length).padStart(5)} | ${fmtPct(avgFillDelta).padEnd(16)}| ${fmtPct(avgStddevDelta)}  ← مخفَّف`);
 
 if (regressed.length > 0) {
   console.log('\nعيّنات التراجع (أوّل 5):');
