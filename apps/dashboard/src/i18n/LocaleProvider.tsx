@@ -55,12 +55,18 @@ const Ctx = createContext<LocaleContext | null>(null);
 
 // ── الوصول لـsafe في SSR ─────────────────────────────
 
+function isLocale(v: string | null): v is Locale {
+  return v === 'ar' || v === 'mixed' || v === 'en';
+}
+
 function readInitial(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
+  // 1) ?locale=X يتخطى (مفيد للقطات والاختبار الآلي)
+  const fromUrl = new URLSearchParams(window.location.search).get('locale');
+  if (isLocale(fromUrl)) return fromUrl;
+  // 2) وإلا localStorage
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === 'ar' || stored === 'mixed' || stored === 'en'
-    ? stored
-    : DEFAULT_LOCALE;
+  return isLocale(stored) ? stored : DEFAULT_LOCALE;
 }
 
 // ── فك مفتاح متداخل: "client.jobRunningPct" → object walk ─

@@ -29,28 +29,30 @@ function isQueueName(v: unknown): v is QueueName {
   return typeof v === 'string' && (QUEUE_NAMES as readonly string[]).includes(v);
 }
 
+// **رسائل الخطأ بالإنجليزية:** لا نريد تسرّب عربي في وضع en (L-dash-5).
+// الأخطاء نادرة وتقنية — الإنجليزية آمنة عبر الأوضاع الثلاثة.
 function parseAction(body: unknown): Action | { error: string } {
-  if (typeof body !== 'object' || body === null) return { error: 'body غير صالح' };
+  if (typeof body !== 'object' || body === null) return { error: 'invalid body' };
   const b = body as Record<string, unknown>;
   const type = b['type'];
 
   if (type === 'kill-job') {
-    if (!isQueueName(b['queue'])) return { error: 'queue غير معروف' };
-    if (typeof b['jobId'] !== 'string' || !b['jobId']) return { error: 'jobId مطلوب' };
+    if (!isQueueName(b['queue'])) return { error: 'unknown queue' };
+    if (typeof b['jobId'] !== 'string' || !b['jobId']) return { error: 'jobId required' };
     return { type: 'kill-job', queue: b['queue'], jobId: b['jobId'] };
   }
   if (type === 'pause' || type === 'resume') {
-    if (!isQueueName(b['queue'])) return { error: 'queue غير معروف' };
+    if (!isQueueName(b['queue'])) return { error: 'unknown queue' };
     return { type, queue: b['queue'] };
   }
   if (type === 'set-worker-count') {
     const c = Number(b['count']);
-    if (!Number.isFinite(c) || c < 0 || c > 32) return { error: 'count يجب أن يكون [0, 32]' };
+    if (!Number.isFinite(c) || c < 0 || c > 32) return { error: 'count must be in [0, 32]' };
     return { type: 'set-worker-count', count: Math.round(c) };
   }
   if (type === 'maintenance-on') return { type: 'maintenance-on' };
   if (type === 'maintenance-off') return { type: 'maintenance-off' };
-  return { error: `type غير معروف: ${String(type)}` };
+  return { error: `unknown type: ${String(type)}` };
 }
 
 export async function POST(req: Request): Promise<NextResponse> {
@@ -58,7 +60,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'JSON غير صالح' }, { status: 400 });
+    return NextResponse.json({ error: 'invalid JSON' }, { status: 400 });
   }
   const parsed = parseAction(body);
   if ('error' in parsed) return NextResponse.json(parsed, { status: 400 });
@@ -69,12 +71,13 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (parsed.type === 'kill-job') {
       const q = getQueue(parsed.queue);
       const job = await q.getJob(parsed.jobId);
-      if (!job) return NextResponse.json({ error: 'المهمة غير موجودة' }, { status: 404 });
+      if (!job) return NextResponse.json({ error: 'job not found' }, { status: 404 });
       const state = await job.getState();
       if (state === 'active') {
         return NextResponse.json(
           {
-            error: 'المهمة نشطة — يجب إيقاف العامل يدوياً لقتلها. الحذف لا يقتل الرندر الجاري.',
+            error:
+              'active job — worker must be stopped manually to kill it. Removing does not abort the running render.',
             state,
           },
           { status: 409 }
@@ -99,7 +102,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       return NextResponse.json({
         ok: true,
         stored: parsed.count,
-        note: 'إعادة تشغيل العامل مطلوبة لتفعيل القيمة (يقرأه worker من متغير البيئة عند البدء).',
+        note: 'worker restart required to apply — value is read from env at startup.',
       });
     }
 

@@ -13,7 +13,7 @@ export async function GET(req: Request): Promise<NextResponse> {
   const tenantId = url.searchParams.get('tenantId')?.trim();
   if (!tenantId) {
     return NextResponse.json(
-      { error: 'tenantId مطلوب في query string' },
+      { error: 'tenantId required in query string' },
       { status: 400 }
     );
   }

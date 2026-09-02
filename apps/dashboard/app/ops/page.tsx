@@ -60,7 +60,7 @@ interface OpsPayload {
   failures: Failures;
   resources: Resources;
   tenants: Tenant[];
-  system: { status: string; reason: string };
+  system: { status: string; reasonKey: string };
   thresholds: {
     diskPct: number;
     queueDepth: number;
@@ -205,7 +205,7 @@ export default function OpsDashboard(): JSX.Element {
             {t('ops.queues')}
           </h2>
           <span className="text-xs text-white/40">
-            {t('system.label')}: {t(`system.${data.system.status}`)} — {data.system.reason}
+            {t('system.label')}: {t(`system.${data.system.status}`)} — {t(data.system.reasonKey)}
           </span>
         </div>
         <table className="w-full text-sm tabular">

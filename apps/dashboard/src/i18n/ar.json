@@ -59,8 +59,8 @@
       "eta": "البدء المتوقع",
       "progress": "التقدّم"
     },
-    "jobRunning": "مهمتك تعمل الآن",
-    "jobRunningPct": "مهمتك تعمل الآن — {pct}%",
+    "jobRunning": "مهمتك قيد التنفيذ",
+    "jobRunningPct": "مهمتك قيد التنفيذ — ‎{pct}%",
     "jobPositioned": "مهمتك رقم {n} — تبدأ خلال {eta}",
     "jobDelayed": "مهمتك مؤجّلة — ستُعاد قريباً"
   },
@@ -106,7 +106,7 @@
     "tenantRow": "منتظرة {waiting} · نشطة {active} · مؤجّلة {delayed}",
     "resources": "موارد النظام",
     "resCpu": "حِمل المعالج (1د/5د)",
-    "resCpuOn": "على {n} نواة",
+    "resCpuOn": "على {n} نوى",
     "resMem": "الذاكرة",
     "resDisk": "القرص ({path})",
     "resDiskUnavailable": "غير متاح",
@@ -120,7 +120,7 @@
   },
   "footer": {
     "refresh": "تحديث كل {n} ثوانٍ",
-    "lastUpdate": "آخر تحديث {time}"
+    "lastUpdate": "آخر تحديث ‎{time}"
   },
   "units": {
     "gb": "غيغابايت",

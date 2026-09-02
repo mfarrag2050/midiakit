@@ -6,7 +6,7 @@ import { AppHeader } from '@/src/ui/AppHeader';
 
 export const metadata: Metadata = {
   title: 'Media Kit — Dashboards',
-  description: 'رؤية الطوابير والحمل — لعملاء pf-mediakit',
+  description: 'pf-mediakit — queue visibility and load for tenants',
 };
 
 export default function RootLayout({

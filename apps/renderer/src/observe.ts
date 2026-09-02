@@ -506,22 +506,37 @@ export type SystemStatus = 'normal' | 'degraded' | 'maintenance';
 
 export const MAINTENANCE_KEY = `${BULLMQ_PREFIX}:sys:maintenance`;
 
+/**
+ * `reasonKey` مفتاح i18n (system.reasonMaintenance / ...Busy / ...Paused /
+ * ...Normal) لا نص عربي. الترجمة تحدث في الواجهة. يجنّبنا تسرّب لغة
+ * الخادم إلى وضع en/mixed.
+ */
+export type SystemReasonKey =
+  | 'system.reasonMaintenance'
+  | 'system.reasonBusy'
+  | 'system.reasonPaused'
+  | 'system.reasonNormal';
+
 export async function systemStatus(): Promise<{
   readonly status: SystemStatus;
-  readonly reason: string;
+  readonly reasonKey: SystemReasonKey;
 }> {
   const conn = getConnection();
   const maint = await conn.get(MAINTENANCE_KEY);
-  if (maint === '1') return { status: 'maintenance', reason: 'وضع صيانة يدوي' };
+  if (maint === '1') {
+    return { status: 'maintenance', reasonKey: 'system.reasonMaintenance' };
+  }
 
   const depths = await queueDepth();
   const urgent = depths.find((d) => d.name === 'urgent');
   const normal = depths.find((d) => d.name === 'normal');
   if ((urgent?.waiting ?? 0) > 10 || (normal?.waiting ?? 0) > 20) {
-    return { status: 'degraded', reason: 'الطابور تحت ضغط عالٍ' };
+    return { status: 'degraded', reasonKey: 'system.reasonBusy' };
   }
   const anyPaused = depths.some((d) => d.paused);
-  if (anyPaused) return { status: 'degraded', reason: 'أحد الطوابير موقوف مؤقتاً' };
+  if (anyPaused) {
+    return { status: 'degraded', reasonKey: 'system.reasonPaused' };
+  }
 
-  return { status: 'normal', reason: 'كل شيء على ما يرام' };
+  return { status: 'normal', reasonKey: 'system.reasonNormal' };
 }

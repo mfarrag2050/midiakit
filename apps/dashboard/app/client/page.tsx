@@ -23,7 +23,10 @@ interface JobRow {
 interface ClientPayload {
   tenantId: string;
   jobs: JobRow[];
-  system: { status: 'normal' | 'degraded' | 'maintenance'; reason: string };
+  system: {
+    status: 'normal' | 'degraded' | 'maintenance';
+    reasonKey: string;
+  };
   totalWaiting: number;
   totalActive: number;
   ts: string;
@@ -191,7 +194,7 @@ export default function ClientDashboard(): JSX.Element {
           {data ? primary(data.jobs) : t('client.loading')}
         </p>
         {data && data.system.status !== 'normal' && (
-          <p className="mt-2 text-sm text-white/60">{data.system.reason}</p>
+          <p className="mt-2 text-sm text-white/60">{t(data.system.reasonKey)}</p>
         )}
       </section>
 
