@@ -18,3 +18,7 @@ services/*/.venv/
 services/*/__pycache__/
 services/*/*.egg-info/
 **/*.pyc
+
+# Next.js build output — يُبنى من المصدر (apps/dashboard).
+.next/
+next-env.d.ts

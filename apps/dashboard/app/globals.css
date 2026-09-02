@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  background: #0b0d10;
+  color: #e5e7eb;
+  font-feature-settings: 'ss01' on, 'cv11' on;
+}
+
+/* أرقام لاتينية أوضح للأرقام الفنية داخل اللوحات */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

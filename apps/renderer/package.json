@@ -10,7 +10,9 @@
     "./cli": "./src/cli.ts",
     "./queues": "./src/queues.ts",
     "./worker": "./src/worker.ts",
-    "./validate": "./src/validate.ts"
+    "./validate": "./src/validate.ts",
+    "./observe": "./src/observe.ts",
+    "./alerts": "./src/alerts.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
