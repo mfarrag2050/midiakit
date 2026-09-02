@@ -764,30 +764,117 @@ function computeHeadlineAnchorY(
 
 // ── الشارة والمصدر ───────────────────────────────────
 
+/**
+ * يحسب rx/bottomY لشارة بأنكور شاشي (9-lattice) بالنظر إلى
+ * `brand.placement.badge` أو أنكور layer الصريح. الشارة مستطيل
+ * بعرض قابل للحساب فقط عند القياس؛ نضع الحافّة اليمنى (rx) والحافّة
+ * السفلى (bottomY) وفقاً للأنكور والإزاحة والارتفاع.
+ */
+function screenAnchoredBadge(
+  brand: BrandKit,
+  size: CanvasSize,
+  badgeHeight: number,
+  layer: BadgeLayer
+): { rx: number; bottomY: number } {
+  const isScreenAnchor = (a: unknown): a is (
+    | 'top-left' | 'top-center' | 'top-right'
+    | 'middle-left' | 'middle-right'
+    | 'bottom-left' | 'bottom-center' | 'bottom-right'
+  ) =>
+    typeof a === 'string' &&
+    /^(top|middle|bottom)-(left|center|right)$/.test(a) &&
+    a !== 'middle-center';
+
+  const placement = brand.placement?.badge;
+  const anchor =
+    (isScreenAnchor(layer.anchor) && layer.anchor) ||
+    placement?.anchor ||
+    'top-right';
+  const offset = placement?.offset ?? { x: 60, y: 60 };
+
+  // rx: الحافّة اليمنى للشارة. bottomY: أسفل الشارة.
+  const [vert, horiz] = anchor.split('-') as [
+    'top' | 'middle' | 'bottom',
+    'left' | 'center' | 'right'
+  ];
+  // لا نعرف عرض الشارة قبل measureText؛ نستعمل rx = الحافّة اليمنى
+  // ثم drawBadge نفسه يحسب x = rx - w داخلياً.
+  let rx: number;
+  switch (horiz) {
+    case 'right':
+      rx = size.w - offset.x;
+      break;
+    case 'left':
+      // نحتاج تقدير عرض الشارة — سيصحّح drawBadge المحاذاة نفسه؛
+      // نضع rx على الأقل عند offset.x + (تقدير) — لكن الأدق أن نمرّر
+      // rx = offset.x + estimateBadgeWidth. تقدير محافظ: 260px.
+      rx = offset.x + 260;
+      break;
+    case 'center':
+    default:
+      rx = size.w / 2 + 130; // تقدير مركزي
+      break;
+  }
+  let bottomY: number;
+  switch (vert) {
+    case 'top':
+      bottomY = offset.y + badgeHeight;
+      break;
+    case 'bottom':
+      bottomY = size.h - offset.y;
+      break;
+    case 'middle':
+    default:
+      bottomY = size.h / 2 + badgeHeight / 2;
+      break;
+  }
+  return { rx, bottomY };
+}
+
 function runBadge(
   layer: BadgeLayer,
   args: RenderFrameArgs,
   state: RenderState
 ): void {
-  const bounds = state.headline;
-  if (!bounds) {
-    throw new Error(
-      '[renderFrame] badge (above-headline) قبل headline — راجع ترتيب الطبقات'
-    );
-  }
   const badge = resolveRef(args.brand, layer.use) as UrgentBadge;
-  // إن مُرِّرت field: استبدل label من content.
   const finalBadge = layer.field
     ? { ...badge, label: String(args.content[layer.field] ?? badge.label) }
     : badge;
-  const gap = asNumber(args.brand, layer.gap, 'badge.gap');
-  const bottomY =
-    layer.anchor === 'above-headline'
-      ? bounds.top - gap
-      : bounds.bottom + gap + finalBadge.height;
+
+  const isStructural =
+    layer.anchor === 'above-headline' || layer.anchor === 'below-headline';
+
+  if (isStructural) {
+    // الأنكور البنيوي: يحتاج headline قبله — نمط قائم.
+    const bounds = state.headline;
+    if (!bounds) {
+      throw new Error(
+        '[renderFrame] badge (above/below-headline) قبل headline — راجع ترتيب الطبقات'
+      );
+    }
+    const gap = asNumber(args.brand, layer.gap ?? 0, 'badge.gap');
+    const bottomY =
+      layer.anchor === 'above-headline'
+        ? bounds.top - gap
+        : bounds.bottom + gap + finalBadge.height;
+    drawBadge(args.ctx, args.size, args.brand, {
+      badge: finalBadge,
+      rx: bounds.right,
+      bottomY,
+    });
+    return;
+  }
+
+  // الأنكور الشاشي: يفوَّض إلى brand.placement.badge أو انكور صريح.
+  const { rx, bottomY } = screenAnchoredBadge(
+    args.brand,
+    args.size,
+    finalBadge.height,
+    layer
+  );
   drawBadge(args.ctx, args.size, args.brand, {
     badge: finalBadge,
-    rx: bounds.right,
+    rx,
     bottomY,
   });
 }
@@ -802,24 +889,63 @@ function runSource(
   args: RenderFrameArgs,
   state: RenderState
 ): void {
-  const bounds = state.headline;
-  if (!bounds) {
-    throw new Error(
-      '[renderFrame] source قبل headline — راجع ترتيب الطبقات'
-    );
-  }
   const text = args.content[layer.field];
   if (typeof text !== 'string' || text.length === 0) return;
   const fontCfg = resolveRef(args.brand, layer.font) as SourceFontCfg;
-  const gapPx = bounds.fontSize * layer.gapFsRatio;
-  const baseline = bounds.bottom + gapPx;
   const family = `"${args.brand.fonts.primary.family}", ${args.brand.fonts.fallback}`;
   args.ctx.font = `${fontCfg.weight} ${fontCfg.size}px ${family}`;
   args.ctx.fillStyle = args.brand.colors.text;
-  args.ctx.textAlign = 'right';
-  args.ctx.direction = 'rtl';
   args.ctx.textBaseline = 'alphabetic';
-  args.ctx.fillText(text, bounds.right, baseline);
+
+  const isStructural = layer.anchor === 'below-headline';
+
+  if (isStructural) {
+    const bounds = state.headline;
+    if (!bounds) {
+      throw new Error(
+        '[renderFrame] source (below-headline) قبل headline — راجع ترتيب الطبقات'
+      );
+    }
+    const gapPx = bounds.fontSize * (layer.gapFsRatio ?? 1.4);
+    const baseline = bounds.bottom + gapPx;
+    args.ctx.textAlign = 'right';
+    args.ctx.direction = 'rtl';
+    args.ctx.fillText(text, bounds.right, baseline);
+    return;
+  }
+
+  // شاشي — من brand.placement.source
+  const placement = args.brand.placement?.source;
+  const anchor = placement?.anchor ?? 'bottom-right';
+  const offset = placement?.offset ?? { x: 60, y: 135 };
+  const [vert, horiz] = anchor.split('-') as [
+    'top' | 'middle' | 'bottom',
+    'left' | 'center' | 'right'
+  ];
+  const isRTL = args.brand.direction === 'rtl';
+
+  // موضع خط الأساس. نستعمل textBaseline='alphabetic' فنطرح fs من bottom
+  // للحصول على baseline y.
+  const baseline =
+    vert === 'top'
+      ? offset.y + fontCfg.size
+      : vert === 'bottom'
+      ? args.size.h - offset.y
+      : args.size.h / 2 + fontCfg.size / 2;
+
+  let x: number;
+  if (horiz === 'right') {
+    x = args.size.w - offset.x;
+    args.ctx.textAlign = 'right';
+  } else if (horiz === 'left') {
+    x = offset.x;
+    args.ctx.textAlign = 'left';
+  } else {
+    x = args.size.w / 2;
+    args.ctx.textAlign = 'center';
+  }
+  args.ctx.direction = isRTL ? 'rtl' : 'ltr';
+  args.ctx.fillText(text, x, baseline);
 }
 
 // ── الإسناد (attribution) ────────────────────────────

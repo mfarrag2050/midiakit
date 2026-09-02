@@ -55,14 +55,18 @@
       "type": "badge",
       "use": "brand.badges.urgent",
       "anchor": "above-headline",
-      "gap": "brand.margins.badgeGap"
+      "gap": "brand.margins.badgeGap",
+      "constraint": true,
+      "//": "شارة العاجل تُقرأ مع العنوان كوحدة تحريرية — كلمة «عاجل» فوق العنوان مباشرة نمط راسخ صحفياً. الفصل يُنتج شارة يتيمة."
     },
     {
       "type": "source",
       "field": "source",
       "anchor": "below-headline",
       "gapFsRatio": 1.4,
-      "font": "brand.typography.source"
+      "font": "brand.typography.source",
+      "constraint": true,
+      "//": "المصدر يُتلى مباشرة تحت العنوان — قاعدة الإسناد الصحفية. فصله عن العنوان يجعل القارئ يفقد الربط بين المحتوى ومصدره."
     },
     { "type": "logo" },
     {

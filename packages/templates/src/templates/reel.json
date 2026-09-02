@@ -42,7 +42,9 @@
       "use": "brand.badges.location",
       "field": "location",
       "anchor": "above-headline",
-      "gap": "brand.margins.badgeGap"
+      "gap": "brand.margins.badgeGap",
+      "constraint": true,
+      "//": "شارة الموقع في الريلز فوق العنوان مباشرة — يقرأها المشاهد قبل التركيز على العنوان (سياق جغرافي قبل السرد)."
     },
     { "type": "logo" },
     {

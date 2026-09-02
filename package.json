@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
+    "preview:placement": "node --import tsx scripts/preview-placement.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },

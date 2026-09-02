@@ -1,15 +1,23 @@
-// layers/logo — رسم الشعار في زاوية.
+// layers/logo — رسم الشعار.
 // المرجع: reference/aa-media-kit.html:1957 (`cvRenderInto` — شعار سفلي
 // يسار بحجم 63 وهامش 51).
 //
-// الحجم والهامش والموضع من `brand.logo`. الصورة تأتي في `params`
-// (المحرك لا يعرف مصدرها — رفع، تحميل، …).
+// **الموضع (2026-09-02):** يُقرأ من `brand.placement.logo` (نمط موحّد،
+// docs/03 §placement). عند غيابه، تراجع خلفي إلى `brand.logo.position`
+// (الحقل الموروث بأربع خيارات) — يضمن أن الهويّات القائمة تعمل بلا
+// تعديل.
 //
-// حراسة صامتة: عند غياب الصورة (الهوية الافتراضية بلا شعار،
-// أو صورة لم تُحمَّل بعد) — لا تُرسم شيئاً. مطابق لسلوك الأصل
-// الذي كان يتحقّق من `cvLogo.complete && naturalWidth`.
+// **مبدأ:** القالب يحدّد أن الشعار **يظهر** (بوجود طبقة `logo`)،
+// والهوية تحدّد **أين**. لا anchor يُذكر في القالب.
+//
+// الحجم والصورة يأتيان من `brand.logo` (size + image). الصورة `undefined`
+// = تخطٍّ صامت (الهوية الافتراضية بلا شعار).
 
-import type { BrandKit, LogoAnchor } from '@pf-mediakit/shared';
+import type {
+  BrandKit,
+  LogoAnchor,
+  PlacementAnchor,
+} from '@pf-mediakit/shared';
 import type { CanvasDrawContext, ImageLike } from '../text/draw-line.js';
 import type { CanvasSize } from './image.js';
 
@@ -18,12 +26,49 @@ export interface LogoLayerParams {
   readonly image?: ImageLike;
 }
 
-/**
- * يحسب زاوية الرسم بناءً على `position` من الهوية.
- * `size` = حجم مربع الشعار (`brand.logo.size`).
- * `margin` = المسافة من الحافة (`brand.logo.margin`).
- */
-function anchorOf(
+/** تحويل PlacementAnchor التسعي إلى إحداثيات x/y لمربع بمقاس size. */
+function placeInside(
+  W: number,
+  H: number,
+  size: number,
+  offset: { readonly x: number; readonly y: number },
+  anchor: PlacementAnchor
+): { readonly x: number; readonly y: number } {
+  const [vert, horiz] = anchor.split('-') as [
+    'top' | 'middle' | 'bottom',
+    'left' | 'center' | 'right'
+  ];
+  let x: number;
+  switch (horiz) {
+    case 'left':
+      x = offset.x;
+      break;
+    case 'right':
+      x = W - offset.x - size;
+      break;
+    case 'center':
+    default:
+      x = (W - size) / 2;
+      break;
+  }
+  let y: number;
+  switch (vert) {
+    case 'top':
+      y = offset.y;
+      break;
+    case 'bottom':
+      y = H - offset.y - size;
+      break;
+    case 'middle':
+    default:
+      y = (H - size) / 2;
+      break;
+  }
+  return { x, y };
+}
+
+/** الفولباك القديم — أربع زوايا فقط. مصدر: brand.logo.position/margin. */
+function legacyAnchor(
   W: number,
   H: number,
   size: number,
@@ -50,8 +95,19 @@ export function drawLogo(
 ): void {
   const { image } = params;
   if (!image) return;
+  const logoSize = brand.logo.size;
 
-  const { size: logoSize, margin, position } = brand.logo;
-  const { x, y } = anchorOf(size.w, size.h, logoSize, margin, position);
+  // مصدر الموضع: brand.placement.logo إن وُجد؛ وإلا brand.logo.position.
+  const placement = brand.placement?.logo;
+  const { x, y } = placement
+    ? placeInside(
+        size.w,
+        size.h,
+        logoSize,
+        { x: placement.offset.x, y: placement.offset.y },
+        placement.anchor
+      )
+    : legacyAnchor(size.w, size.h, logoSize, brand.logo.margin, brand.logo.position);
+
   ctx.drawImage(image, x, y, logoSize, logoSize);
 }

@@ -217,28 +217,70 @@ function validateLayer(raw: unknown, path: string): Layer {
     }
     case 'badge': {
       if (!isString(o['use'])) bail(`${path}.use`, 'badge يتطلب use (مرجع brand.badges.*)');
-      const anchor = o['anchor'];
-      if (!isString(anchor) || !['above-headline', 'below-headline'].includes(anchor)) {
-        bail(`${path}.anchor`, 'يجب أن يكون above-headline أو below-headline');
-      }
-      if (!isString(o['gap']) && !isNumber(o['gap'])) {
-        bail(`${path}.gap`, 'يجب أن يكون رقم أو مرجع brand.*');
+      // anchor اختياري (2026-09-02):
+      //  • بنيوي: above-headline | below-headline (يتطلّب constraint:true وgap)
+      //  • شاشي: top-left…bottom-right (9-lattice)
+      //  • غياب: يفوَّض إلى brand.placement.badge
+      if (o['anchor'] !== undefined) {
+        const anchor = o['anchor'];
+        const STRUCTURAL = ['above-headline', 'below-headline'];
+        const SCREEN = [
+          'top-left', 'top-center', 'top-right',
+          'middle-left', 'middle-right',
+          'bottom-left', 'bottom-center', 'bottom-right',
+        ];
+        if (
+          !isString(anchor) ||
+          !STRUCTURAL.includes(anchor) &&
+          !SCREEN.includes(anchor)
+        ) {
+          bail(
+            `${path}.anchor`,
+            `يجب أن يكون بنيوي (above/below-headline) أو شاشي (top-left…bottom-right)`
+          );
+        }
+        // gap مطلوب فقط للأنكور البنيوي
+        if (STRUCTURAL.includes(anchor as string)) {
+          if (!isString(o['gap']) && !isNumber(o['gap'])) {
+            bail(`${path}.gap`, 'الأنكور البنيوي يتطلّب gap');
+          }
+        }
       }
       if (o['field'] !== undefined && !isString(o['field'])) {
         bail(`${path}.field`, 'يجب أن يكون string');
+      }
+      if (o['constraint'] !== undefined && !isBool(o['constraint'])) {
+        bail(`${path}.constraint`, 'يجب أن يكون boolean');
       }
       return raw as BadgeLayer;
     }
     case 'source': {
       if (!isString(o['field'])) bail(`${path}.field`, 'source يتطلب field');
-      const anchor = o['anchor'];
-      if (anchor !== 'below-headline') {
-        bail(`${path}.anchor`, 'source يدعم below-headline فقط حالياً');
-      }
-      if (!isNumber(o['gapFsRatio'])) {
-        bail(`${path}.gapFsRatio`, 'يجب أن يكون رقم (نسبة من fs)');
+      // anchor اختياري (2026-09-02):
+      //  • بنيوي: below-headline (يتطلّب gapFsRatio)
+      //  • شاشي: top-left…bottom-right
+      //  • غياب: يفوَّض إلى brand.placement.source
+      if (o['anchor'] !== undefined) {
+        const anchor = o['anchor'];
+        const SCREEN = [
+          'top-left', 'top-center', 'top-right',
+          'middle-left', 'middle-right',
+          'bottom-left', 'bottom-center', 'bottom-right',
+        ];
+        if (anchor !== 'below-headline' && (!isString(anchor) || !SCREEN.includes(anchor))) {
+          bail(
+            `${path}.anchor`,
+            'يجب أن يكون below-headline أو شاشي (top-left…bottom-right)'
+          );
+        }
+        if (anchor === 'below-headline' && !isNumber(o['gapFsRatio'])) {
+          bail(`${path}.gapFsRatio`, 'الأنكور البنيوي below-headline يتطلّب gapFsRatio');
+        }
       }
       if (!isString(o['font'])) bail(`${path}.font`, 'يجب أن يكون مرجع brand.*');
+      if (o['constraint'] !== undefined && !isBool(o['constraint'])) {
+        bail(`${path}.constraint`, 'يجب أن يكون boolean');
+      }
       return raw as SourceLayer;
     }
     case 'logo': {

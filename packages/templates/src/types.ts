@@ -59,7 +59,22 @@ export type LayerOnlyIf = 'hasImage' | 'isSquare' | 'isPortrait';
 interface LayerCommon {
   readonly onlyIf?: LayerOnlyIf;
   readonly fallback?: readonly Layer[];
+  /**
+   * علامة توثيقية (2026-09-02) — «هذا الموضع/الأنكور قيد بنيوي لا
+   * تفضيل تصميمي». يوضَع على الطبقات ذات الأنكور النسبي (`above-headline`،
+   * `below-headline`) لتوضيح أن القالب فرضه لأنّ العنصر مرتبط بعنصر آخر،
+   * لا لأنّ المصمّم فضّله. الهوية **لا** تتغلّب على أنكور بنيوي.
+   *
+   * يجب أن يُرافقه تعليق في القالب يشرح السبب. راجع docs/04 §الأولوية.
+   */
+  readonly constraint?: boolean;
 }
+
+/** أنكور الطبقة العام (موضع شاشي 9-attice — يتزامن مع PlacementAnchor في shared). */
+export type ScreenAnchor =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left'             | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
 
 export interface SolidLayer extends LayerCommon {
   readonly type: 'solid';
@@ -114,17 +129,32 @@ export interface BadgeLayer extends LayerCommon {
   readonly use: string;
   /** اختياري: مفتاح حقل يستبدل `label` من الشارة (مثال: للموقع في الريلز). */
   readonly field?: string;
-  readonly anchor: 'above-headline' | 'below-headline';
-  /** مسافة بكسل — رقم أو مرجع brand (مثل `brand.margins.badgeGap`). */
-  readonly gap: string | number;
+  /**
+   * الأنكور. **اختياري (2026-09-02):**
+   *   • `above-headline` / `below-headline`: بنيوي — يتطلّب طبقة headline
+   *     قبله. يجب أن يُرافَق بـ`constraint: true` وتعليق يشرح السبب.
+   *   • ScreenAnchor (top-right…): شاشي — يفوَّض إلى `brand.placement.badge`
+   *     أو يتقدّم عليها إن حمَل offset صريحاً.
+   *   • غياب: يُقرأ من `brand.placement.badge` — مبدأ «الهوية تحدّد أين».
+   */
+  readonly anchor?: 'above-headline' | 'below-headline' | ScreenAnchor;
+  /** مسافة بكسل — رقم أو مرجع brand (مثل `brand.margins.badgeGap`).
+   *  مطلوب فقط للأنكور البنيوي. */
+  readonly gap?: string | number;
 }
 
 export interface SourceLayer extends LayerCommon {
   readonly type: 'source';
   readonly field: string;
-  readonly anchor: 'below-headline';
-  /** المسافة كنسبة من `fs` — لا رقم مطلق (درس L-02). */
-  readonly gapFsRatio: number;
+  /**
+   * الأنكور. اختياري بنفس منطق BadgeLayer.
+   *   • `below-headline`: بنيوي — يتطلّب headline قبله + `constraint: true`.
+   *   • ScreenAnchor: شاشي عبر `brand.placement.source`.
+   *   • غياب: يُقرأ من `brand.placement.source`.
+   */
+  readonly anchor?: 'below-headline' | ScreenAnchor;
+  /** المسافة كنسبة من `fs` — لا رقم مطلق (درس L-02). للأنكور البنيوي فقط. */
+  readonly gapFsRatio?: number;
   /** مرجع تكوين المصدر (مثل `brand.typography.source`). */
   readonly font: string;
 }
