@@ -41,6 +41,7 @@ import type {
   ImageLike,
 } from '../text/index.js';
 import type { CanvasSize, ImageCrop } from '../layers/image.js';
+import { drawImage } from '../layers/image.js';
 import {
   drawHeadlineLine,
   executeLayer,
@@ -109,6 +110,35 @@ interface OutroOverlayEffect extends EffectRef {
   readonly duration: number;
 }
 
+/**
+ * kenBurns — تكبير خطّي من `from` إلى `to` على مدى العنصر (docs/10 مثال).
+ * `origin` يحدّد مركز التحويل — 'center' يكبّر حول وسط القماش، وأطراف
+ * أخرى تكبّر منها. **transform-only** — يعدّل ctx ثم يمرّر لمؤثر لاحق.
+ * الاستيفاء خطّي (بلا ease) — سلوك Ken Burns القياسي.
+ */
+interface KenBurnsEffect extends EffectRef {
+  readonly type: 'kenBurns';
+  readonly from: number;
+  readonly to: number;
+  readonly origin?: KenBurnsOrigin;
+}
+
+export type KenBurnsOrigin =
+  | 'center'
+  | 'top' | 'bottom' | 'left' | 'right'
+  | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+/**
+ * draw-media — يرسم صورة من assets.images[assetKey] على كامل القماش
+ * (سلوك cover). يحترم `crop` من TrackItem إن وُجد.
+ * **draw-effect** — يستدعي `drawImage` primitive، لا يعيد بناءه.
+ */
+interface DrawMediaEffect extends EffectRef {
+  readonly type: 'draw-media';
+  /** مفتاح في `assets.images`. يطابق item.src عادةً. */
+  readonly assetKey: string;
+}
+
 // ── الدالة الرئيسية ──────────────────────────────────
 
 const DEFAULTS: InterpolatedProps = Object.freeze({
@@ -148,6 +178,9 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
       dispatchEffect(effect, {
         ctx, size, brand, template, content, rfArgs, state,
         headlinePrep: args.headlinePrep,
+        assets: args.assets,
+        item,
+        itemProgress: activeItem.progress,
         t, itemLocalT: activeItem.localT, props,
       });
     }
@@ -167,6 +200,11 @@ interface EffectContext {
   rfArgs: RenderFrameArgs;
   state: RenderState;
   headlinePrep: PreparedHeadline | undefined;
+  assets: DrawTimelineAtArgs['assets'];
+  /** العنصر المضيف — يستهلكه المؤثر لقراءة src أو crop. */
+  item: import('@pf-mediakit/shared').TrackItem;
+  /** نسبة تقدّم العنصر [0,1] — للاستيفاء الزمني (kenBurns وأمثاله). */
+  itemProgress: number;
   t: number;
   itemLocalT: number;
   props: InterpolatedProps;
@@ -182,8 +220,12 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
       return applyPulseAroundCenter(effect as PulseEffect, ectx);
     case 'outro-black-overlay':
       return applyOutroOverlay(effect as OutroOverlayEffect, ectx);
+    case 'kenBurns':
+      return applyKenBurns(effect as KenBurnsEffect, ectx);
+    case 'draw-media':
+      return applyDrawMedia(effect as DrawMediaEffect, ectx);
     default:
-      // مؤثر غير معروف — تجاهل صامت في جلسة 1.
+      // مؤثر غير معروف — تجاهل صامت.
       return;
   }
 }
@@ -252,6 +294,57 @@ function applyPulseAroundCenter(effect: PulseEffect, ectx: EffectContext): void 
   ctx.translate(size.w / 2, size.h / 2);
   ctx.scale(scale, scale);
   ctx.translate(-size.w / 2, -size.h / 2);
+}
+
+/**
+ * kenBurns — تكبير خطّي حول نقطة أصل. **transform-only.**
+ * scale(t) = from + (to - from) × progress ← استيفاء خطي بلا ease
+ * (سلوك Ken Burns القياسي في محرّرات الفيديو).
+ * الأصل يترجم إلى إحداثيات القماش الفعلي: 'center' → (w/2, h/2)،
+ * 'top' → (w/2, 0)، 'top-left' → (0, 0)، إلخ.
+ */
+function applyKenBurns(effect: KenBurnsEffect, ectx: EffectContext): void {
+  const scale = effect.from + (effect.to - effect.from) * ectx.itemProgress;
+  if (scale === 1) return;
+  const { ctx, size } = ectx;
+  const origin = effect.origin ?? 'center';
+  const [ax, ay] = originToAnchor(origin, size);
+  ctx.translate(ax, ay);
+  ctx.scale(scale, scale);
+  ctx.translate(-ax, -ay);
+}
+
+function originToAnchor(
+  origin: KenBurnsOrigin,
+  size: CanvasSize
+): readonly [number, number] {
+  const { w, h } = size;
+  switch (origin) {
+    case 'center':       return [w / 2, h / 2];
+    case 'top':          return [w / 2, 0];
+    case 'bottom':       return [w / 2, h];
+    case 'left':         return [0, h / 2];
+    case 'right':        return [w, h / 2];
+    case 'top-left':     return [0, 0];
+    case 'top-right':    return [w, 0];
+    case 'bottom-left':  return [0, h];
+    case 'bottom-right': return [w, h];
+    default:             return [w / 2, h / 2];
+  }
+}
+
+/**
+ * draw-media — يرسم صورة من `assets.images[assetKey]`. يستدعي
+ * `drawImage` primitive من `layers/image.ts` — لا يعيد بناء cover logic.
+ * إن غاب الأصل: تجاهل صامت (كما legacy layer image يفعل).
+ */
+function applyDrawMedia(effect: DrawMediaEffect, ectx: EffectContext): void {
+  const image = ectx.assets?.images?.[effect.assetKey];
+  if (!image) return;
+  drawImage(ectx.ctx, ectx.size, ectx.brand, {
+    image,
+    ...(ectx.item.crop && { crop: ectx.item.crop }),
+  });
 }
 
 /** تراكب أسود بشفافية متزايدة عند نهاية المسار. */

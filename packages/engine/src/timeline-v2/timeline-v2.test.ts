@@ -289,3 +289,82 @@ describe('نقاء زمني — resolveAt(t) لا يعتمد على استدعا
     expect(a).toEqual(b);
   });
 });
+
+// ── buildTimelinePlan — تحضير النصوص مسبقاً (L-07) ──
+
+import { buildTimelinePlan, collectTextItems } from './plan.js';
+import { BREAKING } from '@pf-mediakit/templates';
+import { DEFAULT_BRAND } from '@pf-mediakit/shared';
+import { resolveBrand } from '../brand/resolve.js';
+import { createSyntheticMeasurer } from './../text/measurer.js';
+
+describe('buildTimelinePlan — تحضير عناصر text مسبقاً', () => {
+  const brand = resolveBrand(DEFAULT_BRAND);
+  // ctx وهمي يكفي لـprepareHeadline على مقاس ثابت — تفادينا skia-canvas
+  // في اختبارات vitest، نستخدم واجهة اصطناعية.
+  const mockCtx = {
+    font: '',
+    measureText: (s: string) => ({
+      width: s.length * 10,
+      actualBoundingBoxAscent: 30,
+      actualBoundingBoxDescent: 10,
+    }),
+    save: () => {}, restore: () => {}, translate: () => {}, scale: () => {},
+    fillRect: () => {}, fillText: () => {}, drawImage: () => {},
+    beginPath: () => {}, moveTo: () => {}, lineTo: () => {}, closePath: () => {},
+    fill: () => {}, stroke: () => {}, arc: () => {}, arcTo: () => {},
+    clip: () => {}, rect: () => {}, createLinearGradient: () => ({ addColorStop: () => {} }),
+    globalAlpha: 1, fillStyle: '', strokeStyle: '',
+    textAlign: 'right' as CanvasTextAlign,
+    textBaseline: 'alphabetic' as CanvasTextBaseline,
+    direction: 'rtl' as CanvasDirection,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high' as ImageSmoothingQuality,
+  };
+
+  it('عنصر text بلا value ⇒ لا تحضير', () => {
+    const timeline = tl([
+      track({ type: 'text', items: [item({ id: 'empty' })] }),
+    ]);
+    const plan = buildTimelinePlan({
+      timeline, brand,
+      template: BREAKING,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx: mockCtx as any,
+      size: { w: 1080, h: 1350 },
+    });
+    expect(plan.textPreps.size).toBe(0);
+  });
+
+  it('عنصر text بـvalue ⇒ prep موجود في الخريطة بمفتاح trackId:itemId', () => {
+    const timeline = tl([
+      track({
+        id: 'txt', type: 'text',
+        items: [item({ id: 'h1', value: 'عنوان قصير للاختبار' })],
+      }),
+    ]);
+    const plan = buildTimelinePlan({
+      timeline, brand,
+      template: BREAKING,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx: mockCtx as any,
+      size: { w: 1080, h: 1350 },
+    });
+    expect(plan.textPreps.has('txt:h1')).toBe(true);
+    const p = plan.textPreps.get('txt:h1')!;
+    expect(p.trackId).toBe('txt');
+    expect(p.itemId).toBe('h1');
+    expect(p.prep.linesJustified.length).toBeGreaterThan(0);
+  });
+
+  it('collectTextItems يعيد كل عناصر text عبر المسارات', () => {
+    const timeline = tl([
+      track({ id: 'm', type: 'media', items: [item({ id: 'bg' })] }),
+      track({ id: 't1', type: 'text', items: [item({ id: 'a' }), item({ id: 'b' })] }),
+      track({ id: 't2', type: 'text', items: [item({ id: 'c' })] }),
+    ]);
+    const items = collectTextItems(timeline);
+    expect(items).toHaveLength(3);
+    expect(items.map((i) => `${i.trackId}:${i.item.id}`)).toEqual(['t1:a', 't1:b', 't2:c']);
+  });
+});

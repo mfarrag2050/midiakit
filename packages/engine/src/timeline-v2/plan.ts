@@ -5,43 +5,44 @@
 // **مرة واحدة** قبل الحلقة، ويُخزَّن كـPreparedHeadline في الخطة.
 //
 // **النقاء محفوظ:** الخطة قيمة مُشتقّة من نفس المدخلات (timeline + brand
-// + assets + template)، تُمرَّر إلى drawTimelineAt كوسيط. لا وحدة حالة.
+// + template + ctx للقياس)، تُمرَّر إلى drawTimelineAt كوسيط. لا وحدة
+// حالة، لا آثار جانبية.
 //
-// **حدود هذه الجلسة (session 1):** الخطة تدعم:
-//   • حساب مواضع العنصر الأول من كل مسار text — تحضير رأس واحد كافٍ
-//     لبوابة التكافؤ (breaking لديه رأس واحد ومصدر واحد).
-//   • حساب breakPenalties (semantic breaks) — إن كان مُفعَّلاً في brand.
-// **مؤجَّل:** خطة الوسائط (المسار media)، خطة الصوت (buildAudioGraph)،
-// دعم عدة عناصر نص لكل مسار.
+// **مبدأ الاستدعاء:** نستدعي `prepareHeadline` الموجودة (render.ts)
+// لكل عنصر text — لا نعيد بناءها. الطبقة المرجعية داخل template تُحدَّد
+// بواسطة `item.template` (اسم القالب) أو نستعمل القالب المُمرَّر إن كان
+// العنصر بلا template صريح (المسار المألوف: قالب واحد يحكم كل شيء).
+//
+// **جلسة 2:** buildTimelinePlan يمتلئ. نصوص text تُحضَّر مسبقاً. مسارات
+// media لا تحتاج تحضيراً (drawTimelineAt يحمّل الصور من assets مباشرة).
 
 import type { BrandKit, Timeline, TrackItem } from '@pf-mediakit/shared';
 import type { Template } from '@pf-mediakit/templates';
 
-import type { PreparedHeadline } from '../render.js';
+import {
+  prepareHeadline,
+  type PreparedHeadline,
+  type RenderFrameArgs,
+  type RenderState,
+  type RenderAssets,
+} from '../render.js';
+import type {
+  CanvasDrawContext,
+  CanvasFontContext,
+} from '../text/index.js';
 
 // ── نتيجة الخطة ──────────────────────────────────────
 
 /** حزمة تحضير نصّ واحد داخل عنصر مسار — تُحسب مرة قبل الحلقة. */
 export interface PreparedTextItem {
-  /** معرف العنصر — يطابق TrackItem.id في المصدر. */
   readonly itemId: string;
-  /** معرف المسار المضيف. */
   readonly trackId: string;
-  /** PreparedHeadline كامل من render.ts (بلا measure — canvas-independent). */
   readonly prep: PreparedHeadline;
 }
 
-/**
- * نتيجة `buildTimelinePlan`. تُمرَّر كـplan إلى drawTimelineAt.
- *
- * **الاستخدام:** المستدعي يبنيها مرة قبل حلقة الإطارات، ثم يمرّرها
- * على كل استدعاء drawTimelineAt(t). كل الحسابات المستقلة عن t
- * (wrap, justify, layout) موجودة هنا.
- */
 export interface TimelinePlan {
-  /** المرجع الأصلي للـtimeline (يُقرأ فقط، لا يُعدَّل). */
   readonly timeline: Timeline;
-  /** تحضير نصوص العناصر — مفتاح خارجي: `${trackId}:${itemId}`. */
+  /** مفتاح: `${trackId}:${itemId}`. */
   readonly textPreps: ReadonlyMap<string, PreparedTextItem>;
 }
 
@@ -51,34 +52,80 @@ export interface BuildTimelinePlanArgs {
   readonly timeline: Timeline;
   readonly brand: BrandKit;
   /**
-   * القالب المرجعي — للنصوص التي تشير إلى `item.template` وقيمها في
-   * `item.value`. session 1: قالب واحد كافٍ (breaking).
+   * القالب المرجعي — يُستشار للطبقة `headline` عند تحضير عناصر text.
+   * للجلسة 2 القالب واحد لكل الخط الزمني (نموذج breaking).
    */
   readonly template: Template;
   /** ctx للقياس فقط — لا يُرسم عليه. */
-  readonly ctx: unknown;
-  /** حجم القماش — من `timeline.size` أو مُمرَّر صريحاً. */
+  readonly ctx: CanvasDrawContext & CanvasFontContext;
+  /** حجم القماش. */
   readonly size: { readonly w: number; readonly h: number };
+  /** أصول (يحتاجها prepareHeadline للطبقة headline إن كانت تعتمد onlyIf). */
+  readonly assets?: RenderAssets;
 }
+
+// ── الواجهة العامة ────────────────────────────────────
 
 /**
- * **جلسة 1 — دالة placeholder:** الخطة تُبنى فارغة. تحضير النصوص
- * سيُضاف في drawTimelineAt session 1.5 عند دمج بوابة التكافؤ.
+ * يبني الخطة. لكل عنصر في مسار text: يستدعي `prepareHeadline` مرة
+ * ويخزّن النتيجة. drawTimelineAt session-3 سيستهلك الخطة بدلاً من
+ * تمرير `headlinePrep` منفصلاً.
  *
- * السبب: بوابة التكافؤ لجلسة 1 تستعمل `prepareHeadline` مباشرة عبر
- * المسار القديم كمصدر ثقة. عند اعتماد المسار الجديد كمصدر أوحد،
- * ننقل التحضير هنا.
+ * **جلسة 2:** إذا لم يجد العنصر `template` صريح أو `value`، لا يُحضَّر
+ * (item بلا نصّ لا headline له). حالات text المُركّبة (item.template
+ * يشير إلى قالب مختلف عن الرئيسي) مؤجَّلة — يحتاج تسجيل قوالب.
  */
 export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
-  return {
-    timeline: args.timeline,
-    textPreps: new Map<string, PreparedTextItem>(),
-  };
+  const preps = new Map<string, PreparedTextItem>();
+
+  for (const track of args.timeline.tracks) {
+    if (track.type !== 'text') continue;
+    for (const item of track.items) {
+      if (item.value === undefined || item.value === '') continue;
+      const prep = prepareTextItem(item, args);
+      if (prep) {
+        preps.set(`${track.id}:${item.id}`, {
+          itemId: item.id,
+          trackId: track.id,
+          prep,
+        });
+      }
+    }
+  }
+
+  return { timeline: args.timeline, textPreps: preps };
 }
 
-// ── حساب مساعد للمستدعي ──────────────────────────────
+// ── التحضير المفرد لعنصر text ─────────────────────
 
-/** يستخرج كل عناصر نصّية عبر كل المسارات (للتحضير المسبق). */
+function prepareTextItem(
+  item: TrackItem,
+  args: BuildTimelinePlanArgs
+): PreparedHeadline | null {
+  // نحدّد الطبقة headline من القالب — أول طبقة type='headline'.
+  const layer = args.template.layers.find((l) => l.type === 'headline');
+  if (!layer || layer.type !== 'headline') return null;
+
+  // نبني content مؤقت — العنصر يحمل النص في `value`، نضعه تحت
+  // field الطبقة (عادةً 'headline').
+  const contentKey = layer.field;
+  const content: Record<string, unknown> = { [contentKey]: item.value };
+
+  const rfArgs: RenderFrameArgs = {
+    ctx: args.ctx,
+    size: args.size,
+    template: args.template,
+    brand: args.brand,
+    content,
+    ...(args.assets && { assets: args.assets }),
+  };
+  const state: RenderState = {};
+  return prepareHeadline(layer, rfArgs, state);
+}
+
+// ── مساعد للمستدعي ────────────────────────────────
+
+/** يستخرج كل عناصر text عبر كل المسارات — لتشخيص/فحص خطة. */
 export function collectTextItems(
   timeline: Timeline
 ): readonly { readonly trackId: string; readonly item: TrackItem }[] {
@@ -89,3 +136,4 @@ export function collectTextItems(
   }
   return out;
 }
+
