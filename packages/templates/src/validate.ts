@@ -76,8 +76,12 @@ const ATTRIBUTION_MODES = ['handle', 'name', 'both'] as const;
 
 const ATTRIBUTION_ANCHORS = [
   'top-left',
+  'top-center',
   'top-right',
+  'middle-left',
+  'middle-right',
   'bottom-left',
+  'bottom-center',
   'bottom-right',
 ] as const;
 
@@ -283,15 +287,20 @@ function validateLayer(raw: unknown, path: string): Layer {
       ) {
         bail(`${path}.mode`, `يجب أن يكون handle|name|both`);
       }
-      const anchor = o['anchor'];
-      if (
-        !isString(anchor) ||
-        !(ATTRIBUTION_ANCHORS as readonly string[]).includes(anchor)
-      ) {
-        bail(
-          `${path}.anchor`,
-          `يجب أن يكون top-left|top-right|bottom-left|bottom-right`
-        );
+      // anchor اختياري الآن (اُعيد التصميم 2026-09-02): الهوية تحدّد
+      // الموضع الافتراضي عبر brand.placement.attribution. تمرير القيمة
+      // في القالب = «قيد صريح» يتقدّم على الهوية.
+      if (o['anchor'] !== undefined) {
+        const anchor = o['anchor'];
+        if (
+          !isString(anchor) ||
+          !(ATTRIBUTION_ANCHORS as readonly string[]).includes(anchor)
+        ) {
+          bail(
+            `${path}.anchor`,
+            `يجب أن يكون top-left|top-center|top-right|middle-left|middle-right|bottom-left|bottom-center|bottom-right`
+          );
+        }
       }
       if (o['handleField'] !== undefined && !isString(o['handleField'])) {
         bail(`${path}.handleField`, 'يجب أن يكون string');

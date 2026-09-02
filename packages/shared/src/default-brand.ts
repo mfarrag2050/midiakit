@@ -214,6 +214,14 @@ export const DEFAULT_BRAND: BrandKit = {
     reel: { w: 1080, h: 1920 },
   },
   audio: [],
+  placement: {
+    // مواضع افتراضية — كل عنصر بأنكوره + إزاحة. القالب يقرّر أيّها
+    // يظهر، الهوية تقرّر أين. راجع docs/03 §placement.
+    logo:        { anchor: 'bottom-left',  offset: { x: 51, y: 51 } },
+    badge:       { anchor: 'top-right',    offset: { x: 60, y: 60 } },
+    attribution: { anchor: 'bottom-right', offset: { x: 60, y: 60 } },
+    source:      { anchor: 'bottom-right', offset: { x: 60, y: 135 } },
+  },
   attribution: {
     // نصّ فقط افتراضياً — لا شعار مرسوم، لا مخاطرة قانونية.
     // 'generic' متاح عند تفعيله في هوية العميل (شكل هندسي بلا علامة).

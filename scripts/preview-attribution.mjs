@@ -1,29 +1,25 @@
 // scripts/preview-attribution.mjs — بوابة الطور 3.8 بند 1 (طبقة الإسناد).
 //
-// **الهدف:** رسم ثلاث بطاقات على قماش واحد تظهر الأوضاع الثلاثة للطبقة:
-//   1. mode='handle'  — «تيك توك · @user»
-//   2. mode='name'    — «أحمد الشاعر على تيك توك»
-//   3. mode='both'    — «تيك توك · أحمد الشاعر · @user»
+// **الهدف (2026-09-02 v2):** شبكة **3 أوضاع نص × 3 أوضاع شعار × هويتين** =
+// **18 خلية** — لعرض فصل الشعار عن النص واختلاف النتيجة بين الوضعين
+// generic/official/none، ولتأكيد أن brand.placement.attribution يحكم
+// الموضع افتراضياً.
 //
-// ثم مقارنة بين:
-//   • logoMode='none'    (يخفي الأيقونة — نصّ فقط)
-//   • logoMode='generic' (شكل هندسي بلون brandKit — لا علامة تجارية)
-//   • logoMode='official'(شعار simple-icons ملوَّناً — يشترط licenseAck)
+// أوضاع النص:  handle · name · both
+// أوضاع الشعار: none · generic · official
+// الهويّتان: default (اللون: رمادي محايد) · client-demo (اللون: بيج/برتقالي)
 //
 // **قواعد قانونية (راجع ATTRIBUTIONS.md):**
-//   • الأيقونة الرسمية تحتاج `brand.attribution.logoAcks[platform].licenseAck=true`.
-//   • هذا السكربت يبني هوية *اختبار* تحمل الإقرار (ackBy='gate-script') —
-//     لا يعكس إقراراً حقيقياً من عميل.
+//   • official تحتاج `brand.attribution.logoAcks[platform].licenseAck=true`.
+//     السكربت يبني نسخة اختبار حاملة الإقرار (ackBy='gate-script').
 //
 // **الاستخدام:**
 //   pnpm preview:attribution
-//   pnpm preview:attribution -- --brand=client-demo
 //
 // يُصدر:
-//   out/attribution-demo.png       (شبكة 6 بطاقات: 3 modes × 2 برانديز)
-//   out/attribution-demo-handle.png
-//   out/attribution-demo-name.png
-//   out/attribution-demo-both.png
+//   out/attribution-demo.png       شبكة 18 خلية (3×6)
+//   out/attribution-demo-bidi.png  بطاقة BiDi (X + prefix)
+//   out/attribution-demo-placement.png  اختبار brand.placement (بلا anchor)
 
 import { Canvas, FontLibrary, Path2D } from 'skia-canvas';
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
@@ -43,13 +39,12 @@ const ROOT = join(__dirname, '..');
 const OUT_DIR = join(ROOT, 'out');
 if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
 
-// ── تحميل هوية client-demo (تسجيل خطوطها) ──────────────
+// ── تحميل هويّة client-demo (تسجيل خطوطها) ─────────────
 const clientDemoRaw = JSON.parse(
   await readFile(join(ROOT, 'brands/client-demo.json'), 'utf-8')
 );
 const clientDemo = resolveBrand(clientDemoRaw);
 
-// تسجيل خطوط الهويّتين على FontLibrary (كما في preview.mjs)
 const registerFontsFor = async (brand) => {
   const weights = brand.fonts?.primary?.weights;
   if (!weights) return;
@@ -59,7 +54,7 @@ const registerFontsFor = async (brand) => {
       if (existsSync(abs)) {
         try {
           FontLibrary.use(brand.fonts.primary.family, [abs]);
-        } catch (e) {
+        } catch (_e) {
           // مسجَّل مسبقاً — تجاهل
         }
       }
@@ -68,40 +63,29 @@ const registerFontsFor = async (brand) => {
 };
 await registerFontsFor(clientDemo);
 
-// ── هويّة مع licenseAck=true لاختبار وضع 'official' ────
-function withOfficialAcks(brand) {
-  return {
-    ...brand,
-    attribution: {
-      ...brand.attribution,
-      logoMode: 'official',
-      logoAcks: {
-        tiktok:    { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
-        x:         { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
-        instagram: { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
-        youtube:   { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
-        telegram:  { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
-        facebook:  { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+// ── هويّات باختلاف logoMode ────────────────────────────
+function withLogoMode(brand, logoMode) {
+  if (logoMode === 'official') {
+    return {
+      ...brand,
+      attribution: {
+        ...brand.attribution,
+        logoMode: 'official',
+        logoAcks: {
+          tiktok:    { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+          x:         { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+          instagram: { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+          youtube:   { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+          telegram:  { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+          facebook:  { licenseAck: true, ackBy: 'gate-script', ackAt: '2026-09-02' },
+        },
       },
-    },
-  };
+    };
+  }
+  return { ...brand, attribution: { ...brand.attribution, logoMode } };
 }
 
-function withGeneric(brand) {
-  return {
-    ...brand,
-    attribution: { ...brand.attribution, logoMode: 'generic' },
-  };
-}
-
-function withNone(brand) {
-  return {
-    ...brand,
-    attribution: { ...brand.attribution, logoMode: 'none' },
-  };
-}
-
-// ── بناء Path2D لكل منصة (env: skia-canvas) ────────────
+// ── Path2D لكل منصة (env: skia-canvas) ────────────────
 const officialPaths = {
   tiktok:    new Path2D(PLATFORM_PATH_STRINGS.tiktok),
   x:         new Path2D(PLATFORM_PATH_STRINGS.x),
@@ -111,137 +95,157 @@ const officialPaths = {
   facebook:  new Path2D(PLATFORM_PATH_STRINGS.facebook),
 };
 
-// ── قماش واحد كبير للمقارنة (شبكة 6 بطاقات) ────────────
-// 3 modes (handle/name/both) × 2 برانديز (default/client-demo)
-// حجم كل بطاقة 800×220، فاصل 40، إجمالي 2000+ عرض
+// ── شبكة 3×6 = 18 خلية ────────────────────────────────
+// أعمدة (3): أوضاع نص [handle, name, both]
+// صفوف (6): 3 أوضاع شعار × 2 هويتين
+//   الصف 0: default  · logoMode=none
+//   الصف 1: default  · logoMode=generic
+//   الصف 2: default  · logoMode=official
+//   الصف 3: client   · logoMode=none
+//   الصف 4: client   · logoMode=generic
+//   الصف 5: client   · logoMode=official
 const CELL_W = 900;
-const CELL_H = 240;
-const GAP = 40;
+const CELL_H = 220;
+const GAP = 32;
 const PAD = 60;
-const GRID_W = 3 * CELL_W + 2 * GAP + 2 * PAD;
-const GRID_H = 2 * CELL_H + GAP + 2 * PAD + 80; // 80 = header
+const HEADER = 80;
+const ROWLABEL = 260;   // عرض عمود اسم الصف على اليمين
+const COLS = 3;
+const ROWS = 6;
+
+const GRID_W = COLS * CELL_W + (COLS - 1) * GAP + 2 * PAD + ROWLABEL;
+const GRID_H = ROWS * CELL_H + (ROWS - 1) * GAP + 2 * PAD + HEADER;
 
 const grid = new Canvas(GRID_W, GRID_H);
-const gridCtx = grid.getContext('2d');
+const ctx = grid.getContext('2d');
 
-// خلفية خافتة للفصل البصري
-gridCtx.fillStyle = '#0F1218';
-gridCtx.fillRect(0, 0, GRID_W, GRID_H);
+// خلفية عامة داكنة للفصل البصري
+ctx.fillStyle = '#0F1218';
+ctx.fillRect(0, 0, GRID_W, GRID_H);
 
-// عناوين
-gridCtx.fillStyle = '#F8F4E9';
-gridCtx.font = '700 32px "IBM Plex Sans Arabic", sans-serif';
-gridCtx.textAlign = 'center';
-gridCtx.textBaseline = 'top';
-gridCtx.direction = 'rtl';
+// عناوين الأعمدة (أوضاع النص)
+ctx.fillStyle = '#F8F4E9';
+ctx.font = '700 30px "IBM Plex Sans Arabic", sans-serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+ctx.direction = 'ltr';
 
 const modes = ['handle', 'name', 'both'];
-const modeLabels = { handle: 'mode=handle', name: 'mode=name', both: 'mode=both' };
+const modeLabels = { handle: 'mode = handle', name: 'mode = name', both: 'mode = both' };
 modes.forEach((m, i) => {
   const cx = PAD + i * (CELL_W + GAP) + CELL_W / 2;
-  gridCtx.fillText(modeLabels[m], cx, 20);
+  ctx.fillText(modeLabels[m], cx, 24);
 });
 
-// دالة رسم بطاقة واحدة
-function drawCell(ctx, x, y, brand, mode) {
-  // إطار
+// الصفوف: كل هوية × كل logoMode
+const rows = [
+  { brand: withLogoMode(resolveBrand(DEFAULT_BRAND), 'none'),     brandLabel: 'default',     logoMode: 'none' },
+  { brand: withLogoMode(resolveBrand(DEFAULT_BRAND), 'generic'),  brandLabel: 'default',     logoMode: 'generic' },
+  { brand: withLogoMode(resolveBrand(DEFAULT_BRAND), 'official'), brandLabel: 'default',     logoMode: 'official' },
+  { brand: withLogoMode(clientDemo,                   'none'),    brandLabel: 'client-demo', logoMode: 'none' },
+  { brand: withLogoMode(clientDemo,                   'generic'), brandLabel: 'client-demo', logoMode: 'generic' },
+  { brand: withLogoMode(clientDemo,                   'official'),brandLabel: 'client-demo', logoMode: 'official' },
+];
+
+function drawCell(x, y, brand, mode) {
+  // خلفية الخلية = brand.colors.surface
   ctx.fillStyle = brand.colors.surface;
   ctx.fillRect(x, y, CELL_W, CELL_H);
 
-  // اسم الهوية أعلى البطاقة
-  ctx.fillStyle = brand.colors.text;
-  ctx.font = '400 22px "IBM Plex Sans Arabic", sans-serif';
+  // نرسم الطبقة بأنكور صريح بداخل الخلية (لا نستعمل brand.placement هنا
+  // لأنّ الحاوية 900×220 لا 1080×1350 — نُموقع يدوياً وسط الخلية).
+  drawAttribution(ctx, { w: CELL_W, h: CELL_H }, brand, {
+    platform: 'tiktok',
+    mode,
+    handle: '@ahmadalshaer',
+    name: 'أحمد الشاعر',
+    anchor: { x: x + 60, y: y + CELL_H - 90 },
+    officialPath: officialPaths.tiktok,
+  });
+}
+
+// رسم كل الخلايا + بطاقة تسمية صف على اليمين
+ctx.font = '500 22px "IBM Plex Sans Arabic", sans-serif';
+rows.forEach((row, r) => {
+  const cy = PAD + HEADER + r * (CELL_H + GAP);
+  modes.forEach((mode, c) => {
+    const cx = PAD + c * (CELL_W + GAP);
+    drawCell(cx, cy, row.brand, mode);
+  });
+  // تسمية الصف على اليمين
+  ctx.fillStyle = '#B8B8B8';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.direction = 'rtl';
-  const style = brand.attribution.logoMode;
-  ctx.fillText(`${brand.name} · logoMode=${style}`, x + CELL_W - 30, y + 20);
-
-  // رسم الطبقة
-  drawAttribution(
-    ctx,
-    { w: CELL_W, h: CELL_H },
-    brand,
-    {
-      platform: 'tiktok',
-      mode,
-      handle: '@ahmadalshaer',
-      name: 'أحمد الشاعر',
-      anchor: { x: x + 40, y: y + CELL_H - 80 },
-      officialPath: officialPaths.tiktok,
-    }
-  );
-}
-
-// شبكة: صف أول = default (logoMode=official)، صف ثاني = client-demo (logoMode=generic)
-const defaultOfficial = withOfficialAcks(resolveBrand(DEFAULT_BRAND));
-const clientGeneric = withGeneric(clientDemo);
-
-modes.forEach((mode, i) => {
-  const cx = PAD + i * (CELL_W + GAP);
-  const cy1 = PAD + 80;
-  const cy2 = cy1 + CELL_H + GAP;
-  drawCell(gridCtx, cx, cy1, defaultOfficial, mode);
-  drawCell(gridCtx, cx, cy2, clientGeneric, mode);
+  ctx.direction = 'ltr';
+  const labelX = GRID_W - PAD;
+  ctx.fillText(row.brandLabel, labelX, cy + 20);
+  ctx.fillStyle = '#F8F4E9';
+  ctx.fillText(`logoMode = ${row.logoMode}`, labelX, cy + 52);
 });
 
-const gridBuffer = grid.toBufferSync('png');
-await writeFile(join(OUT_DIR, 'attribution-demo.png'), gridBuffer);
+await writeFile(join(OUT_DIR, 'attribution-demo.png'), grid.toBufferSync('png'));
 console.log(`[preview-attribution] out/attribution-demo.png (${GRID_W}×${GRID_H})`);
 
-// ── ثلاث بطاقات منفردة للمعاينة السريعة ───────────────
-async function renderSingle(mode, brand, filename) {
-  const c = new Canvas(1080, 400);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = brand.colors.surface;
-  ctx.fillRect(0, 0, 1080, 400);
-
-  drawAttribution(
-    ctx,
-    { w: 1080, h: 400 },
-    brand,
-    {
-      platform: 'tiktok',
-      mode,
-      handle: '@ahmadalshaer',
-      name: 'أحمد الشاعر',
-      anchor: 'bottom-right',
-      margin: 80,
-      officialPath: officialPaths.tiktok,
-    }
-  );
-
-  await writeFile(join(OUT_DIR, filename), c.toBufferSync('png'));
-  console.log(`[preview-attribution] out/${filename}`);
-}
-
-const officialClient = withOfficialAcks(clientDemo);
-await renderSingle('handle', officialClient, 'attribution-demo-handle.png');
-await renderSingle('name', officialClient, 'attribution-demo-name.png');
-await renderSingle('both', officialClient, 'attribution-demo-both.png');
-
-// ── بطاقة إضافية للتحقّق من BiDi (@user لاتيني داخل عربي) ─
+// ── بطاقة BiDi (X + prefix + LTR handle داخل عربي) ────
 {
   const c = new Canvas(1080, 400);
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = officialClient.colors.surface;
-  ctx.fillRect(0, 0, 1080, 400);
-  drawAttribution(
-    ctx,
-    { w: 1080, h: 400 },
-    officialClient,
-    {
-      platform: 'x',
-      mode: 'handle',
-      handle: '@sample_handle',
-      anchor: 'bottom-right',
-      margin: 80,
-      officialPath: officialPaths.x,
-      prefixLabel: 'المصدر:',
-    }
-  );
+  const cx = c.getContext('2d');
+  const officialClient = withLogoMode(clientDemo, 'official');
+  cx.fillStyle = officialClient.colors.surface;
+  cx.fillRect(0, 0, 1080, 400);
+  drawAttribution(cx, { w: 1080, h: 400 }, officialClient, {
+    platform: 'x',
+    mode: 'handle',
+    handle: '@sample_handle',
+    anchor: 'bottom-right',
+    margin: 80,
+    officialPath: officialPaths.x,
+    prefixLabel: 'المصدر:',
+  });
   await writeFile(join(OUT_DIR, 'attribution-demo-bidi.png'), c.toBufferSync('png'));
   console.log('[preview-attribution] out/attribution-demo-bidi.png');
 }
 
-console.log('[preview-attribution] done — راجع البطاقات في out/');
+// ── اختبار brand.placement — بلا anchor في الاستدعاء ──
+// الهدف: نتأكّد أن الطبقة تستهلك brand.placement.attribution صحيحاً
+// حين لا يمرّر القالب anchor. نرسم على قماش 1080×1350 (نفس مقاس البطاقات).
+{
+  const c = new Canvas(1080, 1350);
+  const cx = c.getContext('2d');
+  const brand = withLogoMode(clientDemo, 'generic');
+  cx.fillStyle = brand.colors.surface;
+  cx.fillRect(0, 0, 1080, 1350);
+
+  // شبكة إشارية لتوضيح الأنكور (خطوط بيضاء)
+  cx.strokeStyle = 'rgba(255,255,255,0.06)';
+  cx.lineWidth = 1;
+  for (let i = 60; i < 1080; i += 60) {
+    cx.beginPath(); cx.moveTo(i, 0); cx.lineTo(i, 1350); cx.stroke();
+  }
+  for (let i = 60; i < 1350; i += 60) {
+    cx.beginPath(); cx.moveTo(0, i); cx.lineTo(1080, i); cx.stroke();
+  }
+
+  // مرَّة واحدة بلا anchor → brand.placement.attribution
+  drawAttribution(cx, { w: 1080, h: 1350 }, brand, {
+    platform: 'tiktok',
+    mode: 'both',
+    handle: '@ahmadalshaer',
+    name: 'أحمد الشاعر',
+    officialPath: officialPaths.tiktok,
+  });
+
+  // نص توضيحي في الأعلى
+  cx.fillStyle = '#F8F4E9';
+  cx.font = '400 28px "IBM Plex Sans Arabic", sans-serif';
+  cx.textAlign = 'left';
+  cx.textBaseline = 'top';
+  cx.direction = 'ltr';
+  cx.fillText('brand.placement.attribution = {anchor: bottom-right, offset: {60,60}}', 60, 60);
+  cx.fillText('لا anchor في الاستدعاء — الهوية تحكم.', 60, 100);
+
+  await writeFile(join(OUT_DIR, 'attribution-demo-placement.png'), c.toBufferSync('png'));
+  console.log('[preview-attribution] out/attribution-demo-placement.png (1080×1350)');
+}
+
+console.log('[preview-attribution] done');

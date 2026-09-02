@@ -70,9 +70,7 @@
       "platform": "tiktok",
       "mode": "both",
       "handleField": "sourceHandle",
-      "nameField": "sourceName",
-      "anchor": "bottom-right",
-      "margin": 60
+      "nameField": "sourceName"
     }
   ],
   "video": {

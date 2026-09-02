@@ -49,9 +49,7 @@
       "type": "attribution",
       "platform": "instagram",
       "mode": "handle",
-      "handleField": "sourceHandle",
-      "anchor": "bottom-left",
-      "margin": 60
+      "handleField": "sourceHandle"
     }
   ]
 }

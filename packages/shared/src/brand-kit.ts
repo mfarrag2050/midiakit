@@ -342,6 +342,40 @@ export interface BrandAudioTrack {
   readonly licenseAck: boolean;
 }
 
+// ── الموضع في الهوية (Placement) ───────────────────────
+// **مبدأ (2026-09-02):** الهوية تُحدِّد **أين** توضع العناصر — القالب
+// يحدّد **أيّها** يظهر. عند التعارض: الهوية تفوز، إلا إن حمل القالب
+// قيداً صريحاً (مثال: قالب يفرض الإسناد تحت العنوان مباشرة).
+//
+// **التطبيق التدريجي:** الطور الحالي (2026-09-02) يربط الإسناد فقط
+// بهذه البنية. الشعار والشارة والمصدر ينضمّون في مهمة تالية — لكن
+// المخطط مصمَّم ليشملهم من الآن لتفادي إعادة تصميم لاحقة.
+
+export type PlacementAnchor =
+  | 'top-left' | 'top-center' | 'top-right'
+  | 'middle-left'            | 'middle-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+export interface PlacementSpec {
+  readonly anchor: PlacementAnchor;
+  /** إزاحة بكسل من نقطة الحاوية عند الأنكور. الاتجاه بحسب الأنكور:
+   *  bottom-* يُضاف عمودياً للأعلى (سلبي)، top-* للأسفل (موجب)، إلخ.
+   *  الافتراضي الآمن: `{ x: 40, y: 40 }` من الحواف. */
+  readonly offset: { readonly x: number; readonly y: number };
+}
+
+/**
+ * كل العناصر المموضَعة عالمياً في الهوية. `attribution` مطبَّق الآن،
+ * الباقي مُعرَّف في المخطط ويُطبَّق مرحلياً. عند غياب مفتاح: fallback
+ * إلى السلوك السابق (brand.logo.position لـlogo، إلخ).
+ */
+export interface BrandPlacement {
+  readonly logo?: PlacementSpec;
+  readonly badge?: PlacementSpec;
+  readonly attribution?: PlacementSpec;
+  readonly source?: PlacementSpec;
+}
+
 // ── الأصول (Assets pin) ────────────────────────────────
 // راجع docs/13-asset-lifecycle.md.
 // **قاعدة:** تحديث الإصدار قرار العميل، لا تلقائي. تحديث خفي يغيّر
@@ -436,4 +470,10 @@ export interface BrandKit {
    * الاختبارات ⇒ ضمنياً `latest`.
    */
   readonly assets?: BrandAssetsPin;
+  /**
+   * مواضع العناصر — نمط موحّد (docs/03 §placement). الهوية تحدّد أين،
+   * القالب يحدّد أيّها. مطبَّق حالياً على attribution؛ الشعار والشارة
+   * والمصدر ينضمّون تدريجياً.
+   */
+  readonly placement?: BrandPlacement;
 }

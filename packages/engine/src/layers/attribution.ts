@@ -16,7 +16,13 @@
 // تستهلك `PLATFORM_PATH_STRINGS` (مسارات public-domain مقتبسة من
 // simple-icons) وتترك بناء Path2D للمستدعي (env-specific).
 
-import type { BrandKit, PlatformKey, PlatformLogoMode } from '@pf-mediakit/shared';
+import type {
+  BrandKit,
+  PlacementAnchor,
+  PlacementSpec,
+  PlatformKey,
+  PlatformLogoMode,
+} from '@pf-mediakit/shared';
 import type { CanvasDrawContext, Path2DLike } from '../text/draw-line.js';
 import type { CanvasSize } from './image.js';
 import { mapNumerals } from '../text/bidi.js';
@@ -72,11 +78,13 @@ export const PLATFORM_ICON_VIEWBOX = 24;
 
 export type AttributionMode = 'handle' | 'name' | 'both';
 
+/**
+ * نمط الأنكور الموسَّع (2026-09-02) — 9 مواضع + إحداثيات صريحة.
+ * يعتمد `PlacementAnchor` الموحَّد من shared لضمان اتساق مع
+ * `brand.placement.*` (docs/03 §placement).
+ */
 export type AttributionAnchor =
-  | 'top-left'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-right'
+  | PlacementAnchor
   | { readonly x: number; readonly y: number };
 
 export interface AttributionParams {
@@ -86,7 +94,13 @@ export interface AttributionParams {
   readonly handle?: string;
   /** الاسم الظاهر — يُطلب في mode='name' أو 'both'. */
   readonly name?: string;
-  readonly anchor: AttributionAnchor;
+  /**
+   * الأنكور. **اختياري (2026-09-02):** حين يغيب، يُقرأ من
+   * `brand.placement.attribution` (docs/03 §placement) — الهوية تحدّد
+   * الموضع، القالب يحدّد الوجود. تمرير القيمة هنا يُعتبر «قيداً صريحاً
+   * من القالب» ويتقدّم على الهوية.
+   */
+  readonly anchor?: AttributionAnchor;
   /**
    * يتجاوز `brand.attribution.logoMode`. مفيد للقالب الذي يريد إجباراً
    * (مثلاً reel يفضّل 'generic' حتى لو الهوية 'none').
@@ -120,9 +134,25 @@ const LRI = '⁦';
 const PDI = '⁩';
 const isolateLtr = (s: string): string => `${LRI}${s}${PDI}`;
 
+/**
+ * القواعد النصّية (2026-09-02) — الشعار بُعد مستقل. **حين توجد أيقونة**
+ * (`effectiveMode !== 'none'`)، النص يقلّ لأن الأيقونة تُشير للمنصة.
+ * حين لا أيقونة، النص يحمل اسم المنصة نصّياً كاملاً.
+ *
+ * | mode   | مع أيقونة              | بلا أيقونة                        |
+ * | ------ | ---------------------- | ----------------------------------- |
+ * | handle | «@user»                | «تيك توك · @user»                   |
+ * | name   | «أحمد الشاعر»          | «أحمد الشاعر على تيك توك»          |
+ * | both   | «أحمد الشاعر · @user»  | «تيك توك · أحمد الشاعر · @user»     |
+ *
+ * المبرِّر: أيقونة + اسم المنصة نصّياً = تكرار بصري (rule c);
+ * أيقونة + وحدات ثلاث في both = تزاحم مساحة (rule b); handle مع أيقونة
+ * فقط = مقبض بلا سياق يكفي لأنّ الأيقونة كافية.
+ */
 function buildAttributionText(
   brand: BrandKit,
-  params: AttributionParams
+  params: AttributionParams,
+  showIcon: boolean
 ): string {
   const style = brand.attribution.platformNameStyle;
   const sep = brand.attribution.separator;
@@ -139,20 +169,26 @@ function buildAttributionText(
   switch (params.mode) {
     case 'handle': {
       const h = params.handle ? wrapHandle(params.handle) : '';
-      body = `${platformName}${sep}${h}`;
+      body = showIcon ? h : `${platformName}${sep}${h}`;
       break;
     }
     case 'name': {
-      // «أحمد الشاعر على تيك توك» / "Ahmed on TikTok" — أدبيّ أكثر من الفاصل.
       const n = params.name ?? '';
-      const connector = style === 'ar' ? ' على ' : ' on ';
-      body = `${n}${connector}${platformName}`;
+      if (showIcon) {
+        body = n;
+      } else {
+        // «أحمد الشاعر على تيك توك» / "Ahmed on TikTok" — أدبيّ.
+        const connector = style === 'ar' ? ' على ' : ' on ';
+        body = `${n}${connector}${platformName}`;
+      }
       break;
     }
     case 'both': {
       const n = params.name ?? '';
       const h = params.handle ? wrapHandle(params.handle) : '';
-      body = `${platformName}${sep}${n}${sep}${h}`;
+      body = showIcon
+        ? `${n}${sep}${h}`
+        : `${platformName}${sep}${n}${sep}${h}`;
       break;
     }
   }
@@ -208,9 +244,18 @@ function drawOfficialLogo(
 }
 
 /**
- * يرسم أيقونة عامة محايدة: دائرة مملوءة + رمز داخلي بسيط
- * (⏵ لـ tiktok/youtube، @ لـ x/instagram/facebook/telegram).
- * لا علامة تجارية أصلاً. اللون = brand.colors.text.
+ * يرسم أيقونة عامة محايدة: **سهم خارج إطار** (external-link glyph)
+ * — دلالة إحالة لمصدر خارجي، النمط المألوف في الصحافة والويكيبيديا.
+ * لا علامة تجارية، لا خلط مع أزرار التشغيل (▶ سابقاً كان يوحي بفيديو).
+ *
+ * البناء الهندسي (ضمن مربع iconSize × iconSize):
+ *   1. مربع محدَّد بلا حشو (frame) — الحافّتان اليسرى والسفلى فقط لتوحي
+ *      بإطار «هنا»، والحافّتان اليمنى العليا مفتوحتان.
+ *   2. سهم مقصف يتّجه من داخل المربع خارجاً إلى الأعلى اليمين (الشمال
+ *      الشرقي) — العُنق قطعة مستقيمة، والرأس مثلث صغير.
+ *
+ * اللون = brand.colors.text (لا خلفية دائرة — نتائج مسطّحة أنسب بصرياً
+ * مع أشكال شعارات simple-icons المستوية).
  */
 function drawGenericIcon(
   ctx: CanvasDrawContext,
@@ -218,49 +263,91 @@ function drawGenericIcon(
   y: number,
   iconSize: number,
   brand: BrandKit,
-  platform: PlatformKey
+  _platform: PlatformKey
 ): void {
-  const cx = x + iconSize / 2;
-  const cy = y + iconSize / 2;
-  const r = iconSize / 2;
+  const stroke = Math.max(2, Math.round(iconSize * 0.09));
+  const pad = Math.round(iconSize * 0.14);
+  // «الإطار الصغير» — سُدس ثلاث ربعية من مربع iconSize
+  const frameSize = Math.round(iconSize * 0.58);
+  const frameX = x + pad;
+  const frameY = y + iconSize - pad - frameSize;
 
-  // دائرة خارجية (خلفية بلون العلامة الصريحة للجدار الخلفي)
   ctx.save();
   ctx.fillStyle = brand.colors.text;
-  ctx.beginPath();
-  // لا arc في CanvasDrawContext — نبنيها بأربعة أرباع arcTo.
-  // بدلاً منها: مستطيل مدوّر بدرجة قصوى = دائرة عمليّاً.
-  const rr = r; // radius = half of iconSize
-  if (typeof ctx.roundRect === 'function') {
-    ctx.roundRect(x, y, iconSize, iconSize, rr);
-  } else {
-    // بناء يدوي (نفس أسلوب badge)
-    ctx.moveTo(cx, y);
-    ctx.arcTo(x + iconSize, y, x + iconSize, y + iconSize, rr);
-    ctx.arcTo(x + iconSize, y + iconSize, x, y + iconSize, rr);
-    ctx.arcTo(x, y + iconSize, x, y, rr);
-    ctx.arcTo(x, y, x + iconSize, y, rr);
-    ctx.closePath();
+
+  // (١) الإطار — نرسمه كمستطيلين رفيعين (يسار + أسفل) بدل «U»-shape
+  // كامل. الوضوح أعلى مع sizes بين 32-64 من رسم L-قطعتين.
+  //
+  //   الحافّة اليسرى:
+  ctx.fillRect(frameX, frameY, stroke, frameSize);
+  //   الحافّة السفلى:
+  ctx.fillRect(frameX, frameY + frameSize - stroke, frameSize, stroke);
+  //   نصف حافّة عليا (ينكسر عند نقطة خروج السهم):
+  const topBreak = Math.round(frameSize * 0.5);
+  ctx.fillRect(frameX, frameY, topBreak, stroke);
+  //   نصف حافّة يمنى (ينكسر عند نقطة خروج السهم):
+  const rightBreak = Math.round(frameSize * 0.5);
+  ctx.fillRect(
+    frameX + frameSize - stroke,
+    frameY + frameSize - rightBreak,
+    stroke,
+    rightBreak
+  );
+
+  // (٢) عُنق السهم — من داخل المربع نحو الأعلى-اليمين (NE).
+  //     نستعمل ctx.translate + rotate لرسم مستطيل مائل يمثّل الخط،
+  //     ثم مثلث الرأس منفصلاً.
+  const shaftStartX = frameX + Math.round(frameSize * 0.35);
+  const shaftStartY = frameY + Math.round(frameSize * 0.65);
+  const shaftEndX = x + iconSize - pad;
+  const shaftEndY = y + pad;
+
+  ctx.save();
+  ctx.translate(shaftStartX, shaftStartY);
+  const dx = shaftEndX - shaftStartX;
+  const dy = shaftEndY - shaftStartY;
+  const len = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx);
+  // بدلاً من rotate (غير مصرَّح به في CanvasDrawContext)، نستعمل
+  // transform يدوية: نُخفف — نرسم خطاً بمستطيلين أفقي/عمودي +
+  // بقعة ديناميكية. الأبسط: نرسم الخط بمستطيلات صغيرة على طوله.
+  const steps = Math.max(2, Math.round(len / stroke));
+  for (let i = 0; i < steps; i++) {
+    const px = (dx * i) / steps;
+    const py = (dy * i) / steps;
+    ctx.fillRect(px - stroke / 2, py - stroke / 2, stroke, stroke);
   }
+  // رأس السهم — مثلث مبني كمثلث RIGHT + TOP عند نقطة النهاية
+  //   نبني رأس السهم من ثلاث نقاط:
+  //     نقطة رأس السهم (النهاية)، ونقطتان تكوّنان القاعدة.
+  const headLen = Math.max(6, Math.round(iconSize * 0.22));
+  // اتجاه القاعدة عمودي على العُنق (nx, ny)
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = -uy; // 90° CCW
+  const ny = ux;
+  const baseCX = dx - ux * headLen;
+  const baseCY = dy - uy * headLen;
+  const halfWidth = headLen * 0.6;
+  const p1x = dx;
+  const p1y = dy;
+  const p2x = baseCX + nx * halfWidth;
+  const p2y = baseCY + ny * halfWidth;
+  const p3x = baseCX - nx * halfWidth;
+  const p3y = baseCY - ny * halfWidth;
+  ctx.beginPath();
+  ctx.moveTo(p1x, p1y);
+  ctx.lineTo(p2x, p2y);
+  ctx.lineTo(p3x, p3y);
+  ctx.closePath();
   ctx.fill();
-
-  // رمز داخلي بلون خلفية السطح (`surface`) — يظهر بارزاً من الدائرة
-  ctx.fillStyle = brand.colors.surface;
-  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
-  const glyphSize = Math.round(iconSize * 0.55);
-  ctx.font = `700 ${glyphSize}px ${family}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.direction = 'ltr';
-
-  const isVideo =
-    platform === 'tiktok' || platform === 'youtube';
-  const glyph = isVideo ? '▶' : '@';
-  ctx.fillText(glyph, cx, cy);
   ctx.restore();
+
+  ctx.restore();
+  void angle;
 }
 
-// ── حساب الموضع (anchor → x/y) ────────────────────────
+// ── حساب الموضع (anchor + offset → x/y) ───────────────
 
 interface Rect {
   readonly x: number;
@@ -269,30 +356,94 @@ interface Rect {
   readonly h: number;
 }
 
+/**
+ * تحويل الأنكور التسعي + إزاحة إلى مستطيل x/y/w/h.
+ *
+ * **الاصطلاح على الإزاحة:**
+ *   • top-*    : `y = offset.y` (من الأعلى إلى الأسفل)
+ *   • bottom-* : `y = size.h - offset.y - h` (من الأسفل إلى الأعلى)
+ *   • middle-* : `y = (size.h - h) / 2` (مُتجاهَل offset.y)
+ *   • left-*   : `x = offset.x`
+ *   • right-*  : `x = size.w - offset.x - totalW`
+ *   • center-* : `x = (size.w - totalW) / 2` (مُتجاهَل offset.x)
+ *
+ * الإحداثيات الصريحة `{x, y}` تُستعمل كما هي (لا offset إضافي).
+ */
 function anchorRect(
   anchor: AttributionAnchor,
+  offset: { x: number; y: number },
   size: CanvasSize,
   totalW: number,
-  h: number,
-  margin: number
+  h: number
 ): Rect {
   if (typeof anchor !== 'string') {
     return { x: anchor.x, y: anchor.y, w: totalW, h };
   }
-  const rightX = size.w - margin - totalW;
-  const leftX = margin;
-  const topY = margin;
-  const bottomY = size.h - margin - h;
-  switch (anchor) {
-    case 'top-left':
-      return { x: leftX, y: topY, w: totalW, h };
-    case 'top-right':
-      return { x: rightX, y: topY, w: totalW, h };
-    case 'bottom-left':
-      return { x: leftX, y: bottomY, w: totalW, h };
-    case 'bottom-right':
-      return { x: rightX, y: bottomY, w: totalW, h };
+
+  const [vert, horiz] = anchor.split('-') as [
+    'top' | 'middle' | 'bottom',
+    'left' | 'center' | 'right'
+  ];
+
+  let x: number;
+  switch (horiz) {
+    case 'left':
+      x = offset.x;
+      break;
+    case 'right':
+      x = size.w - offset.x - totalW;
+      break;
+    case 'center':
+    default:
+      x = (size.w - totalW) / 2;
+      break;
   }
+
+  let y: number;
+  switch (vert) {
+    case 'top':
+      y = offset.y;
+      break;
+    case 'bottom':
+      y = size.h - offset.y - h;
+      break;
+    case 'middle':
+    default:
+      y = (size.h - h) / 2;
+      break;
+  }
+
+  return { x, y, w: totalW, h };
+}
+
+/**
+ * حسم الأنكور الفعّال: القيمة الصريحة في `params.anchor` (قيد القالب)
+ * تتقدّم على `brand.placement.attribution` (الهوية). إن غاب الاثنان،
+ * الافتراضي `bottom-right` بإزاحة `40, 40`.
+ */
+function resolveAnchor(
+  brand: BrandKit,
+  params: AttributionParams
+): { anchor: AttributionAnchor; offset: { x: number; y: number } } {
+  const placement: PlacementSpec | undefined = brand.placement?.attribution;
+  if (params.anchor !== undefined) {
+    // القيد الصريح — استعمل الإزاحة من الهوية إن كانت متاحة، وإلا افتراضي.
+    const offset =
+      placement !== undefined
+        ? { x: placement.offset.x, y: placement.offset.y }
+        : { x: params.margin ?? 40, y: params.margin ?? 40 };
+    return { anchor: params.anchor, offset };
+  }
+  if (placement !== undefined) {
+    return {
+      anchor: placement.anchor,
+      offset: { x: placement.offset.x, y: placement.offset.y },
+    };
+  }
+  return {
+    anchor: 'bottom-right',
+    offset: { x: params.margin ?? 40, y: params.margin ?? 40 },
+  };
 }
 
 // ── الدالة الرئيسية ────────────────────────────────────
@@ -305,15 +456,13 @@ export function drawAttribution(
 ): void {
   const effectiveMode = resolveEffectiveLogoMode(brand, params);
   const iconSize = brand.attribution.iconSize;
+  const showIcon = effectiveMode !== 'none';
 
-  // نصّ الإسناد. لا preprocessBidi هنا: نستدعي ctx.fillText مرّة واحدة
-  // على السطر الكامل، فـCanvas يطبّق Unicode Bidi تلقائياً — المقبض
-  // اللاتيني `@user` يبقى بترتيبه الصحيح داخل السياق العربي بدون
-  // تدخّل. تأكيد الاختيار: طبقة source (render.ts:822) وkicker
-  // (render.ts:316) تفعلان المثل. preprocessBidi يُستعمل فقط في
-  // prepareHeadline لأنه يغذّي parseTokens (رسم كلمة كلمة).
-  // نطبّق mapNumerals فقط (تحويل 123 ↔ ١٢٣ إن طلبت الهوية).
-  const rawText = buildAttributionText(brand, params);
+  // نصّ الإسناد — القواعد الجديدة (2026-09-02) تفصل الشعار عن النص:
+  // showIcon يغيّر شكل الجملة ليتجنّب التكرار والتزاحم.
+  const rawText = buildAttributionText(brand, params, showIcon);
+  // لا preprocessBidi — ctx.fillText يطبّق Unicode Bidi تلقائياً على سطر
+  // كامل. LRI/PDI حول المقبض (داخل buildAttributionText) يحسم التصاق `@`.
   const bidiText = mapNumerals(rawText, brand.typography.bidi.numerals);
 
   // قياس النص (نستعمل brand.typography.source للحجم + وزن).
@@ -323,13 +472,12 @@ export function drawAttribution(
   const textW = ctx.measureText(bidiText).width;
 
   // العرض الكلّي = أيقونة (إن وُجدت) + فراغ + نصّ.
-  const showIcon = effectiveMode !== 'none';
   const gap = showIcon ? Math.round(iconSize * 0.3) : 0;
   const totalW = (showIcon ? iconSize + gap : 0) + textW;
   const totalH = Math.max(iconSize, src.size);
 
-  const margin = params.margin ?? 40;
-  const rect = anchorRect(params.anchor, size, totalW, totalH, margin);
+  const { anchor, offset } = resolveAnchor(brand, params);
+  const rect = anchorRect(anchor, offset, size, totalW, totalH);
 
   // ترتيب العناصر بحسب اتجاه الهوية:
   //   • RTL: الأيقونة على اليمين، النصّ يمتدّ إلى اليسار.

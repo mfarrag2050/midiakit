@@ -164,6 +164,13 @@
 
   "audio": [],
 
+  "placement": {
+    "logo":        { "anchor": "bottom-left",  "offset": { "x": 60, "y": 60 } },
+    "badge":       { "anchor": "top-right",    "offset": { "x": 60, "y": 60 } },
+    "attribution": { "anchor": "bottom-right", "offset": { "x": 60, "y": 60 } },
+    "source":      { "anchor": "bottom-right", "offset": { "x": 60, "y": 150 } }
+  },
+
   "attribution": {
     "logoMode": "generic",
     "platformNameStyle": "ar",

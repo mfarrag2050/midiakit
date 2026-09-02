@@ -186,7 +186,12 @@ export interface AttributionLayer extends LayerCommon {
   readonly handleField?: string;
   /** مفتاح `content` للاسم (مطلوب حين mode='name'|'both'). */
   readonly nameField?: string;
-  readonly anchor: AttributionAnchor;
+  /**
+   * الأنكور. **اختياري (2026-09-02):** حين يغيب، تُقرأ القيمة من
+   * `brand.placement.attribution` — مبدأ «الهوية تحدّد أين». تمريره
+   * يعتبر «قيداً صريحاً من القالب» ويتقدّم على الهوية.
+   */
+  readonly anchor?: AttributionAnchor;
   /** بادئة نصّية اختيارية (مثل «المصدر:»). */
   readonly prefixLabel?: string;
   /**
@@ -194,7 +199,7 @@ export interface AttributionLayer extends LayerCommon {
    * الاستعمال المتوقّع: reel يفرض 'generic' لتماسك بصري حتى مع هوية بلا شعار.
    */
   readonly logoModeOverride?: AttributionLogoModeOverride;
-  /** هامش عن الحواف عند الأنكور الاسمي (px، افتراضي 40). */
+  /** هامش عن الحواف عند الأنكور الصريح — يتجاوز offset الهوية. */
   readonly margin?: number;
 }
 

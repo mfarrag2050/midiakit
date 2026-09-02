@@ -855,7 +855,8 @@ function runAttribution(
   drawAttribution(args.ctx, args.size, args.brand, {
     platform: layer.platform,
     mode: layer.mode,
-    anchor: layer.anchor,
+    // anchor: مرَّر فقط حين يحمله القالب — الغياب = دَع الهوية تحدّد.
+    ...(layer.anchor !== undefined && { anchor: layer.anchor }),
     ...(handle !== undefined && { handle }),
     ...(name !== undefined && { name }),
     ...(layer.prefixLabel !== undefined && { prefixLabel: layer.prefixLabel }),
