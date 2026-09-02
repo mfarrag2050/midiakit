@@ -381,6 +381,33 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 (الذي تمنعه القاعدة) و«الكسر عند حد رابطة» (الذي تسمح به). RSS لا يميّز
 لأنه بلا وسم كيانات.
 
+### التصنيف النهائي لتغييرات التقسيم على 265 عنوان RSS (2026-09-02)
+
+بعد تصحيح مصنّف `find-demo-candidates.mjs` (تجريد الكشيدة قبل المقارنة
++ إضافة idafa/bare-bare/neutral إلى knownRules — درس L-11):
+
+```
+identical         : 230
+visual-only       :  12   (نفس word-to-line، اختلاف boxW/كشيدة فقط — لا تغيّر دلالي)
+genuine-reflow    :  23   (تعيين word-to-line تغيّر فعلاً)
+```
+
+**توزيع الـ23 حسب القاعدة:**
+
+| القاعدة | العدد | العقوبة |
+|---|---|---|
+| particle    | 13 | BREAK_INFINITY |
+| bare-bare   |  5 | BREAK_MEDIUM (400) |
+| place-pair  |  2 | BREAK_STRONG (1000) |
+| number      |  2 | BREAK_INFINITY |
+| title-name  |  1 | BREAK_STRONG (1000) |
+| idafa       |  0 | — |
+| unknown     |  0 | — |
+
+**كل قرار كسر مُحدَّد بقاعدة موثّقة في `semantic-break.ts`.** لا حالة
+بلا سبب معروف. الظاهرة الأولى (12 «unknown») كانت خطأً في المصنّف لا
+في النظام — L-11.
+
 ## التشكيل
 - ☐ دمج نموذج مفتوح في `apps/renderer`
 - ☐ `measuredLineHeight` من `actualBoundingBoxAscent`

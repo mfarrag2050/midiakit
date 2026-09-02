@@ -1,13 +1,17 @@
-// scripts/find-demo-candidates.mjs — يمشط 265 عنوان RSS ويصنّفها:
-// (١) أي عنوان تغيّر تقسيمه بين off/on
-// (٢) ما القاعدة التي تدخّلت عند الحد المُغيَّر
-// (٣) درجة وضوح الفرق (كم من الأسطر تغيّرت)
+// scripts/find-demo-candidates.mjs — يمشط عناوين RSS ويصنّفها:
+// (١) هل تغيّر التقسيم فعلاً (word-to-line) بين off/on؟
+// (٢) ما القاعدة التي تدخّلت عند كل حدّ مُغيَّر؟
+// (٣) درجة وضوح الفرق للعرض التجاري.
 //
-// المخرج: قائمة مرشّحين مفروزين حسب النوع (particle · place · entity · title)،
-// مع أوّل 5 مرشّحين لكل نوع.
+// **درس L-11 (2026-09-02):** المقارنة القديمة `off.lines.join(' | ') ===
+// on.lines.join(' | ')` كانت تشمل محارف الكشيدة (U+0640) — عناوين نفس
+// word-to-line تماماً لكن بتوزيع كشيدة مختلف كانت تُحسب «تغيّرت»، مما
+// أنتج فئة كاذبة `unknown`. الحل: تجريد الكشيدة قبل المقارنة، وفصل
+// المخرج إلى `visual-only` (نفس التوزيع) و `genuine-reflow` (تغيّر فعلي).
+// المخرج: قائمة مرشّحين مفروزين حسب النوع (particle · place · entity ·
+// title · compound-name · conjunction · number · idafa · bare-bare · neutral).
 
 import { Canvas, FontLibrary } from 'skia-canvas';
-import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,7 +45,7 @@ const titles = JSON.parse(readFileSync(join(ROOT, 'data/external/titles.json'), 
 const baseLex = loadDefaultLexicon();
 const extLex = extendLexicon(baseLex, { titles, places, entities });
 
-// ── القوائم كأزواج لتصنيف السبب ──────────────────
+// ── فهارس تصنيف السبب ──────────────────────────
 const titleSet = new Set(titles.map((s) => normalizeArabic(s)));
 
 function pairsOf(names) {
@@ -54,6 +58,11 @@ function pairsOf(names) {
 }
 const placePairs = pairsOf(places);
 const entityPairs = pairsOf(entities);
+
+function startsWithAl(s) {
+  const n = normalizeArabic(s);
+  return n.length > 2 && n.startsWith('ال');
+}
 
 // ── الهويتان ─────────────────────────────────────
 const brandOff = resolveBrand({
@@ -68,6 +77,9 @@ const brandOn = resolveBrand(DEFAULT_BRAND); // enabled=true افتراضياً
 const headlines = JSON.parse(
   readFileSync(join(ROOT, 'data/external/rss-headlines.json'), 'utf8')
 ).headlines;
+
+/** تجريد الكشيدة (U+0640) قبل أي مقارنة. */
+const stripKashida = (s) => s.replace(/ـ/g, '');
 
 function measure(headline, brand, lexicon) {
   const canvas = new Canvas(SIZE.w, SIZE.h);
@@ -84,63 +96,85 @@ function measure(headline, brand, lexicon) {
   });
   const h = plan.headline;
   if (!h) return null;
-  const lines = h.linesJustified.map((line) => line.map((t) => t.text ?? '').join(' '));
-  return { fs: h.fontSize, lines };
+  // أسطر مُنظَّفة من الكشيدة — للمقارنة الدلالية.
+  const linesClean = h.linesJustified.map((line) =>
+    stripKashida(line.map((t) => t.text ?? '').join(' '))
+  );
+  // أسطر خام — للعرض في التقرير.
+  const linesRaw = h.linesJustified.map((line) =>
+    line.map((t) => t.text ?? '').join(' ')
+  );
+  return { fs: h.fontSize, chosenBoxW: h.chosenBoxW, linesClean, linesRaw };
 }
 
-// ── قوائم فحص القاعدة عند حدّ ─────────────────
-// نأخذ (last word of prev-line, first word of next-line) ونصنّف:
-//   • particle: prev كلمة نحوية ملازمة (حرف جر، ناسخ، نافي، استفهام...)
-//   • place: (prev, curr) في placePairs
-//   • entity: (prev, curr) في entityPairs
-//   • title: prev في titleSet
-//   • compound-name: prev من عبد/أبو/ابن/آل/... (isCompoundNamePrefix)
-//   • idafa-bare-def, bare-bare — عام
+// ── تصنيف كامل مطابق لترتيب فحص `semantic-break.ts` ─────
+// يشمل الآن idafa و bare-bare و neutral — لا فئة «other» فارغة.
 function classifyBoundary(prev, curr) {
   const p = normalizeArabic(prev);
   const c = normalizeArabic(curr);
+  if (!p || !c) return 'edge';
   const pair = `${p}|${c}`;
-  if (placePairs.has(pair)) return 'place';
-  if (entityPairs.has(pair)) return 'entity';
-  if (titleSet.has(p)) return 'title';
+  if (placePairs.has(pair)) return 'place-pair';
+  if (entityPairs.has(pair)) return 'entity-pair';
+  if (titleSet.has(p)) return 'title-name';
   if (baseLex.isCompoundNamePrefix(p)) return 'compound-name';
   if (baseLex.isInseparableParticle(p)) return 'particle';
   if (baseLex.isNumber(p)) return 'number';
   if (baseLex.isConjunction(p)) return 'conjunction';
-  return 'other';
+  if (!startsWithAl(p) && startsWithAl(c)) return 'idafa';
+  if (!startsWithAl(p) && !startsWithAl(c)) return 'bare-bare';
+  return 'neutral';
 }
 
-// حدود سطور off = الكلمات في نهاية كل سطر (ما عدا الأخير)
-// نقارن بحدود on؛ فرق يعني إما إزالة حدّ off أو إضافة حدّ جديد.
-function boundariesOf(lines) {
-  // نبني قائمة (endIdx, endWord) — endIdx = فهرس آخر كلمة في السطر
-  // كتوكن ضمن العنوان كاملاً.
+// كل هذه قواعد موثّقة في semantic-break.ts — لا فئة `other`.
+const KNOWN_RULES = new Set([
+  'place-pair', 'entity-pair', 'title-name', 'compound-name',
+  'particle', 'number', 'conjunction', 'idafa', 'bare-bare', 'neutral',
+  'edge',
+]);
+
+/** حدود سطور = فهرس آخر كلمة في كل سطر (ما عدا الأخير). */
+function boundariesOf(linesClean) {
   const out = [];
   let idx = -1;
-  for (let li = 0; li < lines.length - 1; li++) {
-    const words = lines[li].split(/\s+/).filter(Boolean);
+  for (let li = 0; li < linesClean.length - 1; li++) {
+    const words = linesClean[li].split(/\s+/).filter(Boolean);
     idx += words.length;
     out.push(idx);
   }
   return out;
 }
 
-// نجمع لكل عنوان: هل تغيّر التقسيم؟ ما القواعد التي شاركت؟
 function analyze(headline) {
   const off = measure(headline, brandOff, undefined);
   const on = measure(headline, brandOn, extLex);
   if (!off || !on) return null;
-  const same = off.lines.join(' | ') === on.lines.join(' | ');
-  if (same) return { headline, same: true };
 
+  const cleanSame = off.linesClean.join(' | ') === on.linesClean.join(' | ');
+  const rawSame = off.linesRaw.join(' | ') === on.linesRaw.join(' | ');
+
+  if (rawSame) return { headline, category: 'identical' };
+
+  // نفس النص بعد تجريد الكشيدة ⇒ نفس word-to-line ⇒ visual-only.
+  if (cleanSame) {
+    return {
+      headline,
+      category: 'visual-only',
+      fsOff: off.fs,
+      fsOn: on.fs,
+      boxWOff: off.chosenBoxW,
+      boxWOn: on.chosenBoxW,
+      lines: off.linesClean, // كلاهما متطابق بعد التجريد
+    };
+  }
+
+  // نص مختلف بعد التجريد ⇒ تعيين word-to-line تغيّر فعلاً.
   const words = headline.split(/\s+/).filter(Boolean);
-  const bOff = new Set(boundariesOf(off.lines));
-  const bOn = new Set(boundariesOf(on.lines));
+  const bOff = new Set(boundariesOf(off.linesClean));
+  const bOn = new Set(boundariesOf(on.linesClean));
+  const removed = [...bOff].filter((b) => !bOn.has(b));
+  const added = [...bOn].filter((b) => !bOff.has(b));
 
-  const removed = [...bOff].filter((b) => !bOn.has(b)); // موجود في off وليس في on
-  const added = [...bOn].filter((b) => !bOff.has(b));   // موجود في on وليس في off
-
-  // كل حدّ off مُزال يعني: on رفض الكسر هناك — نصنّف السبب من (words[b], words[b+1])
   const rulesRejected = [];
   for (const b of removed) {
     const prev = words[b];
@@ -149,63 +183,103 @@ function analyze(headline) {
     rulesRejected.push({ boundary: b, prev, curr, rule: classifyBoundary(prev, curr) });
   }
 
+  // القاعدة الأساسية = أول قاعدة رُفضت غير-عامة (neutral آخر مطاف).
+  // ترتيب الأولوية للعرض: الأخصّ قبل الأعمّ (نفس منطق L-08).
+  const priority = [
+    'place-pair', 'entity-pair', 'title-name', 'compound-name',
+    'particle', 'number', 'conjunction', 'idafa', 'bare-bare', 'neutral', 'edge',
+  ];
+  const primaryRule =
+    rulesRejected
+      .slice()
+      .sort((a, b) => priority.indexOf(a.rule) - priority.indexOf(b.rule))[0]?.rule
+    ?? 'no-removed-boundary'; // حالة نظرية: reflow بلا إزالة حد — إضافة فقط
+
   return {
     headline,
-    same: false,
+    category: 'genuine-reflow',
     fsOff: off.fs,
     fsOn: on.fs,
-    off: off.lines,
-    on: on.lines,
+    boxWOff: off.chosenBoxW,
+    boxWOn: on.chosenBoxW,
+    off: off.linesClean,
+    on: on.linesClean,
     removedBoundaries: removed,
     addedBoundaries: added,
     rulesRejected,
-    // نوع أساسي = أول قاعدة رُفضت غير-عام
-    primaryRule: rulesRejected.find((r) => r.rule !== 'other')?.rule
-      ?? rulesRejected[0]?.rule
-      ?? 'unknown',
+    primaryRule,
   };
 }
 
 // ── التنفيذ ─────────────────────────────────────
-const changed = [];
+const visualOnly = [];
+const genuine = [];
+let identical = 0;
 for (const item of headlines) {
   const a = analyze(item.headline);
-  if (!a || a.same) continue;
-  changed.push({ ...a, source: item.source });
+  if (!a) continue;
+  if (a.category === 'identical') { identical++; continue; }
+  const enriched = { ...a, source: item.source };
+  if (a.category === 'visual-only') visualOnly.push(enriched);
+  else genuine.push(enriched);
 }
 
-// فرز ضمن كل صنف: عناوين قصيرة (أوضح بصرياً) وحدّ واحد مُزال (أنقى دلالياً)
+// فرز genuine حسب القاعدة للعرض
 const byRule = {};
-for (const c of changed) {
-  const key = c.primaryRule;
-  (byRule[key] ??= []).push(c);
+for (const c of genuine) {
+  (byRule[c.primaryRule] ??= []).push(c);
 }
 for (const key of Object.keys(byRule)) {
   byRule[key].sort((a, b) => {
-    // أولاً: القرارات المُميَّزة عدد = 1
-    const removedA = a.removedBoundaries.length;
-    const removedB = b.removedBoundaries.length;
-    if (removedA !== removedB) return removedA - removedB;
-    // ثم: العنوان الأقصر — أوضح للعرض
+    const ra = a.removedBoundaries.length;
+    const rb = b.removedBoundaries.length;
+    if (ra !== rb) return ra - rb;
     return a.headline.length - b.headline.length;
   });
 }
 
-console.log(`\nمجموع تغيّرات التقسيم: ${changed.length} من ${headlines.length}`);
-console.log('التوزّع حسب القاعدة:');
-for (const [rule, items] of Object.entries(byRule).sort((a, b) => b[1].length - a[1].length)) {
-  console.log(`  ${rule.padEnd(15)} : ${items.length}`);
+// ── التقرير ────────────────────────────────────
+console.log(`\nإجمالي العناوين المفحوصة: ${headlines.length}`);
+console.log(`  identical         : ${identical}`);
+console.log(`  visual-only       : ${visualOnly.length}  (نفس word-to-line، اختلاف boxW/كشيدة فقط — لا تغيّر دلالي)`);
+console.log(`  genuine-reflow    : ${genuine.length}  (تعيين word-to-line تغيّر فعلاً)`);
+
+console.log(`\n════ توزيع genuine-reflow حسب القاعدة (${genuine.length}) ════`);
+const displayOrder = [
+  'particle', 'bare-bare', 'place-pair', 'entity-pair',
+  'title-name', 'number', 'conjunction', 'compound-name',
+  'idafa', 'neutral', 'no-removed-boundary',
+];
+for (const rule of displayOrder) {
+  const list = byRule[rule];
+  if (!list?.length) continue;
+  console.log(`  ${rule.padEnd(22)} : ${list.length}`);
+}
+// أي فئة غير متوقّعة (لن تحدث بعد الإصلاح، لكن نُبقي التحقق):
+const unexpected = Object.keys(byRule).filter((k) => !displayOrder.includes(k));
+if (unexpected.length) {
+  console.log(`\n⚠ فئات غير متوقّعة (تحقّق من classifyBoundary):`);
+  for (const rule of unexpected) console.log(`  ${rule.padEnd(22)} : ${byRule[rule].length}`);
 }
 
-console.log('\n\n══════ أوّل 5 مرشّحين لكل قاعدة ══════');
-for (const rule of ['particle', 'place', 'entity', 'title', 'compound-name', 'conjunction', 'number', 'other']) {
+console.log('\n\n════ أوّل 5 مرشّحين لكل قاعدة (للعرض التجاري) ════');
+for (const rule of displayOrder) {
   const list = byRule[rule] ?? [];
   if (list.length === 0) continue;
   console.log(`\n── ${rule.toUpperCase()} (${list.length}) ──`);
   for (const c of list.slice(0, 5)) {
     console.log(`  [${c.source}] "${c.headline}"`);
-    console.log(`    off (fs=${c.fsOff}): ${c.off.join(' | ')}`);
-    console.log(`    on  (fs=${c.fsOn}): ${c.on.join(' | ')}`);
+    console.log(`    off (fs=${c.fsOff}, boxW=${c.boxWOff}): ${c.off.join(' | ')}`);
+    console.log(`    on  (fs=${c.fsOn}, boxW=${c.boxWOn}): ${c.on.join(' | ')}`);
     console.log(`    القاعدة: ${c.rulesRejected.map((r) => `${r.rule}(${r.prev}→${r.curr})`).join(', ')}`);
+  }
+}
+
+// عيّنة صغيرة من visual-only للسجلّ — لا لعرض تجاري
+if (visualOnly.length > 0) {
+  console.log(`\n\n════ عيّنة visual-only (${visualOnly.length}) — للسجلّ، لا للعرض ════`);
+  for (const c of visualOnly.slice(0, 3)) {
+    console.log(`  [${c.source}] "${c.headline}"`);
+    console.log(`    fs=${c.fsOff}/${c.fsOn}  boxW=${c.boxWOff}/${c.boxWOn}  (نفس الأسطر)`);
   }
 }
