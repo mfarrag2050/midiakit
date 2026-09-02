@@ -29,8 +29,8 @@ import { BREAKING } from '@pf-mediakit/templates';
 import {
   resolveBrand,
   buildRenderPlan,
-  drawAt,           // @legacy — لقياس الأداء المرجعي
-  timelineV2,
+drawTimelineAt,
+templateToTimeline,
 } from '@pf-mediakit/engine';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -182,7 +182,7 @@ console.log(`\n[gate-media] رندر مسار الوسائط v2 — ${TOTAL}s ×
 const framesMedia = Math.ceil(TOTAL * FPS);
 const outMedia = join(OUT_DIR, 'render-media.mp4');
 const rMedia = await renderToMp4(
-  (ctx, t) => timelineV2.drawTimelineAt({
+  (ctx, t) => drawTimelineAt({
     ctx, size: SIZE, timeline, brand, template: BREAKING,
     content: {}, assets, t,
   }),
@@ -201,17 +201,22 @@ const planBr = buildRenderPlan({
   ctx: new Canvas(SIZE.w, SIZE.h).getContext('2d'),
   size: SIZE, template: BREAKING, brand, content: CONTENT_BR, fps: FPS,
 });
-const framesBr = Math.ceil(planBr.timeline.duration * FPS);
+const brTimeline = templateToTimeline({
+  template: BREAKING, brand, content: CONTENT_BR,
+  headlineLineCount: planBr.headline?.linesJustified.length ?? 1,
+  fps: FPS,
+});
+const framesBr = Math.ceil(brTimeline.duration * FPS);
 const outBr = join(OUT_DIR, 'render-breaking.mp4');
 const rBr = await renderToMp4(
-  (ctx, t) => drawAt({
-    ctx, size: SIZE, template: BREAKING, brand,
-    content: CONTENT_BR, t, plan: planBr,
+  (ctx, t) => drawTimelineAt({
+    ctx, size: SIZE, timeline: brTimeline, brand, template: BREAKING,
+    content: CONTENT_BR, headlinePrep: planBr.headline, t,
   }),
   framesBr,
   outBr
 );
-console.log(`  ✓ ${outBr}  ${(rBr.size/1024).toFixed(0)}KB  ${rBr.elapsed.toFixed(2)}s  (${framesBr} إطار / ${planBr.timeline.duration}s)`);
+console.log(`  ✓ ${outBr}  ${(rBr.size/1024).toFixed(0)}KB  ${rBr.elapsed.toFixed(2)}s  (${framesBr} إطار / ${brTimeline.duration}s)`);
 
 // ── (٣) البوابات ─────────────────────────────
 const framesExpected = 192; // 6.4 × 30

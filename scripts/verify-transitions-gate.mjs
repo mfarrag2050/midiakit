@@ -24,7 +24,8 @@ import { fileURLToPath } from 'node:url';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import { BREAKING } from '@pf-mediakit/templates';
 import {
-  resolveBrand, buildRenderPlan, drawAt, timelineV2,
+  resolveBrand, buildRenderPlan,
+drawTimelineAt, templateToTimeline,
 } from '@pf-mediakit/engine';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -168,7 +169,7 @@ const framesTotal = Math.ceil(TOTAL * FPS);
 const outPath = join(ROOT, 'out/timeline-transitions-demo.mp4');
 console.log(`\n[gate-tr] رندر ${framesTotal} إطاراً → ${outPath}`);
 const rTr = await renderToMp4(
-  (ctx, t) => timelineV2.drawTimelineAt({
+  (ctx, t) => drawTimelineAt({
     ctx, size: SIZE, timeline, brand, template: BREAKING,
     content: {}, assets, t,
   }),
@@ -186,11 +187,16 @@ const planBr = buildRenderPlan({
   ctx: new Canvas(SIZE.w, SIZE.h).getContext('2d'),
   size: SIZE, template: BREAKING, brand, content: CONTENT_BR, fps: FPS,
 });
-const framesBr = Math.ceil(planBr.timeline.duration * FPS);
+const brTimeline = templateToTimeline({
+  template: BREAKING, brand, content: CONTENT_BR,
+  headlineLineCount: planBr.headline?.linesJustified.length ?? 1,
+  fps: FPS,
+});
+const framesBr = Math.ceil(brTimeline.duration * FPS);
 const rBr = await renderToMp4(
-  (ctx, t) => drawAt({
-    ctx, size: SIZE, template: BREAKING, brand,
-    content: CONTENT_BR, t, plan: planBr,
+  (ctx, t) => drawTimelineAt({
+    ctx, size: SIZE, timeline: brTimeline, brand, template: BREAKING,
+    content: CONTENT_BR, headlinePrep: planBr.headline, t,
   }),
   framesBr, join(OUT_DIR, 'ref-breaking.mp4'),
 );
@@ -200,7 +206,7 @@ function frameAt(t) {
   const c = new Canvas(SIZE.w, SIZE.h);
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, SIZE.w, SIZE.h);
-  timelineV2.drawTimelineAt({
+drawTimelineAt({
     ctx, size: SIZE, timeline, brand, template: BREAKING,
     content: {}, assets, t,
   });

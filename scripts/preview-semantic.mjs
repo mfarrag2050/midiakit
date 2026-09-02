@@ -18,7 +18,8 @@ import { BREAKING } from '@pf-mediakit/templates';
 import {
   resolveBrand,
   buildRenderPlan,
-  drawAt,
+drawTimelineAt,
+templateToTimeline,
   detectFontCaps,
   createCanvasMeasurer,
 } from '@pf-mediakit/engine';
@@ -69,16 +70,16 @@ async function render(enabled, outName) {
     fps: 30,
   });
 
-  // إطار ثابت في T=0.5 كي تظهر الحركة إذا وُجدت (سنستعمل قالب static)
+  // إطار ثابت في T=5 كي تظهر الحركة إذا وُجدت (بعد كل الحركات، قبل outro)
   ctx.clearRect(0, 0, SIZE.w, SIZE.h);
-  drawAt({
-    ctx,
-    size: SIZE,
-    template: BREAKING,
-    brand,
-    content: CONTENT,
-    t: 5, // بعد كل الحركات، قبل outro
-    plan,
+  const timeline = templateToTimeline({
+    template: BREAKING, brand, content: CONTENT,
+    headlineLineCount: plan.headline?.linesJustified.length ?? 1,
+    fps: 30,
+  });
+drawTimelineAt({
+    ctx, size: SIZE, timeline, template: BREAKING, brand,
+    content: CONTENT, headlinePrep: plan.headline, t: 5,
   });
 
   await canvas.toFile(join(OUT, outName));

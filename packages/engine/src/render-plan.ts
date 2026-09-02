@@ -1,19 +1,21 @@
-// render-plan — يحسب كل ما لا يتغيّر عبر الزمن **مرة واحدة**.
+// render-plan — يحضّر PreparedHeadline مرة قبل حلقة الإطار.
 //
-// **السبب:** حلقة الفيديو تستدعي wrapOptimal + justifyLine + parseAnimations
-// لكل إطار، رغم أن العنوان لا يتغيّر — 730ms/إطار (99.5% من زمن الرندر)
-// تُهدر على إعادة حساب نفس النتيجة. القياس أثبت هذا (2026-08-31).
+// **العلّة (L-07):** wrapOptimal + justifyLine يعطيان نفس النتيجة لكل
+// إطار (العنوان لا يتغيّر عبر الزمن). حسابها 730ms/إطار في السابق =
+// 99.5% من زمن الرندر. الخطة تنقلها خارج الحلقة، الأثر ~99% تخفيض.
+//
+// **بعد حذف @legacy timeline (2026-09-02):** timelineOf و parseAnimations
+// انتقلا إلى `timeline-v2/template-adapter.ts` كجزء من `templateToTimeline`.
+// RenderPlan تقلّصت إلى `{ headline?, headlineLineCount }` — كل ما تحتاجه
+// timeline-v2 لبناء Timeline. حساب مدة القالب والحركات الآن مسؤولية
+// `templateToTimeline`، لا `buildRenderPlan`.
 //
 // **العقد:**
-//   buildRenderPlan({ctx, size, template, brand, content, assets?, fps?})
+//   buildRenderPlan({ctx, size, template, brand, content, assets?, fps?, lexicon?})
 //     → RenderPlan (قيمة خالصة، Canvas-independent).
-//   drawAt يقبل plan؛ حين يُمرَّر، يتخطّى prepareHeadline و parseAnimations
-//   و timelineOf ويستهلك الجاهز.
 //
-// **النقاء محفوظ:** الخطة تُشتقّ من نفس المدخلات وتُمرَّر كوسيط.
-// لا تُخزَّن في وحدة، لا تتراكم بين استدعاءات drawAt. اختبار النقاء
-// الزمني يبقى أخضر لأنه لا يمرّر plan (يبنيه drawAt داخلياً) — النتيجة
-// حتمية إن مُرِّر أو لم يُمرَّر.
+// **النقاء محفوظ:** الخطة تُشتقّ من نفس المدخلات، تُمرَّر كوسيط. لا
+// حالة، لا آثار جانبية.
 
 import type { BrandKit } from '@pf-mediakit/shared';
 import type { Layer, Template } from '@pf-mediakit/templates';
@@ -31,25 +33,20 @@ import type {
 } from './text/index.js';
 import type { Lexicon } from './arabic-lexicon/index.js';
 import type { CanvasSize } from './layers/image.js';
-import {
-  parseAnimations,
-  timelineOf,
-  type ResolvedAnimation,
-  type Timeline,
-} from './timeline/index.js';
 
 // ── الخطة ─────────────────────────────────────────────
 
 export interface RenderPlan {
-  readonly timeline: Timeline;
   /**
    * تحضير العنوان إن كان في القالب. `measure` مُستثنى — يُنشأ في
    * `drawHeadlineLine` من ctx الرسم الحالي (الخطة Canvas-independent).
    */
   readonly headline?: PreparedHeadline;
-  /** عدد الأسطر — يستعمله `parseAnimations` لحساب توقيت `after: "headline"`. */
+  /**
+   * عدد الأسطر — يستعمله `templateToTimeline` لحساب توقيت
+   * `after: "headline"` في الحركات.
+   */
   readonly headlineLineCount: number;
-  readonly animations: Readonly<Record<string, ResolvedAnimation>>;
 }
 
 // ── مُدخلات البناء ────────────────────────────────────
@@ -77,7 +74,6 @@ export interface BuildRenderPlanArgs {
 // ── مساعد: يجرّد `measure` من prep ─────────────────────
 
 function stripMeasure(prep: PreparedHeadline): PreparedHeadline {
-  // نعيد ننشئ الكائن بلا measure — القيم البدائية الأخرى immutable.
   const {
     fontSize,
     lineHeight,
@@ -109,16 +105,13 @@ function stripMeasure(prep: PreparedHeadline): PreparedHeadline {
 // ── الواجهة العامة ─────────────────────────────────────
 
 /**
- * يبني RenderPlan من مدخلات القالب/الهوية/المحتوى. يستدعي:
- *   • timelineOf — يحسب المدة.
- *   • prepareHeadline (مرة واحدة) — يعطي wrap + justify + مواضع.
- *   • parseAnimations — يحلّ توقيت `after` بمعرفة عدد أسطر العنوان.
+ * يبني RenderPlan من مدخلات القالب/الهوية/المحتوى. يستدعي
+ * `prepareHeadline` (مرة واحدة) — يعطي wrap + justify + مواضع.
  *
  * يُنَفَّذ **مرة واحدة قبل حلقة الإطار** — كل هذه القيم لا تعتمد على `t`.
  */
 export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
-  const { ctx, size, template, brand, content, assets, fps, lexicon } = args;
-  const timeline = timelineOf(template, brand, content, fps ?? 30);
+  const { ctx, size, template, brand, content, assets, lexicon } = args;
 
   const headlineLayer = template.layers.find(
     (l): l is Extract<Layer, { type: 'headline' }> => l.type === 'headline'
@@ -141,9 +134,8 @@ export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
   }
 
   const headlineLineCount = headlinePrep?.linesJustified.length ?? 0;
-  const animations = parseAnimations(template, brand, headlineLineCount);
 
   return headlinePrep
-    ? { timeline, headline: headlinePrep, headlineLineCount, animations }
-    : { timeline, headlineLineCount, animations };
+    ? { headline: headlinePrep, headlineLineCount }
+    : { headlineLineCount };
 }

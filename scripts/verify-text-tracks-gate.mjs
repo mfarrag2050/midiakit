@@ -28,8 +28,9 @@ import { BREAKING } from '@pf-mediakit/templates';
 import {
   resolveBrand,
   buildRenderPlan,
-  drawAt,
-  timelineV2,
+drawTimelineAt,
+buildTimelinePlan,
+templateToTimeline,
 } from '@pf-mediakit/engine';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -142,7 +143,7 @@ const assets = { images: { 'asset:bg': bgImg } };
 console.log('[gate-text] buildTimelinePlan — تحضير النصوص مسبقاً …');
 const scratch = new Canvas(SIZE.w, SIZE.h);
 const scratchCtx = scratch.getContext('2d');
-const plan = timelineV2.buildTimelinePlan({
+const plan = buildTimelinePlan({
   timeline, brand, template: BREAKING,
   ctx: scratchCtx, size: SIZE,
 });
@@ -208,7 +209,7 @@ const framesTotal = Math.ceil(TOTAL * FPS);
 const outPath = join(ROOT, 'out/timeline-text-demo.mp4');
 console.log(`\n[gate-text] رندر ${framesTotal} إطاراً → ${outPath}`);
 const rTxt = await renderToMp4(
-  (ctx, t) => timelineV2.drawTimelineAt({
+  (ctx, t) => drawTimelineAt({
     ctx, size: SIZE, timeline, brand, template: BREAKING,
     content: {}, assets, plan, t,
   }),
@@ -226,11 +227,16 @@ const planBr = buildRenderPlan({
   ctx: new Canvas(SIZE.w, SIZE.h).getContext('2d'),
   size: SIZE, template: BREAKING, brand, content: CONTENT_BR, fps: FPS,
 });
-const framesBr = Math.ceil(planBr.timeline.duration * FPS);
+const brTimeline = templateToTimeline({
+  template: BREAKING, brand, content: CONTENT_BR,
+  headlineLineCount: planBr.headline?.linesJustified.length ?? 1,
+  fps: FPS,
+});
+const framesBr = Math.ceil(brTimeline.duration * FPS);
 const rBr = await renderToMp4(
-  (ctx, t) => drawAt({
-    ctx, size: SIZE, template: BREAKING, brand,
-    content: CONTENT_BR, t, plan: planBr,
+  (ctx, t) => drawTimelineAt({
+    ctx, size: SIZE, timeline: brTimeline, brand, template: BREAKING,
+    content: CONTENT_BR, headlinePrep: planBr.headline, t,
   }),
   framesBr, join(OUT_DIR, 'ref-breaking.mp4')
 );
@@ -250,7 +256,7 @@ const textOnlyTimeline = {
     ...timeline.tracks[1], // نفس تكوين مسار نص A
   }],
 };
-const textOnlyPlan = timelineV2.buildTimelinePlan({
+const textOnlyPlan = buildTimelinePlan({
   timeline: textOnlyTimeline, brand, template: BREAKING,
   ctx: scratchCtx, size: SIZE,
 });
@@ -259,7 +265,7 @@ function frameNoKenBurns(t) {
   const c = new Canvas(SIZE.w, SIZE.h);
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, SIZE.w, SIZE.h);
-  timelineV2.drawTimelineAt({
+drawTimelineAt({
     ctx, size: SIZE, timeline: textOnlyTimeline, brand, template: BREAKING,
     content: {}, plan: textOnlyPlan, t,
   });

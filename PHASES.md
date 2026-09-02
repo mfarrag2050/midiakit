@@ -472,14 +472,28 @@ WojoodGaza. التشكيل الآلي **مُنجَز** (خدمة معزولة + 
 # المرحلة 3.7 — محرّر الخط الزمني
 
 **قرار المالك: كامل، من الإصدار الأول.** المواصفة في `10-timeline-editor.md`.
-`drawAt` الخالصة هي الأساس — توسيع لا إعادة بناء.
+مسار الرسم الوحيد الآن `drawTimelineAt` — @legacy `drawAt`/`timelineOf`/
+`parseAnimations` حُذفت (2026-09-02) بعد إثبات التكافؤ 253/253 إطاراً
+ومطابقة md5 لبريكينغ فيديو. `templateToTimeline` هو الجسر لأي قالب موروث.
 
-## أ — النواة الزمنية
-- ☐ نموذج `Timeline` (مسارات · عناصر · انتقالات · مفاتيح)
-- ☐ `resolveAt(timeline, t)` — أي عنصر نشط وموضعه النسبي
-- ☐ `interpolate(keyframes, t)` + ثماني دوال تسهيل
-- ☐ `timelineDuration`
-- ☐ `drawAt` موحّدة تقرأ الشجرة الزمنية (تحلّ محل `cvVidDrawAtT` و `rlDrawAt`)
+**تنظيف @legacy (2026-09-02):**
+- ☑ حُذف `packages/engine/src/timeline/timeline.ts` (`timelineOf`، `parseAnimations`، `ResolvedAnimation` نُقلت إلى `template-adapter.ts`).
+- ☑ حُذف `packages/engine/src/timeline/draw-at.ts` (`drawAt` الموروث).
+- ☑ حُذف `packages/engine/src/timeline/easing.ts` (النسخة الموروثة). timeline-v2/easing.ts يخدم 8 دوال جديدة.
+- ☑ حُذف `scripts/verify-timeline-equivalence.mjs` — لا مرجع للمقارنة.
+- ☑ حُذف `scripts/diagnose-render-perf.mjs` و `scripts/diagnose-semantic-perf.mjs` (تشخيصات تاريخية، نتائجها في L-07/L-09).
+- ☑ `packages/engine/src/timeline-v2/` أُعيدت تسميتها إلى `timeline/`.
+- ☑ namespace `timelineV2` أُزيل من `packages/engine/src/index.ts` — كل شيء export مباشر.
+- ☑ `RenderPlan` تقلّصت إلى `{ headline?, headlineLineCount }` — لا `timeline` ولا `animations` (كلاهما مسؤولية `templateToTimeline`).
+- ☑ **`snapshots-video/breaking.mp4` + `breaking.md5`** — مرجع ذهبي دائم، `pnpm verify:breaking-video` يحرسه.
+- ☑ **المُوفَّر:** ~1000 سطر (400 مصدر legacy + 580 تشخيصات + 12 حرف تلوّث في references).
+
+## أ — النواة الزمنية (☑ مكتملة)
+- ☑ نموذج `Timeline` (مسارات · عناصر · انتقالات · مفاتيح) — `packages/shared/src/timeline-types.ts`
+- ☑ `resolveAt(timeline, t)` — أي عنصر نشط وموضعه النسبي
+- ☑ `interpolate(keyframes, t)` + ثماني دوال تسهيل (linear · easeIn/Out/InOut · easeOutCubic · easeOutBack · spring · step)
+- ☑ `timelineDuration`
+- ☑ `drawTimelineAt` موحّدة تقرأ الشجرة الزمنية — تستدعي `executeLayer` و `drawHeadlineLine` و `drawImage` primitives، لا تعيد بناءها
 
 ## ب — مسار الوسائط
 - ☐ قص (`trimIn`/`trimOut`) · سرعة · ترتيب · تجميد إطار

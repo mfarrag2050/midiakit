@@ -1,7 +1,12 @@
 // apps/renderer — رندر الفيديو على Node.
 //
-// **ADR-004:** حلقة إطارات → drawAt → مخزن RGBA خام → FFmpeg.
+// **ADR-004:** حلقة إطارات → drawTimelineAt → مخزن RGBA خام → FFmpeg.
 // **ADR-008:** أنبوب مباشر — لا ملفات إطارات مؤقتة على القرص.
+//
+// **المسار (بعد حذف @legacy 2026-09-02):** timeline-v2 هو المسار الوحيد.
+// `templateToTimeline` يحوّل قالباً بحقل `video.animation` الموروث إلى
+// Timeline v2، ثم drawTimelineAt يستهلكها. أُثبت بايت-بايت مطابقاً
+// لسلوك @legacy drawAt قبل الحذف.
 //
 // **العقد:**
 //   renderVideo({ template, brand, content, size, outPath, fps?, ffmpegPath? })
@@ -13,10 +18,9 @@ import type { BrandKit } from '@pf-mediakit/shared';
 import type { Template } from '@pf-mediakit/templates';
 import {
   buildRenderPlan,
-  drawAt,
-  timelineOf,
+drawTimelineAt,
+templateToTimeline,
   type RenderPlan,
-  type Timeline,
 } from '@pf-mediakit/engine';
 
 // نستورد skia-canvas بشكل ديناميكي في العقدة لتفادي فرضه على المتصفح
@@ -111,28 +115,13 @@ function rgbaBufferOf(canvas: Canvas): Buffer {
 
 export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoResult> {
   const fps = args.fps ?? 30;
-  const timeline: Timeline = timelineOf(args.template, args.brand, args.content, fps);
-  const frameCount = Math.ceil(timeline.duration * fps);
-  const ffmpeg: ChildProcessWithoutNullStreams = spawn(
-    args.ffmpegPath ?? 'ffmpeg',
-    ffmpegArgs(args.size, fps, args.outPath),
-    { stdio: ['pipe', 'inherit', 'inherit'] }
-  ) as unknown as ChildProcessWithoutNullStreams;
-
-  // نلتقط فشل FFmpeg مبكراً لتفادي حلقة كتابة عمياء
-  const ffmpegDone = new Promise<number>((res, rej) => {
-    ffmpeg.on('error', rej);
-    ffmpeg.on('close', (code) => res(code ?? -1));
-  });
 
   const canvas = new Canvas(args.size.w, args.size.h);
   const ctx = canvas.getContext('2d');
 
-  // **الأداء (2026-08-31، بعد تشخيص 730ms/إطار):** wrapOptimal +
-  // justifyLine + parseAnimations كلها تُنتج نفس النتيجة لكل إطار
-  // (العنوان لا يتغيّر عبر الزمن). نبنيها **مرة قبل الحلقة** ونمرّرها
-  // كـplan إلى drawAt. الأثر المُقاس: ~99% تخفيض في زمن الإطار.
-  // النقاء محفوظ — الخطة قيمة مُشتقّة من نفس المدخلات، لا حالة عابرة.
+  // **plan** (L-07): wrap/justify/anims تُحسب مرة قبل الحلقة. تعطي prep
+  // العنوان (headlineLineCount) اللازم لـ templateToTimeline لحساب
+  // توقيت `after: "headline"`.
   const plan: RenderPlan = buildRenderPlan({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ctx: ctx as any,
@@ -142,26 +131,47 @@ export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoRes
     content: args.content,
     fps,
   });
+  const headlineLineCount = plan.headline?.linesJustified.length ?? 1;
+
+  // Timeline v2 من القالب الموروث.
+  const timeline = templateToTimeline({
+    template: args.template,
+    brand: args.brand,
+    content: args.content,
+    headlineLineCount,
+    fps,
+  });
+  const frameCount = Math.ceil(timeline.duration * fps);
+
+  const ffmpeg: ChildProcessWithoutNullStreams = spawn(
+    args.ffmpegPath ?? 'ffmpeg',
+    ffmpegArgs(args.size, fps, args.outPath),
+    { stdio: ['pipe', 'inherit', 'inherit'] }
+  ) as unknown as ChildProcessWithoutNullStreams;
+
+  const ffmpegDone = new Promise<number>((res, rej) => {
+    ffmpeg.on('error', rej);
+    ffmpeg.on('close', (code) => res(code ?? -1));
+  });
 
   try {
     for (let f = 0; f < frameCount; f++) {
-      // مسح الإطار قبل الرسم (drawAt يتوقّع سطحاً نظيفاً — لا حالة سابقة)
       ctx.clearRect(0, 0, args.size.w, args.size.h);
       const t = f / fps;
-      drawAt({
+drawTimelineAt({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ctx: ctx as any,
         size: args.size,
+        timeline,
         template: args.template,
         brand: args.brand,
         content: args.content,
+        ...(plan.headline && { headlinePrep: plan.headline }),
         t,
-        plan,
       });
       const buf = rgbaBufferOf(canvas);
       const writable = ffmpeg.stdin.write(buf);
       if (!writable) {
-        // انتظار حتى يُفرَغ الـbuffer، تفادياً لضغط ذاكرة كبير
         await new Promise<void>((resolve) => ffmpeg.stdin.once('drain', resolve));
       }
       if (args.onProgress) args.onProgress(f + 1, frameCount);

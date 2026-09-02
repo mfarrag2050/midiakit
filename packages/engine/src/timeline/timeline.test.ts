@@ -1,143 +1,370 @@
-// timeline.test — تأكيدان أساسيان:
-//   (١) `timelineOf` يطبّق معادلة المدة الصحيحة من brand.motion.
-//   (٢) **`drawAt` خالصة** — استدعاؤها بترتيب عشوائي يعطي نفس نتائج
-//       الاستدعاء المتسلسل. أي فرق = تسرّب حالة بين الإطارات.
-//
-// **الطريقة:** نستعمل `createMockCtx` الذي يسجّل كل عملية رسم. لكل t،
-// نسجّل كل الـops، ثم نقارن.
+// اختبارات timeline-v2 — النواة الزمنية (resolveAt + interpolate +
+// duration + easing). لا اختبار للرسم هنا — بوابة التكافؤ (script)
+// تفحص drawTimelineAt.
 
-import { describe, it, expect } from 'vitest';
-import { DEFAULT_BRAND } from '@pf-mediakit/shared';
-import { BREAKING } from '@pf-mediakit/templates';
-import { createMockCtx } from '../text/mock-ctx.js';
-import { resolveBrand } from '../brand/resolve.js';
-import { drawAt, type DrawAtArgs } from './draw-at.js';
-import { timelineOf, baseDurationForHeadline, parseAnimations } from './timeline.js';
+import { describe, expect, it } from 'vitest';
+import type {
+  Keyframe,
+  Timeline,
+  Track,
+  TrackItem,
+} from '@pf-mediakit/shared';
 
-const SIZE = { w: 1080, h: 1350 };
+import { ease, isTimelineEasingName } from './easing.js';
+import { interpolate } from './interpolate.js';
+import { resolveAt } from './resolve-at.js';
+import { timelineDuration, timelineMaxItemEnd } from './duration.js';
 
-const brand = resolveBrand(DEFAULT_BRAND);
+// ── مساعد بناء ─────────────────────────────────────
 
-const CONTENT = {
-  headline:
-    'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع',
-  source: 'مصدر طبي للأناضول',
-};
+const item = (over: Partial<TrackItem>): TrackItem => ({
+  id: over.id ?? 'x',
+  start: over.start ?? 0,
+  end: over.end ?? 1,
+  ...over,
+});
 
-function renderAtT(t: number): unknown[] {
-  const ctx = createMockCtx();
-  const args: DrawAtArgs = {
-    ctx,
-    size: SIZE,
-    template: BREAKING,
-    brand,
-    content: CONTENT,
-    t,
-  };
-  drawAt(args);
-  // نُعيد نسخة عميقة من الـops (بسيطة عبر JSON — كل الحقول primitives).
-  // النسخ يمنع أي حالة داخلية من التسرّب بين المقارنات.
-  return JSON.parse(JSON.stringify(ctx.ops));
-}
+const track = (over: Partial<Track>): Track => ({
+  id: over.id ?? 't',
+  type: over.type ?? 'media',
+  index: over.index ?? 0,
+  items: over.items ?? [],
+  ...(over.transitions !== undefined && { transitions: over.transitions }),
+});
 
-// ── timelineOf ───────────────────────────────────────
+const tl = (tracks: readonly Track[], duration = 10): Timeline => ({
+  duration,
+  fps: 30,
+  size: 'reel',
+  tracks,
+});
 
-describe('timelineOf', () => {
-  it('يحسب المدة الأساسية من brand.motion لعدد الكلمات', () => {
-    // brand.motion: segmentMin=7, segmentMax=10, segmentWordBase=8, segmentWordStep=0.3
-    // n=8 ⇒ max(7, min(10, 7 + max(0, 0) × 0.3)) = 7
-    expect(baseDurationForHeadline(brand, 8)).toBeCloseTo(7, 5);
-    // n=13 ⇒ max(7, min(10, 7 + 5 × 0.3)) = max(7, min(10, 8.5)) = 8.5
-    expect(baseDurationForHeadline(brand, 13)).toBeCloseTo(8.5, 5);
-    // n=20 ⇒ max(7, min(10, 7 + 12 × 0.3)) = max(7, min(10, 10.6)) = 10
-    expect(baseDurationForHeadline(brand, 20)).toBeCloseTo(10, 5);
-    // n=5 ⇒ max(7, min(10, 7 + 0)) = 7 (لا ينزل تحت min)
-    expect(baseDurationForHeadline(brand, 5)).toBeCloseTo(7, 5);
+// ── easing ─────────────────────────────────────────
+
+describe('easing — الدوال الثمانية', () => {
+  it('كل الأسماء الثمانية متاحة وقابلة للتحقق', () => {
+    const names = [
+      'linear', 'easeIn', 'easeOut', 'easeInOut',
+      'easeOutCubic', 'easeOutBack', 'spring', 'step',
+    ];
+    for (const n of names) expect(isTimelineEasingName(n)).toBe(true);
+    expect(isTimelineEasingName('unknown')).toBe(false);
   });
 
-  it('timelineOf يضيف outro إلى المدة الأساسية ويحمل fps', () => {
-    const tl = timelineOf(BREAKING, brand, CONTENT);
-    // CONTENT.headline = 11 كلمة
-    // base = 7 + max(0, 11-8) × 0.3 = 7 + 0.9 = 7.9
-    // duration = 7.9 + brand.motion.outro (0.5) = 8.4
-    expect(tl.duration).toBeCloseTo(7.9 + brand.motion.outro, 5);
-    expect(tl.fps).toBe(30);
-    expect(tl.outro).toBe(brand.motion.outro);
+  it('linear يعطي الهوية', () => {
+    expect(ease('linear', 0)).toBe(0);
+    expect(ease('linear', 0.5)).toBe(0.5);
+    expect(ease('linear', 1)).toBe(1);
+  });
+
+  it('easeOutCubic: 0→0، 1→1، منتصف > 0.5', () => {
+    expect(ease('easeOutCubic', 0)).toBe(0);
+    expect(ease('easeOutCubic', 1)).toBe(1);
+    expect(ease('easeOutCubic', 0.5)).toBeGreaterThan(0.5);
+  });
+
+  it('step قفزة عند 0.5', () => {
+    expect(ease('step', 0.49)).toBe(0);
+    expect(ease('step', 0.5)).toBe(1);
+    expect(ease('step', 0.51)).toBe(1);
+  });
+
+  it('t يُقصَّ إلى [0, 1]', () => {
+    expect(ease('linear', -1)).toBe(0);
+    expect(ease('linear', 2)).toBe(1);
   });
 });
 
-// ── parseAnimations ──────────────────────────────────
+// ── interpolate ────────────────────────────────────
 
-describe('parseAnimations — breaking video', () => {
-  it('يحلّ مراجع brand.* في fade و stagger', () => {
-    const anims = parseAnimations(BREAKING, brand, 3);
-    expect(anims['badge']?.fade).toBe(0.35);
-    expect(anims['badge']?.pulse).toBe(true);
-    expect(anims['headline']?.fade).toBe(brand.motion.lineFade); // 0.42
-    expect(anims['headline']?.stagger).toBe(brand.motion.lineStagger); // 0.12
-    expect(anims['headline']?.slideY).toBe(26);
+describe('interpolate — الحالات الحدّية', () => {
+  it('0 مفاتيح → افتراضيات', () => {
+    const r = interpolate([], 0.5);
+    expect(r).toEqual({ opacity: 1, x: 0, y: 0, scale: 1, rotation: 0 });
   });
 
-  it("توقيت `after: 'headline'` يعتمد عدد الأسطر", () => {
-    const a2 = parseAnimations(BREAKING, brand, 2);
-    const a3 = parseAnimations(BREAKING, brand, 3);
-    // source.startAt = headline.startAt (0.30) + fade (0.42) + stagger × (lines-1)
-    // 2 lines: 0.30 + 0.42 + 0.12 × 1 = 0.84
-    // 3 lines: 0.30 + 0.42 + 0.12 × 2 = 0.96
-    expect(a2['source']?.startAt).toBeCloseTo(0.84, 5);
-    expect(a3['source']?.startAt).toBeCloseTo(0.96, 5);
-  });
-});
-
-// ── النقاء الزمني: الاختبار الحاسم لـADR-004 ──────
-
-describe('drawAt — نقاء زمني', () => {
-  it('استدعاء بترتيب عشوائي = استدعاء متسلسل (لا تسرّب حالة بين الإطارات)', () => {
-    // ست لحظات تغطّي التحريكات المهمة:
-    //   0.00 — badge بدأ فقط
-    //   0.30 — headline بدأ
-    //   1.00 — headline في منتصف الطريق (stagger لسطور)
-    //   2.00 — كل شيء ظهر
-    //   5.70 — قبل outro
-    //   7.00 — خلال outro
-    const times = [0, 0.30, 1.0, 2.0, 5.7, 7.0];
-
-    // خط الأساس: مسلسل
-    const sequential = new Map<number, unknown[]>();
-    for (const t of times) sequential.set(t, renderAtT(t));
-
-    // مُقلَّب: نفس الأوقات بترتيب عشوائي محدَّد (لا Math.random — تكراريّة)
-    const shuffled = [5.7, 0.30, 7.0, 0, 2.0, 1.0];
-    const random = new Map<number, unknown[]>();
-    for (const t of shuffled) random.set(t, renderAtT(t));
-
-    // لكل t: نتيجة المسلسل = نتيجة المُقلَّب
-    for (const t of times) {
-      const seq = sequential.get(t);
-      const rnd = random.get(t);
-      expect(rnd, `t=${t} غير موجود في random`).toBeDefined();
-      expect(rnd, `t=${t} — عدد ops`).toHaveLength((seq as unknown[]).length);
-      expect(rnd, `t=${t} — تسلسل ops`).toEqual(seq);
+  it('مفتاح واحد → قيمه للجميع', () => {
+    const kfs: Keyframe[] = [{ t: 0, opacity: 0.3, y: 10 }];
+    // t قبل، عند، بعد كلها تعطي نفس القيمة (مفتاح مصلّب)
+    for (const t of [-1, 0, 5]) {
+      const r = interpolate(kfs, t);
+      expect(r.opacity).toBe(0.3);
+      expect(r.y).toBe(10);
+      expect(r.x).toBe(0); // افتراضي
     }
   });
 
-  it('drawAt(t) لا يحمل حالة إلى drawAt(t) الثانية بنفس t', () => {
-    // نستدعي نفس t مرتين — يجب أن يكون النتيجتان متطابقتين تماماً
-    const t = 1.4;
-    const a = renderAtT(t);
-    const b = renderAtT(t);
-    expect(a).toEqual(b);
-    expect(a.length).toBeGreaterThan(0); // نتأكّد أن الاختبار يفعل شيئاً
+  it('استيفاء خطي بين مفتاحين — linear', () => {
+    const kfs: Keyframe[] = [
+      { t: 0, opacity: 0, ease: 'linear' },
+      { t: 1, opacity: 1 },
+    ];
+    expect(interpolate(kfs, 0)).toMatchObject({ opacity: 0 });
+    expect(interpolate(kfs, 0.5)).toMatchObject({ opacity: 0.5 });
+    expect(interpolate(kfs, 1)).toMatchObject({ opacity: 1 });
   });
 
-  it('إطار عند t=0 ≠ إطار عند t=2 (التحريك يعمل)', () => {
-    // ضمان أن الاختبار السابق ليس trivially-true
-    const zero = renderAtT(0);
-    const two = renderAtT(2.0);
-    // على الأقل مختلفان في العدد أو المحتوى (إحداثيات مختلفة، شفافيات مختلفة)
-    // نقارن الطول أو التسلسل — لا يجوز أن يكونا متطابقين
-    const same =
-      zero.length === two.length && JSON.stringify(zero) === JSON.stringify(two);
-    expect(same).toBe(false);
+  it('استيفاء easeOutCubic — منتصف > خطي', () => {
+    const kfs: Keyframe[] = [
+      { t: 0, opacity: 0, ease: 'easeOutCubic' },
+      { t: 1, opacity: 1 },
+    ];
+    const midEased = interpolate(kfs, 0.5).opacity;
+    expect(midEased).toBeGreaterThan(0.5); // ease-out يتقدّم أسرع
+    expect(midEased).toBeLessThan(1);
+  });
+
+  it('اقتصاص خارج مدى المفاتيح', () => {
+    const kfs: Keyframe[] = [
+      { t: 1, opacity: 0.2 },
+      { t: 2, opacity: 0.8 },
+    ];
+    expect(interpolate(kfs, 0).opacity).toBe(0.2); // قبل الأول = الأول
+    expect(interpolate(kfs, 5).opacity).toBe(0.8); // بعد الأخير = الأخير
+  });
+
+  it('وراثة قيمة غير مذكورة من مفتاح سابق', () => {
+    // opacity في المفتاح 1، y فقط في المفتاح 2.
+    const kfs: Keyframe[] = [
+      { t: 0, opacity: 0.5, y: 20 },
+      { t: 1, y: 0 }, // opacity غير مذكورة → تبقى 0.5
+    ];
+    const r = interpolate(kfs, 0.5);
+    expect(r.opacity).toBe(0.5); // مورَّثة
+    expect(r.y).toBe(10);        // نصف الطريق من 20 إلى 0
+  });
+
+  it('استيفاء عدة خصائص متزامنة على نفس ease', () => {
+    const kfs: Keyframe[] = [
+      { t: 0, opacity: 0, y: 26, ease: 'easeOutCubic' },
+      { t: 0.42, opacity: 1, y: 0 },
+    ];
+    const r = interpolate(kfs, 0.21); // منتصف الجيب
+    // كلاهما eased بنفس النسبة
+    const easeMid = ease('easeOutCubic', 0.5);
+    expect(r.opacity).toBeCloseTo(easeMid, 5);
+    expect(r.y).toBeCloseTo(26 * (1 - easeMid), 5);
+  });
+});
+
+// ── resolveAt ──────────────────────────────────────
+
+describe('resolveAt — الحدود والمسارات المتوازية', () => {
+  it('t = item.start ⇒ نشط بـprogress = 0', () => {
+    const t = tl([track({ items: [item({ start: 1, end: 5 })] })]);
+    const s = resolveAt(t, 1);
+    expect(s.items).toHaveLength(1);
+    expect(s.items[0]!.progress).toBe(0);
+    expect(s.items[0]!.localT).toBe(0);
+  });
+
+  it('t = item.end ⇒ نشط بـprogress = 1 (شامل)', () => {
+    const t = tl([track({ items: [item({ start: 1, end: 5 })] })]);
+    const s = resolveAt(t, 5);
+    expect(s.items).toHaveLength(1);
+    expect(s.items[0]!.progress).toBe(1);
+    expect(s.items[0]!.localT).toBe(4);
+  });
+
+  it('بين start وend ⇒ progress نسبي', () => {
+    const t = tl([track({ items: [item({ start: 2, end: 4 })] })]);
+    const s = resolveAt(t, 3);
+    expect(s.items[0]!.progress).toBe(0.5);
+  });
+
+  it('خارج المدى ⇒ صفر عناصر نشطة', () => {
+    const t = tl([track({ items: [item({ start: 1, end: 5 })] })]);
+    expect(resolveAt(t, 0.5).items).toHaveLength(0);
+    expect(resolveAt(t, 5.1).items).toHaveLength(0);
+  });
+
+  it('مسارات متوازية: نص فوق وسائط، كلاهما نشط عند t واحد', () => {
+    const t = tl([
+      track({
+        id: 'media', type: 'media', index: 0,
+        items: [item({ id: 'bg', start: 0, end: 10 })],
+      }),
+      track({
+        id: 'text', type: 'text', index: 10,
+        items: [item({ id: 'headline', start: 0, end: 6 })],
+      }),
+    ]);
+    const s = resolveAt(t, 3);
+    expect(s.items).toHaveLength(2);
+    // بترتيب index تصاعدياً: media أولاً (خلف)، ثم text (أمام)
+    expect(s.items[0]!.trackId).toBe('media');
+    expect(s.items[1]!.trackId).toBe('text');
+  });
+
+  it('توصيل مباشر: item ينتهي وآخر يبدأ عند نفس t ⇒ كلاهما نشط', () => {
+    const t = tl([
+      track({
+        items: [
+          item({ id: 'a', start: 0, end: 3 }),
+          item({ id: 'b', start: 3, end: 6 }),
+        ],
+      }),
+    ]);
+    const s = resolveAt(t, 3);
+    expect(s.items.map((i) => i.item.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('انتقال crossfade عند حدّ العنصرَين', () => {
+    const t = tl([
+      track({
+        items: [
+          item({ id: 'a', start: 0, end: 3 }),
+          item({ id: 'b', start: 3, end: 6 }),
+        ],
+        transitions: [
+          { between: ['a', 'b'], type: 'crossfade', duration: 0.6 },
+        ],
+      }),
+    ]);
+    // مركز الانتقال عند t=3 (prev.end)
+    const s = resolveAt(t, 3);
+    expect(s.transitions).toHaveLength(1);
+    expect(s.transitions[0]!.progress).toBeCloseTo(0.5, 5);
+    // خارج نافذة الانتقال
+    expect(resolveAt(t, 2.5).transitions).toHaveLength(0);
+    expect(resolveAt(t, 3.5).transitions).toHaveLength(0);
+  });
+});
+
+// ── duration ───────────────────────────────────────
+
+describe('timelineDuration — قيمة معلنة، ليست مشتقّة', () => {
+  it('يعيد timeline.duration كما هو', () => {
+    const t = tl([track({})], 12.5);
+    expect(timelineDuration(t)).toBe(12.5);
+  });
+
+  it('timelineMaxItemEnd يعيد أقصى نهاية عبر المسارات', () => {
+    const t = tl([
+      track({ id: 'a', items: [item({ end: 5 })] }),
+      track({ id: 'b', items: [item({ end: 8 })] }),
+      track({ id: 'c', items: [item({ end: 3 })] }),
+    ], 10);
+    expect(timelineMaxItemEnd(t)).toBe(8);
+  });
+});
+
+// ── نقاء زمني: ترتيب عشوائي = متسلسل ─────────────
+
+describe('نقاء زمني — resolveAt(t) لا يعتمد على استدعاءات سابقة', () => {
+  const t = tl([
+    track({ items: [item({ id: 'a', start: 0, end: 5 })] }),
+    track({ id: 't2', index: 10, type: 'text', items: [item({ id: 'b', start: 2, end: 7 })] }),
+  ], 10);
+
+  it('نفس الزمن يعطي نفس النتيجة بغضّ النظر عن ترتيب الاستدعاءات', () => {
+    const sequential = [0, 1, 2, 3, 4, 5, 6, 7].map((v) => resolveAt(t, v));
+    const shuffled = [7, 0, 5, 3, 6, 1, 2, 4].map((v) => resolveAt(t, v));
+    // نجمع {t → snapshot} من كلا الاتجاهين ونطابقهما
+    const snap = (arr: ReturnType<typeof resolveAt>[]): string =>
+      arr.map((s) => JSON.stringify({
+        n: s.items.length,
+        ids: s.items.map((i) => i.item.id).sort(),
+        progs: s.items.map((i) => i.progress).sort(),
+      })).join('|');
+    const seqOrdered = [0,1,2,3,4,5,6,7].map((v) => sequential[v]!);
+    const shufOrdered = [7,0,5,3,6,1,2,4].map((v, idx) => shuffled[idx]!);
+    // نبني map من t إلى نتيجة، ونقارن حسب t
+    const seqMap = new Map([0,1,2,3,4,5,6,7].map((tv, i) => [tv, seqOrdered[i]!] as const));
+    const shufMap = new Map([7,0,5,3,6,1,2,4].map((tv, i) => [tv, shufOrdered[i]!] as const));
+    for (const tv of [0,1,2,3,4,5,6,7]) {
+      expect(snap([seqMap.get(tv)!])).toBe(snap([shufMap.get(tv)!]));
+    }
+  });
+
+  it('interpolate لا يعتمد على استدعاءات سابقة', () => {
+    const kfs: Keyframe[] = [
+      { t: 0, opacity: 0, y: 20, ease: 'easeOutCubic' },
+      { t: 1, opacity: 1, y: 0 },
+    ];
+    const a = interpolate(kfs, 0.3);
+    interpolate(kfs, 0.9); // نداء أوسط لا يجب أن يترك أثراً
+    interpolate(kfs, 0.1);
+    const b = interpolate(kfs, 0.3);
+    expect(a).toEqual(b);
+  });
+});
+
+// ── buildTimelinePlan — تحضير النصوص مسبقاً (L-07) ──
+
+import { buildTimelinePlan, collectTextItems } from './plan.js';
+import { BREAKING } from '@pf-mediakit/templates';
+import { DEFAULT_BRAND } from '@pf-mediakit/shared';
+import { resolveBrand } from '../brand/resolve.js';
+import { createSyntheticMeasurer } from './../text/measurer.js';
+
+describe('buildTimelinePlan — تحضير عناصر text مسبقاً', () => {
+  const brand = resolveBrand(DEFAULT_BRAND);
+  // ctx وهمي يكفي لـprepareHeadline على مقاس ثابت — تفادينا skia-canvas
+  // في اختبارات vitest، نستخدم واجهة اصطناعية.
+  const mockCtx = {
+    font: '',
+    measureText: (s: string) => ({
+      width: s.length * 10,
+      actualBoundingBoxAscent: 30,
+      actualBoundingBoxDescent: 10,
+    }),
+    save: () => {}, restore: () => {}, translate: () => {}, scale: () => {},
+    fillRect: () => {}, fillText: () => {}, drawImage: () => {},
+    beginPath: () => {}, moveTo: () => {}, lineTo: () => {}, closePath: () => {},
+    fill: () => {}, stroke: () => {}, arc: () => {}, arcTo: () => {},
+    clip: () => {}, rect: () => {}, createLinearGradient: () => ({ addColorStop: () => {} }),
+    globalAlpha: 1, fillStyle: '', strokeStyle: '',
+    textAlign: 'right' as CanvasTextAlign,
+    textBaseline: 'alphabetic' as CanvasTextBaseline,
+    direction: 'rtl' as CanvasDirection,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high' as ImageSmoothingQuality,
+  };
+
+  it('عنصر text بلا value ⇒ لا تحضير', () => {
+    const timeline = tl([
+      track({ type: 'text', items: [item({ id: 'empty' })] }),
+    ]);
+    const plan = buildTimelinePlan({
+      timeline, brand,
+      template: BREAKING,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx: mockCtx as any,
+      size: { w: 1080, h: 1350 },
+    });
+    expect(plan.textPreps.size).toBe(0);
+  });
+
+  it('عنصر text بـvalue ⇒ prep موجود في الخريطة بمفتاح trackId:itemId', () => {
+    const timeline = tl([
+      track({
+        id: 'txt', type: 'text',
+        items: [item({ id: 'h1', value: 'عنوان قصير للاختبار' })],
+      }),
+    ]);
+    const plan = buildTimelinePlan({
+      timeline, brand,
+      template: BREAKING,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ctx: mockCtx as any,
+      size: { w: 1080, h: 1350 },
+    });
+    expect(plan.textPreps.has('txt:h1')).toBe(true);
+    const p = plan.textPreps.get('txt:h1')!;
+    expect(p.trackId).toBe('txt');
+    expect(p.itemId).toBe('h1');
+    expect(p.prep.linesJustified.length).toBeGreaterThan(0);
+  });
+
+  it('collectTextItems يعيد كل عناصر text عبر المسارات', () => {
+    const timeline = tl([
+      track({ id: 'm', type: 'media', items: [item({ id: 'bg' })] }),
+      track({ id: 't1', type: 'text', items: [item({ id: 'a' }), item({ id: 'b' })] }),
+      track({ id: 't2', type: 'text', items: [item({ id: 'c' })] }),
+    ]);
+    const items = collectTextItems(timeline);
+    expect(items).toHaveLength(3);
+    expect(items.map((i) => `${i.trackId}:${i.item.id}`)).toEqual(['t1:a', 't1:b', 't2:c']);
   });
 });

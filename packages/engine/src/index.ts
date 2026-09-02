@@ -21,10 +21,6 @@ export {
   type BuildRenderPlanArgs,
 } from './render-plan.js';
 export * from './timeline/index.js';
-// timeline-v2 مُصدَّر تحت namespace لتفادي تعارض `ease`/`getEasingFn`/`Timeline`
-// مع الإصدار القديم (timeline/). الاستعمال: `import { timelineV2 } from
-// '@pf-mediakit/engine'` → `timelineV2.resolveAt(...)`.
-export * as timelineV2 from './timeline-v2/index.js';
 export {
   loadDefaultLexicon,
   normalize as normalizeArabic,

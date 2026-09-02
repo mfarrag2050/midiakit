@@ -1,6 +1,6 @@
 // verify-frame-at — يقارن إطاراً منفرداً من MP4 مع رندر مباشر عبر
-// drawAt عند نفس الزمن. تأكيد إضافي على النقاء الزمني: الأنبوب لا
-// يشوّه شيئاً بين drawAt والملف النهائي.
+// drawTimelineAt عند نفس الزمن. تأكيد إضافي على النقاء الزمني:
+// الأنبوب لا يشوّه شيئاً بين المحرك والملف النهائي.
 //
 // **الاستخدام:** node scripts/verify-frame-at.mjs [t=1.4]
 // (T بالثواني — الافتراضي 1.4)
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import { TEMPLATES } from '@pf-mediakit/templates';
-import { resolveBrand, drawAt, timelineOf } from '@pf-mediakit/engine';
+import { resolveBrand, buildRenderPlan, drawTimelineAt, templateToTimeline } from '@pf-mediakit/engine';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -41,12 +41,20 @@ const SIZE = { w: 1080, h: 1350 };
 const OUT = join(ROOT, 'out');
 if (!existsSync(OUT)) await mkdir(OUT, { recursive: true });
 
-// (١) رندر مباشر عبر drawAt → PNG
+// (١) رندر مباشر عبر drawTimelineAt → PNG
 const canvas = new Canvas(SIZE.w, SIZE.h);
 const ctx = canvas.getContext('2d');
 ctx.clearRect(0, 0, SIZE.w, SIZE.h);
-const timeline = timelineOf(template, brand, CONTENT);
-drawAt({ ctx, size: SIZE, template, brand, content: CONTENT, t: T, timeline });
+const plan = buildRenderPlan({ ctx, size: SIZE, template, brand, content: CONTENT, fps: 30 });
+const timeline = templateToTimeline({
+  template, brand, content: CONTENT,
+  headlineLineCount: plan.headline?.linesJustified.length ?? 1,
+  fps: 30,
+});
+drawTimelineAt({
+  ctx, size: SIZE, timeline, template, brand, content: CONTENT,
+  headlinePrep: plan.headline, t: T,
+});
 const directPath = join(OUT, `verify-frame-direct-t${T}.png`);
 await canvas.toFile(directPath);
 
@@ -74,8 +82,8 @@ const { readFile } = await import('node:fs/promises');
 const [a, b] = await Promise.all([readFile(directPath), readFile(extractedPath)]);
 console.log(`
 [verify-frame-at] t=${T}s
-  رندر مباشر (drawAt → PNG):  ${directPath} (${a.length} بايت)
-  مستخرج من MP4 (ffmpeg -ss): ${extractedPath} (${b.length} بايت)
+  رندر مباشر (drawTimelineAt → PNG):  ${directPath} (${a.length} بايت)
+  مستخرج من MP4 (ffmpeg -ss):         ${extractedPath} (${b.length} بايت)
 
 ملاحظة: بايتات PNG لن تتطابق بايت-بايت لأن ffmpeg يمرّ بترميز H.264
 (lossy) ثم فك ترميز → PNG. المقارنة البصرية عبر QuickView/Preview.
