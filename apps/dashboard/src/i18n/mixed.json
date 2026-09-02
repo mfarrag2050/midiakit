@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "title": "Media Kit — Dashboards",
+    "subtitle": "رؤية وثقة (docs/08). Phase 3.2.",
+    "client": "لوحة العميل",
+    "ops": "Ops"
+  },
+  "locale": {
+    "label": "اللغة",
+    "ar": "العربية",
+    "mixed": "مختلطة",
+    "en": "English"
+  },
+  "queue": {
+    "urgent": "Urgent",
+    "normal": "Normal",
+    "edit": "Edit",
+    "batch": "Batch"
+  },
+  "status": {
+    "active": "قيد التنفيذ",
+    "waiting": "في الانتظار",
+    "prioritized": "في الانتظار",
+    "delayed": "مؤجّلة",
+    "completed": "مكتملة",
+    "failed": "فاشلة",
+    "unknown": "غير معروفة"
+  },
+  "system": {
+    "label": "System status",
+    "normal": "عادي",
+    "degraded": "ضغط عالٍ",
+    "maintenance": "صيانة",
+    "reasonNormal": "كل شيء على ما يرام",
+    "reasonBusy": "الطابور تحت ضغط عالٍ",
+    "reasonPaused": "أحد الـ queues موقوف مؤقتاً",
+    "reasonMaintenance": "وضع صيانة يدوي"
+  },
+  "time": {
+    "now": "الآن",
+    "sec": "ث",
+    "min": "د",
+    "ms": "مث"
+  },
+  "client": {
+    "tenantPrompt": "أدخل tenant ID لعرض حالة الطابور:",
+    "placeholder": "e.g. aljazeera-cairo",
+    "viewButton": "عرض",
+    "urlHint": "يمكنك تمريره أيضاً في الرابط: ?tenantId=...",
+    "loading": "جارٍ التحميل…",
+    "noJobs": "لا مهام حالية",
+    "currentJobs": "مهامك الحالية",
+    "emptyJobs": "لا مهام حالية.",
+    "col": {
+      "jobId": "ID",
+      "queue": "Queue",
+      "status": "الحالة",
+      "position": "الموقع",
+      "eta": "البدء المتوقع",
+      "progress": "التقدّم"
+    },
+    "jobRunning": "مهمتك في الـ render",
+    "jobRunningPct": "مهمتك في الـ render — {pct}%",
+    "jobPositioned": "مهمتك رقم {n} — تبدأ خلال {eta}",
+    "jobDelayed": "مهمتك مؤجّلة — ستُعاد قريباً"
+  },
+  "ops": {
+    "thresholds": "الموقع من كل threshold",
+    "thDisk": "Disk %",
+    "thDeepest": "أعمق queue",
+    "thOldest": "أقدم active job (s)",
+    "queues": "Queues",
+    "col": {
+      "name": "Name",
+      "workers": "Workers",
+      "waiting": "Waiting",
+      "active": "Active",
+      "delayed": "Delayed",
+      "completed": "Completed",
+      "failed": "Failed",
+      "state": "State",
+      "action": "إجراء"
+    },
+    "state": {
+      "paused": "موقوف",
+      "running": "يعمل"
+    },
+    "action": {
+      "pause": "إيقاف",
+      "resume": "استئناف"
+    },
+    "activeJobs": "Active jobs ({n})",
+    "noActive": "لا active jobs الآن.",
+    "activeCol": {
+      "jobId": "ID",
+      "queue": "Queue",
+      "tenant": "Tenant",
+      "template": "Template",
+      "age": "Age",
+      "progress": "Progress"
+    },
+    "failuresTitle": "الفشل — آخر {n} ساعة",
+    "failuresSubtitle": "{fail} من {total} مهمة",
+    "tenants": "التوزيع بين الـ tenants",
+    "tenantsEmpty": "لا نشاط.",
+    "tenantRow": "Waiting {waiting} · Active {active} · Delayed {delayed}",
+    "resources": "موارد النظام",
+    "resCpu": "CPU load (1m / 5m)",
+    "resCpuOn": "على {n} cores",
+    "resMem": "Memory",
+    "resDisk": "Disk ({path})",
+    "resDiskUnavailable": "غير متاح",
+    "adminTitle": "Admin actions",
+    "adminMaintOn": "تفعيل وضع الصيانة",
+    "adminMaintOff": "إنهاء الصيانة",
+    "adminKillJob": "Kill job",
+    "adminSetCount": "حفظ (يتطلب restart)",
+    "adminJobIdPh": "jobId",
+    "adminCountPh": "WORKER_COUNT"
+  },
+  "footer": {
+    "refresh": "Refresh كل {n}s",
+    "lastUpdate": "last update {time}"
+  },
+  "units": {
+    "gb": "GB",
+    "of": "من"
+  }
+}

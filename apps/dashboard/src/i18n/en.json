@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "title": "Media Kit — Dashboards",
+    "subtitle": "Visibility and trust (docs/08). Phase 3.2.",
+    "client": "Client",
+    "ops": "Ops"
+  },
+  "locale": {
+    "label": "Language",
+    "ar": "Arabic",
+    "mixed": "Mixed",
+    "en": "English"
+  },
+  "queue": {
+    "urgent": "Urgent",
+    "normal": "Normal",
+    "edit": "Edit",
+    "batch": "Batch"
+  },
+  "status": {
+    "active": "Active",
+    "waiting": "Waiting",
+    "prioritized": "Prioritized",
+    "delayed": "Delayed",
+    "completed": "Completed",
+    "failed": "Failed",
+    "unknown": "Unknown"
+  },
+  "system": {
+    "label": "System status",
+    "normal": "Normal",
+    "degraded": "Degraded",
+    "maintenance": "Maintenance",
+    "reasonNormal": "All clear",
+    "reasonBusy": "Queue under high load",
+    "reasonPaused": "One or more queues paused",
+    "reasonMaintenance": "Manual maintenance mode"
+  },
+  "time": {
+    "now": "now",
+    "sec": "s",
+    "min": "m",
+    "ms": "ms"
+  },
+  "client": {
+    "tenantPrompt": "Enter your tenant ID to see queue status:",
+    "placeholder": "e.g. aljazeera-cairo",
+    "viewButton": "View",
+    "urlHint": "You can also pass it via URL: ?tenantId=...",
+    "loading": "Loading…",
+    "noJobs": "No jobs right now",
+    "currentJobs": "Your current jobs",
+    "emptyJobs": "No jobs right now.",
+    "col": {
+      "jobId": "ID",
+      "queue": "Queue",
+      "status": "Status",
+      "position": "Position",
+      "eta": "Starts in",
+      "progress": "Progress"
+    },
+    "jobRunning": "Your job is running",
+    "jobRunningPct": "Your job is running — {pct}%",
+    "jobPositioned": "You are #{n} in line — starts in {eta}",
+    "jobDelayed": "Your job is delayed — will retry shortly"
+  },
+  "ops": {
+    "thresholds": "Position vs each threshold",
+    "thDisk": "Disk %",
+    "thDeepest": "Deepest queue",
+    "thOldest": "Oldest active job (s)",
+    "queues": "Queues",
+    "col": {
+      "name": "Name",
+      "workers": "Workers",
+      "waiting": "Waiting",
+      "active": "Active",
+      "delayed": "Delayed",
+      "completed": "Completed",
+      "failed": "Failed",
+      "state": "State",
+      "action": "Action"
+    },
+    "state": {
+      "paused": "Paused",
+      "running": "Running"
+    },
+    "action": {
+      "pause": "Pause",
+      "resume": "Resume"
+    },
+    "activeJobs": "Active jobs ({n})",
+    "noActive": "No active jobs.",
+    "activeCol": {
+      "jobId": "ID",
+      "queue": "Queue",
+      "tenant": "Tenant",
+      "template": "Template",
+      "age": "Age",
+      "progress": "Progress"
+    },
+    "failuresTitle": "Failures — last {n}h",
+    "failuresSubtitle": "{fail} of {total} jobs",
+    "tenants": "Distribution by tenant",
+    "tenantsEmpty": "No activity.",
+    "tenantRow": "Waiting {waiting} · Active {active} · Delayed {delayed}",
+    "resources": "System resources",
+    "resCpu": "CPU load (1m / 5m)",
+    "resCpuOn": "on {n} cores",
+    "resMem": "Memory",
+    "resDisk": "Disk ({path})",
+    "resDiskUnavailable": "n/a",
+    "adminTitle": "Admin actions",
+    "adminMaintOn": "Enable maintenance",
+    "adminMaintOff": "End maintenance",
+    "adminKillJob": "Kill job",
+    "adminSetCount": "Save (restart required)",
+    "adminJobIdPh": "jobId",
+    "adminCountPh": "WORKER_COUNT"
+  },
+  "footer": {
+    "refresh": "Refresh every {n}s",
+    "lastUpdate": "last update {time}"
+  },
+  "units": {
+    "gb": "GB",
+    "of": "of"
+  }
+}
