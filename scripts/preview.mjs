@@ -5,14 +5,20 @@
 //   pnpm preview -- --brand=client-demo
 //   pnpm preview -- --template=plain
 //   pnpm preview -- --brand=client-demo --template=all    # كل القوالب لهذه الهوية
+//   pnpm preview -- --semantic=off                        # يفرض تعطيل الكسر الدلالي
+//   pnpm preview -- --semantic=on                         # يفرض تفعيل الكسر الدلالي
 //
 // **بوابة المرحلة 2 (2026-08-31):** إضافة قالب `plain` (خامس بعد الأربعة
 // الأصلية) بلا سطر كود — يُرسم من JSON فقط عبر renderFrame.
 // **إغلاق الدَين (2026-08-31 لاحقة):** أُضيفت منفّذات kicker + accent
 // + watermark، فأصبحت كل القوالب الستة تُرسم كاملة.
+// **الجزء ب-2 (2026-09-01):** يُحمَّل ExtendedLexicon من data/external
+// حين semantic=on، ويُمرَّر لـ renderFrame كـ`lexicon`. المُخرج يُوجَّه
+// إلى `out/semantic/` أو `out/nosemantic/` — verify-snapshot يقارن كلاًّ
+// بمرجعه (snapshots-semantic/ و snapshots/ على التوالي).
 
 import { Canvas, FontLibrary } from 'skia-canvas';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile, mkdir, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve as pathResolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +29,8 @@ import {
   createCanvasMeasurer,
   detectFontCaps,
   renderFrame,
+  loadDefaultLexicon,
+  extendLexicon,
 } from '@pf-mediakit/engine';
 import { TEMPLATES } from '@pf-mediakit/templates';
 
@@ -31,12 +39,15 @@ const ROOT = join(__dirname, '..');
 
 // ── وسائط سطر الأوامر ─────────────────────────────────
 function parseArgs() {
-  const args = { brand: 'default', template: 'breaking' };
+  // semantic: 'default' | 'on' | 'off' — 'default' يحترم brand.typography.semanticBreaks
+  const args = { brand: 'default', template: 'breaking', semantic: 'default' };
   for (const arg of process.argv.slice(2)) {
     const brandMatch = arg.match(/^--brand=(.+)$/);
     if (brandMatch) args.brand = brandMatch[1];
     const tplMatch = arg.match(/^--template=(.+)$/);
     if (tplMatch) args.template = tplMatch[1];
+    const semMatch = arg.match(/^--semantic=(default|on|off)$/);
+    if (semMatch) args.semantic = semMatch[1];
   }
   return args;
 }
@@ -52,7 +63,40 @@ async function loadBrandRaw(name) {
 }
 
 const brandRaw = await loadBrandRaw(CLI.brand);
-const brand = resolveBrand(brandRaw);
+// تطبيق قرار --semantic إن لم يكن default
+function applySemanticOverride(raw, mode) {
+  if (mode === 'default') return raw;
+  return {
+    ...raw,
+    typography: {
+      ...raw.typography,
+      semanticBreaks: {
+        ...(raw.typography?.semanticBreaks ?? {}),
+        enabled: mode === 'on',
+      },
+    },
+  };
+}
+const brandAdjusted = applySemanticOverride(brandRaw, CLI.semantic);
+const brand = resolveBrand(brandAdjusted);
+
+// ── تحميل ExtendedLexicon (يُمرَّر فقط حين semantic مفعّل) ──
+const DATA_DIR = join(ROOT, 'data/external');
+let extLex = null;
+if (brand.typography.semanticBreaks.enabled) {
+  const [placesRaw, entitiesRaw, titlesRaw] = await Promise.all([
+    readFile(join(DATA_DIR, 'places.json'), 'utf8'),
+    readFile(join(DATA_DIR, 'entities.json'), 'utf8'),
+    readFile(join(DATA_DIR, 'titles.json'), 'utf8'),
+  ]);
+  const places = JSON.parse(placesRaw).places;
+  const entities = JSON.parse(entitiesRaw).entities;
+  const titles = JSON.parse(titlesRaw).titles;
+  extLex = extendLexicon(loadDefaultLexicon(), { titles, places, entities });
+  console.log(
+    `[preview] lexicon: places=${places.length} entities=${entities.length} titles=${titles.length}`
+  );
+}
 
 // ── تسجيل الخط ديناميكياً ─────────────────────────────
 const FONTS_DIR = join(ROOT, 'assets/fonts');
@@ -108,8 +152,15 @@ const CONTENT_BY_TEMPLATE = {
 };
 
 const SIZE = { w: 1080, h: 1350 };
-const OUT_DIR = join(ROOT, 'out');
+// ── مجلد المخرجات ───────────────────────────────────
+// نستعمل subdir حسب حالة الدلالي — verify-snapshot يقارن كلاً بمرجعه.
+const semanticActive = brand.typography.semanticBreaks.enabled;
+const OUT_SUBDIR = semanticActive ? 'semantic' : 'nosemantic';
+const OUT_DIR = join(ROOT, 'out', OUT_SUBDIR);
 if (!existsSync(OUT_DIR)) await mkdir(OUT_DIR, { recursive: true });
+// مجلد جذر out/ يبقى للملفَين الأحاديَّين (preview-semantic.png، preview-nosemantic.png).
+const OUT_ROOT = join(ROOT, 'out');
+if (!existsSync(OUT_ROOT)) await mkdir(OUT_ROOT, { recursive: true });
 
 // ── كشف قدرات الخط لمرة واحدة ─────────────────────────
 {
@@ -149,6 +200,7 @@ async function renderOne(templateId, kashidaOn) {
     template,
     brand: brandForFrame,
     content,
+    ...(extLex && { lexicon: extLex }),
   });
 
   const suffix = templateId === 'breaking' ? '' : `-${templateId.replace(/_/g, '-')}`;
@@ -163,7 +215,7 @@ const templatesToRun =
   CLI.template === 'all' ? Object.keys(TEMPLATES) : [CLI.template];
 
 console.log(
-  `[preview] brand=${brand.id} · قوالب=${templatesToRun.join(',')} · قماش=${SIZE.w}×${SIZE.h}`
+  `[preview] brand=${brand.id} · قوالب=${templatesToRun.join(',')} · قماش=${SIZE.w}×${SIZE.h} · semantic=${semanticActive ? 'on' : 'off'} (${OUT_SUBDIR}/)`
 );
 
 for (const tplId of templatesToRun) {
@@ -171,4 +223,17 @@ for (const tplId of templatesToRun) {
   const outN = await renderOne(tplId, false);
   console.log(`   ${tplId.padEnd(14)} → ${outK.replace(ROOT + '/', '')} (kashida)`);
   console.log(`   ${' '.repeat(14)}   ${outN.replace(ROOT + '/', '')} (بلا)`);
+}
+
+// ── ملفَي المراجعة البصرية للمالك ────────────────────
+// عند brand=default && template=breaking (أو all)، ننسخ لقطة الكشيدة إلى
+// out/preview-semantic.png أو out/preview-nosemantic.png — يقارنها المالك
+// جنباً إلى جنب (اعمل الأمر مرتين: --semantic=on ثم --semantic=off).
+if (CLI.brand === 'default' && templatesToRun.includes('breaking')) {
+  const src = join(OUT_DIR, `preview-default.png`);
+  const dst = join(OUT_ROOT, `preview-${semanticActive ? 'semantic' : 'nosemantic'}.png`);
+  if (existsSync(src)) {
+    await copyFile(src, dst);
+    console.log(`   ↪ ${dst.replace(ROOT + '/', '')} (مراجعة بصرية)`);
+  }
 }

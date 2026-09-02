@@ -124,7 +124,13 @@ export const DEFAULT_BRAND: BrandKit = {
       minLineFill: 0.82,
       lastLine: 'natural',
     },
-    semanticBreaks: { enabled: false, useModel: 'never' },
+    // مفعَّل افتراضياً منذ 2026-09-01 (المرحلة 3.5 ب-2).
+    // البوابات المقيسة على 265 عنوان RSS: Δfill=+0.56% · Δstddev=-0.26%
+    // · softness regression=2.26% · buildRenderPlan p95=402ms — كلها
+    // اجتازت. البوابتان (أ) و (ب) معلَّقتان (WojoodGaza) لكنّهما تخصّان
+    // دقّة القواعد لا سلامة التفعيل. راجع docs/LESSONS.md#L-10.
+    // useModel='never' — الطبقة الثانية (LLM) مؤجَّلة.
+    semanticBreaks: { enabled: true, useModel: 'never' },
     diacritics: { enabled: false, mode: 'full' },
     bidi: { enabled: true, numerals: 'latin' },
   },
