@@ -53,6 +53,8 @@ import {
 import { resolveAt } from './resolve-at.js';
 import { interpolate } from './interpolate.js';
 import { getEasingFn } from './easing.js';
+import { drawTextItemLines, drawTextItemByWordRTL } from './text-effects.js';
+import type { TimelinePlan } from './plan.js';
 
 // ── مدخلات الاستدعاء ──────────────────────────────────
 
@@ -73,6 +75,12 @@ export interface DrawTimelineAtArgs {
    * حين مُمرَّرة، drawTimelineAt يتجنّب قياس النص لكل إطار (L-07).
    */
   readonly headlinePrep?: PreparedHeadline;
+  /**
+   * خطة مبنية مسبقاً — تحوي preps لكل عناصر text عبر المسارات
+   * (buildTimelinePlan). يستهلكها مؤثّرا `text-item-lines` و
+   * `text-item-byWord` تلقائياً بمفتاح `${trackId}:${itemId}`.
+   */
+  readonly plan?: TimelinePlan;
   /** الزمن بالثواني — 0 هو أول إطار. */
   readonly t: number;
 }
@@ -139,6 +147,27 @@ interface DrawMediaEffect extends EffectRef {
   readonly assetKey: string;
 }
 
+/**
+ * text-item-lines — يرسم كل سطور PreparedHeadline للعنصر الحالي بلا
+ * تدرّج زمني. opacity/translate تُطبَّق من keyframes مسبقاً (على مستوى
+ * العنصر). يتطلب `plan` في args لاسترداد prep بمفتاح `${trackId}:${itemId}`.
+ */
+interface TextItemLinesEffect extends EffectRef {
+  readonly type: 'text-item-lines';
+}
+
+/**
+ * text-item-byWord — يرسم كلمة بكلمة من اليمين (RTL) مع stagger زمني.
+ * القاعدة 7 في CLAUDE.md: محرّك حركة عربي — الكلمة الأولى يميناً تظهر
+ * أولاً، بتدرّج نحو اليسار. `stagger` = زمن بين كلمة والتي تليها،
+ * `fadeDuration` = مدة fade لكل كلمة.
+ */
+interface TextItemByWordEffect extends EffectRef {
+  readonly type: 'text-item-byWord';
+  readonly stagger: number;
+  readonly fadeDuration: number;
+}
+
 // ── الدالة الرئيسية ──────────────────────────────────
 
 const DEFAULTS: InterpolatedProps = Object.freeze({
@@ -167,6 +196,13 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
         ? interpolate(item.keyframes, activeItem.localT)
         : DEFAULTS;
 
+    // لعناصر text، ابحث عن prep في الخطة (إن وُجدت).
+    let itemPrep: PreparedHeadline | undefined;
+    if (args.plan) {
+      const found = args.plan.textPreps.get(`${activeItem.trackId}:${item.id}`);
+      if (found) itemPrep = found.prep;
+    }
+
     // save واحد لكل عنصر — كل التحويلات تنقض معاً.
     ctx.save();
     // تطبيق props قاعدياً (يطابق legacy: alpha ثم translateY داخل save واحد).
@@ -178,6 +214,7 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
       dispatchEffect(effect, {
         ctx, size, brand, template, content, rfArgs, state,
         headlinePrep: args.headlinePrep,
+        itemPrep,
         assets: args.assets,
         item,
         itemProgress: activeItem.progress,
@@ -200,6 +237,8 @@ interface EffectContext {
   rfArgs: RenderFrameArgs;
   state: RenderState;
   headlinePrep: PreparedHeadline | undefined;
+  /** prep لهذا العنصر تحديداً (من plan.textPreps). */
+  itemPrep: PreparedHeadline | undefined;
   assets: DrawTimelineAtArgs['assets'];
   /** العنصر المضيف — يستهلكه المؤثر لقراءة src أو crop. */
   item: import('@pf-mediakit/shared').TrackItem;
@@ -224,6 +263,10 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
       return applyKenBurns(effect as KenBurnsEffect, ectx);
     case 'draw-media':
       return applyDrawMedia(effect as DrawMediaEffect, ectx);
+    case 'text-item-lines':
+      return applyTextItemLines(ectx);
+    case 'text-item-byWord':
+      return applyTextItemByWord(effect as TextItemByWordEffect, ectx);
     default:
       // مؤثر غير معروف — تجاهل صامت.
       return;
@@ -345,6 +388,33 @@ function applyDrawMedia(effect: DrawMediaEffect, ectx: EffectContext): void {
     image,
     ...(ectx.item.crop && { crop: ectx.item.crop }),
   });
+}
+
+/**
+ * text-item-lines — كل سطور prep بلا تدرّج. opacity/translate من keyframes
+ * مطبَّقة قبل الدخول (على ctx.globalAlpha/transform الحاضنة).
+ */
+function applyTextItemLines(ectx: EffectContext): void {
+  const prep = ectx.itemPrep;
+  if (!prep) return;
+  drawTextItemLines(ectx.ctx, ectx.brand, prep);
+}
+
+/**
+ * text-item-byWord — كلمة بكلمة من اليمين. الكشيدة ثابتة (من prep الجاهز)
+ * — لا يعاد حسابها هنا. المستدعي يضمن أن prep من buildTimelinePlan
+ * تُحسب مرة قبل الحلقة.
+ */
+function applyTextItemByWord(
+  effect: TextItemByWordEffect,
+  ectx: EffectContext
+): void {
+  const prep = ectx.itemPrep;
+  if (!prep) return;
+  drawTextItemByWordRTL(
+    ectx.ctx, ectx.brand, prep,
+    ectx.itemLocalT, effect.stagger, effect.fadeDuration
+  );
 }
 
 /** تراكب أسود بشفافية متزايدة عند نهاية المسار. */

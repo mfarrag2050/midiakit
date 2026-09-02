@@ -13,6 +13,7 @@ export { timelineDuration, timelineMaxItemEnd } from './duration.js';
 export {
   drawTimelineAt,
   type DrawTimelineAtArgs,
+  type KenBurnsOrigin,
 } from './draw-timeline-at.js';
 export {
   buildTimelinePlan,
@@ -21,3 +22,8 @@ export {
   type BuildTimelinePlanArgs,
   type PreparedTextItem,
 } from './plan.js';
+export {
+  drawTextItemLines,
+  drawTextItemByWordRTL,
+  totalWordCount,
+} from './text-effects.js';
