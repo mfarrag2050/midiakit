@@ -1,4 +1,12 @@
-// timeline — نموذج المدة والحركة للفيديو.
+// **@legacy** — نموذج المدة والحركة الموروث للفيديو.
+//
+// **الحالة (2026-09-02):** أُعلن @legacy عند بدء المرحلة 3.7 (بناء
+// timeline-v2 بمفهوم المسارات المتوازية من الصفر). يبقى هذا الملف يعمل
+// كما هو حتى ينتج timeline-v2 نفس مخرج breaking بايت-بايت (بوابة
+// التكافؤ). **لا يُحذف** قبل ذلك — 24 لقطة ذهبية تعتمد عليه.
+//
+// **لا تُعدَّل الآن:** أي تحسين هنا يجب أن يُطبَّق أيضاً في timeline-v2
+// وإلا يكسر بوابة التكافؤ. راجع docs/10 و docs/11 §الملفات المقفلة.
 //
 // **timelineOf(template, brand, content)** يحسب مدة القالب:
 //   duration = clamp(n_words, brand.motion.segmentMin..segmentMax)
@@ -48,6 +56,7 @@ function wordCount(text: unknown): number {
  * يبني Timeline لقالب. يعتمد `content.headline` (أو أول حقل من نوع
  * headline في `template.fields`) لعدد الكلمات.
  */
+/** @legacy — راجع تعليق أعلى الملف. `timeline-v2` هو البديل الجاري بناؤه. */
 export function timelineOf(
   template: Template,
   brand: BrandKit,
