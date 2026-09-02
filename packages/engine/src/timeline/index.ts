@@ -43,3 +43,12 @@ export {
   type TemplateToTimelineArgs,
   type ResolvedAnimation,
 } from './template-adapter.js';
+export {
+  buildAudioGraph,
+  collectAudioTracks,
+  type AudioPlan,
+  type AudioTrackPlan,
+  type AudioItemPlan,
+  type AudioSource,
+  type DuckingRule,
+} from './audio-graph.js';

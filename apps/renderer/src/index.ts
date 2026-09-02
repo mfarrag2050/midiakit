@@ -18,10 +18,12 @@ import type { BrandKit } from '@pf-mediakit/shared';
 import type { Template } from '@pf-mediakit/templates';
 import {
   buildRenderPlan,
-drawTimelineAt,
-templateToTimeline,
+  drawTimelineAt,
+  templateToTimeline,
   type RenderPlan,
+  type AudioPlan,
 } from '@pf-mediakit/engine';
+import { buildAudioFilterGraph } from './audio-ffmpeg.js';
 
 // نستورد skia-canvas بشكل ديناميكي في العقدة لتفادي فرضه على المتصفح
 // (وإن كان هذا الملف Node-only، فالحرص لا يضر).
@@ -38,6 +40,11 @@ export interface RenderVideoArgs {
   readonly ffmpegPath?: string;
   /** يُستدعى بعد كل إطار لتتبّع التقدم (اختياري — بلا logging افتراضياً). */
   readonly onProgress?: (frame: number, total: number) => void;
+  /**
+   * خطة الصوت (اختياري). حين تُمرَّر، تُترجم إلى `-i` + filter_complex
+   * وتُدمج مع فيديو stdin. حين تغيب: صوت صامت (السلوك القديم).
+   */
+  readonly audioPlan?: AudioPlan;
 }
 
 export interface RenderVideoResult {
@@ -55,52 +62,53 @@ export interface RenderVideoResult {
  *   • output: H.264 (libx264) + yuv420p + faststart + bt709 (≈ sRGB) + AAC 128k.
  *   • `-shortest` يقصّ الصوت الصامت إلى مدة الفيديو تلقائياً.
  */
+/**
+ * يبني وسائط FFmpeg. حالتان:
+ *   • بلا audioPlan: input 0 = rawvideo/stdin، input 1 = anullsrc (سلوك سابق).
+ *   • مع audioPlan: input 0 = rawvideo/stdin، inputs 1..N = lavfi (synth)،
+ *     filter_complex يجمع → [aout]، ثم map [0:v] + [aout].
+ */
 function ffmpegArgs(
   size: { w: number; h: number },
   fps: number,
-  outPath: string
+  outPath: string,
+  audioPlan?: AudioPlan
 ): readonly string[] {
-  return [
-    '-y', // استبدال بلا سؤال
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    // ── input 0: rawvideo من stdin
-    '-f',
-    'rawvideo',
-    '-pix_fmt',
-    'rgba',
-    '-s',
-    `${size.w}x${size.h}`,
-    '-r',
-    String(fps),
-    '-i',
-    'pipe:0',
-    // ── input 1: صوت صامت
-    '-f',
-    'lavfi',
-    '-i',
-    'anullsrc=r=44100:cl=stereo',
-    // ── output: H.264 + yuv420p + AAC 128k
-    '-c:v',
-    'libx264',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
-    '-color_primaries',
-    'bt709',
-    '-color_trc',
-    'bt709',
-    '-colorspace',
-    'bt709',
-    '-c:a',
-    'aac',
-    '-b:a',
-    '128k',
-    '-shortest',
-    outPath,
+  const args: string[] = [
+    '-y', '-hide_banner', '-loglevel', 'error',
+    // input 0: rawvideo من stdin
+    '-f', 'rawvideo', '-pix_fmt', 'rgba',
+    '-s', `${size.w}x${size.h}`, '-r', String(fps),
+    '-i', 'pipe:0',
   ];
+
+  if (audioPlan && audioPlan.tracks.length > 0) {
+    const built = buildAudioFilterGraph(audioPlan, 1); // videoInputCount=1
+    args.push(...built.inputs);
+    args.push(
+      '-filter_complex', built.filterComplex,
+      '-map', '0:v',          // فيديو stdin بلا أقواس (مصدر مباشر)
+      '-map', built.audioMap, // مخرج filter (بأقواس)
+    );
+  } else {
+    // صوت صامت — السلوك السابق
+    args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo');
+    args.push('-shortest');
+  }
+
+  args.push(
+    // output: H.264 + yuv420p + AAC 128k
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    '-color_primaries', 'bt709',
+    '-color_trc', 'bt709',
+    '-colorspace', 'bt709',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    outPath,
+  );
+  return args;
 }
 
 /**
@@ -145,7 +153,7 @@ export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoRes
 
   const ffmpeg: ChildProcessWithoutNullStreams = spawn(
     args.ffmpegPath ?? 'ffmpeg',
-    ffmpegArgs(args.size, fps, args.outPath),
+    ffmpegArgs(args.size, fps, args.outPath, args.audioPlan),
     { stdio: ['pipe', 'inherit', 'inherit'] }
   ) as unknown as ChildProcessWithoutNullStreams;
 
