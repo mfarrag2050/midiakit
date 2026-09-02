@@ -92,13 +92,15 @@ const timeline = {
         ],
       }],
     },
-    // مسار نص A — byWord RTL، يبدأ عند 0.5s وينتهي عند 5.5s
+    // مسار نص A — byWord RTL، الثلث الأوسط (anchor: 'center'، 50%
+     // من الارتفاع). يبدأ عند 0.5s وينتهي عند 5.5s.
     {
       id: 'textA', type: 'text', index: 10,
       items: [{
         id: 'a1',
         start: 0.5, end: 5.5,
         value: TEXT_A,
+        anchor: 'center',
         keyframes: [
           { t: 0, opacity: 0, ease: 'easeOutCubic' },
           { t: 0.3, opacity: 1 },
@@ -110,14 +112,16 @@ const timeline = {
         ],
       }],
     },
-    // مسار نص B — سطور ثابتة، يبدأ عند 3.0s وينتهي عند 7.5s
-    // (يتداخل مع نص A من 3.0s حتى 5.5s)
+    // مسار نص B — سطور ثابتة، الثلث السفلي (anchor: 'bottom'، 85%).
+    // يبدأ عند 3.0s وينتهي عند 7.5s — يتداخل زمنياً مع A لكن مكانياً
+    // منفصل (بينهما ~35% من ارتفاع القماش).
     {
       id: 'textB', type: 'text', index: 20,
       items: [{
         id: 'b1',
         start: 3.0, end: 7.5,
         value: TEXT_B,
+        anchor: 'bottom',
         keyframes: [
           { t: 0, opacity: 0, y: 20, ease: 'easeOutCubic' },
           { t: 0.5, opacity: 1, y: 0 },
@@ -144,8 +148,9 @@ const plan = timelineV2.buildTimelinePlan({
 });
 console.log(`  preps مبنية: ${plan.textPreps.size} (متوقّع 2)`);
 for (const [key, p] of plan.textPreps) {
-  console.log(`    ${key}: fs=${p.prep.fontSize} lines=${p.prep.linesJustified.length}`);
+  console.log(`    ${key}: fs=${p.prep.fontSize} lines=${p.prep.linesJustified.length} yTop=${p.prep.bounds.top.toFixed(0)} yBot=${p.prep.bounds.bottom.toFixed(0)}`);
 }
+console.log(`  تحذيرات تصادم: ${plan.collisions.length}`);
 
 // ── دوال الأنبوب ─────────────────────────────
 function ffmpegArgs(size, fps, outPath) {
@@ -303,20 +308,30 @@ function countNonEmptyPixels(canvas) {
 // ── التقرير ────────────────────────────────
 const perfRatio = (rTxt.elapsed / framesTotal) / (rBr.elapsed / framesBr);
 console.log('\n════════ بوابة مسارات النصوص ════════');
-console.log('البوابة                     | معيار              | قياس           | حكم');
-console.log('----------------------------|-------------------|----------------|-----');
+console.log('البوابة                        | معيار         | قياس           | حكم');
+console.log('-------------------------------|--------------|----------------|-----');
 const g1 = framesTotal === 240;
-console.log(`عدد الإطارات                | 240               | ${framesTotal}            | ${g1 ? '✓' : '✗'}`);
+console.log(`عدد الإطارات                    | 240          | ${framesTotal}            | ${g1 ? '✓' : '✗'}`);
 const g2 = rTxt.size > 100_000;
-console.log(`MP4 حجم واقعي                | > 100KB           | ${(rTxt.size/1024).toFixed(0)}KB          | ${g2 ? '✓' : '✗'}`);
+console.log(`MP4 حجم واقعي                    | > 100KB      | ${(rTxt.size/1024).toFixed(0)}KB          | ${g2 ? '✓' : '✗'}`);
 const g3 = perfRatio <= 1.5;
-console.log(`الأداء (text/breaking)      | ≤ 1.5×             | ${perfRatio.toFixed(2)}×          | ${g3 ? '✓' : '✗'}`);
-console.log(`ثبات الكشيدة (h1 == h2)     | متطابق             | ${kashidaStable ? 'متطابق' : 'مختلف'}         | ${kashidaStable ? '✓' : '✗'}`);
-console.log(`byWord مرئي (late > early×3) | متزايد            | ${earlyCount}→${lateCount}      | ${byWordVisible ? '✓' : '✗'}`);
+console.log(`الأداء (text/breaking)         | ≤ 1.5×        | ${perfRatio.toFixed(2)}×          | ${g3 ? '✓' : '✗'}`);
+console.log(`ثبات الكشيدة (md5 إطارَين)      | متطابق        | ${kashidaStable ? 'متطابق' : 'مختلف'}         | ${kashidaStable ? '✓' : '✗'}`);
+console.log(`byWord مرئي (late > early×2)   | متزايد        | ${earlyCount}→${lateCount}      | ${byWordVisible ? '✓' : '✗'}`);
+// **الشرط الدائم (L-16):** لا تصادم مكاني بين عناصر نص متداخلة زمنياً.
+const noCollision = plan.collisions.length === 0;
+console.log(`لا تصادم نص × نص (شرط دائم)   | 0 تحذير      | ${plan.collisions.length}              | ${noCollision ? '✓' : '✗'}`);
 console.log('');
 console.log(`زمن الإطار: text=${(rTxt.elapsed/framesTotal*1000).toFixed(1)}ms  breaking=${(rBr.elapsed/framesBr*1000).toFixed(1)}ms`);
 
-const allPass = g1 && g2 && g3 && kashidaStable && byWordVisible;
+if (!noCollision) {
+  console.error('\n✗ تصادم بين عناصر نص — عيّن item.anchor صريحاً لكل عنصر.');
+  for (const c of plan.collisions) {
+    console.error(`  ${c.a.trackId}:${c.a.itemId} × ${c.b.trackId}:${c.b.itemId}  تداخل ${c.overlapSeconds.toFixed(2)}s`);
+  }
+}
+
+const allPass = g1 && g2 && g3 && kashidaStable && byWordVisible && noCollision;
 if (!allPass) {
   console.error('\n✗ بوابة فاشلة — راجع النتائج.');
   process.exit(1);

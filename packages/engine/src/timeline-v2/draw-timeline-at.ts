@@ -208,6 +208,12 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
     // تطبيق props قاعدياً (يطابق legacy: alpha ثم translateY داخل save واحد).
     if (props.opacity !== 1) ctx.globalAlpha = ctx.globalAlpha * props.opacity;
     if (props.x !== 0 || props.y !== 0) ctx.translate(props.x, props.y);
+    // إزاحة إضافية من item.offset (فوق keyframes) — تُطبَّق دائماً في
+    // نفس save/restore. للنصوص خصوصاً: تُتيح تحريكاً دقيقاً عن anchor
+    // بلا تغيير التصنيف الرأسي.
+    const ox = item.offset?.x ?? 0;
+    const oy = item.offset?.y ?? 0;
+    if (ox !== 0 || oy !== 0) ctx.translate(ox, oy);
 
     // تنفيذ المؤثرات بالترتيب — transforms قبل draws.
     for (const effect of item.effects) {

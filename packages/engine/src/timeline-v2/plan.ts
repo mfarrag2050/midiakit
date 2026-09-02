@@ -1,20 +1,21 @@
 // timeline-v2/plan — buildTimelinePlan (docs/10 عقد المحرك + L-07).
 //
 // **العلّة (L-07):** حساب wrap/justify للنصوص داخل حلقة إطارات يقتل
-// الأداء (177s→2.2s سابقاً). كل نصّ في مسار text يجب أن يُلفّ ويُبرَّر
-// **مرة واحدة** قبل الحلقة، ويُخزَّن كـPreparedHeadline في الخطة.
+// الأداء. كل نصّ في مسار text يجب أن يُلفّ ويُبرَّر مرة قبل الحلقة،
+// ويُخزَّن كـPreparedHeadline في الخطة.
 //
-// **النقاء محفوظ:** الخطة قيمة مُشتقّة من نفس المدخلات (timeline + brand
-// + template + ctx للقياس)، تُمرَّر إلى drawTimelineAt كوسيط. لا وحدة
-// حالة، لا آثار جانبية.
+// **الموضع لكل عنصر (L-16 · 2026-09-02):** كل عنصر نص يحمل `anchor`
+// و`offset` خاصَّين. buildTimelinePlan **يبني نسخة معدَّلة من طبقة
+// headline** بـ anchor مأخوذ من العنصر (لا من القالب)، ثم يمرّرها إلى
+// prepareHeadline. تجاهل item.anchor كان سبب تصادم نصَّين في نفس
+// الموضع — راجع docs/LESSONS.md#L-16.
 //
-// **مبدأ الاستدعاء:** نستدعي `prepareHeadline` الموجودة (render.ts)
-// لكل عنصر text — لا نعيد بناءها. الطبقة المرجعية داخل template تُحدَّد
-// بواسطة `item.template` (اسم القالب) أو نستعمل القالب المُمرَّر إن كان
-// العنصر بلا template صريح (المسار المألوف: قالب واحد يحكم كل شيء).
+// **فحص التصادم:** بعد بناء كل preps، نطابق كل زوج عناصر متداخل زمنياً
+// ونفحص تقاطع صناديقهما الرأسية. تحذير في `console.warn` — لا استثناء
+// (قد يكون التصادم مقصوداً كتراكب طبقات في حالات خاصّة).
 //
-// **جلسة 2:** buildTimelinePlan يمتلئ. نصوص text تُحضَّر مسبقاً. مسارات
-// media لا تحتاج تحضيراً (drawTimelineAt يحمّل الصور من assets مباشرة).
+// **النقاء محفوظ:** الخطة قيمة مُشتقّة من نفس المدخلات، تُمرَّر إلى
+// drawTimelineAt كوسيط. لا حالة، لا آثار جانبية عدا التحذير.
 
 import type { BrandKit, Timeline, TrackItem } from '@pf-mediakit/shared';
 import type { Template } from '@pf-mediakit/templates';
@@ -40,10 +41,20 @@ export interface PreparedTextItem {
   readonly prep: PreparedHeadline;
 }
 
+/** تحذير تصادم — يُملأ إن اكتُشف نصّان يتقاطعان مكانياً وزمانياً. */
+export interface CollisionWarning {
+  readonly a: { readonly trackId: string; readonly itemId: string };
+  readonly b: { readonly trackId: string; readonly itemId: string };
+  readonly overlapSeconds: number;
+  readonly yGapPixels: number;
+}
+
 export interface TimelinePlan {
   readonly timeline: Timeline;
   /** مفتاح: `${trackId}:${itemId}`. */
   readonly textPreps: ReadonlyMap<string, PreparedTextItem>;
+  /** تحذيرات تصادم مكاني بين عناصر متداخلة زمنياً. */
+  readonly collisions: readonly CollisionWarning[];
 }
 
 // ── مدخلات البناء ─────────────────────────────────────
@@ -52,29 +63,44 @@ export interface BuildTimelinePlanArgs {
   readonly timeline: Timeline;
   readonly brand: BrandKit;
   /**
-   * القالب المرجعي — يُستشار للطبقة `headline` عند تحضير عناصر text.
-   * للجلسة 2 القالب واحد لكل الخط الزمني (نموذج breaking).
+   * القالب المرجعي — يوفّر طبقة `headline` كنقطة انطلاق للتحضير.
+   * anchor/verticalAnchor من طبقة القالب يُتجاوَزان بـ `item.anchor`.
    */
   readonly template: Template;
   /** ctx للقياس فقط — لا يُرسم عليه. */
   readonly ctx: CanvasDrawContext & CanvasFontContext;
   /** حجم القماش. */
   readonly size: { readonly w: number; readonly h: number };
-  /** أصول (يحتاجها prepareHeadline للطبقة headline إن كانت تعتمد onlyIf). */
   readonly assets?: RenderAssets;
+}
+
+// ── تعيين anchor العنصر إلى anchor + verticalAnchor للطبقة ─
+
+interface AnchorMapping {
+  readonly anchor: 'top' | 'middle' | 'bottom' | 'centerLower';
+  readonly verticalAnchor?: number;
+}
+
+/**
+ * يحوّل item.anchor إلى (layer.anchor, layer.verticalAnchor):
+ *   • 'top'    → anchor='top' (15% من الارتفاع في render.ts)
+ *   • 'center' → anchor='middle' (50%)
+ *   • 'bottom' → anchor='bottom' (85%)
+ *   • ratio    → anchor='centerLower' + verticalAnchor=ratio
+ * الافتراضي (undefined) → 'center' (0.5) — يُصاحبه تحذير تصادم لاحق
+ * إن تعارض مع عنصر آخر.
+ */
+function mapItemAnchor(itemAnchor: TrackItem['anchor']): AnchorMapping {
+  if (itemAnchor === undefined) return { anchor: 'middle' };
+  if (itemAnchor === 'top') return { anchor: 'top' };
+  if (itemAnchor === 'center') return { anchor: 'middle' };
+  if (itemAnchor === 'bottom') return { anchor: 'bottom' };
+  // نسبة رقمية
+  return { anchor: 'centerLower', verticalAnchor: itemAnchor };
 }
 
 // ── الواجهة العامة ────────────────────────────────────
 
-/**
- * يبني الخطة. لكل عنصر في مسار text: يستدعي `prepareHeadline` مرة
- * ويخزّن النتيجة. drawTimelineAt session-3 سيستهلك الخطة بدلاً من
- * تمرير `headlinePrep` منفصلاً.
- *
- * **جلسة 2:** إذا لم يجد العنصر `template` صريح أو `value`، لا يُحضَّر
- * (item بلا نصّ لا headline له). حالات text المُركّبة (item.template
- * يشير إلى قالب مختلف عن الرئيسي) مؤجَّلة — يحتاج تسجيل قوالب.
- */
 export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
   const preps = new Map<string, PreparedTextItem>();
 
@@ -93,7 +119,17 @@ export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
     }
   }
 
-  return { timeline: args.timeline, textPreps: preps };
+  const collisions = detectCollisions(args.timeline, preps);
+  for (const c of collisions) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[buildTimelinePlan] تصادم مكاني/زماني: ${c.a.trackId}:${c.a.itemId} × ${c.b.trackId}:${c.b.itemId} — ` +
+      `تداخل زمني ${c.overlapSeconds.toFixed(2)}s، فارق رأسي ${c.yGapPixels.toFixed(0)}px (سالب = تقاطع). ` +
+      `عيّن item.anchor لكل عنصر (top/center/bottom أو نسبة).`
+    );
+  }
+
+  return { timeline: args.timeline, textPreps: preps, collisions };
 }
 
 // ── التحضير المفرد لعنصر text ─────────────────────
@@ -102,13 +138,20 @@ function prepareTextItem(
   item: TrackItem,
   args: BuildTimelinePlanArgs
 ): PreparedHeadline | null {
-  // نحدّد الطبقة headline من القالب — أول طبقة type='headline'.
-  const layer = args.template.layers.find((l) => l.type === 'headline');
-  if (!layer || layer.type !== 'headline') return null;
+  const baseLayer = args.template.layers.find((l) => l.type === 'headline');
+  if (!baseLayer || baseLayer.type !== 'headline') return null;
 
-  // نبني content مؤقت — العنصر يحمل النص في `value`، نضعه تحت
-  // field الطبقة (عادةً 'headline').
-  const contentKey = layer.field;
+  // clone الطبقة مع override لـ anchor/verticalAnchor من item.
+  const mapping = mapItemAnchor(item.anchor);
+  const overriddenLayer = {
+    ...baseLayer,
+    anchor: mapping.anchor,
+    ...(mapping.verticalAnchor !== undefined && {
+      verticalAnchor: mapping.verticalAnchor,
+    }),
+  };
+
+  const contentKey = baseLayer.field;
   const content: Record<string, unknown> = { [contentKey]: item.value };
 
   const rfArgs: RenderFrameArgs = {
@@ -120,7 +163,62 @@ function prepareTextItem(
     ...(args.assets && { assets: args.assets }),
   };
   const state: RenderState = {};
-  return prepareHeadline(layer, rfArgs, state);
+  return prepareHeadline(overriddenLayer, rfArgs, state);
+}
+
+// ── فحص التصادم ──────────────────────────────────────
+
+/**
+ * لكل زوج عناصر text في مسارات مختلفة (أو نفس المسار):
+ *   1. هل يتداخلان زمنياً؟ [a.start, a.end] ∩ [b.start, b.end] > 0
+ *   2. هل صناديقهما الرأسية تتقاطع؟
+ *      box.top = prep.bounds.top، box.bottom = prep.bounds.bottom
+ * إن تحقّق الاثنان ⇒ تحذير.
+ *
+ * **ليست خطأ صعباً:** بعض التصاميم تتراكب عمداً (ظلّ نص، تراكب مقصود).
+ * التحذير يُلزم المصمّم بالتحقّق عن قصد أو خطأ.
+ */
+function detectCollisions(
+  timeline: Timeline,
+  preps: ReadonlyMap<string, PreparedTextItem>
+): readonly CollisionWarning[] {
+  const items: Array<{
+    trackId: string;
+    item: TrackItem;
+    prep: PreparedHeadline;
+  }> = [];
+  for (const track of timeline.tracks) {
+    if (track.type !== 'text') continue;
+    for (const item of track.items) {
+      const p = preps.get(`${track.id}:${item.id}`);
+      if (p) items.push({ trackId: track.id, item, prep: p.prep });
+    }
+  }
+
+  const warnings: CollisionWarning[] = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = items[i]!;
+      const b = items[j]!;
+      // تداخل زمني
+      const tOverlap = Math.min(a.item.end, b.item.end) - Math.max(a.item.start, b.item.start);
+      if (tOverlap <= 0) continue;
+      // تقاطع رأسي (يشمل offset.y إن وُجد)
+      const aTop = a.prep.bounds.top + (a.item.offset?.y ?? 0);
+      const aBot = a.prep.bounds.bottom + (a.item.offset?.y ?? 0);
+      const bTop = b.prep.bounds.top + (b.item.offset?.y ?? 0);
+      const bBot = b.prep.bounds.bottom + (b.item.offset?.y ?? 0);
+      const yOverlap = Math.min(aBot, bBot) - Math.max(aTop, bTop);
+      if (yOverlap <= 0) continue; // لا تقاطع — سالم
+      warnings.push({
+        a: { trackId: a.trackId, itemId: a.item.id },
+        b: { trackId: b.trackId, itemId: b.item.id },
+        overlapSeconds: tOverlap,
+        yGapPixels: -yOverlap, // سالب = تقاطع
+      });
+    }
+  }
+  return warnings;
 }
 
 // ── مساعد للمستدعي ────────────────────────────────
@@ -136,4 +234,3 @@ export function collectTextItems(
   }
   return out;
 }
-

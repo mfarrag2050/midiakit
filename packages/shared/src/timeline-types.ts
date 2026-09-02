@@ -133,11 +133,24 @@ export interface TrackItem {
   readonly value?: string;
   /** نمط اللف — 'uniform' أو 'alternating'. */
   readonly wrap?: 'uniform' | 'alternating';
-  /** نقطة تثبيت النص في القماش. */
-  readonly anchor?:
-    | 'top-left' | 'top-center' | 'top-right'
-    | 'center-left' | 'center' | 'center-right'
-    | 'bottom-left' | 'bottom-center' | 'bottom-right';
+  /**
+   * موضع النص الرأسي على القماش. **لكل عنصر نص موضع خاص** — لا يرث
+   * الموضع من طبقة القالب. صيغتان:
+   *   • ثابتة: `'top'` (15% من الارتفاع) · `'center'` (50%) · `'bottom'` (85%)
+   *   • نسبة: عدد ∈ [0, 1] — مركز الكتلة عند `size.h × ratio`
+   * الافتراضي حين لا يُذكَر: 'center' (يُحذّر buildTimelinePlan عند
+   * تصادم عناصر بلا موضع صريح).
+   */
+  readonly anchor?: 'top' | 'center' | 'bottom' | number;
+  /**
+   * إزاحة إضافية عن نقطة `anchor` بالبكسل. تُطبَّق كـctx.translate
+   * فوق أيّ keyframe y-translate. مفيدة للفروق الطفيفة (تحريك سطر إلى
+   * الأسفل قليلاً بلا تغيير التصنيف الرأسي).
+   */
+  readonly offset?: {
+    readonly x?: number;
+    readonly y?: number;
+  };
   /** كشف النص تدريجياً — كلمة/حرف بحرف. */
   readonly reveal?: {
     readonly mode: 'byWord' | 'byChar';
