@@ -25,5 +25,11 @@ export {
 export {
   drawTextItemLines,
   drawTextItemByWordRTL,
+  drawTextItemTypewriterRTL,
   totalWordCount,
 } from './text-effects.js';
+export {
+  applyTransitionFrame,
+  resolveDirection,
+  type TransitionRole,
+} from './transitions.js';

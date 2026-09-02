@@ -53,8 +53,18 @@ import {
 import { resolveAt } from './resolve-at.js';
 import { interpolate } from './interpolate.js';
 import { getEasingFn } from './easing.js';
-import { drawTextItemLines, drawTextItemByWordRTL } from './text-effects.js';
+import { drawTextItemLines, drawTextItemByWordRTL, drawTextItemTypewriterRTL } from './text-effects.js';
 import type { TimelinePlan } from './plan.js';
+import {
+  applyTransitionFrame,
+  resolveDirection,
+  type TransitionRole,
+} from './transitions.js';
+import type {
+  ActiveItem,
+  Transition,
+  TrackItem,
+} from '@pf-mediakit/shared';
 
 // ── مدخلات الاستدعاء ──────────────────────────────────
 
@@ -168,11 +178,32 @@ interface TextItemByWordEffect extends EffectRef {
   readonly fadeDuration: number;
 }
 
+/**
+ * text-item-typewriter — يرسم حرفاً بحرف من اليمين (RTL). أشد دقّة من
+ * byWord — يفضّل للاقتباسات القصيرة أو أرقام العناوين. `charStagger` =
+ * زمن بين حرف والذي يليه.
+ */
+interface TextItemTypewriterEffect extends EffectRef {
+  readonly type: 'text-item-typewriter';
+  readonly charStagger: number;
+}
+
 // ── الدالة الرئيسية ──────────────────────────────────
 
 const DEFAULTS: InterpolatedProps = Object.freeze({
   opacity: 1, x: 0, y: 0, scale: 1, rotation: 0,
 });
+
+/** حزمة رندر لعنصر واحد — قد تحمل سياق انتقال. */
+interface RenderEntry {
+  readonly activeItem: ActiveItem;
+  readonly transitionCtx?: {
+    readonly transition: Transition;
+    readonly role: TransitionRole;
+    readonly progress: number;
+    readonly direction: 'rtl' | 'ltr';
+  };
+}
 
 export function drawTimelineAt(args: DrawTimelineAtArgs): void {
   const { ctx, size, timeline, brand, template, content, assets, t } = args;
@@ -187,49 +218,176 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
 
   const active = resolveAt(timeline, t);
 
-  for (const activeItem of active.items) {
-    const item = activeItem.item;
-    if (!item.effects || item.effects.length === 0) continue;
+  // بناء قائمة رندر تشمل: (١) العناصر النشطة، و(٢) عناصر ضمن انتقال جارٍ
+  // حتى لو كانت خارج نافذتها الطبيعية (prev بعد end، أو next قبل start).
+  // كلا العنصرَين في الانتقال يجب أن يُرسم بحالة الانتقال (crossfade،
+  // slide، wipe، …) داخل نافذته.
+  const entries = buildRenderList(active, timeline, brand);
 
-    const props =
-      item.keyframes && item.keyframes.length > 0
-        ? interpolate(item.keyframes, activeItem.localT)
-        : DEFAULTS;
-
-    // لعناصر text، ابحث عن prep في الخطة (إن وُجدت).
-    let itemPrep: PreparedHeadline | undefined;
-    if (args.plan) {
-      const found = args.plan.textPreps.get(`${activeItem.trackId}:${item.id}`);
-      if (found) itemPrep = found.prep;
-    }
-
-    // save واحد لكل عنصر — كل التحويلات تنقض معاً.
-    ctx.save();
-    // تطبيق props قاعدياً (يطابق legacy: alpha ثم translateY داخل save واحد).
-    if (props.opacity !== 1) ctx.globalAlpha = ctx.globalAlpha * props.opacity;
-    if (props.x !== 0 || props.y !== 0) ctx.translate(props.x, props.y);
-    // إزاحة إضافية من item.offset (فوق keyframes) — تُطبَّق دائماً في
-    // نفس save/restore. للنصوص خصوصاً: تُتيح تحريكاً دقيقاً عن anchor
-    // بلا تغيير التصنيف الرأسي.
-    const ox = item.offset?.x ?? 0;
-    const oy = item.offset?.y ?? 0;
-    if (ox !== 0 || oy !== 0) ctx.translate(ox, oy);
-
-    // تنفيذ المؤثرات بالترتيب — transforms قبل draws.
-    for (const effect of item.effects) {
-      dispatchEffect(effect, {
-        ctx, size, brand, template, content, rfArgs, state,
-        headlinePrep: args.headlinePrep,
-        itemPrep,
-        assets: args.assets,
-        item,
-        itemProgress: activeItem.progress,
-        t, itemLocalT: activeItem.localT, props,
-      });
-    }
-
-    ctx.restore();
+  for (const entry of entries) {
+    drawRenderEntry(entry, {
+      ctx, size, brand, template, content, rfArgs, state,
+      assets: args.assets, plan: args.plan,
+      headlinePrep: args.headlinePrep, t,
+    });
   }
+}
+
+// ── بناء قائمة الرندر ────────────────────────────
+
+function buildRenderList(
+  active: ReturnType<typeof resolveAt>,
+  timeline: import('@pf-mediakit/shared').Timeline,
+  brand: BrandKit
+): RenderEntry[] {
+  const out: RenderEntry[] = [];
+  const brandDir = (brand.direction ?? 'rtl') as 'rtl' | 'ltr';
+  // فهرس العناصر النشطة بمفتاح trackId:itemId — تفادي البحث الخطّي.
+  const activeByKey = new Map<string, ActiveItem>();
+  for (const ai of active.items) {
+    activeByKey.set(`${ai.trackId}:${ai.item.id}`, ai);
+  }
+
+  // فهرس العناصر داخل انتقال — قد يظهر واحد لعدة انتقالات (نادر).
+  const inTransition = new Set<string>();
+
+  for (const at of active.transitions) {
+    const track = timeline.tracks.find((tr) => tr.id === at.trackId);
+    if (!track) continue;
+    const itemById = new Map<string, TrackItem>();
+    for (const it of track.items) itemById.set(it.id, it);
+
+    const prevId = at.transition.between[0];
+    const nextId = at.transition.between[1];
+    const prevItem = itemById.get(prevId);
+    const nextItem = itemById.get(nextId);
+    if (!prevItem || !nextItem) continue;
+
+    const direction = resolveDirection(at.transition.direction, brandDir);
+
+    // prev: قد يكون نشطاً أو مُنتهياً — إن مُنتهي، ننشئ ActiveItem بديل
+    // بـprogress=1، localT=مدة العنصر.
+    let prevActive = activeByKey.get(`${at.trackId}:${prevId}`);
+    if (!prevActive) {
+      prevActive = {
+        trackId: at.trackId,
+        item: prevItem,
+        progress: 1,
+        localT: prevItem.end - prevItem.start,
+      };
+    }
+    out.push({
+      activeItem: prevActive,
+      transitionCtx: {
+        transition: at.transition, role: 'prev',
+        progress: at.progress, direction,
+      },
+    });
+    inTransition.add(`${at.trackId}:${prevId}`);
+
+    // next: قد لم يبدأ بعد — ننشئ ActiveItem بديل بـprogress=0، localT=0.
+    let nextActive = activeByKey.get(`${at.trackId}:${nextId}`);
+    if (!nextActive) {
+      nextActive = {
+        trackId: at.trackId,
+        item: nextItem,
+        progress: 0,
+        localT: 0,
+      };
+    }
+    out.push({
+      activeItem: nextActive,
+      transitionCtx: {
+        transition: at.transition, role: 'next',
+        progress: at.progress, direction,
+      },
+    });
+    inTransition.add(`${at.trackId}:${nextId}`);
+  }
+
+  // العناصر المتبقّية (غير المشمولة في انتقال) تُضاف عادياً.
+  for (const ai of active.items) {
+    const key = `${ai.trackId}:${ai.item.id}`;
+    if (inTransition.has(key)) continue;
+    out.push({ activeItem: ai });
+  }
+
+  // فرز: حسب trackIndex تصاعدياً، ثم item.start تصاعدياً (للاستقرار).
+  const trackIndexOf = new Map<string, number>();
+  for (const tr of timeline.tracks) trackIndexOf.set(tr.id, tr.index);
+  out.sort((a, b) => {
+    const ia = trackIndexOf.get(a.activeItem.trackId) ?? 0;
+    const ib = trackIndexOf.get(b.activeItem.trackId) ?? 0;
+    if (ia !== ib) return ia - ib;
+    return a.activeItem.item.start - b.activeItem.item.start;
+  });
+
+  return out;
+}
+
+// ── رسم عنصر واحد ────────────────────────────────
+
+interface DrawEntryContext {
+  ctx: CanvasDrawContext & CanvasFontContext;
+  size: CanvasSize;
+  brand: BrandKit;
+  template: Template;
+  content: Readonly<Record<string, unknown>>;
+  rfArgs: RenderFrameArgs;
+  state: RenderState;
+  assets: DrawTimelineAtArgs['assets'];
+  plan: TimelinePlan | undefined;
+  headlinePrep: PreparedHeadline | undefined;
+  t: number;
+}
+
+function drawRenderEntry(entry: RenderEntry, dc: DrawEntryContext): void {
+  const { activeItem, transitionCtx } = entry;
+  const item = activeItem.item;
+  if (!item.effects || item.effects.length === 0) return;
+
+  const props =
+    item.keyframes && item.keyframes.length > 0
+      ? interpolate(item.keyframes, activeItem.localT)
+      : DEFAULTS;
+
+  let itemPrep: PreparedHeadline | undefined;
+  if (dc.plan) {
+    const found = dc.plan.textPreps.get(`${activeItem.trackId}:${item.id}`);
+    if (found) itemPrep = found.prep;
+  }
+
+  dc.ctx.save();
+  // (١) حالة الانتقال أوّلاً — قد تعدّل alpha وtransform وclip قبل
+  //     تطبيق props/offset الطبيعية.
+  if (transitionCtx) {
+    applyTransitionFrame(
+      dc.ctx, dc.size, transitionCtx.transition,
+      transitionCtx.role, transitionCtx.progress, transitionCtx.direction
+    );
+  }
+  // (٢) props (keyframes) — alpha ثم translate x/y
+  if (props.opacity !== 1) dc.ctx.globalAlpha = dc.ctx.globalAlpha * props.opacity;
+  if (props.x !== 0 || props.y !== 0) dc.ctx.translate(props.x, props.y);
+  // (٣) item.offset — إزاحة ثابتة فوق keyframes
+  const ox = item.offset?.x ?? 0;
+  const oy = item.offset?.y ?? 0;
+  if (ox !== 0 || oy !== 0) dc.ctx.translate(ox, oy);
+
+  // (٤) المؤثرات بالترتيب — transforms قبل draws
+  for (const effect of item.effects) {
+    dispatchEffect(effect, {
+      ctx: dc.ctx, size: dc.size, brand: dc.brand,
+      template: dc.template, content: dc.content,
+      rfArgs: dc.rfArgs, state: dc.state,
+      headlinePrep: dc.headlinePrep, itemPrep,
+      assets: dc.assets, item,
+      itemProgress: activeItem.progress,
+      t: dc.t, itemLocalT: activeItem.localT, props,
+    });
+  }
+
+  dc.ctx.restore();
 }
 
 // ── تنفيذ المؤثرات ──────────────────────────────────
@@ -273,6 +431,8 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
       return applyTextItemLines(ectx);
     case 'text-item-byWord':
       return applyTextItemByWord(effect as TextItemByWordEffect, ectx);
+    case 'text-item-typewriter':
+      return applyTextItemTypewriter(effect as TextItemTypewriterEffect, ectx);
     default:
       // مؤثر غير معروف — تجاهل صامت.
       return;
@@ -420,6 +580,22 @@ function applyTextItemByWord(
   drawTextItemByWordRTL(
     ectx.ctx, ectx.brand, prep,
     ectx.itemLocalT, effect.stagger, effect.fadeDuration
+  );
+}
+
+/**
+ * text-item-typewriter — حرف بحرف من اليمين. الكشيدة ثابتة كما في
+ * byWord (من prep الجاهز). أدقّ من byWord — يفضّل للاقتباسات القصيرة.
+ */
+function applyTextItemTypewriter(
+  effect: TextItemTypewriterEffect,
+  ectx: EffectContext
+): void {
+  const prep = ectx.itemPrep;
+  if (!prep) return;
+  drawTextItemTypewriterRTL(
+    ectx.ctx, ectx.brand, prep,
+    ectx.itemLocalT, effect.charStagger
   );
 }
 

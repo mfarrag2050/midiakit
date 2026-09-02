@@ -73,15 +73,29 @@ export type TransitionType =
   | 'blurIn';
 
 /**
+ * اتجاه الانتقال المكاني — يستهلكه `slide` و`wipe` و`zoom`.
+ * • `'rtl'`: يدخل من اليمين (يميل إلى اليسار) — عربي طبيعي.
+ * • `'ltr'`: يدخل من اليسار — لاتيني.
+ * • `'auto'`: يقرأ `brand.direction` — 'rtl' افتراضياً في الهوية العربية.
+ */
+export type TransitionDirection = 'rtl' | 'ltr' | 'auto';
+
+/**
  * انتقال بين عنصرَين متجاورَين في نفس المسار — يُحسب زمنه من نهاية
  * الأول (`prev.end - duration/2`) إلى بداية الثاني (`next.start +
  * duration/2`). لا انتقال يجاور عنصراً لا يشترك معه في `between`.
+ *
+ * **الاتجاه (slide/wipe):** يفصل الأداة العربية عن أداة مترجَمة —
+ * انتقال يدخل من اليسار في بطاقة عربية يبدو أجنبياً. الافتراضي 'auto'
+ * = `brand.direction`.
  */
 export interface Transition {
   readonly between: readonly [string, string];
   readonly type: TransitionType;
   /** بالثواني. */
   readonly duration: number;
+  /** اتجاه الحركة لـslide/wipe/zoom — يُتجاهل عند crossfade و blurIn. */
+  readonly direction?: TransitionDirection;
 }
 
 // ── العنصر داخل المسار ─────────────────────────────────

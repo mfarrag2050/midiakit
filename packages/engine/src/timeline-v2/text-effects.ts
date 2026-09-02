@@ -132,3 +132,88 @@ export function totalWordCount(prep: PreparedHeadline): number {
   }
   return n;
 }
+
+// ── drawTextItemTypewriterRTL — حرف بحرف من اليمين ────
+
+/**
+ * يرسم كل سطور prep حرفاً-بحرف من اليمين. أدقّ من byWord — كل حرف
+ * يُكشف في وقت محدد. الترتيب: السطر الأول أوّلاً (حروفه من اليمين
+ * لليسار)، ثم الثاني، إلخ.
+ *
+ * **الكشيدة داخل الكلمة:** إن حَوَت الكلمة تطويلاً (مثل «الاســـتقبال»)،
+ * الحروف الأصلية تُكشف بالترتيب مع تخطّي محارف التطويل (U+0640) —
+ * محرَف التطويل يُرسم مع الحرف الذي قبله لا كخطوة مستقلة، وإلا ظهرت
+ * فجوات بصرية.
+ *
+ * **تنفيذ:** لكل كلمة، نحسب مواضع الحروف الجزئية بقياس نصّ متزايد
+ * (نصف الكلمة أوّلاً، ثم كلها…). طريقة ثقيلة لكن آمنة — الأسلوب
+ * الطبيعي في محرّرات الفيديو.
+ */
+export function drawTextItemTypewriterRTL(
+  ctx: CanvasDrawContext & CanvasFontContext,
+  brand: BrandKit,
+  prep: PreparedHeadline,
+  localT: number,
+  charStagger: number
+): void {
+  const measure = createCanvasMeasurer(ctx, brand);
+  const rightX = prep.rightX;
+
+  // نبني قائمة كل الحروف عبر السطور بترتيب الكشف، مع مواضعها البصرية.
+  // مبسّط: نتعامل مع كل كلمة كوحدة رسم — الحروف الجزئية تُرسم بقصّ
+  // النصّ إلى prefix (كلمة كاملة — عدد حروف مكشوفة).
+  //
+  // المؤشّر العالمي:
+  //   charGlobalIdx يزداد لكل حرف (تجاهل الكشيدة داخل الكلمات).
+  //   الحرف يُكشف عند localT ≥ charGlobalIdx × charStagger.
+  //
+  // لأن Canvas يقيس كامل النصّ لا حرفاً-بحرف بسهولة، نستعمل هذه
+  // الاستراتيجية: لكل كلمة نحسب «كم حرفاً مكشوفاً» ونرسم نصّاً
+  // مقصوصاً `word.slice(0, revealedChars)`.
+
+  let charGlobalIdx = 0;
+  for (let li = 0; li < prep.linesJustified.length; li++) {
+    const line = prep.linesJustified[li]!;
+    const y = prep.firstBaseline + li * prep.lineHeight;
+    ctx.textAlign = 'right';
+    ctx.direction = 'rtl';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = brand.colors.text;
+
+    let x = rightX;
+    const sp = measure.space(prep.fontSize);
+    for (const tok of line) {
+      if (isBreak(tok) || !isWord(tok)) continue;
+      // نحسب عدد الحروف الأصلية (بلا تطويل) للكلمة.
+      const chars = [...tok.text];
+      const originalLen = chars.filter((c) => c !== 'ـ').length;
+
+      // كم حرفاً مكشوفاً حتى الآن؟ نحسب من charGlobalIdx وlocalT.
+      const revealedTotal = charStagger > 0
+        ? Math.max(0, Math.floor((localT / charStagger) - charGlobalIdx) + 1)
+        : originalLen;
+      const revealedInWord = Math.min(originalLen, revealedTotal);
+
+      if (revealedInWord > 0) {
+        // نبني السلسلة المكشوفة — نأخذ أول revealedInWord حرف أصلي مع
+        // كل الكشيدة المصاحبة (الكشيدة تُرسم مع الحرف الذي قبلها).
+        let out = '';
+        let origCount = 0;
+        for (const ch of chars) {
+          if (ch !== 'ـ') {
+            if (origCount >= revealedInWord) break;
+            origCount++;
+          }
+          out += ch;
+        }
+        ctx.font = fontString(prep.fontSize, tok.bold, brand);
+        ctx.fillText(out, x, y);
+      }
+      // نتقدّم إلى موقع الكلمة التالية باستعمال العرض الكامل (الكشف
+      // يجب أن يبقى محاذياً لموضع الكلمة النهائي).
+      const wFull = measure.word(tok, prep.fontSize, false);
+      x -= wFull + sp;
+      charGlobalIdx += originalLen;
+    }
+  }
+}

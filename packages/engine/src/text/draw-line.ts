@@ -56,11 +56,17 @@ export interface CanvasDrawContext {
   beginPath(): void;
   fill(): void;
   moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
   closePath(): void;
   arcTo(x1: number, y1: number, x2: number, y2: number, r: number): void;
   // roundRect اختياري: skia-canvas والمتصفحات الحديثة يوفّرونه؛
   // إن غاب نستخدم arcTo يدوياً (نفس أسلوب الأصل — INVENTORY 1852–1856).
   roundRect?(x: number, y: number, w: number, h: number, r: number): void;
+  // rect + clip — يستهلكهما مؤثّر `wipe` في timeline-v2 لقصّ منطقة
+  // مستطيلة تتحرّك مع تقدّم الانتقال. كلا Canvas 2D و skia-canvas
+  // يوفّرانهما قياسياً.
+  rect(x: number, y: number, w: number, h: number): void;
+  clip(): void;
 
   // صور
   drawImage(image: ImageLike, dx: number, dy: number): void;
