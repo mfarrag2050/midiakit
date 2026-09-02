@@ -54,6 +54,7 @@ import {
   drawLineCentered,
   breakPenalty,
   BREAK_INFINITY,
+  measuredLineHeight,
   type Measurer,
 } from './text/index.js';
 import type {
@@ -572,18 +573,8 @@ export function prepareHeadline(
   const centerX = size.w / 2;
   const nLines = wrap.lines.length;
 
-  const anchorY = computeHeadlineAnchorY(
-    layer.anchor,
-    layer.verticalAnchor,
-    size,
-    nLines,
-    wrap.lineHeight,
-    wrap.fontSize,
-    state
-  );
-  const firstBaseline = anchorY;
-  const lastBaseline = firstBaseline + (nLines - 1) * wrap.lineHeight;
-
+  // justify أولاً — قد يُدخل كشيدة تزيد ارتفاع بعض الحروف قليلاً، لكن
+  // القرار الرئيسي في ارتفاع السطر يعتمد على التشكيل لا الكشيدة.
   const linesJustified = wrap.lines.map((line, i) =>
     justifyLine(
       line,
@@ -597,11 +588,44 @@ export function prepareHeadline(
     )
   );
 
+  // lineHeight الديناميكي (docs/07 §3): يُفعَّل تلقائياً حين التشكيل
+  // مُفعَّل (`diacritics.enabled`)، أو حين الهوية تفرضه صراحةً
+  // (`lineHeightMode='dynamic'`). النسبة الثابتة (fs × 1.34/1.42) تصبح
+  // **حداً أدنى**؛ نقيس الارتفاع الفعلي عبر actualBoundingBoxAscent/Descent
+  // ونأخذ الأكبر. عند 'fixed' وبلا تشكيل نُبقي wrap.lineHeight كما هو
+  // (سلوك سابق) — snapshots الذهبية تبقى مطابقة بايت-بايت.
+  const dynamicActive =
+    brand.typography.lineHeightMode === 'dynamic' ||
+    brand.typography.diacritics.enabled;
+  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
+  const finalLineHeight = dynamicActive
+    ? measuredLineHeight(
+        ctx,
+        linesJustified,
+        wrap.fontSize,
+        family,
+        false,
+        wrap.lineHeight
+      )
+    : wrap.lineHeight;
+
+  const anchorY = computeHeadlineAnchorY(
+    layer.anchor,
+    layer.verticalAnchor,
+    size,
+    nLines,
+    finalLineHeight,
+    wrap.fontSize,
+    state
+  );
+  const firstBaseline = anchorY;
+  const lastBaseline = firstBaseline + (nLines - 1) * finalLineHeight;
+
   // نُقاس accent spans عبر «رسم صامت» على measure فقط — لا يُخلّ بالنقاء
   // (النتيجة نفسها في أي استدعاء بنفس الوسائط).
   const accentSpans: AccentSpanBounds[] = [];
   linesJustified.forEach((ln, i) => {
-    const y = firstBaseline + i * wrap.lineHeight;
+    const y = firstBaseline + i * finalLineHeight;
     // نستعمل drawLine* لكن نُلغي التأثيرات عبر عدم استدعائها هنا —
     // بدلاً من ذلك نحسب accent bounds من الإحداثيات مباشرةً.
     // الأبسط: احتفظ بحدود accent فقط عند الرسم الفعلي في drawHeadlineLine.
@@ -619,7 +643,7 @@ export function prepareHeadline(
 
   return {
     fontSize: wrap.fontSize,
-    lineHeight: wrap.lineHeight,
+    lineHeight: finalLineHeight,
     chosenBoxW,
     rightX,
     centerX,

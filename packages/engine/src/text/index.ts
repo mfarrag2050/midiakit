@@ -57,3 +57,7 @@ export {
   BREAK_MEDIUM,
   BREAK_NEUTRAL,
 } from './semantic-break.js';
+export {
+  measuredLineHeight,
+  type CanvasBoundsContext,
+} from './dynamic-line-height.js';

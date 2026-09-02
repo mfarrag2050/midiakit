@@ -112,7 +112,11 @@ export const DEFAULT_BRAND: BrandKit = {
       boxWidthRange: [0.68, 0.86],
     },
     accentBar: { height: 8, minWidth: 140, maxWidth: 620 },
-    lineHeightMode: 'dynamic',
+    // fixed افتراضياً — يستعمل fs × lineHeight الثابت من font.breaking.
+    // dynamic يُفعَّل تلقائياً حين diacritics.enabled=true (docs/07 §3):
+    // التشكيل يزيد ارتفاع الحرف الفعلي، فنحتاج قياساً حقيقياً لتفادي
+    // تصادم علامة سطر مع الحرف الأدنى فوقها.
+    lineHeightMode: 'fixed',
     justify: {
       // القيم مطابقة لـ docs/03 §justify.
       // mode='kashida' لأن الخط الافتراضي (IBM Plex) يدعمه — للخطوط

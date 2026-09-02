@@ -12,3 +12,9 @@ out/
 # الملفات المُشتقّة (data/external/*.json) هي التي تُتَتبَّع.
 data/external/raw/
 data/external/rss/
+
+# بيئات بايثون المعزولة لخدمات services/ — لا تُتَتبَّع (~2GB torch كلٌّ).
+services/*/.venv/
+services/*/__pycache__/
+services/*/*.egg-info/
+**/*.pyc

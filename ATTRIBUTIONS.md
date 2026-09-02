@@ -71,6 +71,24 @@
 - **حدود الاستعمال:** المحتوى قابل للاختبار الداخلي فقط بموجب استعمال
   عادل (research/benchmarking) — لا يُعاد نشره كما هو خارج المشروع.
 
+### 4. arabic-diacritizer — التشكيل الآلي
+
+- **الاستهلاك:** خدمة معزولة `services/diacritizer/` — لا تبعية بايثون
+  داخل `packages/engine`. المحرك يستقبل النص المشكّل كأيّ نصّ (L-12).
+- **المصدر:** https://pypi.org/project/arabic-diacritizer/ (v1.0.0،
+  Zain Mahmood، مارس 2026).
+- **الترخيص:** MIT.
+- **الإسناد الرسمي:** MIT لا يشترط إسناداً في المخرج، لكن نُوثّقه هنا:
+  > Diacritization powered by **arabic-diacritizer**
+  > (https://pypi.org/project/arabic-diacritizer/) — MIT License,
+  > Zain Mahmood, 2026.
+- **البنية:** BiLSTM ثلاثي الطبقات + Bahdanau attention، تصنيف على
+  15 فئة تشكيل. ~18MB نموذج + ~29MB كاش كلمات.
+- **الدقّة المُعلَنة:** معدّل خطأ ~6.6% على معيار Tashkeela — يكفي
+  لسياق العرض التلفازي/الرقمي، ليس مصدراً للمصاحف أو النصوص التعليمية.
+- **التبعيات الثقيلة:** PyTorch 2.13 (~2GB). معزولة في `services/
+  diacritizer/.venv` — لا تدخل `pnpm install` الرئيسي.
+
 ## المُعلَّق — WojoodGaza
 
 - **الحالة:** غير محمَّل. مطلوب لبوابتي (أ) صفر كسر داخل Infinity

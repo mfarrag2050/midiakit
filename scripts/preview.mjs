@@ -40,7 +40,14 @@ const ROOT = join(__dirname, '..');
 // ── وسائط سطر الأوامر ─────────────────────────────────
 function parseArgs() {
   // semantic: 'default' | 'on' | 'off' — 'default' يحترم brand.typography.semanticBreaks
-  const args = { brand: 'default', template: 'breaking', semantic: 'default' };
+  // diacritize: false | true — يستدعي خدمة التشكيل قبل الرندر
+  const args = {
+    brand: 'default',
+    template: 'breaking',
+    semantic: 'default',
+    diacritize: false,
+    diacritizerUrl: 'http://127.0.0.1:19080',
+  };
   for (const arg of process.argv.slice(2)) {
     const brandMatch = arg.match(/^--brand=(.+)$/);
     if (brandMatch) args.brand = brandMatch[1];
@@ -48,8 +55,36 @@ function parseArgs() {
     if (tplMatch) args.template = tplMatch[1];
     const semMatch = arg.match(/^--semantic=(default|on|off)$/);
     if (semMatch) args.semantic = semMatch[1];
+    if (arg === '--diacritize') args.diacritize = true;
+    const urlMatch = arg.match(/^--diacritizer-url=(.+)$/);
+    if (urlMatch) args.diacritizerUrl = urlMatch[1];
   }
   return args;
+}
+
+/**
+ * يستدعي خدمة التشكيل مع تراجع صامت. عند تعذّر الاتصال أو خطأ نموذج،
+ * يُطبع تحذير ويُرجَع النص كما هو — لا فشل صعب (L-04: احترام حدود
+ * النظام؛ هنا الحدّ خدمة خارجية اختيارية).
+ */
+async function diacritizeText(text, url) {
+  try {
+    const resp = await fetch(`${url}/diacritize`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) {
+      console.warn(`[preview] diacritizer HTTP ${resp.status} — تمرير النص كما هو`);
+      return text;
+    }
+    const data = await resp.json();
+    return data.text ?? text;
+  } catch (err) {
+    console.warn(`[preview] تعذّر الاتصال بخدمة التشكيل (${url}): ${err.message} — تمرير النص كما هو`);
+    return text;
+  }
 }
 
 const CLI = parseArgs();
@@ -77,7 +112,25 @@ function applySemanticOverride(raw, mode) {
     },
   };
 }
-const brandAdjusted = applySemanticOverride(brandRaw, CLI.semantic);
+// تفعيل التشكيل في الهوية عند --diacritize — يُفعِّل تلقائياً dynamic
+// lineHeight داخل المحرك (docs/07 §3).
+function applyDiacriticsOverride(raw, on) {
+  if (!on) return raw;
+  return {
+    ...raw,
+    typography: {
+      ...raw.typography,
+      diacritics: {
+        ...(raw.typography?.diacritics ?? {}),
+        enabled: true,
+      },
+    },
+  };
+}
+const brandAdjusted = applyDiacriticsOverride(
+  applySemanticOverride(brandRaw, CLI.semantic),
+  CLI.diacritize
+);
 const brand = resolveBrand(brandAdjusted);
 
 // ── تحميل ExtendedLexicon (يُمرَّر فقط حين semantic مفعّل) ──
@@ -180,7 +233,14 @@ async function renderOne(templateId, kashidaOn) {
       `[preview] template=${templateId} غير معروف. المتاح: ${Object.keys(TEMPLATES).join(', ')}`
     );
   }
-  const content = CONTENT_BY_TEMPLATE[templateId] ?? {};
+  const rawContent = CONTENT_BY_TEMPLATE[templateId] ?? {};
+  // التشكيل يجري على مستوى النص **قبل** استدعاء المحرك — المحرك يستقبل
+  // نصاً مشكّلاً كأيّ نص. لا تبعية بايثون في packages/engine.
+  let content = rawContent;
+  if (CLI.diacritize && typeof rawContent.headline === 'string') {
+    content = { ...rawContent, headline: await diacritizeText(rawContent.headline, CLI.diacritizerUrl) };
+  }
+
   const canvas = new Canvas(SIZE.w, SIZE.h);
   const ctx = canvas.getContext('2d');
 
@@ -215,7 +275,7 @@ const templatesToRun =
   CLI.template === 'all' ? Object.keys(TEMPLATES) : [CLI.template];
 
 console.log(
-  `[preview] brand=${brand.id} · قوالب=${templatesToRun.join(',')} · قماش=${SIZE.w}×${SIZE.h} · semantic=${semanticActive ? 'on' : 'off'} (${OUT_SUBDIR}/)`
+  `[preview] brand=${brand.id} · قوالب=${templatesToRun.join(',')} · قماش=${SIZE.w}×${SIZE.h} · semantic=${semanticActive ? 'on' : 'off'} · diacritics=${CLI.diacritize ? 'on' : 'off'} (${OUT_SUBDIR}/)`
 );
 
 for (const tplId of templatesToRun) {
@@ -227,11 +287,15 @@ for (const tplId of templatesToRun) {
 
 // ── ملفَي المراجعة البصرية للمالك ────────────────────
 // عند brand=default && template=breaking (أو all)، ننسخ لقطة الكشيدة إلى
-// out/preview-semantic.png أو out/preview-nosemantic.png — يقارنها المالك
-// جنباً إلى جنب (اعمل الأمر مرتين: --semantic=on ثم --semantic=off).
+// out/preview-semantic.png / preview-nosemantic.png / preview-diacritics.png
+// حسب حالة العلامات — يقارنها المالك جنباً إلى جنب.
 if (CLI.brand === 'default' && templatesToRun.includes('breaking')) {
   const src = join(OUT_DIR, `preview-default.png`);
-  const dst = join(OUT_ROOT, `preview-${semanticActive ? 'semantic' : 'nosemantic'}.png`);
+  let destName;
+  if (CLI.diacritize) destName = 'preview-diacritics.png';
+  else if (semanticActive) destName = 'preview-semantic.png';
+  else destName = 'preview-nosemantic.png';
+  const dst = join(OUT_ROOT, destName);
   if (existsSync(src)) {
     await copyFile(src, dst);
     console.log(`   ↪ ${dst.replace(ROOT + '/', '')} (مراجعة بصرية)`);

@@ -2,7 +2,17 @@
 
 > ملف حيّ. يُحدَّث في نهاية كل جلسة عمل. الحقول: `☐` لم يبدأ · `◐` جارٍ · `☑` مكتمل.
 
-**آخر تحديث:** 2026-09-01 (المرحلة 3.5 الجزء ب-2 — الموارد + التفعيل).
+**آخر تحديث:** 2026-09-02 (المرحلة 3.5 — التشكيل الآلي مُنجَز).
+**ملخّص الجلسة:** `services/diacritizer/` FastAPI معزولة (arabic-
+diacritizer MIT، Python 3.12 venv، منفذ 19080) · `measuredLineHeight`
+في المحرك يقيس `actualBoundingBox` مع safety pad · `diacritics.enabled`
+يفعّل dynamic lineHeight تلقائياً · تفاعل صحيح مع الكشيدة مُختبَر
+صريحاً (12 اختبار جديد، المجموع 238) · تراجع صامت عند تعذّر الاتصال ·
+`out/preview-diacritics.png` للمراجعة البصرية · **snapshots ذهبية تبقى
+24/24 مطابقة** بايت-بايت (التشكيل معطّل افتراضياً) · L-12 مُسجَّل
+(«المكوّنات غير-JS في خدمات معزولة، لا في المحرك»).
+
+**السابق (2026-09-01 — المرحلة 3.5 الجزء ب-2):**
 **ملخّص الجلسة:** GeoNames (CC-BY-4.0) → places.json 72KB · Wikidata (CC0)
 → entities.json 113KB · titles.json يدوي 3KB · ExtendedLexicon + 3 قواعد
 جديدة (place-pair · entity-pair · title-name) · 226 اختبار أخضر · قياس
@@ -408,18 +418,54 @@ genuine-reflow    :  23   (تعيين word-to-line تغيّر فعلاً)
 بلا سبب معروف. الظاهرة الأولى (12 «unknown») كانت خطأً في المصنّف لا
 في النظام — L-11.
 
-## التشكيل
-- ☐ دمج نموذج مفتوح في `apps/renderer`
-- ☐ `measuredLineHeight` من `actualBoundingBoxAscent`
-- ☐ `lineHeight` الثابت (1.34/1.42) يصبح حداً أدنى
+## التشكيل (2026-09-02 ☑)
+
+- ☑ **خدمة معزولة** في `services/diacritizer/` — FastAPI + arabic-
+      diacritizer (MIT، v1.0.0، 18MB نموذج، ~2GB torch). منفذ 19080
+      من نطاق pf-mediakit. Python 3.10-3.12 في venv خاصّ.
+- ☑ **صفر بايثون داخل `packages/engine`** — تحقّق مُثبَت آلياً بـ
+      `pnpm check:engine-purity` (يمرّ). التكامل على مستوى النص فقط:
+      preview.mjs (وقريباً apps/renderer) يستدعي الخدمة عبر HTTP قبل
+      تمرير `content.headline` لـ`renderFrame`.
+- ☑ `measuredLineHeight` في `packages/engine/src/text/dynamic-line-
+      height.ts` — يحسب من `actualBoundingBoxAscent + Descent`، مع
+      `safetyPad=0.05`. يُعيد `max(minLineHeight, measured × 1.05)`.
+- ☑ `brand.typography.lineHeightMode` يُحترم في `prepareHeadline`:
+      `'fixed'` (الافتراضي — snapshots ذهبية سابقة تبقى بايت-بايت
+      مطابقة) أو `'dynamic'` (يفعّل القياس). **`diacritics.enabled=true`
+      يفعّل dynamic تلقائياً** بغضّ النظر عن lineHeightMode.
+- ☑ التفاعل مع الكشيدة مُختبَر صريحاً في `diacritics-interaction.test.
+      ts` (12 اختبار جديد): كل كلمة مشكّلة ⇒ `kashidaSites=[]`،
+      `justifyLine` لا يُدرج أيّ تطويل جديد.
+- ☑ **تراجع صامت** عند تعذّر الاتصال بالخدمة: تحذير stderr + تمرير
+      النص كما هو، لا فشل صعب (L-04).
+- ☑ `brand.typography.diacritics.enabled = false` في `DEFAULT_BRAND` —
+      التشكيل خيار للعميل، الأخبار العاجلة نادراً ما تُشكَّل.
+- ☑ `out/preview-diacritics.png` (85KB) للمراجعة البصرية جنباً إلى
+      جنب مع `preview-semantic.png` و `preview-nosemantic.png`.
+- ☑ **بوابات المرحلة 3.5:** 238 اختبار vitest أخضر (12 جديد) · 24/24
+      snapshot ذهبية مطابقة (nosemantic + semantic كلاهما 12/12) ·
+      `check:engine-purity` نظيف — لا window/document/بايثون في المحرك.
+- 📎 دمج مباشر في `apps/renderer` (خارج CLI التطوير) — يبقى للمرحلة
+      4 عند بناء الواجهة، حيث الطلب المتزامن للتشكيل يتّضح مساره.
+- ☑ **تدفق تحرير التشكيل مُوثَّق** في docs/09 §«التشكيل — العميل يملك
+      القرار» و docs/04 §«المحتوى». النموذج مساعد لا سلطة؛ العميل يحرّر
+      حرفاً بحرف في حقل نصي، والنص المشكَّل المحرَّر هو ما يُخزَّن.
+- ☑ **تشكيل جزئي مُثبَت آلياً** — 4 اختبارات جديدة في `diacritics-
+      interaction.test.ts` تفحص عنواناً بكلمة مشكّلة وأربع عاريات:
+      parseTokens يحفظ العلامات · kashidaSites قرار لكل كلمة · justifyLine
+      لا يمدّ المشكّلة · measuredLineHeight يعكس الأعلى. **المجموع: 242
+      اختبار vitest أخضر.**
 
 ## البيع
 - ☐ **لقطة مقارنة: مخرجك مقابل Canva لنفس العنوان** — أداة البيع الأولى
 
 **البوابة الشاملة للمرحلة 3.5:** عنوان عربي بلا كسر داخل وحدة معنى، مع
 تشكيل اختياري لا يتصادم مع السطر الأعلى. (الحواف المستقيمة صارت مسؤولية
-المرحلة 1.5.) **الحالة الحالية:** ب-2 مُتحقّقة على المقاييس الطباعية (ج،
-د، أداء) — بوابتا (أ) و (ب) معلَّقتان حتى WojoodGaza. التشكيل الآلي بعد.
+المرحلة 1.5.) **الحالة (2026-09-02):** الكسر الدلالي ب-2 مُتحقّق على
+المقاييس الطباعية (ج، د، أداء) — بوابتا (أ) و (ب) معلَّقتان حتى
+WojoodGaza. التشكيل الآلي **مُنجَز** (خدمة معزولة + dynamic lineHeight
++ تفاعل صحيح مع الكشيدة). المرحلة تبقى **◐** حتى وصول WojoodGaza.
 
 ---
 
