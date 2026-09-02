@@ -342,6 +342,21 @@ export interface BrandAudioTrack {
   readonly licenseAck: boolean;
 }
 
+// ── الأصول (Assets pin) ────────────────────────────────
+// راجع docs/13-asset-lifecycle.md.
+// **قاعدة:** تحديث الإصدار قرار العميل، لا تلقائي. تحديث خفي يغيّر
+// عرض حرف = كسر كسور السطور في مخرجات قائمة.
+
+export interface BrandAssetsPin {
+  /** إصدار مجلد `mediakit-assets/YYYY.MM/` الذي يستهلكه هذا العميل. */
+  readonly version: string;
+  /**
+   * تحديث تلقائي إلى `latest` عند إصدار جديد. الافتراضي `false`.
+   * `true` مقصور على الحسابات التجريبية.
+   */
+  readonly autoUpdate: boolean;
+}
+
 // ── الإسناد (Attribution) ──────────────────────────────
 // راجع docs/03 §attribution و ATTRIBUTIONS.md §شعارات المنصات.
 // **قاعدة قانونية:** لا شعار منصة يُشحن كصورة داخل `packages/*`.
@@ -415,4 +430,10 @@ export interface BrandKit {
   readonly outputs: BrandOutputs;
   readonly audio: readonly BrandAudioTrack[];
   readonly attribution: BrandAttribution;
+  /**
+   * تجميد إصدار مستودع الأصول (docs/13). اختياري في النموذج حالياً —
+   * يُنفَّذ فعلياً مع بنية `mediakit-assets/` في المرحلة 4. غيابه في
+   * الاختبارات ⇒ ضمنياً `latest`.
+   */
+  readonly assets?: BrandAssetsPin;
 }
