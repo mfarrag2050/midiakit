@@ -12,7 +12,19 @@
       "hint": "Enter = كسر سطر يدوي"
     },
     { "key": "source", "type": "text", "required": false },
-    { "key": "image", "type": "image", "required": false }
+    { "key": "image", "type": "image", "required": false },
+    {
+      "key": "sourceHandle",
+      "type": "text",
+      "required": false,
+      "hint": "مقبض المصدر (مثال: @user)"
+    },
+    {
+      "key": "sourceName",
+      "type": "text",
+      "required": false,
+      "hint": "اسم صاحب المصدر"
+    }
   ],
   "layers": [
     {
@@ -52,7 +64,16 @@
       "gapFsRatio": 1.4,
       "font": "brand.typography.source"
     },
-    { "type": "logo" }
+    { "type": "logo" },
+    {
+      "type": "attribution",
+      "platform": "tiktok",
+      "mode": "both",
+      "handleField": "sourceHandle",
+      "nameField": "sourceName",
+      "anchor": "bottom-right",
+      "margin": 60
+    }
   ],
   "video": {
     "animation": [

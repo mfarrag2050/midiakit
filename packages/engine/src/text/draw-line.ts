@@ -35,6 +35,15 @@ export interface ImageLike {
 }
 
 /**
+ * مسار هندسي مسبق البناء — Path2D في المتصفح، Path2D في skia-canvas.
+ * علامة نوعية مبهمة (opaque) — المحرك لا يبني Path2D بنفسه (يخالف الطهر
+ * البيئي)، بل يستقبله من المستدعي. راجع layers/attribution.ts للاستعمال.
+ */
+export interface Path2DLike {
+  readonly __path2dBrand?: unique symbol;
+}
+
+/**
  * السطح الأدنى من Canvas الذي نحتاجه للرسم — لا نستورد lib.dom.
  * يتوافق مع CanvasRenderingContext2D في المتصفح و skia-canvas في Node.
  *
@@ -55,6 +64,12 @@ export interface CanvasDrawContext {
   fillRect(x: number, y: number, w: number, h: number): void;
   beginPath(): void;
   fill(): void;
+  /**
+   * تعبئة Path2D مسبق البناء — تُستعمل في layers/attribution لرسم شعارات
+   * simple-icons (مسارات SVG public-domain). المتصفح و skia-canvas
+   * كلاهما يدعم هذا التوقيع.
+   */
+  fill(path: Path2DLike): void;
   moveTo(x: number, y: number): void;
   lineTo(x: number, y: number): void;
   closePath(): void;

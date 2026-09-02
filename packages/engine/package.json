@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@pf-mediakit/shared": "workspace:*",
-    "@pf-mediakit/templates": "workspace:*"
+    "@pf-mediakit/templates": "workspace:*",
+    "simple-icons": "^16.29.0"
   }
 }

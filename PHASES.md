@@ -666,13 +666,25 @@ Apache 2.0 · MIT · BSD مقبولة. النموذج غير المرخّص صر
       يستقبل نصاً موقوتاً ولا يعرف من فرّغه. **فحص رخصة Whisper أولاً**
       (Whisper نفسه MIT، لكن الحزم الملفوفة مثل faster-whisper تحقّق).
 
-- ☐ **طبقة الإسناد (attribution)** — طبقة قالب جديدة:
-      `{ platform, mode: 'handle'|'name'|'both', handle, name, anchor,
-      showPlatformLogo }` مع دعم tiktok · x · instagram · youtube ·
-      telegram · facebook. **شعارات المنصات علامات تجارية** — يُتحقق
-      من إرشادات كل منصة قبل التنفيذ ويُوثَّق كل شعار في
-      `ATTRIBUTIONS.md`. التصنيف الوظيفي: متطلب تحريري وقانوني، لا
-      تجميلي.
+- ☑ **طبقة الإسناد (attribution)** — أُنجز 2026-09-02. الفحص القانوني
+      رصد أن **خمساً من ست منصات** (Meta/YouTube/X/Telegram) تشترط إذناً
+      لعرض شعارها في منتج تجاري. النتيجة معمارية:
+      `brand.attribution.logoMode: 'none'|'generic'|'official'`.
+      • `none` (الافتراضي في `DEFAULT_BRAND`): نصّ فقط — «تيك توك · @user».
+      • `generic`: أيقونة محايدة نصمّمها (شكل هندسي بلون brandKit) — صفر مخاطرة.
+      • `official`: شعار من `simple-icons` (CC0)، ملوَّن بلون brandKit،
+        يشترط `brand.attribution.logoAcks[platform].licenseAck=true`
+        (نمط مطابق للخط المرفوع). الرسم من مسار Path2D — لا ملفات شعار
+        مشحونة في `packages/*`. الطبقة تعمل على بطاقة (renderFrame) وفيديو
+        (template-adapter → template-layer). ست منصات مدعومة:
+        tiktok · x · instagram · youtube · telegram · facebook. النصّ
+        بنمطين (`platformNameStyle: 'ar'|'latin'`) مع عزل LRI/PDI للمقبض
+        اللاتيني داخل عربي (تفادي التصاق `@` بالسياق العربي).
+        **البوابة:** `pnpm preview:attribution` يصدر شبكة 6 بطاقات
+        (3 modes × 2 هويّات) + 3 بطاقات منفردة + بطاقة BiDi.
+        **اللقطات:** 24/24 مستقرّة (attribution ينتظر content ولا يظهر
+        بدونه). وثائق: `ATTRIBUTIONS.md §شعارات المنصات` + §5 simple-icons
+        + docs/03 §attribution + docs/LESSONS.md (متضمَّن في L-28 لاحقاً).
 
 - ☐ **Lottie / Skottie — الموشن جرافيك** — طبقة `lottie` كنوع
       `TrackItem` تستدعي Skottie. **الخطوة الأولى فحص لا بناء:**

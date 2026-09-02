@@ -26,3 +26,11 @@ export {
   type BadgeParams,
 } from './badge.js';
 export { drawLogo, type LogoLayerParams } from './logo.js';
+export {
+  drawAttribution,
+  PLATFORM_PATH_STRINGS,
+  PLATFORM_ICON_VIEWBOX,
+  type AttributionMode,
+  type AttributionAnchor,
+  type AttributionParams,
+} from './attribution.js';

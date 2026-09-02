@@ -11,6 +11,7 @@
 // كل خطأ يحمل مساراً كاملاً (مثل `layers[2].badge.gap`) للتشخيص السريع.
 
 import type {
+  AttributionLayer,
   BadgeLayer,
   GradientLayer,
   HeadlineLayer,
@@ -59,7 +60,28 @@ const LAYER_TYPES = [
   'watermark',
   'kicker',
   'accent',
+  'attribution',
 ] as const;
+
+const PLATFORM_KEYS = [
+  'tiktok',
+  'x',
+  'instagram',
+  'youtube',
+  'telegram',
+  'facebook',
+] as const;
+
+const ATTRIBUTION_MODES = ['handle', 'name', 'both'] as const;
+
+const ATTRIBUTION_ANCHORS = [
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+] as const;
+
+const ATTRIBUTION_LOGO_MODES = ['none', 'generic', 'official'] as const;
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 const isNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -242,6 +264,67 @@ function validateLayer(raw: unknown, path: string): Layer {
         bail(`${path}.mode`, 'يجب أن يكون span|underline|above-first-line');
       }
       return raw as AccentLayer;
+    }
+    case 'attribution': {
+      const platform = o['platform'];
+      if (
+        !isString(platform) ||
+        !(PLATFORM_KEYS as readonly string[]).includes(platform)
+      ) {
+        bail(
+          `${path}.platform`,
+          `يجب أن يكون واحداً من: ${PLATFORM_KEYS.join(', ')}`
+        );
+      }
+      const attrMode = o['mode'];
+      if (
+        !isString(attrMode) ||
+        !(ATTRIBUTION_MODES as readonly string[]).includes(attrMode)
+      ) {
+        bail(`${path}.mode`, `يجب أن يكون handle|name|both`);
+      }
+      const anchor = o['anchor'];
+      if (
+        !isString(anchor) ||
+        !(ATTRIBUTION_ANCHORS as readonly string[]).includes(anchor)
+      ) {
+        bail(
+          `${path}.anchor`,
+          `يجب أن يكون top-left|top-right|bottom-left|bottom-right`
+        );
+      }
+      if (o['handleField'] !== undefined && !isString(o['handleField'])) {
+        bail(`${path}.handleField`, 'يجب أن يكون string');
+      }
+      if (o['nameField'] !== undefined && !isString(o['nameField'])) {
+        bail(`${path}.nameField`, 'يجب أن يكون string');
+      }
+      if (o['prefixLabel'] !== undefined && !isString(o['prefixLabel'])) {
+        bail(`${path}.prefixLabel`, 'يجب أن يكون string');
+      }
+      if (o['logoModeOverride'] !== undefined) {
+        const lm = o['logoModeOverride'];
+        if (!isString(lm) || !(ATTRIBUTION_LOGO_MODES as readonly string[]).includes(lm)) {
+          bail(`${path}.logoModeOverride`, 'يجب أن يكون none|generic|official');
+        }
+      }
+      if (o['margin'] !== undefined && !isNumber(o['margin'])) {
+        bail(`${path}.margin`, 'يجب أن يكون رقم (px)');
+      }
+      // فحص اتساق: mode + الحقول المطلوبة
+      if ((attrMode === 'handle' || attrMode === 'both') && !isString(o['handleField'])) {
+        bail(
+          `${path}.handleField`,
+          `mode='${attrMode}' يتطلب handleField (مفتاح content)`
+        );
+      }
+      if ((attrMode === 'name' || attrMode === 'both') && !isString(o['nameField'])) {
+        bail(
+          `${path}.nameField`,
+          `mode='${attrMode}' يتطلب nameField (مفتاح content)`
+        );
+      }
+      return raw as AttributionLayer;
     }
   }
 }

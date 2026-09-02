@@ -17,6 +17,7 @@
 
 import type {
   AccentLayer,
+  AttributionLayer,
   BadgeLayer,
   GradientLayer,
   HeadlineLayer,
@@ -30,19 +31,21 @@ import type {
   Template,
   WatermarkLayer,
 } from '@pf-mediakit/templates';
-import type { BrandKit, UrgentBadge } from '@pf-mediakit/shared';
+import type { BrandKit, PlatformKey, UrgentBadge } from '@pf-mediakit/shared';
 
 import { resolve } from './brand/resolve.js';
 import { loadDefaultLexicon, type Lexicon } from './arabic-lexicon/index.js';
 import {
   drawAccentBar,
   drawAccentSpan,
+  drawAttribution,
   drawBadge,
   drawGradient,
   drawImage,
   drawLogo,
 } from './layers/index.js';
 import type { CanvasSize, ImageCrop } from './layers/image.js';
+import type { Path2DLike } from './text/index.js';
 import type { GradientDirection } from './layers/gradient.js';
 import {
   createCanvasMeasurer,
@@ -70,6 +73,12 @@ export interface RenderAssets {
   readonly images?: Readonly<Record<string, ImageLike>>;
   /** خرائط الصور مع خيارات القص لكل حقل (اختياري). */
   readonly imageCrops?: Readonly<Record<string, ImageCrop>>;
+  /**
+   * Path2D مبنيّ لكل منصة (من `PLATFORM_PATH_STRINGS`) بواسطة المستدعي.
+   * مطلوب فقط حين طبقة `attribution` تُرسم مع `logoMode='official'` فعلياً.
+   * غيابه = تراجع صامت إلى 'generic'.
+   */
+  readonly attributionPaths?: Readonly<Partial<Record<PlatformKey, Path2DLike>>>;
 }
 
 export interface RenderFrameArgs {
@@ -813,6 +822,51 @@ function runSource(
   args.ctx.fillText(text, bounds.right, baseline);
 }
 
+// ── الإسناد (attribution) ────────────────────────────
+
+/**
+ * ينفّذ طبقة الإسناد. يتراجع صامتاً حين المحتوى المطلوب مفقود — لا
+ * يخلّ بلقطات القوالب التي لا تُغذّي حقول الإسناد.
+ *
+ * **قاعدة قانونية:** `logoMode='official'` لا يُرسم إلا إن كان
+ * `brand.attribution.logoAcks[platform].licenseAck === true` **و**
+ * `assets.attributionPaths[platform]` مُمرَّراً. غياب أيّهما = تراجع
+ * إلى 'generic' (يُعالجه resolveEffectiveLogoMode داخل الطبقة).
+ */
+function runAttribution(
+  layer: AttributionLayer,
+  args: RenderFrameArgs
+): void {
+  const handle = layer.handleField
+    ? (args.content[layer.handleField] as string | undefined)
+    : undefined;
+  const name = layer.nameField
+    ? (args.content[layer.nameField] as string | undefined)
+    : undefined;
+
+  // تراجع صامت عند غياب المحتوى المطلوب — نفس نمط source.
+  const needsHandle = layer.mode === 'handle' || layer.mode === 'both';
+  const needsName = layer.mode === 'name' || layer.mode === 'both';
+  if (needsHandle && (!handle || handle.length === 0)) return;
+  if (needsName && (!name || name.length === 0)) return;
+
+  const officialPath = args.assets?.attributionPaths?.[layer.platform];
+
+  drawAttribution(args.ctx, args.size, args.brand, {
+    platform: layer.platform,
+    mode: layer.mode,
+    anchor: layer.anchor,
+    ...(handle !== undefined && { handle }),
+    ...(name !== undefined && { name }),
+    ...(layer.prefixLabel !== undefined && { prefixLabel: layer.prefixLabel }),
+    ...(layer.logoModeOverride !== undefined && {
+      logoModeOverride: layer.logoModeOverride,
+    }),
+    ...(officialPath !== undefined && { officialPath }),
+    ...(layer.margin !== undefined && { margin: layer.margin }),
+  });
+}
+
 // ── الموزّع الرئيسي ──────────────────────────────────
 
 /**
@@ -865,6 +919,9 @@ export function executeLayer(
       return;
     case 'accent':
       runAccent(layer, args, state);
+      return;
+    case 'attribution':
+      runAttribution(layer, args);
       return;
   }
 }

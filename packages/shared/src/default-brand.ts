@@ -214,4 +214,21 @@ export const DEFAULT_BRAND: BrandKit = {
     reel: { w: 1080, h: 1920 },
   },
   audio: [],
+  attribution: {
+    // نصّ فقط افتراضياً — لا شعار مرسوم، لا مخاطرة قانونية.
+    // 'generic' متاح عند تفعيله في هوية العميل (شكل هندسي بلا علامة).
+    // 'official' يستخدم simple-icons (CC0) + يحتاج إقراراً من العميل.
+    logoMode: 'none',
+    platformNameStyle: 'ar',
+    separator: ' · ',
+    iconSize: 48,
+    logoAcks: {
+      tiktok:    { licenseAck: false, ackBy: '', ackAt: '' },
+      x:         { licenseAck: false, ackBy: '', ackAt: '' },
+      instagram: { licenseAck: false, ackBy: '', ackAt: '' },
+      youtube:   { licenseAck: false, ackBy: '', ackAt: '' },
+      telegram:  { licenseAck: false, ackBy: '', ackAt: '' },
+      facebook:  { licenseAck: false, ackBy: '', ackAt: '' },
+    },
+  },
 };

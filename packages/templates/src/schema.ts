@@ -83,6 +83,7 @@ export const TEMPLATE_SCHEMA = {
             'watermark',
             'kicker',
             'accent',
+            'attribution',
           ],
         },
         onlyIf: { $ref: '#/definitions/OnlyIf' },

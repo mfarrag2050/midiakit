@@ -342,6 +342,57 @@ export interface BrandAudioTrack {
   readonly licenseAck: boolean;
 }
 
+// ── الإسناد (Attribution) ──────────────────────────────
+// راجع docs/03 §attribution و ATTRIBUTIONS.md §شعارات المنصات.
+// **قاعدة قانونية:** لا شعار منصة يُشحن كصورة داخل `packages/*`.
+// حين logoMode='official'، الشعار يُرسم من مسار SVG في `simple-icons`
+// (CC0)، بلون brandKit، ويشترط licenseAck=true من العميل.
+
+export type PlatformKey =
+  | 'tiktok'
+  | 'x'
+  | 'instagram'
+  | 'youtube'
+  | 'telegram'
+  | 'facebook';
+
+/**
+ * سلوك عرض شعار المنصة:
+ *   • none     — نصّ فقط، لا أيقونة. الأنظف قانونياً. **الافتراضي.**
+ *   • generic  — أيقونة محايدة (شكل هندسي بلون brandKit) بلا علامة تجارية.
+ *   • official — الشعار الرسمي من simple-icons، يشترط licenseAck.
+ */
+export type PlatformLogoMode = 'none' | 'generic' | 'official';
+
+export type PlatformNameStyle = 'ar' | 'latin';
+
+/** إقرار قانوني لكل منصة عند اختيار logoMode='official'. */
+export interface AttributionLogoAck {
+  /**
+   * إقرار العميل بأنه يملك حقّ عرض الشعار في هذا المنتج التجاري.
+   * المحرك يرفض الرسم إن كان false مع logoMode='official'.
+   */
+  readonly licenseAck: boolean;
+  /** اسم صاحب القرار داخل الوكالة (للسجل، غير مستعمل في الرسم). */
+  readonly ackBy: string;
+  /** تاريخ الإقرار ISO 8601 (للسجل). */
+  readonly ackAt: string;
+}
+
+export type AttributionLogoAcks = {
+  readonly [K in PlatformKey]: AttributionLogoAck;
+};
+
+export interface BrandAttribution {
+  readonly logoMode: PlatformLogoMode;
+  readonly platformNameStyle: PlatformNameStyle;
+  /** فاصل بين اسم المنصة والمقبض (« · » افتراضاً). */
+  readonly separator: string;
+  /** حجم الأيقونة بالبكسل عند canvas 1080. */
+  readonly iconSize: number;
+  readonly logoAcks: AttributionLogoAcks;
+}
+
 // ── BrandKit المكتمل ───────────────────────────────────
 
 export type Direction = 'rtl' | 'ltr';
@@ -363,4 +414,5 @@ export interface BrandKit {
   readonly motion: BrandMotion;
   readonly outputs: BrandOutputs;
   readonly audio: readonly BrandAudioTrack[];
+  readonly attribution: BrandAttribution;
 }

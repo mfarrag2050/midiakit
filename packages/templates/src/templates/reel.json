@@ -11,6 +11,18 @@
       "type": "medialist",
       "required": true,
       "accepts": ["video", "image"]
+    },
+    {
+      "key": "sourceHandle",
+      "type": "text",
+      "required": false,
+      "hint": "مقبض المصدر (مثال: @user)"
+    },
+    {
+      "key": "sourceName",
+      "type": "text",
+      "required": false,
+      "hint": "اسم صاحب المصدر"
     }
   ],
   "layers": [
@@ -32,6 +44,14 @@
       "anchor": "above-headline",
       "gap": "brand.margins.badgeGap"
     },
-    { "type": "logo" }
+    { "type": "logo" },
+    {
+      "type": "attribution",
+      "platform": "instagram",
+      "mode": "handle",
+      "handleField": "sourceHandle",
+      "anchor": "bottom-left",
+      "margin": 60
+    }
   ]
 }

@@ -19,6 +19,7 @@ export {
   type CanvasDrawContext,
   type CanvasGradientLike,
   type ImageLike,
+  type Path2DLike,
   type DrawLineResult,
 } from './draw-line.js';
 export {

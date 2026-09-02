@@ -13,6 +13,7 @@
     "test": "pnpm check:engine-purity && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
+    "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },

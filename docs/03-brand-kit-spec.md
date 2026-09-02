@@ -194,7 +194,39 @@
     // الإصدار الأول: رفع العميل فقط. لا مكتبة مضمّنة — انظر §الموسيقى أدناه
     { "url": "…/track.wav", "label": "افتتاحية",
       "source": "upload", "licenseAck": true }
-  ]
+  ],
+
+  "attribution": {
+    // كتلة إسناد المصدر عند إعادة نشر محتوى من منصات أخرى
+    // (طور 3.8، بند 1). الفلسفة: نصّ فقط افتراضياً، الشعار من مكتبة
+    // simple-icons (CC0) بلون brandKit مع إقرار قانوني من العميل.
+    // راجع `ATTRIBUTIONS.md §شعارات المنصات` للتفصيل.
+
+    "logoMode": "none",              // none | generic | official
+    // none    → نصّ فقط بلا أيقونة (الأنظف قانونياً)
+    // generic → أيقونة محايدة (شكل هندسي بلون brandKit) — بلا علامة تجارية
+    // official→ شعار المنصة الرسمي من simple-icons، ملوَّن بلون brandKit،
+    //           يشترط logoAcks[platform].licenseAck=true
+
+    "platformNameStyle": "ar",       // ar | latin
+    // ar    → «تيك توك» «إنستغرام» «إكس» …
+    // latin → «TikTok» «Instagram» «X» …
+
+    "separator": " · ",              // بين اسم المنصة والمقبض/الاسم
+
+    "iconSize": 48,                  // بكسل عند canvas 1080؛ يتناسب مع المقاسات
+
+    "logoAcks": {
+      // مطلوبة فقط حين logoMode='official'. لا مسار (url) هنا لأن الرسم
+      // يأتي من simple-icons داخل المحرك — العميل يقرّ فقط بحقّه في العرض.
+      "tiktok":    { "licenseAck": false, "ackBy": "", "ackAt": "" },
+      "x":         { "licenseAck": false, "ackBy": "", "ackAt": "" },
+      "instagram": { "licenseAck": false, "ackBy": "", "ackAt": "" },
+      "youtube":   { "licenseAck": false, "ackBy": "", "ackAt": "" },
+      "telegram":  { "licenseAck": false, "ackBy": "", "ackAt": "" },
+      "facebook":  { "licenseAck": false, "ackBy": "", "ackAt": "" }
+    }
+  }
 }
 ```
 

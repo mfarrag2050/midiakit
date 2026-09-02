@@ -158,6 +158,46 @@ export interface AccentLayer extends LayerCommon {
   readonly target?: 'kicker' | 'headline';
 }
 
+// طبقة الإسناد — راجع packages/engine/src/layers/attribution.ts +
+// docs/12 §3 + ATTRIBUTIONS.md §شعارات المنصات.
+
+export type AttributionMode = 'handle' | 'name' | 'both';
+
+export type AttributionAnchor =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
+
+export type AttributionLogoModeOverride = 'none' | 'generic' | 'official';
+
+export interface AttributionLayer extends LayerCommon {
+  readonly type: 'attribution';
+  /** المنصة المصدر (`tiktok` | `x` | …). */
+  readonly platform:
+    | 'tiktok'
+    | 'x'
+    | 'instagram'
+    | 'youtube'
+    | 'telegram'
+    | 'facebook';
+  readonly mode: AttributionMode;
+  /** مفتاح `content` للمقبض (مطلوب حين mode='handle'|'both'). */
+  readonly handleField?: string;
+  /** مفتاح `content` للاسم (مطلوب حين mode='name'|'both'). */
+  readonly nameField?: string;
+  readonly anchor: AttributionAnchor;
+  /** بادئة نصّية اختيارية (مثل «المصدر:»). */
+  readonly prefixLabel?: string;
+  /**
+   * يتجاوز `brand.attribution.logoMode` عند مستوى القالب.
+   * الاستعمال المتوقّع: reel يفرض 'generic' لتماسك بصري حتى مع هوية بلا شعار.
+   */
+  readonly logoModeOverride?: AttributionLogoModeOverride;
+  /** هامش عن الحواف عند الأنكور الاسمي (px، افتراضي 40). */
+  readonly margin?: number;
+}
+
 export type Layer =
   | SolidLayer
   | ImageLayer
@@ -168,7 +208,8 @@ export type Layer =
   | LogoLayer
   | WatermarkLayer
   | KickerLayer
-  | AccentLayer;
+  | AccentLayer
+  | AttributionLayer;
 
 // ── القالب ─────────────────────────────────────────────
 

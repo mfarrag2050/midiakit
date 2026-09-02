@@ -105,6 +105,189 @@
   عنواناً حقيقياً، لكن **لا تحلّ محلّ** قياس دقيق للكسور داخل Infinity
   والانخفاض في 1000 — وهما جوهر الميزة تصنيفياً.
 
+## شعارات المنصات — فحص الرخص (2026-09-02)
+
+**السياق:** طبقة الإسناد في الطور 3.8 تحتاج «مصدر: تيك توك · @username»
+مع شعار المنصة. الشعار علامة تجارية. قبل تنزيل أيّ شعار، فُحصت إرشادات
+كل منصة على حدة. القاعدة المُعطاة من المالك: *إن كانت الإرشادات غامضة
+أو مقيّدة، توقّف قبل التنزيل — لا يُفترض السماح*.
+
+### المحصّلة القصيرة
+
+| المنصة | الحكم | الإسناد النصّي | الشعار |
+|---|---|---|---|
+| TikTok | 🟡 مقيّد | مسموح (Nominative fair use) | ❌ لا يُشحن — يحتاج مراجعة قانونية |
+| X (Twitter سابقاً) | 🔴 غامض | مسموح | ❌ لا يُشحن — يحتاج مراسلة `trademarks@x.com` |
+| Instagram | 🔴 مُقيَّد صراحةً | مسموح | ❌ لا يُشحن — Meta تشترط إذناً مكتوباً للمنتجات التجارية |
+| Facebook | 🔴 مُقيَّد صراحةً | مسموح | ❌ لا يُشحن — نفس شرط Meta |
+| YouTube | 🔴 مُقيَّد بنموذج | مسموح | ❌ لا يُشحن — يحتاج `Brand Use Request Form` (Google، مدة أسبوع) |
+| Telegram | 🟡 غامض | مسموح | ❌ لا يُشحن — «راجع الإرشادات» بلا رخصة صريحة للـSaaS |
+
+**النتيجة:** 5 من 6 منصات مُقيَّدة أو غامضة. **قرار: لا يُشحن أيّ شعار
+منصّة في `packages/*`.** الإسناد النصّي فقط في الافتراضي. الشعار يبقى
+عبر آلية *BYO* — مماثلة لآلية الخطوط: العميل يرفع الشعار الذي رخّصه (أو
+حصل على إذنه) في `brand.attribution.logos.{platform}` وتبقى المسؤولية
+القانونية عليه لا على المنتج.
+
+### التفاصيل بالمنصة
+
+#### TikTok — 🟡 مقيّد
+
+- **الإرشادات:** https://www.tiktok.com/legal/page/global/bc-policy/en
+  (Branded Content Policy، تسري 2026-08-31)
+- **الإسناد النصّي:** مسموح تحت *Nominative fair use* — استعمال «تيك توك»
+  لتعريف المصدر، بشرط أن لا يُوحي بالرعاية أو الشراكة.
+- **الشعار (البيتم):** إرشادات TikTok لا تصرّح بالسماح للـSaaS. النصّ
+  في السياسة الرسمية يذكر أن الاستعمال لأغراض تجارية يحتاج إذناً مسبقاً.
+- **الحكم:** الإسناد النصّي فقط. الشعار *BYO*.
+
+#### X (سابقاً Twitter) — 🔴 غامض
+
+- **الإرشادات:** https://about.x.com/en/who-we-are/brand-toolkit
+  (تعذّر الوصول المباشر — HTTP 402 عند الفحص الآلي).
+- **الإسناد النصّي:** «X» و«@username» مسموح للإشارة إلى مصدر منشور.
+- **الشعار:** لكل استعمال للعلامة يجب مراسلة `trademarks@x.com`
+  للحصول على إذن كتابي. السياسة بعد الاستحواذ غير موثّقة علناً بوضوح.
+- **الحكم:** الإسناد النصّي فقط. الشعار يحتاج قرار المالك حول
+  الاتصال بـX.
+
+#### Instagram — 🔴 مُقيَّد صراحةً
+
+- **الإرشادات:** https://www.meta.com/brand/resources/instagram/instagram-brand/
+- **الاقتباس:** *«If you plan to use the Instagram name or logo in a
+  product you sell… you need to contact Meta directly»*.
+- **الحكم:** الإسناد النصّي فقط. الشعار *BYO* أو تركه لآلية مستقبلية
+  حيث يطلب المالك إذناً كتابياً من Meta.
+
+#### Facebook — 🔴 مُقيَّد صراحةً
+
+- **الإرشادات:** https://www.meta.com/brand/resources/facebook/logo/
+- **الاقتباس:** *«Facebook does not permit or license any of its assets
+  for use on merchandise or other products»* + شرط الإذن الكتابي للمنتجات.
+- **الحكم:** نفس Instagram — الإسناد النصّي فقط. الشعار *BYO*.
+
+#### YouTube — 🔴 مُقيَّد بنموذج
+
+- **الإرشادات:** https://www.youtube.com/howyoutubeworks/resources/brand-resources/
+  + https://developers.google.com/youtube/terms/branding-guidelines
+- **الاقتباس:** *«You should submit a brand use request in English for
+  review through the Brand Use Request Form. Please allow up to a week
+  for a reply.»*
+- **الحكم:** الإسناد النصّي فقط (يشمل «قناة X على يوتيوب»).
+  الشعار *BYO* أو انتظار تصديق Brand Use Request من قِبل المالك.
+
+#### Telegram — 🟡 غامض
+
+- **الإرشادات:** https://telegram.org/tour/screenshots (شعارات مُتاحة)
+  + https://telegram.org/tos/content-licensing.
+- **الاقتباس:** «check the Telegram official brand guidelines before
+  commercial use» — لكن لا رخصة صريحة للـSaaS، ولا تصريح استعمال
+  الشعار في منتج تجاري.
+- **الحكم:** الإسناد النصّي فقط. الشعار *BYO*.
+
+### آلية الشعارات — ثلاثة أوضاع
+
+بالتوازي مع نمط الخطوط (`fonts.primary.licenseAck` يُقرّ به العميل عند
+رفع خطّ رخّصه)، تحتوي هوية العميل على كتلة `attribution` بحقل حرج:
+`logoMode` يحدّد سلوك عرض الشعار.
+
+```jsonc
+"attribution": {
+  "logoMode": "none",                // 'none' | 'generic' | 'official'
+  "platformNameStyle": "ar",         // 'ar' | 'latin' — تيك توك مقابل TikTok
+  "separator": " · ",                // بين اسم المنصة والمقبض
+  "iconSize": 48,                    // بكسل عند canvas 1080
+  "logoAcks": {                      // مطلوبة فقط حين logoMode='official'
+    "tiktok":   { "licenseAck": false, "ackBy": "", "ackAt": "" },
+    "x":        { "licenseAck": false, "ackBy": "", "ackAt": "" },
+    "instagram":{ "licenseAck": false, "ackBy": "", "ackAt": "" },
+    "youtube":  { "licenseAck": false, "ackBy": "", "ackAt": "" },
+    "telegram": { "licenseAck": false, "ackBy": "", "ackAt": "" },
+    "facebook": { "licenseAck": false, "ackBy": "", "ackAt": "" }
+  }
+}
+```
+
+**الأوضاع الثلاثة:**
+
+1. **`logoMode: 'none'`** — نصّ فقط. لا أيقونة، لا شعار.
+   الافتراضي في `DEFAULT_BRAND`. أنظف قانونياً. يبقى:
+   «المصدر: تيك توك · @username».
+
+2. **`logoMode: 'generic'`** — أيقونة محايدة نصمّمها نحن داخل المحرك:
+   دائرة مملوءة بلون الهوية + حرف/رمز عام (▶ فيديو، @ نصّ).
+   لا علامة تجارية أصلاً. تُشحن مع `packages/engine`.
+   تحلّ 80% من الحاجة البصرية بصفر مخاطرة قانونية.
+
+3. **`logoMode: 'official'`** — الشعار الرسمي مرسوماً من مكتبة
+   `simple-icons` (CC0). المسار هندسي (Path2D) يُملأ بلون
+   الهوية عبر `ctx.fill()`. يشترط:
+   - `logoAcks[platform].licenseAck === true` (**إقرار قانوني صريح**)
+   - `logoAcks[platform].ackBy` (اسم صاحب القرار في الوكالة)
+   - `logoAcks[platform].ackAt` (تاريخ ISO 8601)
+
+   المحرك يرفض الرسم إن كان `licenseAck !== true` — يرمي خطأ صريحاً
+   ويتراجع إلى `'generic'` إن كان الوضع صريحاً (أو `'none'` عند
+   الأمان). المسؤولية القانونية على العميل الذي أقرّ.
+
+### 5. simple-icons — مسارات شعارات المنصات
+
+- **المكتبة:** `simple-icons` (npm)، >3,000 شعار علامة تجارية،
+  كلٌّ ملفٌّ SVG (viewBox 24×24) + لون العلامة (`.hex`) + المسار (`.path`).
+- **الترخيص:** **CC0 1.0 Universal (Public Domain)**.
+  https://creativecommons.org/publicdomain/zero/1.0/
+- **الرابط الرسمي:** https://simpleicons.org/
+- **الأثر الحرج على قرارنا (نصّ حرفي من رخصة CC0):**
+  > «No trademark or patent rights held by Affirmer are waived,
+  > abandoned, surrendered, licensed or otherwise affected by this
+  > document.»
+- **الترجمة العملية:** CC0 يُطلق **رسم** الشعار للعموم، لا يُطلق
+  **العلامة التجارية** نفسها. تيك توك تبقى ملكاً لـByteDance، إنستغرام
+  لـMeta، إلخ. إرشادات كل منصة تسري كما لو كان الرسم أصلياً.
+
+**لماذا يُختار مع ذلك:**
+1. يحلّ مشكلة **التوزيع**: لا نشحن ملف صورة نستنسخه، بل مسار هندسي
+   عام (public domain). لا نخالف حق النشر على *الرسم*.
+2. يحلّ مشكلة **الجودة البصرية**: Path2D يُرسم بلون brandKit عبر
+   `ctx.fill()`، يتحجّم مع `iconSize` بلا تشويش، يحاذي مع خط الأساس
+   بدقّة.
+3. يوحّد المصدر: ستّ منصات من ملف npm واحد.
+
+**لا يحلّ مشكلة الاستخدام:** العميل يعرض علامة تجارية في مخرج تجاري.
+هذا يبقى قراره ومسؤوليته — وهو ما يُقرّ به في `logoAcks[platform].licenseAck`.
+
+**قاعدة الشحن:** `packages/engine` يستورد `simple-icons` كتبعية، لكن
+لا يستعمله إلا حين `logoMode='official'` في هوية العميل. حين الوضع
+`'none'` أو `'generic'`، الاستيراد ديناميكي (`await import`) يبقى
+موزون-الأداء.
+
+**قواعد استعمال داخل المحرك:**
+- الوصول إلى مسار الشعار عبر `siTiktok.path`، `siX.path`… فقط.
+- **لا** نستعمل `siTiktok.hex` (اللون الرسمي للعلامة) — نستعمل لون
+  brandKit فقط. سبب: نتحاشى استحضار الهوية البصرية للمنصة إلى جانب
+  رسمها؛ نقتصر على الرسم الهندسي بلون العميل.
+- **لا** نضيف نصّ «TikTok™» أو رمز الملكية — الإشارة النصّية إلى اسم
+  المنصة تستعمل `platformNameStyle` (عربي/لاتيني) بلا رموز ملكية.
+
+### آلية `logoAcks` — الفصل عن مسار الأصل
+
+اختلاف عن الخطوط: لا نطلب `url` من العميل، لأن المسار يأتي من
+`simple-icons` (المحرك يعرفه بمعرّف المنصة). ما يُطلب هو **الإقرار**
+فقط: بأنّ العميل أخذ (أو سيأخذ) الإذن من صاحب العلامة، وأنه يتحمّل
+المسؤولية القانونية.
+
+**قاعدة الشحن:** `packages/engine`، `packages/templates`، و`brands/`
+لا يشحنون أيّ شعار كصورة راسترية أو ملف SVG منفصل. الشعارات تُرسم من
+مسارات `simple-icons` وقت الطلب، بلون brandKit، وبإقرار قانوني صريح.
+
+**الأثر على الطور 3.8:** خطوة «تنزيل الشعارات» تُحذَف نهائياً.
+الطبقة تُبنى بدعم `logoMode` الثلاثي، والافتراضي في `DEFAULT_BRAND` هو
+`'none'`. `brands/client-demo.json` يستخدم `'generic'` للاختبار البصري.
+الوضع `'official'` يُختبَر في البوابة على مقطع منفصل (مع بيانات
+`licenseAck: true` صريحة في `logoAcks`).
+
+---
+
 ## بروتوكول تحديث الإسناد
 
 عند إضافة/تحديث أيّ مورد خارجي:
