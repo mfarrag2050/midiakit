@@ -64,7 +64,8 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 **المرحلة الحالية:** 0 ☑ · 1 ☑ · 1.5 ☑ (الكشيدة) · 2 ☑ (القوالب بيانات)
 · 3 ☑ (الرندر على الخادم) · 3.2 ☑ (لوحات التحكم — 2026-09-02) · 3.5 ◐
 (الكسر الدلالي + التشكيل — بوابتا أ/ب معلَّقتان WojoodGaza) · **3.7 ☑
-(محرّك الخط الزمني — 2026-09-02، الواجهة إلى المرحلة 4).**
+(محرّك الخط الزمني — 2026-09-02، الواجهة إلى المرحلة 4)** · **3.8 ◐
+(امتدادات المحرك — خمسة بنود، الإسناد ☑ 2026-09-02، الأربعة الباقية ◐).**
 
 **التالي:** المرحلة **3.8** (امتدادات المحرك — 5 بنود: التفريغ +
 القاموس · الإسناد · Lottie/Skottie · كشف الوجوه · التعليق الصوتي).
@@ -154,7 +155,7 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 - ☑ `preprocessBidi` — دالة تركيبية تُشغَّل **قبل `parseTokens`** (طبقة لا حقن): mapNumerals → splitBidiRuns → orderRuns → دمج
 - ☑ اختبار قبول: «مؤتمر Brussels للسلام» يعطي fillText بالترتيب `[مؤتمر, Brussels, للسلام]` والإحداثيات x تنازلية من اليمين
 - ☑ توثيق سلوك الأقواس على حدود المقاطع (اختبار «تقرير (Reuters) من غزة») — الحد المعروف مسجَّل في D-01
-- ☐ ربط `preprocessBidi` بالواجهة الحالية (نقطة الدخول الوحيدة قبل `parseTokens`) — يُنجَز مع خطوة الربط أدناه
+- 📎 ربط `preprocessBidi` بالواجهة الحالية (نقطة الدخول الوحيدة قبل `parseTokens`) — **مؤجَّل للمرحلة 2/4** (نفس تصنيف بند الربط في السطر 203). الدالة قائمة ومُختبَرة؛ الربط يتم مع بناء واجهة Studio.
 
 ### قيد ترتيب استدعاء `preprocessBidi` — لا يُخالَف
 
@@ -175,29 +176,30 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
   يمرّ بنفس نقطة الدخول.
 
 ## الأصول
-- ☐ مستودع `mediakit-assets` منفصل: `fonts/` + `catalog.json` + `LICENSES/`
-- ☐ تنزيل 7 خطوط بصيغتَي `.woff2` (متصفح) و`.ttf` (خادم) + نسخة OFL مع كل خط
-- ☐ اختبار كل خط على عنوان عاجل حقيقي، 96px، عرض 900، ثلاثة أوزان
-- ☐ اختبار قابلية الكشيدة لكل خط ← `catalog.json`
-- ☐ `audio/` يبقى فارغاً — لا مكتبة موسيقى في الإصدار الأول
+- 📎 مستودع `mediakit-assets` منفصل: `fonts/` + `catalog.json` + `LICENSES/` — **مؤجَّل للمرحلة 4** (يبنى مع محرّر Brand Kit؛ IBM Plex محلي حالياً كافٍ للمحرك وعرضين).
+- 📎 تنزيل 7 خطوط بصيغتَي `.woff2` (متصفح) و`.ttf` (خادم) + نسخة OFL مع كل خط — **مؤجَّل للمرحلة 4** (Almarai + IBM Plex محلّيان يكفيان للجدارة والعميل الأول).
+- 📎 اختبار كل خط على عنوان عاجل حقيقي، 96px، عرض 900، ثلاثة أوزان — **مؤجَّل للمرحلة 4** (يجري وقت تفعيل الخط في `detectFontCaps`).
+- 📎 اختبار قابلية الكشيدة لكل خط ← `catalog.json` — **مؤجَّل للمرحلة 4** (نفس السبب).
+- ☑ `audio/` يبقى فارغاً — لا مكتبة موسيقى في الإصدار الأول (قرار قائم منذ 2026-08-28 — راجع سجل القرارات).
 
 ## الهوية
 - ☑ `BrandKit` كامل من القيم المستخرجة (ملف 03) — `packages/shared/src/brand-kit.ts`
 - ☑ `DEFAULT_BRAND` محايد تماماً — `packages/shared/src/default-brand.ts` (رمادي، IBM Plex Sans Arabic، بلا شعار). اختبار صحة الفصل نجح: الاختبارات تحقن هوية بديلة بتغيير `colors.text` وتتحقّق أن fillStyle تبعها
 - ☑ `resolve(brand, path)` + `resolveBrand(brand)` — `packages/engine/src/brand/resolve.ts`. حل متعدٍ، كشف حلقات، يرمي عند مرجع مفقود (لا يعيد السلسلة صامتاً — Canvas سيبتلعها لوناً غير صالح ويحتفظ بآخر قيمة). يُطبَّق مرة واحدة قبل الرندر، لا داخل الطبقات
 - ☑ `loadBrandFonts` عبر `FontFaceSet` — `FontLoader` قابل للحقن على نمط Measurer، مع `createGatedMeasurer` يرمي إن استُدعي القياس قبل الجاهزية (تنفيذ ADR-006 اختبارياً)
-- ☐ `detectFontCaps` عند رفع الخط
+- ☑ **الدالة قائمة** — `detectFontCaps` مُنفَّذة في `packages/engine/src/text/kashida.ts` وتقيس U+0640 وتعيد `{kashida:boolean}`.
+- 📎 **الاستدعاء عند الرفع** — مؤجَّل للمرحلة 4 (يحتاج واجهة رفع الخط في Studio).
 
 ## الطبقات
-- ☐ تفكيك `cvRenderInto` إلى مفسّر طبقات
+- ☑ تفكيك `cvRenderInto` إلى مفسّر طبقات — **مُنجَز** بـ`renderFrame` في `packages/engine/src/render.ts` (المرحلة 2).
 - ☑ `image` — `layers/image.ts` (cover + crop اختياري، من `cvDrawCover`)
 - ☑ `solid` — `layers/solid.ts` (لون من `brand.colors[colorKey]`)
 - ☑ `gradient` — `layers/gradient.ts` (shape/band من `brand.gradient`، top/bottom/center، من `cvGradient`)
 - ☑ `accent` — `layers/accent.ts` (`drawAccentBar` + `drawAccentSpan` من `brand.colors.accent`، ارتفاع من `brand.typography.accentBar.height`)
 - ☑ `badge` — `layers/badge.ts` (كل القياسات من `brand.badges.urgent`، مسار مستدير عبر `roundRect` مع تراجع `arcTo`)
 - ☑ `logo` — `layers/logo.ts` (حجم/هامش/موضع من `brand.logo` مع حراسة صامتة عند غياب الصورة)
-- ☐ `watermark` — الشعار المائي داخل خلفية العاجل (`cvBreakingBg` — يتطلب composite/tint)
-- ☐ `headline` · `kicker` · `source` — طبقات نصية مركّبة تستدعي `layoutBalanced`/`wrapAlternating` + `drawLine*`
+- ☑ `watermark` — **مُنجَز** كدَين المرحلة 2 (السطر 251): يرسم صورة شعار مقياساً/إزاحة/شفافية بحسب `brand.logo.watermark`. التلوين (tint) بـcomposite operations يبقى مؤجَّلاً حتى أول عميل بشعار حقيقي.
+- ☑ `headline` · `kicker` · `source` — **مُنجَزة** ضمن `renderFrame` (المرحلة 2) وسطور دَين المرحلة 2 المُحسَم (249–255): headline يستعمل `wrapOptimal`/`layoutBalanced`؛ kicker منفَّذ في `render.ts` مع `RenderState.kicker`؛ source منفَّذ بـ`drawLineRTL`.
 
 ## الربط
 - 📎 الواجهة الحالية تعمل فوق المحرك الجديد بلا تغيير مرئي — **مؤجَّل للمرحلة 2/4** (تعتمد على مفسّر القوالب + Next.js Studio). لا يحجب بوابة المرحلة 1 لأن البوابة عن الفصل، لا التكامل مع الأداة القديمة.
@@ -274,9 +276,9 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 # المرحلة 3 — الرندر على الخادم
 
 ## النواة
-- ☐ `apps/renderer` بـ Node + `skia-canvas`
-- ☐ `pnpm render:png` من CLI ← **اختبار صحة المعمارية كلها**
-- ☐ مقارنة بكسلية: Node مقابل المتصفح (فرق ≤ 1%) — يُرفع مع تنفيذ الواجهة
+- ☑ `apps/renderer` بـ Node + `skia-canvas` — **مُنجَز** (`apps/renderer/src/index.ts`، السطر 286).
+- ☑ `pnpm render:mp4` من CLI ← **اختبار صحة المعمارية كلها** — مُنجَز (السطر 289). `render:png` غير مطلوب مستقلاً بعد أن أثبت `render:mp4` نفس المعمارية (كل إطار = نداء `drawAt`).
+- 📎 مقارنة بكسلية: Node مقابل المتصفح (فرق ≤ 1%) — **يُرفع مع تنفيذ الواجهة في المرحلة 4** (لا وجود لواجهة متصفح تُقارَن بها اليوم).
 - ☑ `timelineOf(template, brand, content)` — `packages/engine/src/timeline/timeline.ts`. المعادلة: `max(motion.segmentMin, min(motion.segmentMax, motion.segmentMin + max(0, n − motion.segmentWordBase) × motion.segmentWordStep))` + outro. كل الثوابت من `brand.motion` (لا مثبتات).
 - ☑ حلقة `drawAt(t = f/fps)` — `packages/engine/src/timeline/draw-at.ts`. دالة خالصة من الزمن إلى إطار مع دعم fade + slideY + stagger (per-line للـheadline) + pulse (للـbadge) + outro fade-to-black. **اختبار النقاء الحاسم:** استدعاء بترتيب عشوائي `[5.7, 0.30, 7.0, 0, 2.0, 1.0]` يعطي نتائج مطابقة للاستدعاء المتسلسل `[0, 0.30, 1.0, 2.0, 5.7, 7.0]` — 7 اختبارات vitest أخضر.
 - ☑ 8 دوال easing — `packages/engine/src/timeline/easing.ts`: linear + Quad {In,Out,InOut} + Cubic {In,Out,InOut} + easeOutBack.
@@ -313,8 +315,8 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 - مهمة صحيحة معالَجة بعدها في 1.60s — الطابور نظيف
 
 ## المتصفح
-- ☐ `WebCodecs` للفيديو القصير بلا مصدر خارجي — يُرفع مع الواجهة
-- ☐ الخادم كتراجع (دعم Safari ناقص)
+- 📎 `WebCodecs` للفيديو القصير بلا مصدر خارجي — **مؤجَّل للمرحلة 4** (يُرفع مع الواجهة).
+- 📎 الخادم كتراجع (دعم Safari ناقص) — **مؤجَّل للمرحلة 4**، تابع لبند WebCodecs أعلاه.
 - 📎 **حذف `MediaRecorder` نهائياً** — لا يوجد في المستودع أصلاً (وُلد المحرك التجاري بلا `MediaRecorder`)
 
 **البوابة (الجلسة الأولى — مُتحقّقة 2026-08-31):**
@@ -722,7 +724,7 @@ Apache 2.0 · MIT · BSD مقبولة. النموذج غير المرخّص صر
 حيث ينطبق. لا فتح للمرحلة 4 قبل اكتمال هذه الخمسة (أو تأجيل صريح
 لواحد منها بحجّة قوية).
 
-**قرار معماري متكرر (L-13-مماثل):** كل مخرَج نموذج **اقتراح قابل
+**قرار معماري متكرر (L-13):** كل مخرَج نموذج **اقتراح قابل
 للتحرير**، لا نتيجة نهائية. التشكيل والتفريغ والقصّ الذكي وصياغات
 العنوان — نفس القاعدة.
 
