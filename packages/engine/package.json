@@ -15,6 +15,9 @@
   "dependencies": {
     "@pf-mediakit/shared": "workspace:*",
     "@pf-mediakit/templates": "workspace:*",
-    "simple-icons": "^16.29.0"
+    "simple-icons": "^16.29.0",
+    "svg-arc-to-cubic-bezier": "^3.2.0",
+    "svg-parser": "^2.1.0",
+    "svg-pathdata": "^9.0.0"
   }
 }

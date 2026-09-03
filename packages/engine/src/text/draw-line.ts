@@ -74,6 +74,16 @@ export interface CanvasDrawContext {
   lineTo(x: number, y: number): void;
   closePath(): void;
   arcTo(x1: number, y1: number, x2: number, y2: number, r: number): void;
+  // منحنيات — لطبقة SVG (تُفكّك أوامر C/S/Q/T من `d=` إلى Bézier).
+  // كلا المتصفح و skia-canvas يوفّرانهما قياسياً.
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  arc(x: number, y: number, r: number, a0: number, a1: number, ccw?: boolean): void;
+  // stroke — لطبقة SVG (line/polyline/paths مع stroke).
+  strokeStyle: string | CanvasGradientLike;
+  lineWidth: number;
+  stroke(): void;
+  stroke(path: Path2DLike): void;
   // roundRect اختياري: skia-canvas والمتصفحات الحديثة يوفّرونه؛
   // إن غاب نستخدم arcTo يدوياً (نفس أسلوب الأصل — INVENTORY 1852–1856).
   roundRect?(x: number, y: number, w: number, h: number, r: number): void;

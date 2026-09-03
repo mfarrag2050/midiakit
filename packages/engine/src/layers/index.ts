@@ -27,6 +27,16 @@ export {
 } from './badge.js';
 export { drawLogo, type LogoLayerParams } from './logo.js';
 export {
+  drawSvg,
+  prepareSvg,
+  type SvgFit,
+  type SvgLayerParams,
+  type PreparedSvg,
+  type ParsedShape,
+  type PathCommand,
+  type RawStyle,
+} from './svg.js';
+export {
   drawAttribution,
   PLATFORM_PATH_STRINGS,
   PLATFORM_ICON_VIEWBOX,

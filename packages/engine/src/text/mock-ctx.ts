@@ -248,6 +248,17 @@ export function createMockCtx(): MockCtx {
     arcTo(x1: number, y1: number, x2: number, y2: number, r: number): void {
       currentPath.push({ kind: 'arcTo', x1, y1, x2, y2, r });
     },
+    // امتدادات SVG (svg.ts) — تُسجَّل كنداءات لكن الاختبارات الحالية
+    // لا تتحقّق منها. المخرج الفعلي عبر preview-svg + skia-canvas.
+    lineTo(_x: number, _y: number): void {},
+    bezierCurveTo(_cp1x: number, _cp1y: number, _cp2x: number, _cp2y: number, _x: number, _y: number): void {},
+    quadraticCurveTo(_cpx: number, _cpy: number, _x: number, _y: number): void {},
+    arc(_x: number, _y: number, _r: number, _a0: number, _a1: number, _ccw?: boolean): void {},
+    stroke(_path?: unknown): void {},
+    strokeStyle: '' as string | CanvasGradientLike,
+    lineWidth: 1,
+    rect(_x: number, _y: number, _w: number, _h: number): void {},
+    clip(): void {},
     roundRect(x: number, y: number, w: number, h: number, r: number): void {
       currentPath.push({ kind: 'roundRect', x, y, w, h, r });
     },
