@@ -1,0 +1,51 @@
+{
+  "$comment": [
+    "قائمة أسماء المؤسسات الحقيقية المحظور ذكرها كنص اختبار/مخرج/تسويق.",
+    "توسّع كلّما ظهرت مؤسسة أخرى في نص عيّنة.",
+    "استثناء تلقائي: reference/ · التوثيق التاريخي (docs/00, docs/01, ",
+    "docs/06, docs/09, docs/PROJECT_INSTRUCTIONS, docs/INVENTORY, ",
+    "docs/LESSONS, PHASES, CLAUDE, README) · تعليقات // المرجع: ",
+    "reference/aa-media-kit.html · scripts/brand-blocklist.json نفسه ",
+    "· scripts/check-no-brand-leak.mjs نفسه.",
+    "تفاصيل في CLAUDE.md §القاعدة 10."
+  ],
+  "blocklist": [
+    { "term": "أناضول",       "reason": "وكالة الأناضول — الأداة الأصلية بُنيت لها" },
+    { "term": "Anadolu",       "reason": "وكالة الأناضول — الاسم اللاتيني" },
+    { "term": "aa-media-kit",  "reason": "اسم الأداة الأصلية — يبقى كمرجع historical فقط" },
+    { "term": "AA Media Kit",  "reason": "اسم الأداة الأصلية — نفس السبب" }
+  ],
+  "$expansionNote": "أضف مؤسسات أخرى هنا بأمر صريح من صاحب المشروع — لا تجتهد. أمثلة محتملة (لم تُقرَّر): 'الجزيرة'/'aljazeera' (يظهر حالياً في RSS pipeline كمعرِّف مصدر، ليس نص اختبار).",
+  "excludeGlobs": [
+    "reference/**",
+    "node_modules/**",
+    ".git/**",
+    "**/.venv/**",
+    "PHASES.md",
+    "CLAUDE.md",
+    "README.md",
+    "docs/00-*.md",
+    "docs/01-*.md",
+    "docs/06-*.md",
+    "docs/09-*.md",
+    "docs/PROJECT_INSTRUCTIONS.md",
+    "docs/INVENTORY.md",
+    "docs/LESSONS.md",
+    "scripts/brand-blocklist.json",
+    "scripts/check-no-brand-leak.mjs",
+    "scripts/compare-cleanup-snapshots.mjs",
+    "pnpm-lock.yaml",
+    "data/external/**",
+    "out/**",
+    "snapshots/**",
+    "snapshots-semantic/**",
+    "snapshots-video/**",
+    "**/dist/**",
+    "**/*.min.js",
+    "**/*.map"
+  ],
+  "excludeLinePatterns": [
+    "// المرجع: reference/aa-media-kit\\.html",
+    "reference/aa-media-kit\\.html"
+  ]
+}

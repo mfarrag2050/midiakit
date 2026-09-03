@@ -213,7 +213,7 @@ async function drawCard(cardCtx, offsetX, offsetY, brand, label) {
         ? CARD_H - placementSource.offset.y
         : CARD_H / 2;
     cardCtx.direction = 'rtl';
-    cardCtx.fillText('مصدر طبي — الأناضول', sx, sy);
+    cardCtx.fillText('مصدر طبي — مراسلنا', sx, sy);
   }
 
   // 4. attribution — نمرّر Path2D (وضع generic لا يحتاجه فعلياً)

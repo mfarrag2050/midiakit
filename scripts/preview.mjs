@@ -189,7 +189,7 @@ const HEADLINE_SHORT = 'قمة عربية طارئة';
 const TITLE_REEL = 'الحرب في غزة';
 const KICKER_TEXT = 'تقرير خاص';
 const LOCATION = 'غزة';
-const SOURCE_TEXT = 'مصدر طبي للأناضول';
+const SOURCE_TEXT = 'مصدر طبي — مراسلنا';
 
 /**
  * محتوى مناسب لكل قالب — يعكس ما ستفعله الواجهة عند استيفاء الحقول.

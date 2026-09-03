@@ -98,7 +98,7 @@ const CONTENT: Record<string, unknown> = {
   breaking: {
     headline:
       'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع',
-    source: 'مصدر طبي للأناضول',
+    source: 'مصدر طبي — مراسلنا',
   },
 }[cli.template] ?? { headline: 'قمة عربية طارئة' };
 

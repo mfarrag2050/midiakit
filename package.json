@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "check:engine-purity": "node scripts/check-engine-purity.mjs",
-    "test": "pnpm check:engine-purity && vitest run",
+    "check:no-brand-leak": "node scripts/check-no-brand-leak.mjs",
+    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",

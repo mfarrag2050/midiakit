@@ -181,7 +181,7 @@ console.log(`  ✓ ${(rTr.size/1024).toFixed(0)}KB · ${rTr.elapsed.toFixed(2)}s
 console.log(`\n[gate-tr] رندر breaking كمرجع أداء …`);
 const CONTENT_BR = {
   headline: 'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع',
-  source: 'مصدر طبي للأناضول',
+  source: 'مصدر طبي — مراسلنا',
 };
 const planBr = buildRenderPlan({
   ctx: new Canvas(SIZE.w, SIZE.h).getContext('2d'),

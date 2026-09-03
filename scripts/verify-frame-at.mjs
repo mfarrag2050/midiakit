@@ -34,7 +34,7 @@ const template = TEMPLATES.breaking;
 const CONTENT = {
   headline:
     'ارتفاع عدد الضحايا جراء الاستهداف الإسرائيلي المتواصل لمنتظري المساعدات شمالي القطاع',
-  source: 'مصدر طبي للأناضول',
+  source: 'مصدر طبي — مراسلنا',
 };
 const SIZE = { w: 1080, h: 1350 };
 

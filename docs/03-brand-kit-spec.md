@@ -26,8 +26,8 @@
 
 ```jsonc
 {
-  "id": "brand_aa",
-  "name": "وكالة الأناضول",
+  "id": "brand_sample",
+  "name": "وكالة نموذجية",
   "version": 1,
   "direction": "rtl",
   "locale": "ar",
