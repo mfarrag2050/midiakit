@@ -31,7 +31,6 @@
     "docs/PROJECT_INSTRUCTIONS.md",
     "docs/INVENTORY.md",
     "docs/LESSONS.md",
-    "PHASES-docs.md",
     "scripts/brand-blocklist.json",
     "scripts/check-no-brand-leak.mjs",
     "scripts/compare-cleanup-snapshots.mjs",
