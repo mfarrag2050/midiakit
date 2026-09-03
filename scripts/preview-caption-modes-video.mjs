@@ -30,7 +30,7 @@ const fixture = JSON.parse(
 );
 const segments = fixture.segments;
 
-// خمس هويّات — نفس القيم عدا highlightMode
+// خمس هويّات — نفس القيم عدا highlightMode + justify صريح
 function brandWith(mode) {
   return resolveBrand({
     ...DEFAULT_BRAND,
@@ -42,7 +42,11 @@ function brandWith(mode) {
     },
     typography: {
       ...DEFAULT_BRAND.typography,
-      caption: { ...DEFAULT_BRAND.typography.caption, highlightMode: mode },
+      caption: {
+        ...DEFAULT_BRAND.typography.caption,
+        highlightMode: mode,
+        justify: 'inherit', // صريح — يفعّل الكشيدة بحسب brand.typography.justify
+      },
     },
   });
 }
