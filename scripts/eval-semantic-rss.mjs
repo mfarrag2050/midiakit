@@ -104,7 +104,7 @@ function measureHeadline(headline, brand, lexicon) {
     // ليست دقيقة كـmeasure، لكن كافية للمقارنة النسبية بين off/on.
     return line.map((t) => (t.text ?? '').length).reduce((a, b) => a + b, 0);
   });
-  // نحسب fill = width_ratio نسبة إلى أطول سطر
+  // نحسب fill = width_ratio نسبة إلى أطول سطر (مقياس ملء موجود)
   const maxW = Math.max(...widths, 1);
   const fills = widths.map((w) => w / maxW);
   const minFill = Math.min(...fills);
@@ -112,6 +112,15 @@ function measureHeadline(headline, brand, lexicon) {
   const stddev = Math.sqrt(
     fills.reduce((s, f) => s + (f - meanFill) ** 2, 0) / fills.length
   );
+  // **Coefficient of Variation** لأطوال الأسطر داخل العنوان:
+  //   cov = stddev(widths) / mean(widths)
+  // مقياس اتساق مباشر — انخفاضه = أسطر أقرب في الطول (بصرف النظر عن
+  // fs أو boxW). راجع docs/LESSONS.md §L-38.
+  const meanWidth = widths.reduce((a, b) => a + b, 0) / widths.length;
+  const stdWidth = Math.sqrt(
+    widths.reduce((s, w) => s + (w - meanWidth) ** 2, 0) / widths.length
+  );
+  const cov = meanWidth > 0 ? stdWidth / meanWidth : 0;
   return {
     dt,
     fs: h.fontSize,
@@ -119,6 +128,7 @@ function measureHeadline(headline, brand, lexicon) {
     minFill,
     meanFill,
     stddev,
+    cov,
     split: h.linesJustified.map((line) => line.map((t) => t.text ?? '').join(' ')).join(' | '),
   };
 }
@@ -184,12 +194,17 @@ function mean(arr) {
   if (arr.length === 0) return 0;
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
-const grFillDelta = mean(genuineReflow.map((r) => r.on.minFill - r.off.minFill));
-const grStddevDelta = mean(genuineReflow.map((r) => r.on.stddev - r.off.stddev));
-const voFillDelta = mean(visualOnly.map((r) => r.on.minFill - r.off.minFill));
-const voStddevDelta = mean(visualOnly.map((r) => r.on.stddev - r.off.stddev));
-const idFillDelta = mean(identical.map((r) => r.on.minFill - r.off.minFill));
-const idStddevDelta = mean(identical.map((r) => r.on.stddev - r.off.stddev));
+// قياسان لـfill: minFill (أضعف سطر) وmeanFill (متوسط الأسطر). التفسيران
+// مختلفان: minFill يقيس أسوأ حالة، meanFill يقيس المتوسط.
+const grFillMinDelta  = mean(genuineReflow.map((r) => r.on.minFill  - r.off.minFill));
+const grFillMeanDelta = mean(genuineReflow.map((r) => r.on.meanFill - r.off.meanFill));
+const grStddevDelta   = mean(genuineReflow.map((r) => r.on.stddev   - r.off.stddev));
+const voFillMinDelta  = mean(visualOnly.map((r) => r.on.minFill  - r.off.minFill));
+const voFillMeanDelta = mean(visualOnly.map((r) => r.on.meanFill - r.off.meanFill));
+const voStddevDelta   = mean(visualOnly.map((r) => r.on.stddev   - r.off.stddev));
+const idFillMinDelta  = mean(identical.map((r) => r.on.minFill  - r.off.minFill));
+const idFillMeanDelta = mean(identical.map((r) => r.on.meanFill - r.off.meanFill));
+const idStddevDelta   = mean(identical.map((r) => r.on.stddev   - r.off.stddev));
 
 // (د) softness regression = نسبة العناوين التي minFill انخفض فيها >2%
 // «softness» = ملء ما بعد الكشيدة (نستعمل minFill كتقدير مباشر — الأدنى
@@ -237,11 +252,44 @@ function fmtPct(v) {
   const s = (v * 100).toFixed(2) + '%';
   return s.padStart(9);
 }
-console.log(`genuine-reflow  | ${String(genuineReflow.length).padStart(5)} | ${fmtPct(grFillDelta).padEnd(16)}| ${fmtPct(grStddevDelta)}`);
-console.log(`visual-only     | ${String(visualOnly.length).padStart(5)} | ${fmtPct(voFillDelta).padEnd(16)}| ${fmtPct(voStddevDelta)}`);
-console.log(`identical       | ${String(identical.length).padStart(5)} | ${fmtPct(idFillDelta).padEnd(16)}| ${fmtPct(idStddevDelta)}`);
+console.log(`genuine-reflow  | ${String(genuineReflow.length).padStart(5)} | ${fmtPct(grFillMinDelta).padEnd(16)}| ${fmtPct(grStddevDelta)}`);
+console.log(`visual-only     | ${String(visualOnly.length).padStart(5)} | ${fmtPct(voFillMinDelta).padEnd(16)}| ${fmtPct(voStddevDelta)}`);
+console.log(`identical       | ${String(identical.length).padStart(5)} | ${fmtPct(idFillMinDelta).padEnd(16)}| ${fmtPct(idStddevDelta)}`);
 console.log(`─────────────────────────────────────────────────────────────`);
 console.log(`المتوسط العام   | ${String(results.length).padStart(5)} | ${fmtPct(avgFillDelta).padEnd(16)}| ${fmtPct(avgStddevDelta)}  ← مخفَّف`);
+
+// ── الاتساق الحقيقي: coefficient of variation (L-38) ─
+console.log('');
+console.log('════════ الاتساق الحقيقي (CoV = stddev/mean widths) ════════');
+console.log('مقياس مباشر لتقارب الأسطر في الطول داخل كل عنوان.');
+console.log('انخفاض CoV = أسطر أقرب في الطول (اتساق أعلى).');
+console.log('');
+console.log('المجموعة        | العدد | CoV قبل  | CoV بعد  | Δ CoV');
+console.log('----------------|-------|----------|----------|----------');
+function fmtCov(v) { return v.toFixed(4).padStart(8); }
+function fmtCovPct(v) {
+  const s = (v * 100).toFixed(2) + '%';
+  return s.padStart(9);
+}
+function report(name, group) {
+  const before = mean(group.map((r) => r.off.cov));
+  const after = mean(group.map((r) => r.on.cov));
+  const delta = after - before;
+  console.log(`${name.padEnd(16)}| ${String(group.length).padStart(5)} | ${fmtCov(before)} | ${fmtCov(after)} | ${fmtCovPct(delta)}`);
+}
+report('genuine-reflow', genuineReflow);
+report('visual-only', visualOnly);
+report('identical', identical);
+report('المتوسط العام', results);
+
+// أيضاً: meanFill delta لكل مجموعة (طلب المالك للتوضيح)
+console.log('');
+console.log('════════ meanFill Delta (توضيح مقاييس الملء) ════════');
+console.log('المجموعة        | العدد | Δ minFill      | Δ meanFill');
+console.log('----------------|-------|----------------|----------------');
+console.log(`genuine-reflow  | ${String(genuineReflow.length).padStart(5)} | ${fmtPct(grFillMinDelta).padEnd(15)}| ${fmtPct(grFillMeanDelta)}`);
+console.log(`visual-only     | ${String(visualOnly.length).padStart(5)} | ${fmtPct(voFillMinDelta).padEnd(15)}| ${fmtPct(voFillMeanDelta)}`);
+console.log(`identical       | ${String(identical.length).padStart(5)} | ${fmtPct(idFillMinDelta).padEnd(15)}| ${fmtPct(idFillMeanDelta)}`);
 
 if (regressed.length > 0) {
   console.log('\nعيّنات التراجع (أوّل 5):');
