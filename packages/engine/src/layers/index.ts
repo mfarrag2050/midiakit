@@ -34,3 +34,9 @@ export {
   type AttributionAnchor,
   type AttributionParams,
 } from './attribution.js';
+export {
+  drawCaption,
+  type CaptionWord,
+  type CaptionSegment,
+  type CaptionParams,
+} from './caption.js';

@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "producer": "pf-mediakit team (hand-crafted)",
+    "purpose": "Caption layer test fixture — simulated transcription output with word timings",
+    "note": "Word timings are hand-crafted to test active-word highlighting + wrapOptimal on a real Arabic headline"
+  },
+  "segments": [
+    {
+      "start": 0.0,
+      "end": 6.8,
+      "text": "مجلس الأمن الدولي يجتمع غداً لمناقشة الوضع في قطاع غزة",
+      "words": [
+        { "start": 0.20, "end": 0.72, "text": "مجلس" },
+        { "start": 0.72, "end": 1.14, "text": "الأمن" },
+        { "start": 1.14, "end": 1.72, "text": "الدولي" },
+        { "start": 1.72, "end": 2.28, "text": "يجتمع" },
+        { "start": 2.28, "end": 2.66, "text": "غداً" },
+        { "start": 2.66, "end": 3.40, "text": "لمناقشة" },
+        { "start": 3.40, "end": 3.86, "text": "الوضع" },
+        { "start": 3.86, "end": 4.12, "text": "في" },
+        { "start": 4.12, "end": 4.58, "text": "قطاع" },
+        { "start": 4.58, "end": 5.02, "text": "غزة" }
+      ]
+    }
+  ]
+}

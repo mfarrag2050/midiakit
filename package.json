@@ -15,6 +15,7 @@
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
     "preview:placement": "node --import tsx scripts/preview-placement.mjs",
+    "preview:caption": "node --import tsx scripts/preview-caption.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },

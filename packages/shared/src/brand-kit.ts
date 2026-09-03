@@ -199,6 +199,27 @@ export interface TypographyAccentBar {
   readonly maxWidth: number;
 }
 
+/**
+ * إعدادات طباعة الترجمة (caption) — نفس بنية breaking لكن بأوزان مختلفة
+ * (خط أصغر، سطران غالباً، ملء أعلى). تُستهلك من `wrapOptimal` بنفس
+ * حراسات الكشيدة والدلالي — سطر الترجمة يخضع لنفس قواعد العنوان.
+ */
+export interface TypographyCaption {
+  readonly max: number;
+  readonly min: number;
+  readonly lineHeight: number;
+  readonly boxWidth: number;
+  readonly maxLines: number;
+  readonly minLines: number;
+  readonly preferredLines: number;
+  readonly readableMinRatio: number;
+  readonly headlineFsRatio: readonly [number, number];
+  readonly boxWidthRange: readonly [number, number];
+  /** لون الكلمة اللاحقة (لم تُنطق بعد) — شفافية على brand.colors.text.
+   *  1.0 = بلا تعتيم، 0.4 = خافت. الافتراضي 0.55. */
+  readonly futureWordOpacity: number;
+}
+
 export type LineHeightMode = 'dynamic' | 'fixed';
 
 export type JustifyMode = 'none' | 'space' | 'kashida' | 'hybrid';
@@ -245,6 +266,20 @@ export interface BrandTypography {
   readonly semanticBreaks: SemanticBreaksConfig;
   readonly diacritics: DiacriticsConfig;
   readonly bidi: BidiConfig;
+  /** طباعة الترجمة (اختيارية — عند غيابها الطبقة لا تُرسم). */
+  readonly caption?: TypographyCaption;
+}
+
+/**
+ * إعدادات التفريغ للهوية — قاموس مخصّص وخصائص أخرى ينتقل عبرها إلى
+ * `services/transcriber`. المحرك يقرأ vocabulary فقط للتصيير (يجعله
+ * متاحاً للنسخ إلى initial_prompt عند بناء الطلب). لا استدعاء شبكة.
+ */
+export interface BrandTranscription {
+  /** مصطلحات ينتقل النموذج لتفضيلها في الإخراج — أسماء مراسلين، مناطق
+   *  تغطية، مصطلحات فنيّة. تُدمج مع `initial_prompt` عند طلب التفريغ.
+   *  الحدّ العملي: ~30 مصطلحاً (قيد 224 توكن على Whisper). */
+  readonly vocabulary: readonly string[];
 }
 
 // ── الشارات ────────────────────────────────────────────
@@ -374,6 +409,9 @@ export interface BrandPlacement {
   readonly badge?: PlacementSpec;
   readonly attribution?: PlacementSpec;
   readonly source?: PlacementSpec;
+  /** موضع طبقة الترجمة (caption). الافتراضي `bottom-center` (النمط
+   *  التلفازي القياسي — سطر ترجمة أسفل الإطار). */
+  readonly caption?: PlacementSpec;
 }
 
 // ── الأصول (Assets pin) ────────────────────────────────
@@ -476,4 +514,10 @@ export interface BrandKit {
    * والمصدر ينضمّون تدريجياً.
    */
   readonly placement?: BrandPlacement;
+  /**
+   * إعدادات التفريغ — قاموس مصطلحات العميل. اختيارية: عند غيابها
+   * ينتقل نصّ فارغ initial_prompt. راجع `services/transcriber` و
+   * `packages/engine/src/layers/caption.ts`.
+   */
+  readonly transcription?: BrandTranscription;
 }

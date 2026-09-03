@@ -137,6 +137,16 @@ export const DEFAULT_BRAND: BrandKit = {
     semanticBreaks: { enabled: true, useModel: 'never' },
     diacritics: { enabled: false, mode: 'full' },
     bidi: { enabled: true, numerals: 'latin' },
+    caption: {
+      // خط أصغر من العنوان — سطر الترجمة تحت المتحدّث. نطاق fs 4.5-6%
+      // من عرض القماش = 49-65px على 1080. سطر أو سطران عادةً.
+      max: 68, min: 36, lineHeight: 1.28, boxWidth: 900,
+      maxLines: 2, minLines: 1, preferredLines: 2,
+      readableMinRatio: 0.038,
+      headlineFsRatio: [0.045, 0.060],
+      boxWidthRange: [0.70, 0.88],
+      futureWordOpacity: 0.55,
+    },
   },
   badges: {
     urgent: {
@@ -217,10 +227,11 @@ export const DEFAULT_BRAND: BrandKit = {
   placement: {
     // مواضع افتراضية — كل عنصر بأنكوره + إزاحة. القالب يقرّر أيّها
     // يظهر، الهوية تقرّر أين. راجع docs/03 §placement.
-    logo:        { anchor: 'bottom-left',  offset: { x: 51, y: 51 } },
-    badge:       { anchor: 'top-right',    offset: { x: 60, y: 60 } },
-    attribution: { anchor: 'bottom-right', offset: { x: 60, y: 60 } },
-    source:      { anchor: 'bottom-right', offset: { x: 60, y: 135 } },
+    logo:        { anchor: 'bottom-left',   offset: { x: 51, y: 51 } },
+    badge:       { anchor: 'top-right',     offset: { x: 60, y: 60 } },
+    attribution: { anchor: 'bottom-right',  offset: { x: 60, y: 60 } },
+    source:      { anchor: 'bottom-right',  offset: { x: 60, y: 135 } },
+    caption:     { anchor: 'bottom-center', offset: { x: 0, y: 180 } },
   },
   attribution: {
     // نصّ فقط افتراضياً — لا شعار مرسوم، لا مخاطرة قانونية.
