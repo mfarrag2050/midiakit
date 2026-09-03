@@ -99,10 +99,15 @@ function measureHeadline(headline, brand, lexicon) {
   const dt = performance.now() - t0;
   const h = plan.headline;
   if (!h) return null;
+
+  // **قياس البكسل الحقيقي (L-41):** char count مقاربة غير دقيقة. نستعمل
+  // ctx.measureText مع خط headline المُختار وحجمه. النتيجة بالبكسل.
+  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
+  ctx.font = `700 ${h.fontSize}px ${family}`;
+  ctx.direction = 'rtl';
   const widths = h.linesJustified.map((line) => {
-    // نستعمل chosenBoxW كطول أقصى، ونحسب النسبة بمعرفة عرض الكلمات فقط
-    // ليست دقيقة كـmeasure، لكن كافية للمقارنة النسبية بين off/on.
-    return line.map((t) => (t.text ?? '').length).reduce((a, b) => a + b, 0);
+    const text = line.map((t) => t.text ?? '').join(' ');
+    return ctx.measureText(text).width;
   });
   // نحسب fill = width_ratio نسبة إلى أطول سطر (مقياس ملء موجود)
   const maxW = Math.max(...widths, 1);
@@ -127,7 +132,9 @@ function measureHeadline(headline, brand, lexicon) {
     lines: h.linesJustified.length,
     minFill,
     meanFill,
-    stddev,
+    stddev,      // stddev of fills (normalized 0-1)
+    stdWidth,    // stddev of raw widths (pixels — للأمانة المقروئية L-41)
+    meanWidth,   // للتوثيق مع CoV
     cov,
     split: h.linesJustified.map((line) => line.map((t) => t.text ?? '').join(' ')).join(' | '),
   };
@@ -258,24 +265,29 @@ console.log(`identical       | ${String(identical.length).padStart(5)} | ${fmtPc
 console.log(`─────────────────────────────────────────────────────────────`);
 console.log(`المتوسط العام   | ${String(results.length).padStart(5)} | ${fmtPct(avgFillDelta).padEnd(16)}| ${fmtPct(avgStddevDelta)}  ← مخفَّف`);
 
-// ── الاتساق الحقيقي: coefficient of variation (L-38) ─
+// ── الاتساق الحقيقي: قياسات متعدّدة + minFill المطلق (L-41) ─
 console.log('');
-console.log('════════ الاتساق الحقيقي (CoV = stddev/mean widths) ════════');
-console.log('مقياس مباشر لتقارب الأسطر في الطول داخل كل عنوان.');
-console.log('انخفاض CoV = أسطر أقرب في الطول (اتساق أعلى).');
+console.log('════════ ثلاثية القياس (L-41 — كل مقياس يعكس رؤية مختلفة) ════════');
+console.log('minFill: أسوأ سطر (ما يراه القارئ) — كسر ملء / أطول سطر');
+console.log('CoV:     stddev/mean من الأطوال بالبكسل — نسبي');
+console.log('stdW:    stddev المطلق للأطوال بالبكسل — الأمانة المقروئية');
 console.log('');
-console.log('المجموعة        | العدد | CoV قبل  | CoV بعد  | Δ CoV');
-console.log('----------------|-------|----------|----------|----------');
-function fmtCov(v) { return v.toFixed(4).padStart(8); }
-function fmtCovPct(v) {
-  const s = (v * 100).toFixed(2) + '%';
-  return s.padStart(9);
-}
+console.log('المجموعة        | العدد | minFill قبل → بعد | CoV قبل → بعد | stdW قبل → بعد (px)');
+console.log('----------------|-------|-------------------|---------------|----------------------');
+function fmt3(v) { return v.toFixed(3).padStart(5); }
+function fmtCov(v) { return v.toFixed(4); }
+function fmtPx(v)  { return v.toFixed(1).padStart(6); }
 function report(name, group) {
-  const before = mean(group.map((r) => r.off.cov));
-  const after = mean(group.map((r) => r.on.cov));
-  const delta = after - before;
-  console.log(`${name.padEnd(16)}| ${String(group.length).padStart(5)} | ${fmtCov(before)} | ${fmtCov(after)} | ${fmtCovPct(delta)}`);
+  const mFillB = mean(group.map((r) => r.off.minFill));
+  const mFillA = mean(group.map((r) => r.on.minFill));
+  const covB   = mean(group.map((r) => r.off.cov));
+  const covA   = mean(group.map((r) => r.on.cov));
+  const stdB   = mean(group.map((r) => r.off.stdWidth));
+  const stdA   = mean(group.map((r) => r.on.stdWidth));
+  const n = String(group.length).padStart(5);
+  console.log(
+    `${name.padEnd(16)}| ${n} | ${fmt3(mFillB)} → ${fmt3(mFillA)}   | ${fmtCov(covB)} → ${fmtCov(covA)} | ${fmtPx(stdB)} → ${fmtPx(stdA)}`
+  );
 }
 report('genuine-reflow', genuineReflow);
 report('visual-only', visualOnly);
