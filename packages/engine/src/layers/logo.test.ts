@@ -15,9 +15,19 @@ describe('drawLogo — الحجم والهامش والموضع من brand.logo'
     expect(ctx.drawImageCalls).toHaveLength(0);
   });
 
+  // الاختبارات تفحص الفولباك القديم (`brand.logo.position/margin`)
+  // — نُلغي `placement.logo` كي يفعل الفولباك (docs/03 §placement).
+  const legacyBrand = (
+    overrides: Partial<BrandKit['logo']> = {}
+  ): BrandKit => ({
+    ...DEFAULT_BRAND,
+    placement: { ...DEFAULT_BRAND.placement, logo: undefined as unknown as never },
+    logo: { ...DEFAULT_BRAND.logo, ...overrides },
+  });
+
   it('bottom-left: (margin, H - margin - size, size, size)', () => {
     const ctx = createMockCtx();
-    drawLogo(ctx, size, DEFAULT_BRAND, { image });
+    drawLogo(ctx, size, legacyBrand(), { image });
     const call = ctx.drawImageCalls[0]!;
     const { size: s, margin: m } = DEFAULT_BRAND.logo;
     // moon params: (image, dx, dy, dw, dh)
@@ -25,12 +35,8 @@ describe('drawLogo — الحجم والهامش والموضع من brand.logo'
   });
 
   it('bottom-right', () => {
-    const custom: BrandKit = {
-      ...DEFAULT_BRAND,
-      logo: { ...DEFAULT_BRAND.logo, position: 'bottom-right' },
-    };
     const ctx = createMockCtx();
-    drawLogo(ctx, size, custom, { image });
+    drawLogo(ctx, size, legacyBrand({ position: 'bottom-right' }), { image });
     const { size: s, margin: m } = DEFAULT_BRAND.logo;
     expect(ctx.drawImageCalls[0]!.args).toEqual([
       1080 - m - s,
@@ -41,34 +47,22 @@ describe('drawLogo — الحجم والهامش والموضع من brand.logo'
   });
 
   it('top-right', () => {
-    const custom: BrandKit = {
-      ...DEFAULT_BRAND,
-      logo: { ...DEFAULT_BRAND.logo, position: 'top-right' },
-    };
     const ctx = createMockCtx();
-    drawLogo(ctx, size, custom, { image });
+    drawLogo(ctx, size, legacyBrand({ position: 'top-right' }), { image });
     const { size: s, margin: m } = DEFAULT_BRAND.logo;
     expect(ctx.drawImageCalls[0]!.args).toEqual([1080 - m - s, m, s, s]);
   });
 
   it('top-left', () => {
-    const custom: BrandKit = {
-      ...DEFAULT_BRAND,
-      logo: { ...DEFAULT_BRAND.logo, position: 'top-left' },
-    };
     const ctx = createMockCtx();
-    drawLogo(ctx, size, custom, { image });
+    drawLogo(ctx, size, legacyBrand({ position: 'top-left' }), { image });
     const { size: s, margin: m } = DEFAULT_BRAND.logo;
     expect(ctx.drawImageCalls[0]!.args).toEqual([m, m, s, s]);
   });
 
   it('تبديل size و margin يغيّر الإحداثيات مباشرة', () => {
-    const custom: BrandKit = {
-      ...DEFAULT_BRAND,
-      logo: { ...DEFAULT_BRAND.logo, size: 100, margin: 30 },
-    };
     const ctx = createMockCtx();
-    drawLogo(ctx, size, custom, { image });
+    drawLogo(ctx, size, legacyBrand({ size: 100, margin: 30 }), { image });
     // bottom-left: (30, 1080 - 30 - 100, 100, 100) = (30, 950, 100, 100)
     expect(ctx.drawImageCalls[0]!.args).toEqual([30, 950, 100, 100]);
   });
@@ -76,7 +70,7 @@ describe('drawLogo — الحجم والهامش والموضع من brand.logo'
   it('حجم الإطار المختلف يبقي الشعار مثبتاً بالنسبة للحواف', () => {
     const ctx = createMockCtx();
     // إطار عمودي 1080×1920، الافتراضي bottom-left.
-    drawLogo(ctx, { w: 1080, h: 1920 }, DEFAULT_BRAND, { image });
+    drawLogo(ctx, { w: 1080, h: 1920 }, legacyBrand(), { image });
     const { size: s, margin: m } = DEFAULT_BRAND.logo;
     expect(ctx.drawImageCalls[0]!.args).toEqual([m, 1920 - m - s, s, s]);
   });
