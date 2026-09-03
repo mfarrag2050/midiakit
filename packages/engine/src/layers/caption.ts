@@ -9,13 +9,14 @@
 //   • **الكسر الدلالي** — «مجلس الأمن» لا تنقسم في الترجمة أيضاً
 //   • **تلوين الكلمة النشطة من اليمين** — النمط العربي الصحيح
 //
-// **العقد:**
-//   drawCaption(ctx, size, brand, params) — يرسم الترجمة الفعّالة في t
-//   يقرأ segments من params، يجد الفعّال، يبني tokens من words، يستدعي
-//   wrapOptimal، يرسم بتلوين per-word حسب t.
+// **مبدأ حاسم (2026-09-03، بعد اكتشاف اهتزاز الكشيدة):** التخطيط
+// (wrap + justify + خرائط الكلمات) يُحسَب **مرّة واحدة عبر عمر المقطع**،
+// ويُخزَّن في `PreparedCaption`. الرسم (drawCaptionAt) يقرأ الجاهز
+// ويغيّر **المظهر لا التخطيط**. يضمن ثبات موضع الكشيدة عبر الإطارات.
 
 import type {
   BrandKit,
+  CaptionHighlightMode,
   PlacementAnchor,
   PlacementSpec,
   Token,
@@ -25,9 +26,7 @@ import type {
 import { isWord } from '@pf-mediakit/shared';
 import type { CanvasDrawContext } from '../text/draw-line.js';
 import type { CanvasFontContext } from '../text/measurer.js';
-import type { CanvasSize } from './image.js';
 import { createCanvasMeasurer } from '../text/measurer.js';
-import { parseTokens } from '../text/parse-tokens.js';
 import { wrapOptimal } from '../text/wrap-optimal.js';
 import { justifyLine } from '../text/kashida.js';
 import { computeBreakPenalties } from '../render.js';
@@ -35,7 +34,6 @@ import { loadDefaultLexicon, type Lexicon } from '../arabic-lexicon/index.js';
 
 // ── أنواع المدخلات ─────────────────────────────────────
 
-/** كلمة موقوتة — من مخرج التفريغ. */
 export interface CaptionWord {
   readonly start: number;   // ثانية
   readonly end: number;
@@ -43,7 +41,6 @@ export interface CaptionWord {
   readonly probability?: number;
 }
 
-/** مقطع ترجمة — مجموعة كلمات ضمن نافذة زمنية. */
 export interface CaptionSegment {
   readonly start: number;
   readonly end: number;
@@ -51,11 +48,31 @@ export interface CaptionSegment {
   readonly words: readonly CaptionWord[];
 }
 
+// ── نتيجة التحضير — تُحسَب مرة، تُقرأ كثيراً ────────────
+
+/** موضع كلمة مرسومة بعد التبرير (المرجع للرسم والتلوين). */
+export interface PreparedCaptionWord {
+  readonly text: string;        // النصّ بعد كشيدة (إن وُجدت)
+  readonly width: number;       // العرض المقيس (px)
+  readonly rightX: number;      // إحداثي الحافّة اليمنى للكلمة
+  readonly baselineY: number;
+  readonly wordIdx: number;     // مؤشر في segment.words للتزمين
+  readonly lineIdx: number;
+}
+
+export interface PreparedCaption {
+  readonly segment: CaptionSegment;
+  readonly fontSize: number;
+  readonly lineHeight: number;
+  readonly nLines: number;
+  readonly words: readonly PreparedCaptionWord[];
+  readonly family: string;
+}
+
 export interface CaptionParams {
   readonly segments: readonly CaptionSegment[];
-  /** الوقت الحالي (ثانية) — يحدّد المقطع الفعّال + الكلمة النشطة. */
+  /** الوقت الحالي (ثانية). */
   readonly t: number;
-  /** قاموس دلالي مخصّص (اختياري) — يمرَّر إلى wrapOptimal. */
   readonly lexicon?: Lexicon;
 }
 
@@ -74,36 +91,39 @@ function resolveCaptionAnchor(
   return { anchor: 'bottom-center', offset: { x: 0, y: 180 } };
 }
 
-// ── الدالة الرئيسية ────────────────────────────────────
+// ── كاش للتحضير (بحسب هوية segment) ─────────────────────
+// WeakMap يُفرِغ إن أُطلقت المرجعية على segment.
+const PREPARED_CACHE = new WeakMap<CaptionSegment, PreparedCaption>();
 
 const DEFAULT_LEXICON: Lexicon = loadDefaultLexicon();
 
-export function drawCaption(
+// ── التحضير: مرة عبر عمر المقطع ────────────────────────
+
+/**
+ * يحسب wrap + justify + خرائط المواضع لمقطع كامل. النتيجة قابلة لإعادة
+ * الاستعمال في كل إطار داخل [segment.start, segment.end]. يُخزَّن في
+ * WeakMap بمفتاح مرجع الـsegment — نفس المرجع → إعادة نفس النتيجة.
+ */
+export function prepareCaption(
   ctx: CanvasDrawContext & CanvasFontContext,
-  size: CanvasSize,
+  size: { readonly w: number; readonly h: number },
   brand: BrandKit,
-  params: CaptionParams
-): void {
-  // الخط الطباعي اختياري — عند غيابه لا رسم.
+  segment: CaptionSegment,
+  lexicon?: Lexicon
+): PreparedCaption | null {
+  const cached = PREPARED_CACHE.get(segment);
+  if (cached) return cached;
+
   const cfg: TypographyCaption | undefined = brand.typography.caption;
-  if (!cfg) return;
+  if (!cfg) return null;
+  if (segment.words.length === 0) return null;
 
-  // (١) إيجاد المقطع الفعّال — أوّل مقطع يحوي t.
-  const t = params.t;
-  const active = params.segments.find((s) => s.start <= t && t <= s.end);
-  if (!active || active.words.length === 0) return;
+  // (١) بناء tokens من الكلمات، بترتيبها في المصدر.
+  const tokens: Token[] = segment.words.map((w) => ({
+    text: w.text.trim(), bold: false, accent: false,
+  }));
 
-  // (٢) بناء tokens من الكلمات.
-  // **مهم:** `wrapOptimal` قد يستنسخ tokens أو يكون بنائها الداخلي
-  // يفقد Object identity. لذلك **لا نعتمد Map<Token, index>**؛ بدلاً
-  // منها نعتمد أن `wrapOptimal` يحفظ ترتيب الكلمات — نُحصي مؤشراً
-  // متتابعاً على الأسطر النهائية ونربطه بـactive.words[i].
-  const tokens: Token[] = active.words.map((w) => {
-    const tok: WordToken = { text: w.text.trim(), bold: false, accent: false };
-    return tok;
-  });
-
-  // (٣) قياسات + إعداد wrapOptimal (نفس knobs headline).
+  // (٢) قياسات + wrapOptimal.
   const measure = createCanvasMeasurer(ctx, brand);
   const readableMin = Math.round(size.w * cfg.readableMinRatio);
   const [bwMinR, bwMaxR] = cfg.boxWidthRange;
@@ -118,24 +138,15 @@ export function drawCaption(
     Math.round(size.w * cfg.headlineFsRatio[1]),
   ];
 
-  // كسر دلالي مطبَّق على tokens إن فُعِّل في الهوية.
   const semanticEnabled = brand.typography.semanticBreaks.enabled;
   const breakPenalties = semanticEnabled
-    ? computeBreakPenalties(tokens, params.lexicon ?? DEFAULT_LEXICON)
+    ? computeBreakPenalties(tokens, lexicon ?? DEFAULT_LEXICON)
     : undefined;
 
   const justifyCfg = brand.typography.justify;
   const wrap = wrapOptimal(
-    tokens,
-    cfg.boxWidth,
-    cfg.max,
-    cfg.min,
-    false,
-    cfg.maxLines,
-    1.0,           // shortLineRatio — الترجمة uniform
-    cfg.lineHeight,
-    measure,
-    'uniform',
+    tokens, cfg.boxWidth, cfg.max, cfg.min, false,
+    cfg.maxLines, 1.0, cfg.lineHeight, measure, 'uniform',
     {
       minLines: cfg.minLines,
       preferredLines: cfg.preferredLines,
@@ -144,108 +155,235 @@ export function drawCaption(
       absoluteMinFill: justifyCfg.minLineFill,
       boxWidthCandidates,
       fsRange,
-      justifyCapacityConfig: {
-        cfg: justifyCfg,
-        fontCaps: brand.fonts.capabilities,
-      },
+      justifyCapacityConfig: { cfg: justifyCfg, fontCaps: brand.fonts.capabilities },
       ...(breakPenalties && { breakPenalties }),
     }
   );
 
-  // (٤) تبرير الأسطر (كشيدة).
   const linesJustified = wrap.lines.map((line, i) =>
     justifyLine(
-      line,
-      wrap.boxWidth,
-      wrap.fontSize,
-      false,
-      justifyCfg,
-      brand.fonts.capabilities,
-      measure,
+      line, wrap.boxWidth, wrap.fontSize, false, justifyCfg,
+      brand.fonts.capabilities, measure,
       { isLast: i === wrap.lines.length - 1 }
     )
   );
 
-  // (٥) حساب الموضع من brand.placement.caption.
+  // (٣) موقع الكتلة + قياس عرض كل كلمة بعد الكشيدة.
   const { anchor, offset } = resolveCaptionAnchor(brand);
   const nLines = linesJustified.length;
-  const blockHeight = nLines * wrap.lineHeight;
   const [vert, horiz] = anchor.split('-') as [
-    'top' | 'middle' | 'bottom',
-    'left' | 'center' | 'right'
+    'top' | 'middle' | 'bottom', 'left' | 'center' | 'right'
   ];
-
-  // مركز الحاوية العمودي (أول baseline).
   let firstBaseline: number;
   switch (vert) {
-    case 'top':
-      firstBaseline = offset.y + wrap.fontSize;
-      break;
-    case 'bottom':
-      firstBaseline = size.h - offset.y - (nLines - 1) * wrap.lineHeight;
-      break;
-    case 'middle':
-    default:
-      firstBaseline = size.h / 2 - ((nLines - 1) * wrap.lineHeight) / 2;
-      break;
+    case 'top':    firstBaseline = offset.y + wrap.fontSize; break;
+    case 'bottom': firstBaseline = size.h - offset.y - (nLines - 1) * wrap.lineHeight; break;
+    default:       firstBaseline = size.h / 2 - ((nLines - 1) * wrap.lineHeight) / 2;
   }
-
-  // الحافة اليمنى للنص — للـRTL نضع rightX عند الحافة اليمنى للـboxWidth
-  // المحسوب حول أنكور أفقي.
   const chosenBoxW = wrap.boxWidth;
-  let rightX: number;
+  let rightXBase: number;
   switch (horiz) {
-    case 'right':
-      rightX = size.w - offset.x;
-      break;
-    case 'left':
-      rightX = offset.x + chosenBoxW;
-      break;
-    case 'center':
-    default:
-      rightX = size.w / 2 + chosenBoxW / 2;
-      break;
+    case 'right':  rightXBase = size.w - offset.x; break;
+    case 'left':   rightXBase = offset.x + chosenBoxW; break;
+    default:       rightXBase = size.w / 2 + chosenBoxW / 2;
   }
 
-  // (٦) رسم كل سطر مع تلوين per-word بحسب t.
   const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
+  // نضبط ctx.font للقياس فقط — الرسم يعيد ضبطه مطابقاً.
   ctx.font = `700 ${wrap.fontSize}px ${family}`;
-  ctx.direction = 'rtl';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'alphabetic';
 
-  // نستعمل مؤشراً متتابعاً على كل الكلمات عبر كل الأسطر — يفترض أن
-  // wrapOptimal يحفظ ترتيب الكلمات (يفعل ذلك — DP على تسلسل).
+  const spaceW = wrap.fontSize * 0.28;
+  const words: PreparedCaptionWord[] = [];
   let wordCursor = 0;
   for (let lineIdx = 0; lineIdx < linesJustified.length; lineIdx++) {
     const line = linesJustified[lineIdx]!;
     const y = firstBaseline + lineIdx * wrap.lineHeight;
-    // نرسم كلمة كلمة من اليمين لليسار — يمكّن التلوين per-word.
-    let x = rightX;
+    let x = rightXBase;
     for (const tok of line) {
       if (!isWord(tok)) continue;
-      const wt = tok;
-      // ربط الترتيبي مع active.words — يفترض تطابق ترتيب wrap مع input.
-      const w = active.words[wordCursor];
-      wordCursor++;
-      // تلوين:
-      //   • t < w.start ⇒ لاحق (شفافية)
-      //   • w.start <= t <= w.end ⇒ نشط (accent)
-      //   • t > w.end ⇒ سابق (نصّ عادي)
-      let fill = brand.colors.text;
-      let alpha = 1.0;
-      if (w) {
-        if (t < w.start) { alpha = brand.typography.caption?.futureWordOpacity ?? 0.55; }
-        else if (t <= w.end) { fill = brand.colors.accent; }
-      }
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = fill;
-      ctx.fillText(wt.text, x, y);
+      const wt = tok as WordToken;
       const wWidth = ctx.measureText(wt.text).width;
-      ctx.restore();
-      const spaceW = wrap.fontSize * 0.28;
+      words.push({
+        text: wt.text,
+        width: wWidth,
+        rightX: x,
+        baselineY: y,
+        wordIdx: wordCursor,
+        lineIdx,
+      });
+      wordCursor++;
       x -= wWidth + spaceW;
     }
+  }
+
+  const prepared: PreparedCaption = {
+    segment,
+    fontSize: wrap.fontSize,
+    lineHeight: wrap.lineHeight,
+    nLines,
+    words,
+    family,
+  };
+  PREPARED_CACHE.set(segment, prepared);
+  return prepared;
+}
+
+// ── الرسم عند t — يقرأ الجاهز، يغيّر المظهر فقط ────────
+
+/**
+ * يرسم الترجمة عند وقت t باستهلاك التحضير المُخزَّن.
+ * **لا يغيّر التخطيط.** الكشيدة والمواضع والأحجام ثابتة عبر الإطارات.
+ */
+export function drawCaption(
+  ctx: CanvasDrawContext & CanvasFontContext,
+  size: { readonly w: number; readonly h: number },
+  brand: BrandKit,
+  params: CaptionParams
+): void {
+  const cfg = brand.typography.caption;
+  if (!cfg) return;
+
+  const t = params.t;
+  const active = params.segments.find((s) => s.start <= t && t <= s.end);
+  if (!active) return;
+
+  const prep = prepareCaption(ctx, size, brand, active, params.lexicon);
+  if (!prep) return;
+
+  const mode: CaptionHighlightMode = cfg.highlightMode ?? 'wordColor';
+  if (mode === 'none') {
+    drawFixedText(ctx, prep, brand);
+    return;
+  }
+
+  ctx.font = `700 ${prep.fontSize}px ${prep.family}`;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+
+  const highlightColor = cfg.highlightColor ?? brand.colors.accent;
+  const pastOpacity = cfg.pastOpacity ?? 1.0;
+  const futureOpacity =
+    cfg.futureOpacity ?? cfg.futureWordOpacity ?? 0.55;
+
+  for (const w of prep.words) {
+    const word = active.words[w.wordIdx];
+    if (!word) continue;
+    const status =
+      t < word.start ? 'future'
+      : t <= word.end ? 'active'
+      : 'past';
+
+    switch (mode) {
+      case 'progressiveReveal': {
+        if (status === 'future') continue; // لا رسم للاحقة
+        const color = status === 'active' ? highlightColor : brand.colors.text;
+        drawWord(ctx, w, color, 1.0);
+        break;
+      }
+      case 'wordBackground': {
+        if (status === 'active') {
+          drawWordBackground(ctx, w, prep.fontSize, highlightColor);
+          drawWord(ctx, w, brand.colors.surface, 1.0);
+        } else {
+          const alpha = status === 'past' ? pastOpacity : futureOpacity;
+          drawWord(ctx, w, brand.colors.text, alpha);
+        }
+        break;
+      }
+      case 'wordScale': {
+        if (status === 'active') {
+          drawWordScaled(ctx, w, brand.colors.text, highlightColor, 1.12, prep.fontSize, prep.family);
+        } else {
+          const alpha = status === 'past' ? pastOpacity : futureOpacity;
+          drawWord(ctx, w, brand.colors.text, alpha);
+        }
+        break;
+      }
+      case 'wordColor':
+      default: {
+        if (status === 'active') {
+          drawWord(ctx, w, highlightColor, 1.0);
+        } else {
+          const alpha = status === 'past' ? pastOpacity : futureOpacity;
+          drawWord(ctx, w, brand.colors.text, alpha);
+        }
+      }
+    }
+  }
+}
+
+// ── مساعدات رسم منخفضة المستوى ─────────────────────────
+
+function drawWord(
+  ctx: CanvasDrawContext,
+  w: PreparedCaptionWord,
+  fill: string,
+  alpha: number
+): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = fill;
+  ctx.fillText(w.text, w.rightX, w.baselineY);
+  ctx.restore();
+}
+
+function drawWordBackground(
+  ctx: CanvasDrawContext,
+  w: PreparedCaptionWord,
+  fontSize: number,
+  fill: string
+): void {
+  const pad = Math.round(fontSize * 0.18);
+  const height = Math.round(fontSize * 1.15);
+  const bgY = w.baselineY - height + Math.round(fontSize * 0.28);
+  const bgX = w.rightX - w.width - pad;
+  ctx.save();
+  ctx.fillStyle = fill;
+  const r = Math.round(fontSize * 0.15);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath();
+    ctx.roundRect(bgX, bgY, w.width + pad * 2, height, r);
+    ctx.fill();
+  } else {
+    ctx.fillRect(bgX, bgY, w.width + pad * 2, height);
+  }
+  ctx.restore();
+}
+
+function drawWordScaled(
+  ctx: CanvasDrawContext & CanvasFontContext,
+  w: PreparedCaptionWord,
+  _baseColor: string,
+  highlightColor: string,
+  scale: number,
+  fontSize: number,
+  family: string
+): void {
+  // نُكبّر بلمس خط الأساس فقط — بلا إخلال بمواضع الكلمات الأخرى.
+  ctx.save();
+  ctx.translate(w.rightX, w.baselineY);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = highlightColor;
+  ctx.font = `700 ${fontSize}px ${family}`;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(w.text, 0, 0);
+  ctx.restore();
+}
+
+function drawFixedText(
+  ctx: CanvasDrawContext & CanvasFontContext,
+  prep: PreparedCaption,
+  brand: BrandKit
+): void {
+  ctx.font = `700 ${prep.fontSize}px ${prep.family}`;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = brand.colors.text;
+  for (const w of prep.words) {
+    ctx.fillText(w.text, w.rightX, w.baselineY);
   }
 }

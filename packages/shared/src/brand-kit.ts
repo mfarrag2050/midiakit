@@ -200,6 +200,24 @@ export interface TypographyAccentBar {
 }
 
 /**
+ * نمط تلوين الكلمة النشطة في الترجمة.
+ *   • `wordColor`         — لون accent على النص (الحالي، افتراضي)
+ *   • `wordBackground`    — خلفية ملوّنة خلف الكلمة النشطة
+ *   • `progressiveReveal` — الكلمات تظهر تباعاً، اللاحقة غير مرسومة
+ *   • `wordScale`         — تكبير خفيف للكلمة النشطة مع اللون
+ *   • `none`              — نصّ ثابت بلا تمييز (كلّه بلون text)
+ *
+ * **قاعدة (L-41-مماثل):** كل الأنماط تغيّر المظهر لا التخطيط. موضع
+ * الكلمات وأحجامها والكشيدة ثابتة عبر الإطارات في كل نمط.
+ */
+export type CaptionHighlightMode =
+  | 'wordColor'
+  | 'wordBackground'
+  | 'progressiveReveal'
+  | 'wordScale'
+  | 'none';
+
+/**
  * إعدادات طباعة الترجمة (caption) — نفس بنية breaking لكن بأوزان مختلفة
  * (خط أصغر، سطران غالباً، ملء أعلى). تُستهلك من `wrapOptimal` بنفس
  * حراسات الكشيدة والدلالي — سطر الترجمة يخضع لنفس قواعد العنوان.
@@ -215,9 +233,20 @@ export interface TypographyCaption {
   readonly readableMinRatio: number;
   readonly headlineFsRatio: readonly [number, number];
   readonly boxWidthRange: readonly [number, number];
-  /** لون الكلمة اللاحقة (لم تُنطق بعد) — شفافية على brand.colors.text.
-   *  1.0 = بلا تعتيم، 0.4 = خافت. الافتراضي 0.55. */
-  readonly futureWordOpacity: number;
+  /** نمط تلوين الكلمة النشطة. */
+  readonly highlightMode: CaptionHighlightMode;
+  /** شفافية الكلمات السابقة (المنطوقة). افتراضي 1.0 (لا تعتيم). */
+  readonly pastOpacity: number;
+  /** شفافية الكلمات اللاحقة (لم تُنطق بعد). افتراضي 0.55. */
+  readonly futureOpacity: number;
+  /** لون التمييز — إن غاب يُستعمل `brand.colors.accent`. */
+  readonly highlightColor?: string;
+  /**
+   * الاسم القديم `futureWordOpacity` — مُبقى لتوافق قديم مع الكود الذي
+   * كتب قبل إضافة `futureOpacity`. تفضيل الاستعمال: `futureOpacity`.
+   * @deprecated — استعمل futureOpacity.
+   */
+  readonly futureWordOpacity?: number;
 }
 
 export type LineHeightMode = 'dynamic' | 'fixed';

@@ -145,7 +145,10 @@ export const DEFAULT_BRAND: BrandKit = {
       readableMinRatio: 0.038,
       headlineFsRatio: [0.045, 0.060],
       boxWidthRange: [0.70, 0.88],
-      futureWordOpacity: 0.55,
+      highlightMode: 'wordColor',
+      pastOpacity: 1.0,
+      futureOpacity: 0.55,
+      futureWordOpacity: 0.55, // توافق قديم
     },
   },
   badges: {

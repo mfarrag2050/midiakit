@@ -36,7 +36,10 @@ export {
 } from './attribution.js';
 export {
   drawCaption,
+  prepareCaption,
   type CaptionWord,
   type CaptionSegment,
   type CaptionParams,
+  type PreparedCaption,
+  type PreparedCaptionWord,
 } from './caption.js';
