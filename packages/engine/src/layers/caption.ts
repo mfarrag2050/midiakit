@@ -143,7 +143,13 @@ export function prepareCaption(
     ? computeBreakPenalties(tokens, lexicon ?? DEFAULT_LEXICON)
     : undefined;
 
-  const justifyCfg = brand.typography.justify;
+  // التبرير: 'inherit' (افتراضي) يرث brand.typography.justify.
+  // 'none' يفرض mode='none' للترجمة تحديداً — بلا كشيدة، بلا مطّ.
+  const captionJustifyMode = cfg.justify ?? 'inherit';
+  const justifyCfg =
+    captionJustifyMode === 'none'
+      ? { ...brand.typography.justify, mode: 'none' as const }
+      : brand.typography.justify;
   const wrap = wrapOptimal(
     tokens, cfg.boxWidth, cfg.max, cfg.min, false,
     cfg.maxLines, 1.0, cfg.lineHeight, measure, 'uniform',

@@ -222,6 +222,15 @@ export type CaptionHighlightMode =
  * (خط أصغر، سطران غالباً، ملء أعلى). تُستهلك من `wrapOptimal` بنفس
  * حراسات الكشيدة والدلالي — سطر الترجمة يخضع لنفس قواعد العنوان.
  */
+/**
+ * سلوك التبرير على الترجمة. الافتراضي 'inherit' (يستعمل
+ * `brand.typography.justify` كما العنوان). 'none' يُلغي التبرير
+ * لسطر الترجمة تحديداً — الكشيدة لا تُدرَج، السطور تبقى بعرضها
+ * الطبيعي. السبب: سطر الترجمة أقصر من العنوان، وقد يبدو التطويل
+ * مفرطاً فيه؛ العميل يقرّر.
+ */
+export type CaptionJustifyMode = 'inherit' | 'none';
+
 export interface TypographyCaption {
   readonly max: number;
   readonly min: number;
@@ -233,6 +242,9 @@ export interface TypographyCaption {
   readonly readableMinRatio: number;
   readonly headlineFsRatio: readonly [number, number];
   readonly boxWidthRange: readonly [number, number];
+  /** التبرير: 'inherit' يرث brand.typography.justify، 'none' يُلغي.
+   *  الافتراضي 'inherit'. */
+  readonly justify?: CaptionJustifyMode;
   /** نمط تلوين الكلمة النشطة. */
   readonly highlightMode: CaptionHighlightMode;
   /** شفافية الكلمات السابقة (المنطوقة). افتراضي 1.0 (لا تعتيم). */
