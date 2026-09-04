@@ -138,8 +138,8 @@
 | A3 | آلية `SET LOCAL app.tenant_id` | ✅ | `app_set_tenant(uuid)` + `withTenant` / `withoutTenant` في packages/db/src |
 | A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.52s، 17 جدولاً، ANY_TENANT + FORCE، سلبيّتان حاسمتان، revisions-orphan، auth_lookup، find_user_by_email |
 | **A5** | schema المصادقة + find_user_by_email | ✅ | password_reset_tokens (RLS+FORCE) + login_attempts (استثناء موثّق) + users.is_active + auth_lookup + الدالة الوحيدة SECURITY DEFINER |
-| A6 | `auth/session.ts` — الطبقة الوحيدة | 🔄 التالي | argon2id PHC + jose + rate limit + constant-time |
-| A7 | tenant-hook + auth middleware | ⏳ | onRequest hook مركزي لـSET LOCAL |
+| **A6** | `auth/session.ts` — الطبقة الوحيدة | ✅ | argon2id PHC + jose HS256 + sessions قابلة للإبطال + refresh rotation + rate limit + constant-time. `pnpm --filter @pf-mediakit/api smoke:auth` يمرّ. |
+| A7 | tenant-hook + auth middleware + routes | 🔄 التالي | onRequest hook مركزي لـSET LOCAL + Fastify routes |
 | A8 | **G-P4-2** بوابة نقاء المصادقة | ⏳ | تسجيل/دخول/دعوة/إبطال + سلبيّة كاشفة |
 
 ### المجموعة B–F: endpoints (لاحقاً)
@@ -207,6 +207,32 @@
   في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
   + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
   G-P4-11 تُفعَّل مع A11.
+- **A6 مكتمل — apps/api + auth/session.ts:** الطبقة الوحيدة للمصادقة
+  في `apps/api/src/auth/session.ts` (المرجع الوحيد لـjose و @node-rs/argon2
+  — G-P4-2 grep guard). القيود المطبَّقة:
+  * argon2id بمعاملات صريحة (m=19456 KiB · t=2 · p=1) — مخرج PHC معياري
+    `$argon2id$v=19$m=19456,t=2,p=1$SALT$HASH` يقبله Keycloak استيراداً.
+  * JWT بـHS256 صريح (jose): iss='pf-mediakit-api'، aud='pf-mediakit-studio'،
+    exp 15 دقيقة، session_id ضمن claims. verify يفرض الخوارزمية صراحةً
+    (لا يقبل ما في header) + iss + aud + exp.
+  * Sessions قابلة للإبطال في القاعدة: getActiveSession يفحص revoked_at
+    + expires_at قبل كل طلب.
+  * Refresh token: `${tenantId}.${base64url(32 bytes)}` — يحمل tenant_id
+    ليتمكّن الخادم من SET LOCAL قبل البحث بـhash (بديل SECURITY DEFINER
+    ثانية — مرفوض). rotation صارمة: القديم يُبطل فوراً عند refresh.
+  * Rate limit في checkLoginRateLimit: 10 محاولات فاشلة/بريد/15 دقيقة
+    · 30/IP/15 دقيقة. login_attempts INSERT خارج txn (لا يُروجع مع الفشل).
+  * Constant-time: verifyPassword عبر argon2id timing-safe + fake hash
+    وهمي عند البريد المفقود (زمن استجابة متطابق: 14ms vs 27ms في smoke).
+  * password reset: رمز عشوائي 32 بايت، ينتهي خلال ساعة، يُستخدم مرة،
+    revoke كل الجلسات النشطة عند نجاح الاستعادة.
+  * لا كشف وجود الحساب: request-reset يعيد null (نجاح وهمي) للبريد المفقود؛
+    complete-reset يعيد نفس ResetTokenInvalid لأيّ سبب فشل.
+  * سلوك signup: يولّد UUIDs كودياً بدل RETURNING (سياسة SELECT ترفض
+    قراءة الصف الجديد قبل SET LOCAL).
+  * apps/api/scripts/smoke-auth.ts يمرّ 22+ فحصاً: PHC + signup + JWT verify
+    + login صحيح/خاطئ/مفقود + refresh + revoke + password reset flow +
+    rate limit (يضرب عند المحاولة 11).
 - **A5 مكتمل + G-P4-1 موسَّع:** migration `20260904141400_auth-schema.ts`:
   * `users`: UNIQUE(email) عالمياً + is_active + last_login_at.
   * `password_reset_tokens` (RLS+FORCE): رمز واحد نشط لكل مستخدم.
