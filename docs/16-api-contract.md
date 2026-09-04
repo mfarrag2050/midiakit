@@ -898,10 +898,27 @@ finalize مع `{ "acknowledgedWarnings": ["SVG_HAS_TEXT"] }`.
 ### 9.3 GET /v1/assets
 
 **الدور:** `viewer` فما فوق.
-**التصفية:** `filter[kind]` · `filter[brand_kit_id]` (لو الأصل مرتبط) ·
-`filter[createdAt]`.
 
-**الاستجابة:** قائمة صيغتها كـ§9.2 (بلا `publicUrl` في القائمة — يُطلَب لكل أصل عند الاستهلاك).
+**التصفية — تدعم S8 (منتقي الأصول في mk-studio):**
+
+| الفلتر | الشكل | الاستخدام |
+|---|---|---|
+| `filter[kind]` | `font\|logo\|image\|audio\|video\|lottie\|svg` (يقبل `in`) | التبويب حسب النوع |
+| `filter[brand_kit_id]` | معرّف | أصول هوية بعينها |
+| `filter[createdAt][gte/lte]` | ISO | نطاق زمني |
+| `filter[label]` | بحث جزئي (substring على `meta.label` و `filename` الأصلي) | البحث النصّي في المكتبة |
+| `filter[licenseAck]` | `true\|false` | الأصول المُقرَّة قانونياً فقط (خطوط/لوتي) — لعرض «جاهز للتصدير» |
+| `filter[inUse]` | `true\|false` | الأصول المُشار إليها من brand kits (`true`) أو اليتيمة (`false`) — لتنظيف المكتبة |
+| `filter[sizeBytes][gte/lte]` | int | أحجام (تحديد الملفات الثقيلة قبل تدقيق التخزين) |
+| `filter[hasFaces]` | `true\|false` | صور بها وجوه مُكتشَفة — يُقصر الاختيار على مصادر بشرية (لبطاقة عاجل عنها) |
+
+**الترتيب:** `sort=createdAt\|label\|sizeBytes` مع `-` للتنازلي. الافتراضي `-createdAt`.
+
+**الاستجابة:** قائمة صيغتها كـ§9.2 (بلا `publicUrl` في القائمة — يُطلَب لكل أصل عند الاستهلاك عبر §9.4 أو §9.5).
+
+**الأخطاء:**
+- 400 `INVALID_FILTER_FIELD` (فلتر خارج القائمة أعلاه)
+- 400 `INVALID_KIND_VALUE` (قيمة `kind` غير معروفة)
 
 ### 9.4 GET /v1/assets/:id
 

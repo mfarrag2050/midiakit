@@ -123,35 +123,126 @@ hashes، تفعيل SSO، ملء `external_id`). **بلاها:** أسبوع كا
 
 ### 3.3 الأعمدة الأساسية — يمكن التوازي داخلها
 
-من هنا فصاعداً، بعض البنود مستقلّة وتقبل التوازي بين مطوّرَين على `feat/api`.
+**قاعدة:** كل بند تنفيذ يُذكر بـpath وverb صراحةً. البند بلا نقطة نهاية
+= بند بلا تعريف. الإشارة الملخّصة («list/get/create…») تُكتشف متأخراً
+في mk-api كثغرات صامتة.
 
 **المجموعة الأولى (بعد A8):**
-- **A9.** Tenants (GET/PATCH `/v1/tenant`).
-- **A10.** Users (list/get/invite/patch/delete + إعادة إسناد المشاريع — قرار B1).
-- **A11.** Assets (upload-url + finalize + list/get/delete + refresh-url + detect-faces + patch faces).
+
+- **A9. Tenants** (docs/16 §3):
+  - `GET /v1/tenant`
+  - `PATCH /v1/tenant`
+
+- **A10. Users** (docs/16 §4):
+  - `GET /v1/users`
+  - `GET /v1/users/:id`
+  - `POST /v1/users/invite`
+  - `PATCH /v1/users/:id`
+  - `DELETE /v1/users/:id` (يشمل إعادة إسناد المشاريع إلى `owner` وحذف المسوّدات — قرار B1، مع `reason` إلزامي في body وسجل `revisions.action='reassign'` لكل مشروع مُنقول)
+
+- **A11. Assets** (docs/16 §9) — نمط pre-signed upload:
+  - `POST /v1/assets/upload-url` (يعيد signed PUT URL + assetId مسوّدة)
+  - `POST /v1/assets/:id/finalize` (يستخرج metadata، يطلق كشف الوجوه لـkind=image، يطلب `licenseAck=true` لـkind ∈ {font, lottie}، ويعيد warnings لـkind=svg بنصّ محوَّل)
+  - `GET /v1/assets` (قائمة قابلة للتصفية — راجع docs/16 §9.3 للفلاتر)
+  - `GET /v1/assets/:id`
+  - `POST /v1/assets/:id/refresh-url` (تجديد `publicUrl` الموقَّت)
+  - `DELETE /v1/assets/:id`
+  - `POST /v1/assets/:id/detect-faces` (إعادة تشغيل الكشف)
+  - `PATCH /v1/assets/:id/faces` (حفظ إحداثيات معدَّلة كنسب من العرض/الارتفاع — L-02)
 
 **المجموعة الثانية (بعد A9-A10):**
-- **A12.** Brand Kits (list/get/create/patch/delete + font-ack + logo-ack + assets-version).
-- **A13.** Templates (list/get/create/patch/delete).
+
+- **A12. Brand Kits** (docs/16 §5) — الأثقل، **ثمانية endpoints** تشمل إقرارات الترخيص وترقية إصدارات الأصول:
+  - `GET /v1/brand-kits` (قائمة موجزة بلا `config` كامل)
+  - `GET /v1/brand-kits/:id` (كائن كامل حسب docs/03)
+  - `POST /v1/brand-kits` (إنشاء بحقول إلزامية فقط، الباقي من DEFAULT_BRAND)
+  - `PATCH /v1/brand-kits/:id` (JSON Merge Patch — RFC 7396 — يُنشئ revision تلقائياً)
+  - `POST /v1/brand-kits/:id/fonts/:family/ack` (إقرار ترخيص خط مرفوع — `licenseAck=true` إلزامي، يُخزَّن `ackBy` و `ackAt`)
+  - `POST /v1/brand-kits/:id/attribution/logo-acks/:platform` (إقرار حقّ عرض شعار منصة رسمية لتفعيل `logoMode='official'`)
+  - `POST /v1/brand-kits/:id/assets-version` (ترقية إصدار الأصول — L-29 — `owner`/`admin` فقط، `acknowledgedDiff=true` إلزامي)
+  - `DELETE /v1/brand-kits/:id` (يفشل بـ409 على brand kits نشطة أو الوحيدة)
+
+- **A13. Templates** (docs/16 §6):
+  - `GET /v1/templates` (قوالب عامة + tenant's، مع `filter[scope]` و `filter[kind]`)
+  - `GET /v1/templates/:id`
+  - `POST /v1/templates` (إنشاء قالب مستأجر — يمرّ بـ`validateTemplate`)
+  - `PATCH /v1/templates/:id` (يرفض قوالب `scope='global'` بـ403)
+  - `DELETE /v1/templates/:id` (يفشل بـ409 إن كان القالب مستعملاً في مشاريع)
 
 **المجموعة الثالثة (بعد A12-A13):**
-- **A14.** Projects (list/get/create/patch/delete).
-- **A15.** Workflows (list/get/create/patch/delete).
-- **A16.** Project State + Transitions + Assign.
-- **A17.** Annotations (segmentIndex — قرار B4).
+
+- **A14. Projects** (docs/16 §7):
+  - `GET /v1/projects` (فلاتر state/assignee/brand_kit_id/template_id)
+  - `GET /v1/projects/:id` (يشمل `content`)
+  - `POST /v1/projects` (يحتاج brand_kit_id + template_id، يبدأ في أول حالة workflow)
+  - `PATCH /v1/projects/:id` (يعتمد على حالة workflow — قد يفشل بـ403 لدور غير مسموح للحالة)
+  - `DELETE /v1/projects/:id` (Q5 معلَّق — سلوك «له renders» بانتظار قرار المالك)
+
+- **A15. Workflows** (docs/16 §11):
+  - `GET /v1/workflows` (قوالب `individual` / `small-team` / `full-agency` + مخصّص المستأجر)
+  - `GET /v1/workflows/:id` (states + transitions)
+  - `POST /v1/workflows`
+  - `PATCH /v1/workflows/:id` (409 على تعديل حقول جوهرية مع workflows نشط)
+  - `DELETE /v1/workflows/:id` (409 على المستعمل أو الافتراضي)
+
+- **A16. Project State + Transitions + Assign** (docs/16 §11.6-11.8):
+  - `GET /v1/projects/:id/state` (الحالة الراهنة + التحوّلات المتاحة للمستخدم + history كامل)
+  - `POST /v1/projects/:id/transitions` (تنفيذ تحوّل — يحتاج `transitionId`، وقد يحتاج `reason` بحسب workflow)
+  - `POST /v1/projects/:id/assign` (Q7 معلَّق — الدور المسموح بالإسناد بانتظار قرار المالك؛ الآن `editor+` كافتراضي)
+
+- **A17. Annotations** (docs/16 §12) — segmentIndex بحسب قرار B4:
+  - `GET /v1/projects/:id/annotations` (فلاتر resolved/authorId/layer/segmentIndex)
+  - `POST /v1/projects/:id/annotations` (target = `{kind:'layer', layer, segmentIndex}`)
+  - `PATCH /v1/projects/:id/annotations/:aid` (تعديل body أو resolved)
+  - `DELETE /v1/projects/:id/annotations/:aid`
 
 **المجموعة الرابعة (بعد A11-A17):**
-- **A18.** Renders (create مع brand_snapshot + list/get/output/brand-snapshot/cancel/delete).
-- **A19.** ربط الطوابير (تكامل مع apps/renderer الموجود).
 
-**المجموعة الخامسة (مستقلّة عن الرندر — يمكن أن تُبنى بالتوازي مع A14-A19):**
-- **A20.** Revisions system + triggers + endpoints الاستعادة.
-- **A21.** Subscriptions + webhooks — **Paddle** (قرار المالك 2026-09-04، آخر ما يُبنى). **شرط:** كل الاستدعاءات تمرّ عبر `payments/provider.ts` (محوّل واحد يخفي Paddle). بقية النظام يعرف «اشتراك نشط» و «الحد الشهري» فقط — لا يذكر Paddle باسمه في أيّ ملف آخر. **العملاء الأوائل بحسابات يدوية** — يكشف الحدود الصحيحة قبل تثبيتها.
-- **A22.** Usage tracking.
+- **A18. Renders** (docs/16 §8) — **`brand_snapshot` يُلتقط ذرّياً عند POST**:
+  - `POST /v1/renders` (يقبل `Idempotency-Key`، يُنشئ `brand_snapshot` نسخة كاملة من brand_kit وقت الإنشاء، ثم يُدخل في الطابور بالأولوية المطلوبة)
+  - `GET /v1/renders` (سجل التصديرات — بلا `output_url` في القائمة)
+  - `GET /v1/renders/:id`
+  - `GET /v1/renders/:id/output` (يعيد signed URL بصلاحية ساعة، قابل للتجديد بلا حدّ)
+  - `GET /v1/renders/:id/brand-snapshot` (**الاستعادة الصريحة للقطة الهوية المستعمَلة** — يوضح «لماذا يبدو هذا التصدير مختلفاً عن الحالي؟»)
+  - `POST /v1/renders/:id/cancel` (إلغاء `queued` أو `running`)
+  - `DELETE /v1/renders/:id` (409 عند `running`)
+
+- **A19. ربط الطوابير** — تكامل `POST /v1/renders` مع BullMQ (المرحلة 3 الجاهزة): تحويل payload إلى job مع priority + tenant_id + timeout بحسب queue.
+
+**المجموعة الخامسة (مستقلّة عن الرندر — تقبل التوازي مع A14-A19):**
+
+- **A20. Revisions system** (docs/16 §10) — **نمط عام على خمسة موارد**: `brand_kits` · `projects` · `templates` · `users` · `assets`. لكل مورد ثلاث نقاط:
+  - `GET /v1/{resource}/:id/revisions` (سجل مرتَّب بالوقت — فلاتر actorId/createdAt)
+  - `GET /v1/{resource}/:id/revisions/:revId` (revision كامل يشمل `reconstructedState` — استعادة صافية بلا commit)
+  - `POST /v1/{resource}/:id/revisions/:revId/restore` (**الاستعادة الصريحة** — يحتاج `reason` ≥ 10 أحرف، يُنشئ revision جديدة تمثّل الاستعادة، لا يمحو التاريخ)
+
+  **إضافة إلى endpoints:** triggers على القاعدة (INSERT/UPDATE/DELETE) تكتب في `revisions` تلقائياً — الطبقة برمجية على مستوى DB لا تعتمد على انضباط handlers.
+
+- **A21. Subscriptions + webhooks — Paddle** (قرار المالك 2026-09-04، آخر ما يُبنى):
+  - `GET /v1/subscription` (docs/16 §13.1)
+  - `POST /v1/subscription/checkout` (docs/16 §13.2 — يعيد `checkoutUrl` من Paddle عبر المحوّل)
+  - `POST /v1/subscription/cancel` (يحتاج `reason` ≥ 10)
+  - `POST /v1/subscription/resume`
+  - `GET /v1/subscription/invoices`
+  - `POST /v1/webhooks/paddle` (docs/16 §16.1 — يتحقّق من `X-Signature`)
+
+  **شرط:** كل الاستدعاءات تمرّ عبر `payments/provider.ts` (محوّل واحد يخفي Paddle). بقية النظام يعرف «اشتراك نشط» و «الحد الشهري» فقط — لا يذكر Paddle باسمه في أيّ ملف آخر. **العملاء الأوائل بحسابات يدوية** — يكشف الحدود الصحيحة قبل تثبيتها.
+
+- **A22. Usage tracking**:
+  - `GET /v1/usage/current` (docs/16 §14.1 — يشمل `byBrandKit`)
+  - `GET /v1/usage/history` (نقاط شهرية)
+
+  **إضافة:** hooks داخلية عند كل render + كل AI invoke — تحديث `usage` بلا انتظار حسابات دورية.
 
 **المجموعة السادسة (بعد A21):**
-- **A23.** Rate limits enforcement (بحسب باقة الاشتراك — §17 docs/16).
-- **A24.** AI Integrations (POST/GET/DELETE) + AI invoke proxy (§15.4).
+
+- **A23. Rate limits enforcement** (بحسب باقة الاشتراك — docs/16 §17): وسيط global يقرأ باقة المستأجر من A21 ويطبّق (طلب/دقيقة · رندر متزامن · رندر/شهر). البطاقات لا تُحسب.
+
+- **A24. AI Integrations** (docs/16 §15) — mk-api وسيط بحسب قرار B3:
+  - `GET /v1/ai/integrations` (يعيد `apiKeyRef` فقط — لا `apiKey` مطلقاً)
+  - `POST /v1/ai/integrations` (إضافة/تحديث مفتاح — one-shot، يُنشئ `apiKeyRef` جديد)
+  - `DELETE /v1/ai/integrations/:provider`
+  - `POST /v1/ai/invoke/:capability` (proxy — لا يُخزَّن نصّ الطلب/الاستجابة، يُسجَّل tokensIn/Out/durationMs/provider للفوترة فقط)
 
 ### 3.4 لوحة `/ops` الإدارية
 
