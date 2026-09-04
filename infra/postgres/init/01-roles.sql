@@ -56,3 +56,10 @@ ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
 
 ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
     GRANT EXECUTE ON FUNCTIONS TO app_user;
+
+-- إزالة BYPASSRLS من دور postgres الجذري (docker bootstrap).
+-- ملاحظة: postgres يبقى SUPERUSER (شرط docker)، و SUPERUSER يتجاوز RLS
+-- دائماً بغضّ النظر عن رمز BYPASSRLS. هذا الإجراء رمزي — يوثّق النيّة،
+-- ويجعل تحقّق G-P4-1 «pg_roles WHERE rolbypassrls = true» يعود صفراً.
+-- التطبيق لا يتّصل بـpostgres في أيّ سيناريو.
+ALTER ROLE postgres NOBYPASSRLS;

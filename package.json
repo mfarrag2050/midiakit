@@ -22,7 +22,7 @@
     "verify:smart-crop": "node --import tsx scripts/verify-smart-crop-gate.mjs",
     "verify:tts": "node --import tsx scripts/verify-tts-gate.mjs",
     "verify:perf": "node --import tsx scripts/verify-perf-gate.mjs",
-    "verify:tenant-isolation": "node --import tsx scripts/verify-tenant-isolation.mjs",
+    "verify:tenant-isolation": "pnpm --filter @pf-mediakit/db verify:isolation",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts",
     "db:up": "./bin/mk -f infra/docker-compose.yml up -d",

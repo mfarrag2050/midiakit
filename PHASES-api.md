@@ -61,7 +61,7 @@
 | A1 | البنية الأساسية للقاعدة + المستخدمان | ✅ | commit `9bb1e1a` |
 | **A2** | المخطط الكامل + RLS+FORCE | ✅ | 16 جدولاً، كلها rowsecurity=t + forcerowsecurity=t، سياسات ALL على 15، 4 سياسات على tenants (INSERT مفتوح، الباقي مقيّد) |
 | A3 | آلية `SET LOCAL app.tenant_id` | ✅ | `app_set_tenant(uuid)` + `withTenant` / `withoutTenant` في packages/db/src |
-| **A4** | **G-P4-1** بوابة عزل المستأجرين | 🔄 | فحوص وجود + ثبات + سلبيّة على كل جدول |
+| A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.39s، 16 جدولاً، سلبيّتان حاسمتان (بلا SET LOCAL + بلا FORCE) + لا BYPASSRLS |
 | A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ | بعد A4 |
 
 ### المجموعة B–F: endpoints (لاحقاً)
@@ -74,7 +74,7 @@
 
 | البوابة | الوصف | الحالة |
 |---|---|---|
-| **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + لا-BYPASSRLS) | ⏳ A4 |
+| **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
 | G-P4-2 | نقاء المصادقة | ⏳ بعد A8 |
 | G-P4-3 | اكتمال سجل المراجعات | ⏳ |
 | G-P4-4 | ثبات `brand_snapshot` | ⏳ |
@@ -101,6 +101,22 @@
   `colima start mediakit`. معزولة عن `~/Minhaj` و `~/PrimeMind`.
 - **A1 مكتمل:** infra/docker-compose.yml + init/01-roles.sql +
   packages/db (node-pg-migrate + wrapper) + PHASES-api.md + ATTRIBUTIONS.md.
+- **A4 مكتمل + G-P4-1 PASSED:** `packages/db/scripts/verify-isolation.mjs`
+  ينفّذ في 1.39s على قاعدة test. كل الفحوص خضراء على 16 جدولاً:
+  * وجود على 15 جدولاً تحت مستأجر + tenants الخاص.
+  * ثبات: 100 استدعاء متطابق لكل جدول (1500 استعلام إجمالاً).
+  * سلبيّة بـID: SELECT/UPDATE/DELETE بـID مستأجر آخر → 0 صفوف/متأثّرات.
+  * سلبيّة INSERT: INSERT بـtenant_id=B من جلسة A → RLS rejected (42501).
+  * **سلبي حاسم بلا SET LOCAL:** 16 جدولاً → 0 صفوف مرئية.
+  * **سلبي حاسم بلا FORCE:** جدول usage → مع FORCE ترى 1 صف، بلا FORCE
+    ترى 2 (migration_user يتجاوز RLS كـOWNER). يُبرهن أن FORCE ضرورية.
+  * لا دور بـBYPASSRLS في القاعدة (postgres تنازل عنه رمزياً).
+  * لا SUPERUSER يمكن تسجيل دخول من التطبيق (postgres مستثنى — bootstrap
+    فقط، لا يمرّ عبر إعداد التطبيق).
+  * كل الـ16 جدولاً: rls=t force=t policies≥1.
+  * **اكتُشِف بگ في السياسات القديمة:** custom GUCs تعود إلى empty string
+    بعد SET LOCAL على اتصال Pool مُعاد استعماله (لا NULL). أُصلح في
+    `20260904141300_fix-empty-string-guc.ts` عبر NULLIF على كل السياسات.
 - **A3 مكتمل:** `app_set_tenant(uuid)` SQL function (GRANT EXECUTE على
   app_user و migration_user، REVOKE من PUBLIC). helpers TS في
   `packages/db/src/test-helpers.ts` — `withTenant(pool, id, fn)` و
