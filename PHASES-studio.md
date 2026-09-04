@@ -58,7 +58,54 @@ pnpm workspace. المنفذ 19050. طبقة عميل mk-api مكتوبة بعق
 **غير مطلوب في S1:** استدعاء أيّ endpoint من أيّ صفحة (تنتظر SYNC-α
 حسب `docs/17 §5`).
 
-## S2 — نظام التصميم ⏳
+## S2 — نظام التصميم ✅
+
+**التسليم:** مكتبة atoms + composites تحت `apps/studio/src/ui/`،
+**RTL-first**: استعمال خصائص منطقية (`ms-*`, `pe-*`, `text-start/end`)
+حصراً — لا فروع `dir==='rtl'` في المكوّنات. كل مكوّن يستقبل مفاتيح
+i18n (`*Key`) لا نصوصاً (L-22 على مستوى الواجهة).
+
+**Atoms:**
+- `Button` — 4 variants (primary/secondary/ghost/danger) × 2 sizes +
+  `loading` + `leadingIcon`/`trailingIcon` + `fullWidth`.
+- `Input`, `Textarea` — حالة `invalid` بصرية.
+- `Field` — يلفّ label + input + help/error، يقبل `required`.
+- `Card` — سطح مع رأس/عنوان/أفعال/ذيل، `padded` قابل للإيقاف.
+- `Table<T>` — أعمدة مُعرَّفة بـ`Column<T>`، محاذاة `text`/`numeric`
+  /`center`. النوعية `numeric` تُفعّل `tabular` + `text-end`.
+- `Dialog` — قائم على `<dialog>` (focus + Escape + backdrop مجاناً)،
+  variant `default`/`danger`.
+- `Alert` — أربعة أنماط (info/success/warning/danger) بشريط لون +
+  أيقونة.
+- `Badge` — علامة صغيرة بخمس لهجات.
+
+**Composites (منقولة إلى الأساس):**
+- `AppShell` — يستعمل `LocaleSwitcher`.
+- `AuthCard` — أعيد بناؤها لتستعمل `Field` + `Input` + `Button`.
+
+**معرض حي:** `/design` (route جديد، مرتبط في الشريط الجانبي) يعرض كل
+atom + composite في مكان واحد. الغاية: مراجعة بصرية في كل جلسة قادمة
+تلمس نظام التصميم — L-17 يبقى ساري المفعول.
+
+**اللقطات:** `design-{ar,mixed,en}.png` في `apps/studio/screenshots/`.
+
+**ما رأيته:**
+- **AR**: Layout RTL — الشريط الجانبي على اليمين، بند «النظام» نشط.
+  الأزرار تُقرأ من اليمين لليسار بأمر صحيح: حفظ (primary ذهبي)،
+  إلغاء (secondary)، إغلاق (ghost)، حذف (danger)، حفظ (loading مع
+  سبينر)، حفظ (disabled)، إجراء أساسي (small). كل الحقول تُظهر label
+  فوق الإدخال، النجمة الحمراء بعد "الاسم *"، رسالة الخطأ الحمراء
+  تحت "bad-value". Textarea يعرض help text. أربعة تنبيهات مكدَّسة
+  بألوان مميزة. الجدول: رؤوس بعرض العمود، صفوف بترتيب صحيح، عمود
+  «العدد» يظهر رقمياً بمحاذاة نهاية السطر.
+- **EN**: Layout LTR — الشريط الجانبي على اليسار، نفس البنية معكوسة.
+  الأزرار تفتح بـSave (ذهبي) على اليسار، تتوالى يميناً. عمود COUNT
+  يظهر بمحاذاة right-end.
+- **Mixed**: RTL، الوحدات المستقلّة (Design System, Buttons, Fields,
+  Alerts, Table, Info, Warning…) بالإنجليزية؛ جمل الوصف والمساعدة
+  بالعربية — L-24 محفوظ.
+
+**تحقّق:** `pnpm typecheck` أخضر.
 
 ## S3 — i18n ✅
 

@@ -15,6 +15,7 @@
     "templates": "القوالب",
     "assets": "الأصول",
     "renders": "التصديرات",
+    "design": "النظام",
     "user": {
       "placeholder": "الحساب"
     }
@@ -104,5 +105,46 @@
     "UNAUTHENTICATED": "انتهت جلستك. سجّل الدخول من جديد.",
     "NETWORK_ERROR": "تعذّر الوصول إلى الخدمة.",
     "INTERNAL_ERROR": "خطأ في الخدمة. حاول لاحقاً."
+  },
+  "design": {
+    "title": "نظام التصميم",
+    "subtitle": "عرض حي لكل مكوّن — للمراجعة البصرية (L-17).",
+    "cta": "إجراء أساسي",
+    "buttons": {
+      "title": "الأزرار",
+      "subtitle": "primary · secondary · ghost · danger · loading · disabled."
+    },
+    "form": {
+      "title": "الحقول",
+      "subtitle": "Field يلفّ label + input + help/error.",
+      "name": "الاسم",
+      "namePh": "اكتب هنا…",
+      "invalid": "حقل غير صالح",
+      "invalidError": "قيمة غير مقبولة.",
+      "note": "ملاحظة",
+      "noteHelp": "يقبل عدة أسطر."
+    },
+    "alerts": {
+      "title": "التنبيهات",
+      "info": "معلومة",
+      "infoBody": "رسالة معلوماتية موجزة.",
+      "success": "تم الحفظ",
+      "warning": "تحذير",
+      "warningBody": "تفاصيل قد تحتاج انتباهاً.",
+      "danger": "خطأ",
+      "dangerBody": "الإجراء فشل — راجع البيانات."
+    },
+    "table": {
+      "title": "العنوان",
+      "state": "الحالة",
+      "count": "العدد",
+      "title2": "الجدول"
+    },
+    "dialog": {
+      "title": "الحوار",
+      "open": "افتح حواراً",
+      "confirmTitle": "تأكيد الحذف",
+      "confirmBody": "هل تريد فعلاً حذف هذا العنصر؟ لا يمكن التراجع."
+    }
   }
 }

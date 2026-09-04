@@ -21,6 +21,7 @@ const NAV: readonly NavItem[] = [
   { href: '/templates', labelKey: 'nav.templates', icon: '▤' },
   { href: '/assets', labelKey: 'nav.assets', icon: '◈' },
   { href: '/renders', labelKey: 'nav.renders', icon: '↗' },
+  { href: '/design', labelKey: 'nav.design', icon: '⌘' },
 ];
 
 export function AppShell({ children }: { children: ReactNode }): JSX.Element {

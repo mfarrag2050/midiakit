@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useLocale } from '@/src/i18n/LocaleProvider';
+import { Button } from './Button';
+import { Field } from './Field';
+import { Input } from './Input';
 
 // AuthCard — بطاقة مصادقة عامة (login/signup/forgot/reset).
-// **عرض فقط** حتى S5 — لا تستدعي أيّ endpoint. الحقول تحمل `autoComplete`
-// الصحيح ليفهمها مدير كلمات السر.
+// **عرض فقط** حتى S5 — لا تستدعي أيّ endpoint.
 
 export interface AuthField {
   readonly name: string;
@@ -58,33 +60,27 @@ export function AuthCard({
         }}
       >
         {fields.map((f) => (
-          <div key={f.name} className="space-y-1.5">
-            <label
-              htmlFor={f.name}
-              className="block text-xs font-medium text-fg-muted"
-            >
-              {t(f.labelKey)}
-            </label>
-            <input
+          <Field
+            key={f.name}
+            htmlFor={f.name}
+            labelKey={f.labelKey}
+            {...(f.helpKey ? { helpKey: f.helpKey } : {})}
+          >
+            <Input
               id={f.name}
               name={f.name}
               type={f.type}
               autoComplete={f.autoComplete ?? 'off'}
-              dir={f.type === 'email' || f.type === 'password' ? 'ltr' : undefined}
-              className="w-full rounded border border-border bg-surface-2 px-3 py-2 text-sm text-fg outline-none focus:border-accent"
+              dir={
+                f.type === 'email' || f.type === 'password' ? 'ltr' : undefined
+              }
             />
-            {f.helpKey && (
-              <p className="text-[11px] text-fg-subtle">{t(f.helpKey)}</p>
-            )}
-          </div>
+          </Field>
         ))}
 
-        <button
-          type="submit"
-          className="w-full rounded bg-accent px-4 py-2 text-sm font-semibold text-accent-fg hover:brightness-110"
-        >
+        <Button type="submit" variant="primary" fullWidth>
           {t(submitKey)}
-        </button>
+        </Button>
       </form>
 
       <div className="mt-6 space-y-2 text-center text-xs text-fg-muted">

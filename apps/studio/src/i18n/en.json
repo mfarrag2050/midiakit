@@ -15,6 +15,7 @@
     "templates": "Templates",
     "assets": "Assets",
     "renders": "Renders",
+    "design": "Design",
     "user": {
       "placeholder": "Account"
     }
@@ -104,5 +105,46 @@
     "UNAUTHENTICATED": "Your session expired. Please sign in again.",
     "NETWORK_ERROR": "Can't reach the service.",
     "INTERNAL_ERROR": "Server error. Try again later."
+  },
+  "design": {
+    "title": "Design System",
+    "subtitle": "Live gallery of every component — for visual review (L-17).",
+    "cta": "Primary action",
+    "buttons": {
+      "title": "Buttons",
+      "subtitle": "primary · secondary · ghost · danger · loading · disabled."
+    },
+    "form": {
+      "title": "Fields",
+      "subtitle": "Field wraps label + input + help/error.",
+      "name": "Name",
+      "namePh": "Type here…",
+      "invalid": "Invalid field",
+      "invalidError": "Value not accepted.",
+      "note": "Note",
+      "noteHelp": "Accepts multiple lines."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "info": "Info",
+      "infoBody": "A brief informational message.",
+      "success": "Saved",
+      "warning": "Warning",
+      "warningBody": "Details you may want to attend to.",
+      "danger": "Error",
+      "dangerBody": "Action failed — check the data."
+    },
+    "table": {
+      "title": "Title",
+      "state": "State",
+      "count": "Count",
+      "title2": "Table"
+    },
+    "dialog": {
+      "title": "Dialog",
+      "open": "Open dialog",
+      "confirmTitle": "Delete confirmation",
+      "confirmBody": "Really delete this item? This can't be undone."
+    }
   }
 }
