@@ -82,3 +82,62 @@
 **الملفَان:** `demo/demo-3-before.png` · `demo/demo-3-after.png`
 
 ---
+
+## مخرجات إضافية من المرحلة 3.8/3.10 (2026-09-04)
+
+منقولة من `out/` بعد إثبات صلاحها للعرض (L-48). كل ملفّ يُظهر ميّزة
+مذكورة في M1 أو PHASES.
+
+### attribution-demo.png · attribution-demo-bidi.png
+
+طبقة الإسناد (attribution) — 18 خلية × 3 أوضاع شعار (none/generic/
+official) × هويّتين + BiDi للمقبض اللاتيني داخل عربي (LRI/PDI).
+مسجَّلة في **M1 §د-1**. الفيكستشر: 6 منصات مدعومة (tiktok · x ·
+instagram · youtube · telegram · facebook).
+
+### placement-demo.png
+
+نظام المواضع الموحّد (`brand.placement`) — 9 أنكورات × عناصر متعدّدة
+(logo · badge · attribution · source · caption). دليل أن أيّ عنصر
+يُموضَع بنفس المفردات في كل قالب.
+
+### svg-demo.png (1200×700)
+
+طبقة SVG بمحرّكنا — subset مدعوم (path · rect · circle · ellipse ·
+line · polyline · polygon · g/defs · transform · clipPath) مع ربط
+الألوان بالهوية (`data-brand-fill="accent"`). الشبكة تعرض هويّتين
+مختلفتين تُنتِجان نفس الفيكستشر بألوان مختلفة. مسجَّلة في **PHASES
+§المرحلة 3.8 · SVG**.
+
+### smart-crop-demo.png (1360×1358)
+
+القصّ الذكي — شبكة 4 مقاسات × مركزي/ذكي. الذكي يزيح الإطار نحو
+«الوجه» ويحوّل مسافة المركز من 607px إلى 201px (×3 تحسّن). مسجَّلة
+في **PHASES §المرحلة 3.8 · كشف الوجوه**.
+
+### multilang-demo.png (1740×840)
+
+`content.locale` — ثلاث لغات (ar · en · tr) في نفس القالب. العربية
+بكشيدة، اللاتينية بلف بسيط، كلها بمحاذاة بصرية موحّدة بعد إصلاح
+L-50 (pixel-based ascent). مسجَّلة في **PHASES §المرحلة 3.10**.
+
+### caption-modes-demo.mp4 (35s)
+
+طبقة caption على المحرك — 5 أنماط تلوين متتابعة (wordColor ·
+wordBackground · progressiveReveal · wordScale · none). الكشيدة
+مستقرّة عبر الأنماط الخمسة (md5 موحّد). مسجَّلة في **M1 §ب-4**.
+
+### tts-demo.mp4 (10s)
+
+TTS Gateway مع mock adapter — موسيقى 220Hz + تعليق صوتي + ducking
+تلقائي عبر `sidechaincompress`. المفتاح لا يظهر في المخرج (redactKey).
+مسجَّلة في **PHASES §المرحلة 3.8 · التعليق الصوتي**.
+
+---
+
+## قاعدة الحفظ (L-48)
+
+هذه الملفات مُتَتبَّعة في git لأن الوثائق تُحيل إليها. أيّ حذف يجب
+أن يسبقه حذف الإحالة من M1/M2 (يفشل `pnpm check:doc-paths` إن ورد
+`out/` في وثيقة تسويقية). الملفات المؤقّتة تبقى في `out/`
+(المستثنى من Git).
