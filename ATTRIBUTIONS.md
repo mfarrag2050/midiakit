@@ -374,6 +374,39 @@ ADR-001 والقاعدة 2 في CLAUDE.md).
 (MIT، ~232KB). يتطلّب ~150 سطر postprocess يدوي (توليد anchors + NMS).
 موثَّق كخيار مقبول تقنياً.
 
+## قاعدة البيانات — mk-api (2026-09-04)
+
+`packages/db/` — schema، migrations، وسياسات RLS. الحزمة الأساسية:
+
+### node-pg-migrate (salsita) — v7.9.1
+
+- **الاستعمال:** إطار migrations يُشغَّل ببرمجة أو CLI. يقبل SQL خاماً
+  عبر `pgm.sql(...)` — يمرَّر إلى PostgreSQL بلا تجريد. مثالي لكتابة
+  RLS + FORCE + السياسات كلها SQL خاص بـPG لا نريد أن يحجبه ORM.
+- **الترخيص:** MIT — https://github.com/salsita/node-pg-migrate
+- **التبعيات:** `pg` فقط (client PostgreSQL الرسمي، MIT).
+- **الصيانة:** نشطة (آخر إصدار 2026-01).
+- **البدائل المرفوضة (2026-09-04):**
+  - **Atlas** (Apache-2.0): تصريحي — يقرّر SQL بدلاً من المطوّر. RLS
+    في طبقة نخشى تسريب البيانات فيها؛ نريد كتابة كل بند بأنفسنا.
+  - **dbmate** (MIT): Go binary مستقل — يخرج من نظام pnpm، يحتاج تثبيتاً
+    خارجياً على كل بيئة CI/dev.
+  - **Prisma Migrate** (Apache-2.0): يفرض `schema.prisma` — يخفي SQL،
+    ودعم RLS محدود.
+
+### pg (brianc) — v8.13.1
+
+- **الاستعمال:** عميل PostgreSQL الرسمي لـNode. يُستخدم داخل migrate.ts
+  ولاحقاً في mk-api للاتصال بقاعدة البيانات.
+- **الترخيص:** MIT — https://github.com/brianc/node-postgres
+- **الصيانة:** نشطة (المرجع في نظام Node).
+
+### dotenv (motdotla) — v16.4.7
+
+- **الاستعمال:** تحميل متغيّرات .env في scripts/migrate.ts. الأسرار
+  الحقيقية للإنتاج تُحقن من مدير أسرار خارج .env.
+- **الترخيص:** BSD-2-Clause — https://github.com/motdotla/dotenv
+
 ## بروتوكول تحديث الإسناد
 
 عند إضافة/تحديث أيّ مورد خارجي:

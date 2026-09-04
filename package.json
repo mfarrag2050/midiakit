@@ -22,9 +22,15 @@
     "verify:smart-crop": "node --import tsx scripts/verify-smart-crop-gate.mjs",
     "verify:tts": "node --import tsx scripts/verify-tts-gate.mjs",
     "verify:perf": "node --import tsx scripts/verify-perf-gate.mjs",
-    "verify:tenant-isolation": "node scripts/verify-tenant-isolation.mjs",
+    "verify:tenant-isolation": "node --import tsx scripts/verify-tenant-isolation.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
-    "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
+    "render:mp4": "node --import tsx apps/renderer/src/cli.ts",
+    "db:up": "./bin/mk -f infra/docker-compose.yml up -d",
+    "db:down": "./bin/mk -f infra/docker-compose.yml down",
+    "db:logs": "./bin/mk -f infra/docker-compose.yml logs -f",
+    "db:reset": "./bin/mk -f infra/docker-compose.yml down -v && pnpm db:up",
+    "db:migrate": "pnpm --filter @pf-mediakit/db migrate:up",
+    "db:migrate:test": "pnpm --filter @pf-mediakit/db migrate:up:test"
   },
   "devDependencies": {
     "typescript": "5.6.3",

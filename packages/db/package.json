@@ -1,0 +1,25 @@
+{
+  "name": "@pf-mediakit/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "migrate:up": "node --import tsx scripts/migrate.ts up",
+    "migrate:up:test": "node --import tsx scripts/migrate.ts up --test",
+    "migrate:down": "node --import tsx scripts/migrate.ts down",
+    "migrate:down:test": "node --import tsx scripts/migrate.ts down --test",
+    "migrate:redo": "node --import tsx scripts/migrate.ts down && node --import tsx scripts/migrate.ts up",
+    "migrate:create": "node --import tsx scripts/migrate.ts create"
+  },
+  "dependencies": {
+    "node-pg-migrate": "7.9.1",
+    "pg": "8.13.1",
+    "dotenv": "16.4.7"
+  },
+  "devDependencies": {
+    "@types/pg": "8.11.10",
+    "typescript": "5.6.3",
+    "tsx": "4.19.2"
+  }
+}

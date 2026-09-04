@@ -1,0 +1,65 @@
+# pf-mediakit-api dev + test PostgreSQL.
+# محكوم بـCLAUDE.md §بيئة مشتركة: بادئة pf-mediakit-، منافذ 19040-19099،
+# سياق colima-mediakit حصراً. تُشغَّل عبر bin/mk من الجذر.
+#
+# مستخدما القاعدة (migration_user، app_user) يُنشآن في init/01-roles.sql
+# — كلاهما NOSUPERUSER NOBYPASSRLS. ADR-011 + قاعدة PHASES-api.md
+# «لا BYPASSRLS إطلاقاً» مضمونة قبل أول migration.
+
+name: pf-mediakit
+
+services:
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: pf-mediakit-postgres-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19041:5432"
+    environment:
+      POSTGRES_DB: mediakit
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: bootstrap_only_never_used_by_app
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - pf-mediakit-postgres-dev-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediakit"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - pf-mediakit-net
+
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: pf-mediakit-postgres-test
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19042:5432"
+    environment:
+      POSTGRES_DB: mediakit_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: bootstrap_only_never_used_by_app
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - pf-mediakit-postgres-test-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediakit_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - pf-mediakit-net
+
+networks:
+  pf-mediakit-net:
+    name: pf-mediakit-net
+    driver: bridge
+
+volumes:
+  pf-mediakit-postgres-dev-data:
+    name: pf-mediakit-postgres-dev-data
+  pf-mediakit-postgres-test-data:
+    name: pf-mediakit-postgres-test-data
