@@ -34,6 +34,7 @@
     "fixtures/audio/**",
     "services/*/out/**",
     "services/transcriber/scripts/measure_news_wer.py",
+    "services/transcriber/scripts/diagnose_hakan_fidan.py",
     "scripts/brand-blocklist.json",
     "scripts/check-no-brand-leak.mjs",
     "scripts/compare-cleanup-snapshots.mjs",
