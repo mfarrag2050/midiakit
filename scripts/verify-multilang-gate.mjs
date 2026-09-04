@@ -230,8 +230,16 @@ console.log('\n════════ ز) L-17 — شبكة مقارنة (ar �
     cardCtx.fillStyle = brand.colors.surface;
     cardCtx.fillRect(0, 0, CARD_W, CARD_H);
 
+    // ── L-02 fix: موضع البداية مشتقّ من الصاعد المقيس ──
+    // TOP_PADDING = المسافة الثابتة بين قمة الصندوق وأعلى بكسل من النصّ.
+    // نضيف هامش أمان للتشكيل (measureText يُخفي 13px تقريباً للفتحة
+    // والضمة على IBM Plex Sans Arabic — راجع diagnose-ascent.mjs).
+    const TOP_PADDING = 90;
+    const DIACRITIC_SAFETY = 15; // احتياطي للتشكيل المرفوع
+
+    // نجهّز النصّ والخط أولاً لقياس الصاعد
+    let lines, fs, textAlign, textDirection, xPos;
     if (locale === 'ar') {
-      // نستخدم buildRenderPlan للحصول على linesJustified (تحوي الكشيدة الحقيقية).
       const cardSize = { w: CARD_W, h: CARD_H };
       const plan = buildRenderPlan({
         ctx: cardCtx, size: cardSize,
@@ -239,20 +247,13 @@ console.log('\n════════ ز) L-17 — شبكة مقارنة (ar �
         content: { headline, source: 'وكالات' },
         fps: 30,
       });
-      const lines = plan.headline?.linesJustified ?? [];
-      const fs = plan.headline?.fontSize ?? 40;
-      const lh = 1.2;
-      let y = 140;
-      for (const line of lines) {
-        cardCtx.fillStyle = brand.colors.text;
-        cardCtx.font = `700 ${fs}px "${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
-        cardCtx.textAlign = 'right';
-        cardCtx.direction = 'rtl';
-        cardCtx.textBaseline = 'alphabetic';
-        const text = line.map((t) => t.text || '').join(' ');
-        cardCtx.fillText(text, CARD_W - 30, y);
-        y += fs * lh;
-      }
+      lines = (plan.headline?.linesJustified ?? []).map((line) =>
+        line.map((t) => t.text || '').join(' ')
+      );
+      fs = plan.headline?.fontSize ?? 40;
+      textAlign = 'right';
+      textDirection = 'rtl';
+      xPos = CARD_W - 30;
     } else {
       const wr = wrapLatin(cardCtx, {
         text: headline,
@@ -264,17 +265,30 @@ console.log('\n════════ ز) L-17 — شبكة مقارنة (ar �
         weight: 700,
         fontFamily: `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`,
       });
-      let y = 120;
-      for (const line of wr.lines) {
-        cardCtx.fillStyle = brand.colors.text;
-        cardCtx.font = `700 ${wr.fontSize}px "${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
-        cardCtx.textAlign = 'left';
-        cardCtx.direction = 'ltr';
-        cardCtx.textBaseline = 'alphabetic';
-        const text = line.map((t) => t.text || '').join(' ');
-        cardCtx.fillText(text, 30, y);
-        y += wr.fontSize * wr.lineHeight;
-      }
+      lines = wr.lines.map((line) => line.map((t) => t.text || '').join(' '));
+      fs = wr.fontSize;
+      textAlign = 'left';
+      textDirection = 'ltr';
+      xPos = 30;
+    }
+
+    const lh = 1.2;
+    cardCtx.font = `700 ${fs}px "${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
+    cardCtx.textAlign = textAlign;
+    cardCtx.direction = textDirection;
+    cardCtx.textBaseline = 'alphabetic';
+    cardCtx.fillStyle = brand.colors.text;
+
+    // نقيس الصاعد الفعلي للسطر الأوّل — هو الذي يمسّ الحافة العليا
+    const ascent = lines.length > 0
+      ? cardCtx.measureText(lines[0]).actualBoundingBoxAscent
+      : fs * 0.75;
+    // y-baseline بحيث top = TOP_PADDING مع هامش أمان للتشكيل
+    let y = TOP_PADDING + ascent + DIACRITIC_SAFETY;
+
+    for (const text of lines) {
+      cardCtx.fillText(text, xPos, y);
+      y += fs * lh;
     }
 
     cctx.drawImage(cardCanvas, bx, by);
@@ -288,6 +302,87 @@ console.log('\n════════ ز) L-17 — شبكة مقارنة (ar �
   console.log(`    ✓ ${OUT} (${canvasW}×${canvasH})`);
   const md5 = createHash('md5').update(comp.toBufferSync('png')).digest('hex').slice(0, 12);
   console.log(`    md5: ${md5}…`);
+
+  // ── فحص بكسلي: أعلى بكسل نصّ في كل كارت ≥ MIN_TOP_PADDING ──
+  console.log('\n════════ ح) فحص بكسلي — top-most colored pixel ≥ عتبة ════════');
+  const MIN_TOP_PADDING = 70; // بكسل — حماية من القصّ (TOP_PADDING=90 - 20 هامش)
+  const BORDER = 3;
+  const topPixels = {};
+  for (let i = 0; i < cells.length; i++) {
+    const { label } = cells[i];
+    const bx = PAD + i * (CARD_W + GAP);
+    const by = PAD + 80;
+    // نستخدم dataOf comp لأنه ليس متاحاً كـImage — نُعيد قراءة imgdata
+    const imgData = cctx.getImageData(bx + BORDER, by + BORDER, CARD_W - 2 * BORDER, CARD_H - 2 * BORDER);
+    const midX = Math.floor((CARD_W - 2 * BORDER) / 2);
+    const bgIdx = (0 * (CARD_W - 2 * BORDER) + midX) * 4;
+    const bgR = imgData.data[bgIdx], bgG = imgData.data[bgIdx + 1], bgB = imgData.data[bgIdx + 2];
+    const tolerance = 25;
+    let topRow = -1;
+    outer: for (let row = 0; row < CARD_H - 2 * BORDER; row++) {
+      for (let col = 4; col < CARD_W - 2 * BORDER - 4; col++) {
+        const idx = (row * (CARD_W - 2 * BORDER) + col) * 4;
+        const r = imgData.data[idx], g = imgData.data[idx + 1], b = imgData.data[idx + 2];
+        const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+        if (diff > tolerance) { topRow = row + BORDER; break outer; }
+      }
+    }
+    topPixels[label] = topRow;
+    console.log(`    ${label.padEnd(3)} أعلى بكسل نصّ من قمة الصندوق: ${topRow}px`);
+    assert(topRow >= MIN_TOP_PADDING, `${label}: أعلى بكسل ≥ ${MIN_TOP_PADDING}px`, `${topRow}px`);
+  }
+
+  // ── سلبي: ماذا لو ثبّتنا موضع البداية على قيمة لاتينية للعربي؟ ──
+  console.log('\n════════ ط) سلبي — تثبيت y-baseline على قيمة لاتينية للعربي ════════');
+  {
+    const bx = PAD;
+    const by = PAD + 80;
+    const badCanvas = new Canvas(CARD_W, CARD_H);
+    const badCtx = badCanvas.getContext('2d');
+    badCtx.fillStyle = BRAND_AR.colors.surface;
+    badCtx.fillRect(0, 0, CARD_W, CARD_H);
+    // نستعمل نفس بيانات العربية لكن بـy مثبَّت على ما يناسب اللاتيني
+    const plan = buildRenderPlan({
+      ctx: badCtx, size: { w: CARD_W, h: CARD_H },
+      template: BREAKING, brand: BRAND_AR,
+      content: { headline: HEADLINE_AR, source: 'وكالات' },
+      fps: 30,
+    });
+    const badLines = (plan.headline?.linesJustified ?? []).map((line) =>
+      line.map((t) => t.text || '').join(' ')
+    );
+    const badFs = plan.headline?.fontSize ?? 40;
+    badCtx.font = `700 ${badFs}px "${BRAND_AR.fonts.primary.family}", ${BRAND_AR.fonts.fallback}`;
+    badCtx.textAlign = 'right';
+    badCtx.direction = 'rtl';
+    badCtx.textBaseline = 'alphabetic';
+    badCtx.fillStyle = BRAND_AR.colors.text;
+    // ascent لاتيني (54) بدل العربي (57+) — يقصّ الصاعد العربي
+    const LATIN_ASCENT_HARDCODED = 54;
+    const badY = 20 + LATIN_ASCENT_HARDCODED; // TOP_PADDING مقلَّص (20 بدل 90)
+    let y = badY;
+    for (const text of badLines) {
+      badCtx.fillText(text, CARD_W - 30, y);
+      y += badFs * 1.2;
+    }
+    // نقيس أعلى بكسل
+    const badData = badCtx.getImageData(BORDER, BORDER, CARD_W - 2 * BORDER, CARD_H - 2 * BORDER);
+    const midX = Math.floor((CARD_W - 2 * BORDER) / 2);
+    const bgIdx = (0 * (CARD_W - 2 * BORDER) + midX) * 4;
+    const bgR = badData.data[bgIdx], bgG = badData.data[bgIdx + 1], bgB = badData.data[bgIdx + 2];
+    let badTop = -1;
+    outer2: for (let row = 0; row < CARD_H - 2 * BORDER; row++) {
+      for (let col = 4; col < CARD_W - 2 * BORDER - 4; col++) {
+        const idx = (row * (CARD_W - 2 * BORDER) + col) * 4;
+        const r = badData.data[idx], g = badData.data[idx + 1], b = badData.data[idx + 2];
+        const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+        if (diff > 25) { badTop = row + BORDER; break outer2; }
+      }
+    }
+    console.log(`    مع TOP_PADDING=20 + LATIN_ASCENT=54 على عربي: أعلى بكسل عند ${badTop}px`);
+    assert(badTop < MIN_TOP_PADDING, `السلبي يفشل الحدّ ${MIN_TOP_PADDING}px`, `${badTop}px < ${MIN_TOP_PADDING}px`);
+    console.log(`    ⇒ الحارس (ح) كان سيرصد هذا القصّ لو حدث في الإنتاج`);
+  }
 }
 
 console.log('');
