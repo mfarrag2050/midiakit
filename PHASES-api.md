@@ -140,7 +140,7 @@
 | **A5** | schema المصادقة + find_user_by_email | ✅ | password_reset_tokens (RLS+FORCE) + login_attempts (استثناء موثّق) + users.is_active + auth_lookup + الدالة الوحيدة SECURITY DEFINER |
 | **A6** | `auth/session.ts` — الطبقة الوحيدة | ✅ | argon2id PHC + jose HS256 + sessions قابلة للإبطال + refresh rotation + rate limit + constant-time. `pnpm --filter @pf-mediakit/api smoke:auth` يمرّ. |
 | **A7** | Fastify server + authenticated hook + routes | ✅ | preHandler واحد (authenticated) يجمع JWT verify + session check + tx open + SET LOCAL. onResponse/onError يقفلان الـtx. 6 endpoints في /v1/auth/*. HTTP smoke: signup 201، logout 204، revoked 401، bad token 401. |
-| A8 | **G-P4-2** بوابة نقاء المصادقة | 🔄 التالي | grep guard + HTTP integration + timing + rate limit + non-disclosure |
+| **A8** | **G-P4-2** بوابة نقاء المصادقة | ✅ | `pnpm verify:auth` — 4 طبقات، 18+ فحصاً، timing 1.02× |
 
 ### المجموعة B–F: endpoints (لاحقاً)
 
@@ -153,7 +153,7 @@
 | البوابة | الوصف | الحالة |
 |---|---|---|
 | **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + ANY_TENANT + revisions-orphan + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
-| G-P4-2 | نقاء المصادقة (تسجيل/دخول/دعوة/إبطال + سلبيّة) | ⏳ بعد A8 |
+| **G-P4-2** | نقاء المصادقة (grep guard + HTTP + non-disclosure + rate limit) | ✅ passed 2026-09-04 |
 | **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ⏳ تُفعَّل مع A11 |
 | G-P4-3 | اكتمال سجل المراجعات | ⏳ |
 | G-P4-4 | ثبات `brand_snapshot` | ⏳ |
@@ -207,6 +207,21 @@
   في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
   + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
   G-P4-11 تُفعَّل مع A11.
+- **A8 مكتمل + G-P4-2 PASSED:** `apps/api/scripts/verify-auth.mjs`
+  (يُشغَّل عبر `pnpm verify:auth`). أربع طبقات، كلها خضراء:
+  * **Layer 1 grep guard:** لا ملف في apps/api/src/** (عدا auth/session.ts)
+    يستورد @node-rs/argon2 · jose · jsonwebtoken · argon2.
+  * **Layer 2 HTTP integration (fastify.inject):**
+    - signup 201 مع { user, tenant, session } كامل
+    - login صحيح 200، refresh 200 + old refresh مُبطل 401
+    - logout 204، logout بجلسة مُبطلة 401 SESSION_REVOKED
+    - logout بلا Bearer 401 UNAUTHORIZED
+    - logout بتوقيع مُلفَّق 401 TOKEN_INVALID
+    - logout بـtoken منتهٍ 401 TOKEN_EXPIRED
+  * **Layer 3 non-disclosure:** بريد موجود + مفقود يعطيان نفس status
+    (401)، نفس error code (INVALID_CREDENTIALS)، وتوقيت متقارب (1.02×).
+    forgot-password يعيد 204 لكلا الحالتين.
+  * **Layer 4 rate limit:** يضرب في المحاولة 11 → 429 TOO_MANY_ATTEMPTS.
 - **A7 مكتمل — Fastify + hooks + routes:**
   * `apps/api/src/server.ts`: Fastify 5 + helmet + cors + rate-limit عام
     (300/دقيقة) + errorHandler موحّد (docs/16 §1.4).

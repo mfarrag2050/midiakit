@@ -7,7 +7,8 @@
     "dev": "node --import tsx --watch src/server.ts",
     "start": "node --import tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "smoke:auth": "node --import tsx scripts/smoke-auth.ts"
+    "smoke:auth": "node --import tsx scripts/smoke-auth.ts",
+    "verify:auth": "node --import tsx scripts/verify-auth.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",
