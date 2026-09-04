@@ -21,6 +21,8 @@
     "verify:svg": "node --import tsx scripts/verify-svg-gate.mjs",
     "verify:smart-crop": "node --import tsx scripts/verify-smart-crop-gate.mjs",
     "verify:tts": "node --import tsx scripts/verify-tts-gate.mjs",
+    "verify:perf": "node --import tsx scripts/verify-perf-gate.mjs",
+    "verify:tenant-isolation": "node scripts/verify-tenant-isolation.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
