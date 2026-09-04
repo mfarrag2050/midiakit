@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  فيكستشر ثانٍ — يختبر clipPath وكشف عناصر النصّ.
+  الملكية: المشروع (للاختبار). لا مصدر خارجي.
+
+  الشكل: مربّع ملوَّن كبير مقصوص إلى دائرة عبر clipPath.
+  + عنصر نصّ عربي في المصدر — يجب أن يُكشَف كتحذير، لا يُرسَم.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="100" cy="100" r="70"/>
+    </clipPath>
+  </defs>
+
+  <!-- مربّع بلون accent مقصوص إلى دائرة عبر clip-path=url(#circle-clip) -->
+  <rect x="10" y="10" width="180" height="180"
+        data-brand-fill="accent"
+        clip-path="url(#circle-clip)"/>
+
+  <!-- إطار دائري لتوضيح حدود القصّ -->
+  <circle cx="100" cy="100" r="70" fill="none"
+          data-brand-stroke="text" stroke-width="2"/>
+
+  <!-- عنصر نصّ عربي — لا يجب أن يُرسَم، ويجب أن يُنتج تحذيراً -->
+  <text x="100" y="180" text-anchor="middle" font-size="14">
+    عربية
+  </text>
+</svg>

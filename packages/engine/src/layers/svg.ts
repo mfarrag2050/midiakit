@@ -71,6 +71,8 @@ export interface RawStyle {
   readonly brandFillKey: keyof BrandColors | null;
   /** نفسه لـstroke. */
   readonly brandStrokeKey: keyof BrandColors | null;
+  /** معرِّف clipPath المشار إليه عبر `clip-path="url(#id)"` — null إن غاب. */
+  readonly clipPathId: string | null;
 }
 
 export interface PreparedSvg {
@@ -78,6 +80,17 @@ export interface PreparedSvg {
   readonly viewBox: { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
   /** أشكال بعد تسطيح كل الـ<g> وتطبيق transforms عليها. */
   readonly shapes: readonly ParsedShape[];
+  /**
+   * تعريفات clipPath المستخرَجة من `<defs>` أو من مستوى الجذر —
+   * مفتاح = id، قيمة = أشكال منطقة القصّ (نفس التمثيل مثل shapes).
+   */
+  readonly clipPaths: ReadonlyMap<string, readonly ParsedShape[]>;
+  /**
+   * تحذيرات مستخرَجة من المصدر — مثل «العنصر <text> لا يُرسم؛ حوّل
+   * إلى مسارات» (L-47 امتداد: كشف صامت يخفي خللاً على العميل).
+   * المستدعي مسؤول عن عرضها (console.warn / واجهة رفع / …).
+   */
+  readonly warnings: readonly string[];
 }
 
 // ── تحليل ───────────────────────────────────────────────
@@ -101,9 +114,20 @@ export function prepareSvg(source: string): PreparedSvg {
   );
 
   const shapes: ParsedShape[] = [];
-  collectShapes(svgNode, identityMatrix(), shapes);
+  const clipPaths = new Map<string, ParsedShape[]>();
+  const textElementCount = { n: 0 };
+  const warnings: string[] = [];
+  collectShapes(svgNode, identityMatrix(), shapes, clipPaths, textElementCount);
 
-  return { viewBox, shapes };
+  if (textElementCount.n > 0) {
+    warnings.push(
+      `SVG يحمل ${textElementCount.n} عنصر <text> — المحرك لا يرسمها. ` +
+      `النص العربي في SVG بلا تشكيل حروف يظهر منفصلاً (ا ل ع ر ب ي ة بدل العربية). ` +
+      `الحل: حوّل النص إلى مسارات قبل التصدير (Illustrator: Type → Create Outlines).`
+    );
+  }
+
+  return { viewBox, shapes, clipPaths, warnings };
 }
 
 // ── رسم ────────────────────────────────────────────────
@@ -138,7 +162,7 @@ export function drawSvg(
     ctx.scale(scaleX, scaleY);
 
     for (const shape of prep.shapes) {
-      drawShape(ctx, brand, shape);
+      drawShape(ctx, brand, shape, prep.clipPaths);
     }
   } finally {
     ctx.restore();
@@ -176,7 +200,8 @@ function fitTransform(
 function drawShape(
   ctx: CanvasDrawContext,
   brand: BrandKit,
-  shape: ParsedShape
+  shape: ParsedShape,
+  clipPaths: ReadonlyMap<string, readonly ParsedShape[]>
 ): void {
   const style = shape.style;
   const fill = resolveColor(brand, style.brandFillKey, style.fill);
@@ -189,6 +214,19 @@ function drawShape(
   ctx.save();
   try {
     if (style.opacity !== 1) ctx.globalAlpha = ctx.globalAlpha * style.opacity;
+
+    // clip-path — ارسم منطقة القصّ ثم clip() قبل رسم الشكل.
+    // save/restore الخارجيّان يحرسان تنقية الحالة.
+    if (style.clipPathId) {
+      const clipShapes = clipPaths.get(style.clipPathId);
+      if (clipShapes && clipShapes.length > 0) {
+        ctx.beginPath();
+        for (const cs of clipShapes) tracePath(ctx, cs);
+        ctx.clip();
+      }
+      // إن كان id غير معروف — لا clip (سلوك متساهل، لا نُخفي شكلاً بلا سبب).
+    }
+
     ctx.beginPath();
     tracePath(ctx, shape);
     if (shouldFill) {
@@ -301,13 +339,49 @@ function firstChildByTag(root: unknown, tag: string): AstNode | null {
   return null;
 }
 
-function collectShapes(node: AstNode, parentMatrix: Matrix, out: ParsedShape[]): void {
+function collectShapes(
+  node: AstNode,
+  parentMatrix: Matrix,
+  out: ParsedShape[],
+  clipPaths: Map<string, ParsedShape[]>,
+  textCount: { n: number }
+): void {
   const localMatrix = composeMatrix(parentMatrix, parseTransform((node.properties?.['transform'] as string | undefined) ?? null));
   const style = parseStyle(node.properties ?? {});
 
+  // <defs> — يحوي تعريفات (clipPath/pattern/gradient/…). نصدر إلى
+  // نفس منطق clipPath، لا نضيف أشكاله كمرئية.
+  if (node.tagName === 'defs') {
+    for (const child of node.children ?? []) {
+      if ('tagName' in child) collectShapes(child as AstNode, localMatrix, out, clipPaths, textCount);
+    }
+    return;
+  }
+
+  // <clipPath id="..."> — نجمع أشكاله في قاموس منفصل بحسب id.
+  // لا نضيف أشكاله إلى `out` المرئي.
+  if (node.tagName === 'clipPath') {
+    const id = (node.properties?.['id'] as string | undefined) ?? null;
+    if (id) {
+      const clipShapes: ParsedShape[] = [];
+      for (const child of node.children ?? []) {
+        if ('tagName' in child) collectShapes(child as AstNode, localMatrix, clipShapes, clipPaths, textCount);
+      }
+      clipPaths.set(id, clipShapes);
+    }
+    return;
+  }
+
+  // <text> — لا يُرسَم (النص العربي بلا تشكيل يظهر منفصلاً).
+  // نعدّه في textCount؛ الرسالة تُصاغ في prepareSvg من العدّ.
+  if (node.tagName === 'text') {
+    textCount.n++;
+    return;
+  }
+
   if (node.tagName === 'g' || node.tagName === 'svg') {
     for (const child of node.children ?? []) {
-      if ('tagName' in child) collectShapes(child as AstNode, localMatrix, out);
+      if ('tagName' in child) collectShapes(child as AstNode, localMatrix, out, clipPaths, textCount);
     }
     return;
   }
@@ -516,6 +590,7 @@ function parseStyle(props: Record<string, string | number | undefined>): RawStyl
   const opacity = opacityRaw ? Number(opacityRaw) : 1;
   const brandFillKey = (props['data-brand-fill'] as string | undefined) ?? null;
   const brandStrokeKey = (props['data-brand-stroke'] as string | undefined) ?? null;
+  const clipPathRaw = attrOrStyle(props, 'clip-path');
   return {
     fill: fill ?? null,
     stroke: stroke ?? null,
@@ -523,7 +598,15 @@ function parseStyle(props: Record<string, string | number | undefined>): RawStyl
     opacity: Number.isFinite(opacity) ? opacity : 1,
     brandFillKey: isColorKey(brandFillKey) ? (brandFillKey as keyof BrandColors) : null,
     brandStrokeKey: isColorKey(brandStrokeKey) ? (brandStrokeKey as keyof BrandColors) : null,
+    clipPathId: parseClipPathUrl(clipPathRaw),
   };
+}
+
+/** يستخرج `id` من `url(#id)` — يقبل الفراغات والمسافات. */
+function parseClipPathUrl(raw: string | null): string | null {
+  if (!raw) return null;
+  const m = /url\(\s*#([^)\s]+)\s*\)/.exec(raw);
+  return m ? m[1]! : null;
 }
 
 function attrOrStyle(

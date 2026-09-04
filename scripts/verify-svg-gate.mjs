@@ -99,8 +99,38 @@ console.log(`    default   md5: ${hashALit}`);
 console.log(`    contrast  md5: ${hashBLit}`);
 assert(hashALit === hashBLit, 'SVG بألوان حرفية لا يتأثّر بالهوية (لا data-brand → لا ربط)');
 
+// ── (هـ) clipPath — منطقة القصّ تُقيَّد الرسم ─────────────
+console.log('\n════════ هـ) clipPath يُقيِّد الرسم ════════');
+const svgClipped = await readFile(join(ROOT, 'fixtures/svg/clipped-shape.svg'), 'utf-8');
+const prepClipped = prepareSvg(svgClipped);
+console.log(`    clipPaths مسجَّلة: ${prepClipped.clipPaths.size} (${[...prepClipped.clipPaths.keys()].join(', ')})`);
+console.log(`    أشكال مرئية: ${prepClipped.shapes.length}`);
+assert(prepClipped.clipPaths.has('circle-clip'), 'clipPath id="circle-clip" مستخرَج');
+const withClip = prepClipped.shapes.find((s) => s.style.clipPathId === 'circle-clip');
+assert(!!withClip, 'شكل rect يشير إلى circle-clip', withClip?.kind ?? 'مفقود');
+
+// اختبار سلوكي: الرسم بـclipPath يختلف عن الرسم بلا (نقارن md5).
+// نبني نسختين — واحدة كما هي، وأخرى نُلغي فيها clipPathId عبر إعادة تركيب الأشكال.
+const noClipShapes = prepClipped.shapes.map((s) => ({ ...s, style: { ...s.style, clipPathId: null } }));
+const prepNoClip = { ...prepClipped, shapes: noClipShapes };
+const hashClipped = renderMd5(brand, prepClipped, bounds);
+const hashNoClip = renderMd5(brand, prepNoClip, bounds);
+console.log(`    مع clipPath  md5: ${hashClipped}`);
+console.log(`    بدون clipPath md5: ${hashNoClip}`);
+assert(hashClipped !== hashNoClip, 'clipPath يغيّر المخرج فعلاً (rect يُقصّ إلى دائرة)');
+
+// ── (و) كشف <text> — تحذير لا رسم ────────────────────────
+console.log('\n════════ و) كشف عنصر <text> يُنتج تحذيراً ════════');
+console.log(`    عدد التحذيرات: ${prepClipped.warnings.length}`);
+prepClipped.warnings.forEach((w, i) => console.log(`      ${i + 1}. ${w.slice(0, 100)}${w.length > 100 ? '…' : ''}`));
+assert(prepClipped.warnings.length >= 1, 'تحذير واحد على الأقل مُنتَج من <text>');
+assert(
+  prepClipped.warnings.some((w) => w.includes('<text>') && w.includes('Create Outlines')),
+  'التحذير يذكر الحل (Create Outlines)'
+);
+
 console.log('');
-if (failed === 0) console.log('════════ كل البوابات الأربع ✓ ════════');
+if (failed === 0) console.log('════════ كل البوابات الست ✓ ════════');
 else {
   console.log(`════════ ${failed} إخفاق ✗ ════════`);
   process.exit(1);
