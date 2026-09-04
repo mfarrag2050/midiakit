@@ -60,6 +60,43 @@ pnpm workspace. المنفذ 19050. طبقة عميل mk-api مكتوبة بعق
 
 ## S2 — نظام التصميم ⏳
 
-## S3 — i18n ⏳
+## S3 — i18n ✅
+
+**التسليم:** ar/mixed/en على نمط `apps/dashboard/src/i18n/` (L-24 يحكم
+الخلط). المخزن `pfmk.studio.locale` (ADR-011 · L-49 — لغة الموظف
+لا الوكالة). `?locale=X` يتخطى المخزَّن للقطات.
+
+**ما بُني:**
+- `LocaleProvider.tsx` — dir/lang على `<html>`، Locale سياق React،
+  `t()` مع fallback إلى العربية.
+- `LocaleSwitcher.tsx` — ثلاثة أزرار مدمج في `AppShell` header و
+  `AuthShell` header.
+- `Ltr.tsx` — يوفَّر مبكراً؛ يستعمَل في S4 وما بعد.
+- ثلاث قواميس مع مفاتيح: `brand`, `locale`, `nav`, `pages.{projects,
+  brandKits, templates, assets, renders}`, `auth.{login, signup, forgot,
+  reset, field, hint}`, `actions`, `table`, `errors` (مفاتيح L-22).
+
+**قاعدة L-24 مطبَّقة في `mixed`:**
+- عناوين ووحدات مستقلّة بالإنجليزية: `Projects`, `Brand Kits`,
+  `Templates`, `Assets`, `Renders`, `Workspace`, `Account`, `No … yet`.
+- جمل الوصف والتلميحات بالعربية كاملةً.
+- شاشات المصادقة (auth.*) عربية كاملة في mixed لأن الجملة الطويلة
+  للتوجيه لا تحتمل الخلط داخل الجملة.
+
+**اللقطات (L-17):** ست شاشات في `apps/studio/screenshots/`:
+`projects-{ar,mixed,en}.png` و `login-{ar,mixed,en}.png`.
+
+**ما رأيته:**
+- **AR/projects**: RTL كامل — الشريط على اليمين، مبدّل اللغة إلى
+  اليسار، النصوص العربية تُقرأ صحيحة. البند النشط مظلَّل.
+- **EN/projects**: LTR — الشريط على اليسار، النصوص الإنجليزية
+  بحروف صحيحة الطباعة، مبدّل اللغة إلى اليمين.
+- **Mixed/projects**: RTL محفوظ، الأسماء (Projects, Brand Kits…)
+  بالإنجليزية كوحدات مستقلّة، الجمل التوصيفية عربية. قراءة صوتية:
+  «Projects — بطاقاتك…» تنساب طبيعية بلا خلط داخل الجملة.
+- **AR/login**: بطاقة مركزية، شارة MEDIA KIT ذهبية، حقول dir=ltr
+  للبريد وكلمة السر، زر ذهبي بارز، روابط بلغة الحساب.
+
+**تحقّق:** `pnpm typecheck` أخضر.
 
 ## S4 — الأرقام والاتجاه ⏳

@@ -1,0 +1,109 @@
+{
+  "_note": "L-24: الخلط على الوحدة الدلالية المستقلة (زرّ، عمود، اسم موضوع)، لا داخل الجملة. اقرأ العبارة بصوت عالٍ قبل إضافتها.",
+  "brand": {
+    "tagline": "Media Studio"
+  },
+  "locale": {
+    "label": "Language",
+    "ar": "العربية",
+    "mixed": "Mixed",
+    "en": "English"
+  },
+  "nav": {
+    "workspace": "Workspace",
+    "projects": "Projects",
+    "brandKits": "Brand Kits",
+    "templates": "Templates",
+    "assets": "Assets",
+    "renders": "Renders",
+    "user": {
+      "placeholder": "Account"
+    }
+  },
+  "pages": {
+    "projects": {
+      "title": "Projects",
+      "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
+      "empty": "No projects yet",
+      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب. يظهر هنا حين يجهز الربط بالخدمة."
+    },
+    "brandKits": {
+      "title": "Brand Kits",
+      "subtitle": "خطوط وألوان وشعارات وقواعد الطباعة لكل عميل.",
+      "empty": "No brand kits yet",
+      "emptyBody": "الهوية تحوي الخط والألوان والشعار والحواف وقواعد الحركة."
+    },
+    "templates": {
+      "title": "Templates",
+      "subtitle": "قوالب البطاقات والعاجل والريلز — عامة وخاصة بك.",
+      "empty": "No templates yet",
+      "emptyBody": "القوالب ملفات JSON بحقول تُملأ لتنتج مخرجاً."
+    },
+    "assets": {
+      "title": "Assets",
+      "subtitle": "خطوط، شعارات، صور، ملفات صوتية، Lottie، SVG.",
+      "empty": "No assets uploaded",
+      "emptyBody": "الرفع يمرّ برابط موقَّت من الخدمة (docs/16 §9)."
+    },
+    "renders": {
+      "title": "Renders",
+      "subtitle": "سجل PNG وMP4 لكل مشروع، مع لقطة الهوية وقت الإنتاج.",
+      "empty": "No renders yet",
+      "emptyBody": "كل تصدير يحفظ لقطة الهوية المستعملة (docs/16 §8)."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "أدخل بيانات حسابك للمتابعة.",
+      "submit": "تسجيل الدخول",
+      "needAccount": "ليس لديك حساب؟ أنشئ واحداً",
+      "forgot": "نسيت كلمة السر؟"
+    },
+    "signup": {
+      "title": "إنشاء حساب",
+      "subtitle": "ابدأ استوديو جديداً لوكالتك في دقيقة.",
+      "submit": "إنشاء الحساب",
+      "haveAccount": "لديك حساب — سجّل الدخول"
+    },
+    "forgot": {
+      "title": "استعادة كلمة السر",
+      "subtitle": "سنرسل رابط استعادة إلى بريدك.",
+      "submit": "إرسال رابط الاستعادة",
+      "backToLogin": "العودة إلى تسجيل الدخول"
+    },
+    "reset": {
+      "title": "تعيين كلمة سر جديدة",
+      "subtitle": "أدخل كلمة سر جديدة لحسابك.",
+      "submit": "حفظ كلمة السر",
+      "backToLogin": "العودة إلى تسجيل الدخول"
+    },
+    "field": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "tenantName": "اسم الوكالة"
+    },
+    "hint": {
+      "passwordMin": "12 حرفاً على الأقل."
+    }
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "search": "Search"
+  },
+  "table": {
+    "empty": "No rows yet.",
+    "loading": "جارٍ التحميل…"
+  },
+  "errors": {
+    "UNKNOWN": "حدث خطأ غير متوقّع.",
+    "UNAUTHENTICATED": "انتهت جلستك. سجّل الدخول من جديد.",
+    "NETWORK_ERROR": "تعذّر الوصول إلى الخدمة.",
+    "INTERNAL_ERROR": "خطأ في الخدمة. حاول لاحقاً."
+  }
+}

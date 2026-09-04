@@ -1,0 +1,108 @@
+{
+  "brand": {
+    "tagline": "Media Studio"
+  },
+  "locale": {
+    "label": "Language",
+    "ar": "العربية",
+    "mixed": "Mixed",
+    "en": "English"
+  },
+  "nav": {
+    "workspace": "Workspace",
+    "projects": "Projects",
+    "brandKits": "Brand Kits",
+    "templates": "Templates",
+    "assets": "Assets",
+    "renders": "Renders",
+    "user": {
+      "placeholder": "Account"
+    }
+  },
+  "pages": {
+    "projects": {
+      "title": "Projects",
+      "subtitle": "Your cards, videos, and in-flight work.",
+      "empty": "No projects yet",
+      "emptyBody": "Start a project from a brand kit and template. It appears here once the API is wired."
+    },
+    "brandKits": {
+      "title": "Brand Kits",
+      "subtitle": "Fonts, colors, logos, and typography rules per client.",
+      "empty": "No brand kits yet",
+      "emptyBody": "A kit holds the font, palette, logo, margins, and motion rules."
+    },
+    "templates": {
+      "title": "Templates",
+      "subtitle": "Card, Urgent, and Reel templates — public and your own.",
+      "empty": "No templates yet",
+      "emptyBody": "Templates are JSON files with fields you fill in to produce output."
+    },
+    "assets": {
+      "title": "Assets",
+      "subtitle": "Fonts, logos, images, audio, Lottie, SVG.",
+      "empty": "No assets uploaded",
+      "emptyBody": "Uploads go through a signed URL from the API (docs/16 §9)."
+    },
+    "renders": {
+      "title": "Renders",
+      "subtitle": "PNG and MP4 history per project, with the brand snapshot used.",
+      "empty": "No renders yet",
+      "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8)."
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Enter your credentials to continue.",
+      "submit": "Sign in",
+      "needAccount": "No account? Create one",
+      "forgot": "Forgot your password?"
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Start a new studio for your agency in a minute.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account — sign in"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "We'll send a recovery link to your email.",
+      "submit": "Send reset link",
+      "backToLogin": "Back to sign in"
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "Enter a new password for your account.",
+      "submit": "Save password",
+      "backToLogin": "Back to sign in"
+    },
+    "field": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "tenantName": "Agency name"
+    },
+    "hint": {
+      "passwordMin": "At least 12 characters."
+    }
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "search": "Search"
+  },
+  "table": {
+    "empty": "No rows yet.",
+    "loading": "Loading…"
+  },
+  "errors": {
+    "UNKNOWN": "Something went wrong.",
+    "UNAUTHENTICATED": "Your session expired. Please sign in again.",
+    "NETWORK_ERROR": "Can't reach the service.",
+    "INTERNAL_ERROR": "Server error. Try again later."
+  }
+}

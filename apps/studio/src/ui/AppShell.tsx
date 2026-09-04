@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLocale } from '@/src/i18n/LocaleProvider';
+import { LocaleSwitcher } from '@/src/i18n/LocaleSwitcher';
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول: شريط جانبي + رأس + مضمون.
 // المكوّنات الذرّية (Button, Field…) تُبنى في S2. هنا التخطيط فقط.
@@ -72,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
         <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-6">
           <div className="text-sm text-fg-muted">{t('nav.workspace')}</div>
           <div className="flex items-center gap-4 text-xs text-fg-muted">
-            {/* LocaleSwitcher يُضاف في S3 */}
+            <LocaleSwitcher />
             <span aria-hidden>·</span>
             <span>{t('nav.user.placeholder')}</span>
           </div>
