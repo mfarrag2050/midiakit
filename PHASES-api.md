@@ -58,9 +58,9 @@
 
 | البند | العنوان | الحالة | ملاحظة |
 |---|---|---|---|
-| **A1** | البنية الأساسية للقاعدة + المستخدمان | 🔄 قيد التنفيذ | docker-compose + init/01-roles + packages/db |
-| A2 | المخطط الكامل + RLS+FORCE | ⏳ | migration واحدة لكل الجداول |
-| A3 | آلية `SET LOCAL app.tenant_id` | ⏳ | SQL function + test helper |
+| A1 | البنية الأساسية للقاعدة + المستخدمان | ✅ | commit `9bb1e1a` |
+| **A2** | المخطط الكامل + RLS+FORCE | ✅ | 16 جدولاً، كلها rowsecurity=t + forcerowsecurity=t، سياسات ALL على 15، 4 سياسات على tenants (INSERT مفتوح، الباقي مقيّد) |
+| **A3** | آلية `SET LOCAL app.tenant_id` | 🔄 | SQL helper + test helper |
 | A4 | **G-P4-1** بوابة عزل المستأجرين | ⏳ | فحوص وجود + ثبات + سلبيّة على كل جدول |
 | A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ | بعد A4 |
 
@@ -99,8 +99,17 @@
   على اثنين فقط. القاعدة الحاكمة أعلاه سُجّلت وأُضيفت إلى G-P4-1.
 - **بيئة docker:** VM جديدة `colima-mediakit` (4 CPU/8GB/80GB) عبر
   `colima start mediakit`. معزولة عن `~/Minhaj` و `~/PrimeMind`.
-- **A1 قيد التنفيذ:** infra/docker-compose.yml + init/01-roles.sql +
+- **A1 مكتمل:** infra/docker-compose.yml + init/01-roles.sql +
   packages/db (node-pg-migrate + wrapper) + PHASES-api.md + ATTRIBUTIONS.md.
+- **A2 مكتمل:** 16 جدولاً في migration واحدة `20260904141100_initial-schema-and-rls.ts`
+  + init/02-extensions.sql (pgcrypto+citext كـsuperuser، لا CREATE على
+  migration_user). سياسة `tenants` استثنائية: INSERT مفتوح للـsignup،
+  SELECT/UPDATE/DELETE مقيّد بـid = app.tenant_id. باقي الجداول سياسة
+  ALL موحّدة `tenant_id = current_setting('app.tenant_id', true)::uuid`
+  مع WITH CHECK. templates.tenant_id NULLABLE لدعم globals لاحقاً (A13)،
+  حالياً RLS يحجب globals حتى تُضاف سياسة قراءة صريحة. Trigger عام
+  `set_updated_at()` مطبَّق. تحقّق يدوي: alpha يرى Alpha فقط، beta يرى
+  Beta فقط، بلا SET LOCAL لا شيء.
 
 ---
 
