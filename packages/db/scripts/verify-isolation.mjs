@@ -678,18 +678,20 @@ async function checkNoRlsExceptions(migrationPool) {
 // ══════════════════════════════════════════════════════════════════
 
 async function checkLoginAttemptsGrants(migrationPool) {
-  console.log(`\n▶ login_attempts: صلاحيات app_user محدودة`);
+  console.log(`\n▶ login_attempts: صلاحيات app_user محدودة (A8+ hardening)`);
   const r = await migrationPool.query(
     `SELECT privilege_type FROM information_schema.table_privileges
      WHERE grantee = 'app_user' AND table_schema = 'public' AND table_name = 'login_attempts'
      ORDER BY privilege_type`,
   );
   const perms = r.rows.map((row) => row.privilege_type).sort();
-  const expected = ['INSERT', 'SELECT'];
+  // A8+ hardening: SELECT مُنِع لسدّ ثغرة قراءة محاولات مستأجرين آخرين.
+  // القراءة الآن عبر SECURITY DEFINER count_failed_login_attempts.
+  const expected = ['INSERT'];
   if (JSON.stringify(perms) === JSON.stringify(expected)) {
-    pass(`app_user على login_attempts: [${perms.join(', ')}] — لا DELETE ولا UPDATE`);
+    pass(`app_user على login_attempts: [${perms.join(', ')}] فقط — لا SELECT (يذهب عبر function)`);
   } else {
-    fail(`login_attempts grants`, `متوقع [INSERT, SELECT]، وجدنا [${perms.join(', ')}]`);
+    fail(`login_attempts grants`, `متوقع [INSERT]، وجدنا [${perms.join(', ')}]`);
   }
 }
 
@@ -717,17 +719,18 @@ async function checkAuthLookupRole(migrationPool) {
       `canlogin=${role.rolcanlogin} super=${role.rolsuper} bypassrls=${role.rolbypassrls} (متوقع كلها f)`);
   }
 
-  // 2. صلاحياته على الجداول: SELECT على users فقط، لا شيء آخر
+  // 2. صلاحياته على الجداول: SELECT على users + login_attempts (A8+ hardening)
   const grantsRes = await migrationPool.query(
     `SELECT table_name, privilege_type FROM information_schema.table_privileges
      WHERE grantee = 'auth_lookup' AND table_schema = 'public'
      ORDER BY table_name, privilege_type`,
   );
   const grants = grantsRes.rows.map((r) => `${r.table_name}:${r.privilege_type}`);
-  if (grants.length === 1 && grants[0] === 'users:SELECT') {
-    pass(`auth_lookup grants: [${grants.join(', ')}] — SELECT على users فقط`);
+  const expected = ['login_attempts:SELECT', 'users:SELECT'];
+  if (JSON.stringify(grants.sort()) === JSON.stringify(expected)) {
+    pass(`auth_lookup grants: [${grants.join(', ')}] — SELECT محدود على users + login_attempts (لدالتَي auth)`);
   } else {
-    fail(`auth_lookup grants`, `متوقع [users:SELECT]، وجدنا [${grants.join(', ')}]`);
+    fail(`auth_lookup grants`, `متوقع ${JSON.stringify(expected)}، وجدنا ${JSON.stringify(grants)}`);
   }
 
   // 3. اختبار سلبي: SET ROLE auth_lookup + SELECT brand_kits → permission denied
@@ -752,7 +755,7 @@ async function checkAuthLookupRole(migrationPool) {
 }
 
 async function checkFindUserByEmail(appPool) {
-  console.log(`\n▶ find_user_by_email: الدالة الوحيدة SECURITY DEFINER`);
+  console.log(`\n▶ SECURITY DEFINER functions (2 — كلاهما ضمن auth_lookup)`);
 
   // Positive: بريد موجود يعيد صفاً
   const known = await inTxAsTenant(appPool, TENANT_A, (c) =>
@@ -786,9 +789,31 @@ async function checkFindUserByEmail(appPool) {
     c.query(`SELECT tenant_id FROM find_user_by_email('owner-b@test'::citext)`),
   );
   if (cross.rowCount === 1 && cross.rows[0].tenant_id === TENANT_B) {
-    pass(`cross-tenant lookup يعمل (جلسة A تجد بريد B)`);
+    pass(`find_user_by_email cross-tenant يعمل (جلسة A تجد بريد B)`);
   } else {
     fail(`find_user_by_email cross-tenant`, `expected 1 row (Beta tenant), got ${cross.rowCount}`);
+  }
+
+  // count_failed_login_attempts — الدالة الثانية (A8+ hardening)
+  const rateFn = await appPool.query(
+    `SELECT email_count, ip_count FROM count_failed_login_attempts(NULL::citext, NULL::inet, now() - interval '15 minutes')`,
+  );
+  if (rateFn.rowCount === 1 && rateFn.rows[0].email_count === '0' && rateFn.rows[0].ip_count === '0') {
+    pass(`count_failed_login_attempts(NULL,NULL,...) → (0,0) — الدالة الثانية تعمل`);
+  } else {
+    fail(`count_failed_login_attempts`, `unexpected: ${JSON.stringify(rateFn.rows[0])}`);
+  }
+
+  // اختبار سلبي حاسم — app_user لا يستطيع SELECT مباشر على login_attempts
+  try {
+    await appPool.query(`SELECT * FROM login_attempts LIMIT 1`);
+    fail(`login_attempts SELECT leak`, `app_user استطاع SELECT مباشر — يجب أن يُرفَض`);
+  } catch (err) {
+    if (err.code === '42501' || /permission denied/i.test(err.message)) {
+      pass(`app_user لا يستطيع SELECT مباشراً على login_attempts (${err.code || 'msg match'}) — القراءة عبر function فقط`);
+    } else {
+      fail(`login_attempts SELECT`, `خطأ غير متوقع: ${err.code} ${err.message}`);
+    }
   }
 }
 

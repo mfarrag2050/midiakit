@@ -65,30 +65,38 @@
 
 ---
 
-## القاعدة الثالثة (2026-09-04) — SECURITY DEFINER الوحيد
+## القاعدة الثالثة (2026-09-04، مُحدَّثة 2026-09-04 A8+) — دالتا SECURITY DEFINER
 
-**في المنظومة كلها، هناك دالة SECURITY DEFINER واحدة فقط:
-`find_user_by_email(citext)`** (مضافة في A5). أيّ طلب لإضافة ثانية
-يمرّ **بموافقة صريحة من المالك**. السبب: كل دالة SECURITY DEFINER
-هي ثغرة محتملة في الحاجز الذي بُني بـRLS+FORCE — إن أخطأت في
-الملكية أو search_path أو الحقول المُعادة، يتسرّب كل شيء.
+**في المنظومة كلها، هناك دالتا SECURITY DEFINER فقط، كلتاهما ضمن نطاق
+`auth_lookup` وكلتاهما تعيد اختزالاً لا صفوفاً خامة:**
 
-القيود على `find_user_by_email` (توثَّق هنا حرفياً لأنها المرجع لأيّ
-طلب مستقبلي):
-1. **يعيد الحد الأدنى فقط:** user_id, tenant_id, role, password_hash,
-   is_active. لا PII (اسم، هاتف، أيّ حقل شخصي). أيّ إضافة تحتاج
-   مراجعة.
-2. **الاستجابة نفسها لبريد موجود وغير موجود** (بالتوقيت والنصّ) —
-   تُفرض في `auth/session.ts` بمقارنة hash وهمي بـargon2 عند الفشل.
+1. `find_user_by_email(citext)` (A5) — يعيد
+   (user_id, tenant_id, role, password_hash, is_active).
+2. `count_failed_login_attempts(email, ip, since)` (A8+ hardening) —
+   يعيد (email_count, ip_count) — عددان، لا صفوف.
+
+**أيّ طلب لإضافة ثالثة يمرّ بموافقة صريحة من المالك.** السبب: كل دالة
+SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ ثقة واحد
+(`auth_lookup`) وحقول اختزال (لا PII خام).
+
+القيود المُلزَمة (مطبَّقة على الاثنَين):
+1. **الحد الأدنى المُعاد فقط.** لا اسم، لا هاتف، لا حقول شخصية.
+   `find_user_by_email` يعيد بيانات اعتماد + metadata لـsession.
+   `count_failed_login_attempts` يعيد عددَين.
+2. **الاستجابة لا تكشف الوجود.** بريد موجود وغير موجود يعطيان نفس
+   ApiError ونفس التوقيت (fake argon2 hash + توقيت متقارب — G-P4-2 يقيسه).
 3. **الدور المالك `auth_lookup`:** NOLOGIN + NOSUPERUSER + NOBYPASSRLS
-   + سياسة SELECT-فقط على `users` فقط (لا صلاحية على أيّ جدول آخر).
-4. **`SET search_path = pg_catalog, public`** داخل الدالة — يمنع
+   + سياسة SELECT-فقط على `users` و `login_attempts` فقط (لا صلاحية
+   على أيّ جدول آخر). USAGE+CREATE على schema public (شرط ملكية الدالة).
+4. **`SET search_path = pg_catalog, public`** داخل الدوال — يمنع
    اختطاف المسار.
-5. **بعد التحقّق من كلمة السر:** تُجلب باقي البيانات عبر استعلام
-   عادي مع SET LOCAL app.tenant_id.
+5. **REVOKE ALL FROM PUBLIC + GRANT EXECUTE TO app_user** لكل دالة.
 
-**G-P4-1 يحرس القاعدة:** يتحقّق أن الدالة تعيد الحقول المعلَنة فقط،
-وأن `auth_lookup` لا يستطيع SELECT على `brand_kits` أو أيّ جدول آخر.
+**G-P4-1 يحرس:**
+- الدوال تعيد الحقول المعلَنة فقط.
+- `auth_lookup` لا يستطيع SELECT على `brand_kits` أو أيّ جدول آخر.
+- `app_user` لا يستطيع SELECT مباشراً على `login_attempts` (A8+ fix).
+- `app_user` grants على `login_attempts` = [INSERT] فقط.
 
 ---
 
@@ -207,6 +215,21 @@
   في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
   + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
   G-P4-11 تُفعَّل مع A11.
+- **A8+ hardening (2026-09-04، بعد ملاحظات المالك):**
+  * **إغلاق ثغرة `login_attempts`:** كان app_user يستطيع SELECT مباشراً،
+    فيرى محاولات دخول مستأجرين آخرين (email + IP + user_id). الحل:
+    - REVOKE SELECT من app_user (يبقى INSERT للتسجيل)
+    - GRANT SELECT إلى auth_lookup
+    - SECURITY DEFINER ثانية `count_failed_login_attempts(email,ip,since)`
+      تعيد عددين فقط — session.ts checkLoginRateLimit يستعملها بدل
+      SELECT المباشر
+    - G-P4-1 يفحص: app_user grants=[INSERT]، SELECT مباشر → 42501
+  * **SMTP guard في production:** config.ts يفشل التشغيل إن كان
+    NODE_ENV=production بلا SMTP_HOST/PORT/USER/PASS/FROM. الرسائل
+    تصل عبر Emailer الجديد (`src/emailer.ts`) — DevConsole في dev،
+    SMTP stub في prod (بند لاحق: تكامل nodemailer).
+  * §القاعدة الثالثة أُعيدت صياغتها: دالتا SECURITY DEFINER لا واحدة،
+    كلتاهما ضمن نفس حدّ الثقة (auth_lookup) وكلتاهما تعيد اختزالاً.
 - **A8 مكتمل + G-P4-2 PASSED:** `apps/api/scripts/verify-auth.mjs`
   (يُشغَّل عبر `pnpm verify:auth`). أربع طبقات، كلها خضراء:
   * **Layer 1 grep guard:** لا ملف في apps/api/src/** (عدا auth/session.ts)

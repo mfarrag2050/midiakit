@@ -360,29 +360,27 @@ export async function refreshSession(
 //  Rate limit — يقرأ من login_attempts (بلا RLS، عابر للمستأجرين)
 // ══════════════════════════════════════════════════════════════════
 
+/**
+ * يفحص rate limit عبر SECURITY DEFINER `count_failed_login_attempts`.
+ * لا يقرأ login_attempts مباشرة — app_user فقد SELECT عليه (A8+ hardening
+ * لإغلاق ثغرة قراءة محاولات مستأجرين آخرين).
+ */
 export async function checkLoginRateLimit(
   pool: DbPool,
   params: { email?: string | undefined; ip?: string | undefined },
 ): Promise<void> {
   const windowStart = new Date(Date.now() - RATE_WINDOW_SECONDS * 1000);
-
-  if (params.email) {
-    const r = await pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM login_attempts
-       WHERE email = $1 AND success = false AND attempted_at > $2`,
-      [params.email, windowStart],
-    );
-    if ((r.rows[0]?.n ?? 0) >= RATE_MAX_PER_EMAIL) throw TooManyAttempts();
-  }
-
-  if (params.ip) {
-    const r = await pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM login_attempts
-       WHERE ip_address = $1::inet AND success = false AND attempted_at > $2`,
-      [params.ip, windowStart],
-    );
-    if ((r.rows[0]?.n ?? 0) >= RATE_MAX_PER_IP) throw TooManyAttempts();
-  }
+  const r = await pool.query<{ email_count: string; ip_count: string }>(
+    `SELECT email_count, ip_count
+     FROM count_failed_login_attempts($1::citext, $2::inet, $3)`,
+    [params.email ?? null, params.ip ?? null, windowStart],
+  );
+  const row = r.rows[0];
+  // bigint في pg يعود كنصّ — نحوّل.
+  const emailCount = Number(row?.email_count ?? 0);
+  const ipCount = Number(row?.ip_count ?? 0);
+  if (params.email && emailCount >= RATE_MAX_PER_EMAIL) throw TooManyAttempts();
+  if (params.ip && ipCount >= RATE_MAX_PER_IP) throw TooManyAttempts();
 }
 
 /**
