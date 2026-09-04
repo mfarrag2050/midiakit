@@ -56,7 +56,12 @@ const TABLES_UNDER_TENANT = [
   'ai_integrations',
   'subscriptions',
   'usage',
+  'password_reset_tokens',
 ];
+
+// جداول موثّقة صراحةً بلا RLS — الاستثناء الوحيد.
+// أيّ جدول آخر يظهر بلا RLS = فشل البوابة.
+const TABLES_WITHOUT_RLS_ALLOWED = new Set(['login_attempts', 'pgmigrations']);
 
 let failures = 0;
 const failLog = [];
@@ -221,6 +226,12 @@ async function resetAndSeed(migrationPool) {
         [tenantId],
       );
 
+      await client.query(
+        `INSERT INTO password_reset_tokens(tenant_id, user_id, token_hash, expires_at)
+         VALUES ($1, $2, 'hash-' || $3, now() + interval '1 hour')`,
+        [tenantId, userId, suffix],
+      );
+
       await client.query('COMMIT');
     }
   } finally {
@@ -317,6 +328,12 @@ const NEG_INSERT_STRATEGIES = {
   usage: (c, foreign) =>
     c.query(
       `INSERT INTO usage(tenant_id, period) VALUES ($1, '2030-12-31')`,
+      [foreign],
+    ),
+  password_reset_tokens: (c, foreign) =>
+    c.query(
+      `INSERT INTO password_reset_tokens(tenant_id, user_id, token_hash, expires_at)
+       VALUES ($1, gen_random_uuid(), 'evil', now() + interval '1 hour')`,
       [foreign],
     ),
 };
@@ -630,6 +647,152 @@ async function checkAllTablesRlsAndForce(migrationPool) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+//  Global: login_attempts هو الجدول الوحيد بلا RLS (الاستثناء)
+// ══════════════════════════════════════════════════════════════════
+
+async function checkNoRlsExceptions(migrationPool) {
+  console.log(`\n▶ Global: الاستثناءات الموثّقة بلا RLS = login_attempts فقط`);
+  const r = await migrationPool.query(
+    `SELECT relname FROM pg_class
+     WHERE relnamespace = 'public'::regnamespace
+       AND relkind = 'r'
+       AND relrowsecurity = false
+     ORDER BY relname`,
+  );
+  const found = r.rows.map((row) => row.relname);
+  const unexpected = found.filter((t) => !TABLES_WITHOUT_RLS_ALLOWED.has(t));
+
+  if (unexpected.length === 0) {
+    pass(`الجداول بلا RLS: ${found.join(', ') || '(لا شيء)'} — مطابق للاستثناءات الموثّقة`);
+  } else {
+    fail(
+      `unexpected no-RLS`,
+      `جداول بلا RLS خارج الاستثناءات: ${unexpected.join(', ')} — كل جدول يحتاج RLS+FORCE أو توثيق كاستثناء`,
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  Global: login_attempts محمي من التلاعب
+//  GRANT: INSERT + SELECT فقط لـapp_user، لا UPDATE ولا DELETE.
+// ══════════════════════════════════════════════════════════════════
+
+async function checkLoginAttemptsGrants(migrationPool) {
+  console.log(`\n▶ login_attempts: صلاحيات app_user محدودة`);
+  const r = await migrationPool.query(
+    `SELECT privilege_type FROM information_schema.table_privileges
+     WHERE grantee = 'app_user' AND table_schema = 'public' AND table_name = 'login_attempts'
+     ORDER BY privilege_type`,
+  );
+  const perms = r.rows.map((row) => row.privilege_type).sort();
+  const expected = ['INSERT', 'SELECT'];
+  if (JSON.stringify(perms) === JSON.stringify(expected)) {
+    pass(`app_user على login_attempts: [${perms.join(', ')}] — لا DELETE ولا UPDATE`);
+  } else {
+    fail(`login_attempts grants`, `متوقع [INSERT, SELECT]، وجدنا [${perms.join(', ')}]`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  auth_lookup — الدور والدالة
+// ══════════════════════════════════════════════════════════════════
+
+async function checkAuthLookupRole(migrationPool) {
+  console.log(`\n▶ auth_lookup: خصائص الدور والدالة`);
+
+  // 1. الدور: NOLOGIN, NOSUPERUSER, NOBYPASSRLS
+  const roleRes = await migrationPool.query(
+    `SELECT rolcanlogin, rolsuper, rolbypassrls
+     FROM pg_roles WHERE rolname = 'auth_lookup'`,
+  );
+  if (roleRes.rowCount === 0) {
+    fail(`auth_lookup role`, `دور غير موجود`);
+    return;
+  }
+  const role = roleRes.rows[0];
+  if (!role.rolcanlogin && !role.rolsuper && !role.rolbypassrls) {
+    pass(`auth_lookup: canlogin=f super=f bypassrls=f`);
+  } else {
+    fail(`auth_lookup properties`,
+      `canlogin=${role.rolcanlogin} super=${role.rolsuper} bypassrls=${role.rolbypassrls} (متوقع كلها f)`);
+  }
+
+  // 2. صلاحياته على الجداول: SELECT على users فقط، لا شيء آخر
+  const grantsRes = await migrationPool.query(
+    `SELECT table_name, privilege_type FROM information_schema.table_privileges
+     WHERE grantee = 'auth_lookup' AND table_schema = 'public'
+     ORDER BY table_name, privilege_type`,
+  );
+  const grants = grantsRes.rows.map((r) => `${r.table_name}:${r.privilege_type}`);
+  if (grants.length === 1 && grants[0] === 'users:SELECT') {
+    pass(`auth_lookup grants: [${grants.join(', ')}] — SELECT على users فقط`);
+  } else {
+    fail(`auth_lookup grants`, `متوقع [users:SELECT]، وجدنا [${grants.join(', ')}]`);
+  }
+
+  // 3. اختبار سلبي: SET ROLE auth_lookup + SELECT brand_kits → permission denied
+  const client = await migrationPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('SET LOCAL ROLE auth_lookup');
+    try {
+      await client.query('SELECT * FROM brand_kits LIMIT 1');
+      fail(`auth_lookup brand_kits access`, `SELECT brand_kits نجح — يجب أن يُرفض`);
+    } catch (err) {
+      if (err.code === '42501' || /permission denied/i.test(err.message)) {
+        pass(`auth_lookup لا يستطيع SELECT brand_kits (${err.code || 'msg match'})`);
+      } else {
+        fail(`auth_lookup brand_kits`, `خطأ غير متوقع: ${err.code} ${err.message}`);
+      }
+    }
+    await client.query('ROLLBACK');
+  } finally {
+    client.release();
+  }
+}
+
+async function checkFindUserByEmail(appPool) {
+  console.log(`\n▶ find_user_by_email: الدالة الوحيدة SECURITY DEFINER`);
+
+  // Positive: بريد موجود يعيد صفاً
+  const known = await inTxAsTenant(appPool, TENANT_A, (c) =>
+    c.query(`SELECT * FROM find_user_by_email('owner-a@test'::citext)`),
+  );
+  if (known.rowCount === 1) {
+    const row = known.rows[0];
+    // الحقول المُعادة: user_id, tenant_id, role, password_hash, is_active
+    const keys = Object.keys(row).sort();
+    const expected = ['is_active', 'password_hash', 'role', 'tenant_id', 'user_id'];
+    if (JSON.stringify(keys) === JSON.stringify(expected)) {
+      pass(`known email → 1 row مع الحقول المسموحة فقط: [${keys.join(', ')}]`);
+    } else {
+      fail(`find_user_by_email fields`, `الحقول: [${keys.join(', ')}] (متوقع ${JSON.stringify(expected)})`);
+    }
+    if (row.tenant_id === TENANT_A) pass(`tenant_id صحيح (Alpha)`);
+    else fail(`find_user_by_email tenant`, `tenant_id ${row.tenant_id} ≠ ${TENANT_A}`);
+  } else {
+    fail(`find_user_by_email positive`, `expected 1 row, got ${known.rowCount}`);
+  }
+
+  // Negative: بريد غير موجود يعيد 0 صفوف (بلا خطأ)
+  const unknown = await inTxAsTenant(appPool, TENANT_A, (c) =>
+    c.query(`SELECT * FROM find_user_by_email('doesnotexist@nowhere.test'::citext)`),
+  );
+  if (unknown.rowCount === 0) pass(`unknown email → 0 rows (لا كشف بخطأ)`);
+  else fail(`find_user_by_email negative`, `expected 0 rows, got ${unknown.rowCount}`);
+
+  // Cross-tenant: بريد لـtenant_B يعمل من جلسة tenant_A (الدالة SECURITY DEFINER)
+  const cross = await inTxAsTenant(appPool, TENANT_A, (c) =>
+    c.query(`SELECT tenant_id FROM find_user_by_email('owner-b@test'::citext)`),
+  );
+  if (cross.rowCount === 1 && cross.rows[0].tenant_id === TENANT_B) {
+    pass(`cross-tenant lookup يعمل (جلسة A تجد بريد B)`);
+  } else {
+    fail(`find_user_by_email cross-tenant`, `expected 1 row (Beta tenant), got ${cross.rowCount}`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  main
 // ══════════════════════════════════════════════════════════════════
 
@@ -658,6 +821,10 @@ async function main() {
     await checkNoBypassRls(migrationPool);
     await checkNoAppSuperuser(migrationPool);
     await checkAllTablesRlsAndForce(migrationPool);
+    await checkNoRlsExceptions(migrationPool);
+    await checkLoginAttemptsGrants(migrationPool);
+    await checkAuthLookupRole(migrationPool);
+    await checkFindUserByEmail(appPool);
   } catch (err) {
     console.error('\n✗ Unexpected exception:', err);
     failures++;

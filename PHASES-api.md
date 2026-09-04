@@ -65,6 +65,55 @@
 
 ---
 
+## القاعدة الثالثة (2026-09-04) — SECURITY DEFINER الوحيد
+
+**في المنظومة كلها، هناك دالة SECURITY DEFINER واحدة فقط:
+`find_user_by_email(citext)`** (مضافة في A5). أيّ طلب لإضافة ثانية
+يمرّ **بموافقة صريحة من المالك**. السبب: كل دالة SECURITY DEFINER
+هي ثغرة محتملة في الحاجز الذي بُني بـRLS+FORCE — إن أخطأت في
+الملكية أو search_path أو الحقول المُعادة، يتسرّب كل شيء.
+
+القيود على `find_user_by_email` (توثَّق هنا حرفياً لأنها المرجع لأيّ
+طلب مستقبلي):
+1. **يعيد الحد الأدنى فقط:** user_id, tenant_id, role, password_hash,
+   is_active. لا PII (اسم، هاتف، أيّ حقل شخصي). أيّ إضافة تحتاج
+   مراجعة.
+2. **الاستجابة نفسها لبريد موجود وغير موجود** (بالتوقيت والنصّ) —
+   تُفرض في `auth/session.ts` بمقارنة hash وهمي بـargon2 عند الفشل.
+3. **الدور المالك `auth_lookup`:** NOLOGIN + NOSUPERUSER + NOBYPASSRLS
+   + سياسة SELECT-فقط على `users` فقط (لا صلاحية على أيّ جدول آخر).
+4. **`SET search_path = pg_catalog, public`** داخل الدالة — يمنع
+   اختطاف المسار.
+5. **بعد التحقّق من كلمة السر:** تُجلب باقي البيانات عبر استعلام
+   عادي مع SET LOCAL app.tenant_id.
+
+**G-P4-1 يحرس القاعدة:** يتحقّق أن الدالة تعيد الحقول المعلَنة فقط،
+وأن `auth_lookup` لا يستطيع SELECT على `brand_kits` أو أيّ جدول آخر.
+
+---
+
+## بند مؤجَّل (2026-09-04) — عضوية جمعية للمستخدم
+
+**الحالة:** المخطط الحالي 1:1 (`users.tenant_id NOT NULL`). البريد
+فريد عالمياً (`UNIQUE(email)`)، فتخفيف القيد إلى n:m يحتاج migration
+لاحقة تُنشئ جدول `memberships(user_id, tenant_id, role)` وتحدّث
+السياسات والاستعلامات.
+
+**قرار المالك 2026-09-04:** الواجهة `single-tenant` في الإصدار الأوّل.
+لا مبدّل ولا قائمة اختيار. تعقيد كل شاشة («في أيّ وكالة أنا؟») +
+تعقيد الفوترة + الأدوار = تكلفة عالية مقابل حالة نظرية.
+
+**التفعيل بشرط:** أوّل مستخدم فعلي يحتاج الانتماء إلى أكثر من مستأجر
+(مصمم مستقل، مستشار). عندها تُبنى migration `memberships` + تُحدَّث
+السياسات + تُنقل بيانات users.tenant_id إلى memberships + G-P4-1
+يُوسَّع + الواجهة تُضيف مبدّل.
+
+**سلوك عابر في A5-A8:** `find_user_by_email` يعيد `tenant_id` واحداً
+(كافٍ لـsingle-tenant). لو تجاوز مستخدم هذا القيد بشكل ما لاحقاً،
+الجلسة تختار الأوّل ولا تعرض قائمة، مع تحذير في السجل.
+
+---
+
 ## البنية المعتمدة
 
 | القرار | المصدر | الحالة |
@@ -87,8 +136,11 @@
 | A1 | البنية الأساسية للقاعدة + المستخدمان | ✅ | commit `9bb1e1a` |
 | **A2** | المخطط الكامل + RLS+FORCE | ✅ | 16 جدولاً، كلها rowsecurity=t + forcerowsecurity=t، سياسات ALL على 15، 4 سياسات على tenants (INSERT مفتوح، الباقي مقيّد) |
 | A3 | آلية `SET LOCAL app.tenant_id` | ✅ | `app_set_tenant(uuid)` + `withTenant` / `withoutTenant` في packages/db/src |
-| A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.40s، 16 جدولاً، ANY_TENANT + FORCE على 15، سلبيّتان حاسمتان، revisions-orphan، لا BYPASSRLS |
-| A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ خطة للاعتماد | بعد A4 |
+| A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.52s، 17 جدولاً، ANY_TENANT + FORCE، سلبيّتان حاسمتان، revisions-orphan، auth_lookup، find_user_by_email |
+| **A5** | schema المصادقة + find_user_by_email | ✅ | password_reset_tokens (RLS+FORCE) + login_attempts (استثناء موثّق) + users.is_active + auth_lookup + الدالة الوحيدة SECURITY DEFINER |
+| A6 | `auth/session.ts` — الطبقة الوحيدة | 🔄 التالي | argon2id PHC + jose + rate limit + constant-time |
+| A7 | tenant-hook + auth middleware | ⏳ | onRequest hook مركزي لـSET LOCAL |
+| A8 | **G-P4-2** بوابة نقاء المصادقة | ⏳ | تسجيل/دخول/دعوة/إبطال + سلبيّة كاشفة |
 
 ### المجموعة B–F: endpoints (لاحقاً)
 
@@ -155,6 +207,25 @@
   في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
   + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
   G-P4-11 تُفعَّل مع A11.
+- **A5 مكتمل + G-P4-1 موسَّع:** migration `20260904141400_auth-schema.ts`:
+  * `users`: UNIQUE(email) عالمياً + is_active + last_login_at.
+  * `password_reset_tokens` (RLS+FORCE): رمز واحد نشط لكل مستخدم.
+  * `login_attempts` (الاستثناء الوحيد بلا RLS، موثَّق): user_id قبل
+    email — يقلّل تعداد الحسابات من السجل نفسه. GRANT INSERT+SELECT
+    فقط لـapp_user (لا DELETE ولا UPDATE).
+  * `auth_lookup` (NOLOGIN NOSUPERUSER NOBYPASSRLS): سياسة SELECT-فقط
+    على `users`، USAGE+CREATE على schema public (لملكية الدالة).
+  * `find_user_by_email(citext)` SECURITY DEFINER: يعيد
+    (user_id, tenant_id, role, password_hash, is_active) — لا PII.
+    `SET search_path = pg_catalog, public`. **الوحيدة في المنظومة**
+    (§القاعدة الثالثة).
+  * G-P4-1 يفحص 17 جدولاً + login_attempts استثناء حصريّ + auth_lookup
+    خصائصه وصلاحياته + find_user_by_email positive/negative/cross-tenant.
+- **قاعدة SECURITY DEFINER الوحيد (§القاعدة الثالثة):** أيّ طلب لإضافة
+  دالة ثانية يمرّ بموافقة المالك. الأثر: كل مسار بديل (session pool،
+  cross-tenant lookup لأيّ سبب) يُطرح أوّلاً كسؤال، لا يُبنى صامتاً.
+- **بند العضوية الجمعية مؤجَّل (§البند المؤجَّل أعلاه):** يُفعَّل بشرط
+  ظهور أوّل مستخدم يحتاجه فعلياً. في A5-A8 الجلسة single-tenant.
 - **A3 مكتمل:** `app_set_tenant(uuid)` SQL function (GRANT EXECUTE على
   app_user و migration_user، REVOKE من PUBLIC). helpers TS في
   `packages/db/src/test-helpers.ts` — `withTenant(pool, id, fn)` و

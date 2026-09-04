@@ -63,3 +63,36 @@ ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
 -- ويجعل تحقّق G-P4-1 «pg_roles WHERE rolbypassrls = true» يعود صفراً.
 -- التطبيق لا يتّصل بـpostgres في أيّ سيناريو.
 ALTER ROLE postgres NOBYPASSRLS;
+
+-- ═════════════════════════════════════════════════════════════════
+-- auth_lookup — دور خاص لدالة find_user_by_email SECURITY DEFINER.
+-- ═════════════════════════════════════════════════════════════════
+-- السياق: login يحتاج البحث عن مستخدم بالبريد قبل معرفة tenant_id.
+-- RLS يحجب البحث cross-tenant. لا BYPASSRLS مسموح (القاعدة الحاكمة).
+-- الحل: دالة SECURITY DEFINER تعمل بصلاحيات auth_lookup، الذي:
+--   • NOLOGIN — لا يمكن الاتصال به مباشرة (بلا كلمة سر).
+--   • NOSUPERUSER NOBYPASSRLS — لا يتجاوز شيئاً بشكل عام.
+--   • له سياسة صريحة على users (SELECT-فقط) تُضاف في migration.
+-- app_user يستدعي الدالة عبر SELECT find_user_by_email(...)، والدالة
+-- تعمل داخلياً بصلاحيات auth_lookup.
+--
+-- GRANT auth_lookup TO migration_user يسمح لـmigration بتغيير مالك
+-- الدالة إلى auth_lookup (شرط PG لـALTER FUNCTION ... OWNER TO).
+-- migration_user NOINHERIT فلا يرث صلاحيات auth_lookup تلقائياً —
+-- الفائدة الوحيدة: إمكانية ALTER OWNER في migration.
+
+CREATE ROLE auth_lookup WITH
+    NOLOGIN
+    NOSUPERUSER
+    NOBYPASSRLS
+    NOINHERIT
+    NOCREATEDB
+    NOCREATEROLE;
+
+GRANT auth_lookup TO migration_user;
+
+-- USAGE + CREATE على schema public — CREATE لازم لملكية الدالة
+-- (شرط PG لـALTER FUNCTION OWNER TO). لا SELECT على أيّ جدول
+-- (يُمنح جدول-بجدول في migration). auth_lookup NOLOGIN فلا اتصال
+-- مباشر ممكن. SECURITY DEFINER يقتصر على جسم الدالة (SELECT فقط).
+GRANT USAGE, CREATE ON SCHEMA public TO auth_lookup;
