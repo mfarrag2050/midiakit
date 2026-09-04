@@ -144,6 +144,55 @@ const mul = cvVidTextMul();     // يقرأ من slider
 (~1000 سطر)، `templateToTimeline` هو الجسر، `snapshots-video/` مرجع
 دائم يحرس أن أيّ regression في v2 يُكشَف.
 
+### ADR-011 — عزل المستأجرين عبر PostgreSQL RLS مع FORCE (2026-09-04)
+
+**السياق:** المرحلة 4 تُدخل بيانات مستأجرين متعدّدة إلى قاعدة واحدة —
+brand_kits · **revisions (الأخطر: لقطات كل تعديل)** · renders والمخرجات
+· assets · projects · templates · workflows · project_state · transitions
+· annotations · ai_integrations · subscriptions · usage. **المخاطرة
+الجوهرية:** أن تظهر هوية عميل (شعار، ألوان، خطوط، صور، تعليقات) في
+مخرج عميل آخر. **لا تحلّها المصادقة** — تحلّها الحماية على مستوى القاعدة
+نفسها.
+
+**القرار:** كل جدول يحمل `tenant_id` تحته:
+- **`ENABLE ROW LEVEL SECURITY`** — تفعيل RLS.
+- **`FORCE ROW LEVEL SECURITY`** — تجعل السياسة تُطبَّق على مالك الجدول
+  نفسه. بدونها، أيّ اتصال بصلاحية `OWNER` يتجاوزها فيصير الحاجز وهماً.
+- سياسة `USING (tenant_id = current_setting('app.tenant_id')::uuid)`
+  على SELECT/INSERT/UPDATE/DELETE.
+- **التطبيق يتصل بمستخدم بلا `BYPASSRLS` وبلا ملكية الجداول** — `GRANT`
+  محدَّد لا `OWNER`. مستخدمو migration/dev/test/admin منفصلون عن `app_user`.
+- **`app.tenant_id`** يُضبَط عبر `SET LOCAL` في كل معاملة، مأخوذاً من
+  JWT الموقّع (يُفكّ في `auth/session.ts` الوحيد — راجع القرار المرافق
+  للمصادقة الذاتية).
+- **مسارات المخرجات موقَّعة بانتهاء صلاحية** (signed URLs من R2/S3) —
+  لا معرّفات متسلسلة أو مسارات قابلة للتخمين.
+
+**البدائل المرفوضة:**
+1. **فلترة برمجية `WHERE tenant_id = ...`:** بند نسيان واحد = تسرّب.
+   الأمان يعتمد على انضباط مطوّر، لا حاجز بنيوي.
+2. **RLS بلا FORCE:** مالك الجدول يتجاوزها. أيّ سكربت صيانة أو migration
+   يكشف كل شيء.
+3. **قاعدة منفصلة لكل مستأجر:** مرفوض في ADR-007 — طبقة تسعير لا
+   افتراض معماري.
+4. **مزوّد خارجي (Neon branches, Supabase RLS-only):** يخلط الحل
+   بالمزوّد. RLS على PostgreSQL خام قابل لكل بيئة نشر.
+
+**المقايضة:** كلفة كتابة سياسة لكل جدول + انضباط اتصالات (مستخدمون
+منفصلون لكل غرض). المكسب: **الحاجز في القاعدة لا في الرمز** — يبقى
+ساري المفعول حتى مع خطأ برمجي أو migration خاطئ.
+
+**شرط الجودة (G-P4-1 في `docs/17`):** بوابة عزل المستأجرين تُجتاز
+**قبل بناء أيّ endpoint**. الاختبار يشمل **كل جدول لا عيّنة**، بترتيب
+الخطورة: brand_kits · revisions · renders/assets · projects · templates ·
+workflows · project_state · transitions · annotations · ai_integrations ·
+subscriptions · usage. **الاختبار السلبي الحاسم (L-46):** إعادة تشغيل
+الاختبار بعد إزالة `SET LOCAL app.tenant_id` — يجب أن يفشل فوراً بلا لبس.
+بلا هذا الاختبار السلبي، RLS نظرياً فقط.
+
+**نتيجة:** بند A1-A4 في `docs/17-phase4-plan.md` يُبنى يوم 1 من مسار A،
+ولا يُفتح أيّ endpoint حتى تُجتاز G-P4-1 على الجداول كاملةً.
+
 ---
 
 ## نموذج البيانات (مبدئي)
