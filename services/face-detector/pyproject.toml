@@ -1,0 +1,22 @@
+[project]
+name = "face-detector-service"
+version = "0.1.0"
+description = "خدمة كشف الوجوه للقصّ الذكي — FastAPI ملفوفة حول MTCNN. الكشف مرة واحدة عند الرفع، لا في مسار الرندر."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # MTCNN — Multi-task Cascaded Convolutional Networks — MIT (PyPI مؤكَّد)
+    # كشف وجوه CPU-only، بلا GPU. يُبنى على TensorFlow (Apache-2.0).
+    "mtcnn>=0.1.1",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "python-multipart>=0.0.9",
+    "Pillow>=10.0.0",  # قراءة الصور (BSD/MIT-like PIL license)
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["face_detector_service"]

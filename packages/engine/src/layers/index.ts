@@ -37,6 +37,13 @@ export {
   type RawStyle,
 } from './svg.js';
 export {
+  smartCrop,
+  type FaceBox,
+  type Rect,
+  type Size as SmartCropSize,
+  type SmartCropOptions,
+} from './smart-crop.js';
+export {
   drawAttribution,
   PLATFORM_PATH_STRINGS,
   PLATFORM_ICON_VIEWBOX,

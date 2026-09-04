@@ -339,6 +339,41 @@ ADR-001 والقاعدة 2 في CLAUDE.md).
 يرسم SVG إلى raster مباشرة. **يخالف ADR-001 والقاعدة 2** (محرّك رسم
 ثانٍ). لن يُستهلَك حتى لو كان أسرع.
 
+## خدمة كشف الوجوه (2026-09-04)
+
+`services/face-detector/` — خدمة معزولة FastAPI + MTCNN. الاستعمال:
+مرة واحدة عند رفع الصورة (L-07)، الإحداثيات تُخزَّن مع الأصل. المحرك
+في `packages/engine/src/layers/smart-crop.ts` يستهلك القيم ولا يكشف.
+
+### MTCNN (ipazc)
+
+- **الاستعمال:** كشف الوجوه في الصور (bounding boxes + confidence).
+- **الترخيص:** MIT — https://github.com/ipazc/mtcnn
+- **رخصة الأوزان:** MIT (الأوزان مضمَّنة في الحزمة).
+- **الحجم:** ~2MB نموذج (ثلاث شبكات: P-Net + R-Net + O-Net).
+- **العمل CPU-only:** ✓ (يعتمد TensorFlow — Apache-2.0).
+
+### TensorFlow (كتبعية transitive)
+
+- **الترخيص:** Apache-2.0 — https://github.com/tensorflow/tensorflow
+- **الحجم:** ~500MB مع كل الاعتماديات.
+- **الاستعمال:** موتور تنفيذ MTCNN فقط — لا نستدعي TF API مباشرة.
+
+**البدائل المفحوصة والمرفوضة (2026-09-04):**
+
+- `@mediapipe/tasks-vision` (Apache-2.0): يعتمد DOM (HTMLImageElement)
+  — لا يعمل في Node بلا متصفح.
+- `face-api.js` (MIT): **مهجور** منذ 2024 — لا صيانة.
+- `@vladmandic/face-api` (MIT): **مؤرشف** — لن تصله إصلاحات.
+- `@tensorflow-models/blazeface` (Apache-2.0): مهجور رسمياً؛ الخلف
+  `face-detection` يفرض WebGL في Node.
+- `@resvg/resvg-js` (MPL-2.0 + Rust native): محرّك رسم ثانٍ — يخالف
+  ADR-001 (سبق ذكره في §مكتبات SVG).
+
+**بديل احتياطي إن مات MTCNN:** `onnxruntime-node` (MIT) + `YuNet` ONNX
+(MIT، ~232KB). يتطلّب ~150 سطر postprocess يدوي (توليد anchors + NMS).
+موثَّق كخيار مقبول تقنياً.
+
 ## بروتوكول تحديث الإسناد
 
 عند إضافة/تحديث أيّ مورد خارجي:

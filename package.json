@@ -19,6 +19,7 @@
     "preview:caption": "node --import tsx scripts/preview-caption.mjs",
     "preview:svg": "node --import tsx scripts/preview-svg.mjs",
     "verify:svg": "node --import tsx scripts/verify-svg-gate.mjs",
+    "verify:smart-crop": "node --import tsx scripts/verify-smart-crop-gate.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
