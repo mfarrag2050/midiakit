@@ -18,24 +18,50 @@ import type { AudioPlan, AudioSource, AudioItemPlan, DuckingRule } from '@pf-med
 
 // ── مصادر lavfi ───────────────────────────────────
 
-/** يحوّل AudioSource إلى تعبير lavfi لـFFmpeg. */
-export function lavfiExpression(source: AudioSource): string {
+/**
+ * خريطة أصول → مسارات ملف. يُبنى من المستدعي (worker) قبل استدعاء
+ * `buildAudioFilterGraph`. مصادر `asset:<key>` تُترجَم إلى `-i <path>`
+ * (لا lavfi). المفتاح `key` هو ما يظهر بعد `asset:` في AudioPlan.
+ *
+ * **الاستعمال الحالي:** TTS يكتب المخرج إلى ملف مؤقّت وينشر مفتاحاً
+ * (مثلاً `tts-1`) → المستدعي يضع المسار في هذه الخريطة.
+ */
+export type AssetPaths = ReadonlyMap<string, string>;
+
+/**
+ * يحوّل AudioSource إلى وسائط FFmpeg مناسبة:
+ *   • synth-* → `-f lavfi -i "..."`
+ *   • asset → `-i <path>` (يتطلّب مسار في `assetPaths`)
+ */
+export function sourceToFFmpegInput(
+  source: AudioSource,
+  assetPaths?: AssetPaths
+): readonly string[] {
   switch (source.type) {
     case 'synth-sine':
-      // sine=frequency=220:duration=8:sample_rate=44100
-      return `sine=frequency=${source.frequency}:duration=${source.duration}:sample_rate=44100`;
+      return ['-f', 'lavfi', '-i', `sine=frequency=${source.frequency}:duration=${source.duration}:sample_rate=44100`];
     case 'synth-noise': {
-      // anoisesrc=color=pink:amplitude=0.3:duration=2:sample_rate=44100
-      // colors: white=0, pink=1, brown=2, blue=3, violet=4
       const colorCode = source.color === 'white' ? 'white'
         : source.color === 'brown' ? 'brown'
         : 'pink';
-      return `anoisesrc=color=${colorCode}:amplitude=${source.amplitude}:duration=${source.duration}:sample_rate=44100`;
+      return ['-f', 'lavfi', '-i', `anoisesrc=color=${colorCode}:amplitude=${source.amplitude}:duration=${source.duration}:sample_rate=44100`];
     }
-    case 'asset':
-      // للأصول الحقيقية، المستدعي يوفّر مسار ملف بديلاً — هنا نُبلّغ.
-      throw new Error(`asset:${source.key} يحتاج مسار ملف — synth فقط في الاختبار`);
+    case 'asset': {
+      const path = assetPaths?.get(source.key);
+      if (!path) throw new Error(`asset:${source.key} غير محلول — mapping مفقود في assetPaths`);
+      return ['-i', path];
+    }
   }
+}
+
+/** @deprecated استعمل `sourceToFFmpegInput` — يعيد وسائط FFmpeg كاملة. */
+export function lavfiExpression(source: AudioSource): string {
+  if (source.type === 'asset') {
+    throw new Error(`asset:${source.key} يحتاج مسار ملف — استعمل sourceToFFmpegInput مع assetPaths`);
+  }
+  const args = sourceToFFmpegInput(source);
+  // args = ['-f', 'lavfi', '-i', '<expr>'] — نُعيد التعبير فقط للتوافق الخلفي.
+  return args[3]!;
 }
 
 // ── بناء filter_complex ──────────────────────────
@@ -65,18 +91,19 @@ interface BuildResult {
  */
 export function buildAudioFilterGraph(
   plan: AudioPlan,
-  videoInputCount: number
+  videoInputCount: number,
+  assetPaths?: AssetPaths
 ): BuildResult {
   const inputs: string[] = [];
   const filterParts: string[] = [];
 
-  // (١) مدخلات lavfi لكل عنصر — index يبدأ من videoInputCount.
-  //     نبني خريطة (trackId, itemId) → inputIndex.
+  // (١) مدخلات لكل عنصر — asset → -i <path>، synth-* → -f lavfi -i ...
   const itemInputIdx = new Map<string, number>();
   let nextIdx = videoInputCount;
   for (const track of plan.tracks) {
     for (const item of track.items) {
-      inputs.push('-f', 'lavfi', '-i', lavfiExpression(item.source));
+      const args = sourceToFFmpegInput(item.source, assetPaths);
+      inputs.push(...args);
       itemInputIdx.set(`${track.id}:${item.id}`, nextIdx);
       nextIdx++;
     }

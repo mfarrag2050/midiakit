@@ -323,6 +323,33 @@ export interface BrandTranscription {
   readonly vocabulary: readonly string[];
 }
 
+// ── التعليق الصوتي (TTS — BYO-key) ─────────────────────
+
+/**
+ * إعدادات التعليق الصوتي — العميل يجلب مزوّده ومفتاحه.
+ * لا نستضيف نموذجاً محلياً (docs/12 §10 · قرار المالك 2026-09-04).
+ *
+ * **قاعدة الأمان:** `apiKeyRef` **مرجع** لا مفتاح — يشير إلى إدخال
+ * في التخزين الآمن (Phase 4 KMS/vault). المحرك لا يقرأ المفتاح؛
+ * `apps/renderer` يجلبه من التخزين قبل استدعاء `synthesize`.
+ */
+export type TtsProviderName = 'mock' | 'elevenlabs' | 'google' | 'azure';
+
+export interface BrandTts {
+  /** المزوّد المُختار. */
+  readonly provider: TtsProviderName;
+  /** معرّف الصوت لدى المزوّد (voice_id في ElevenLabs، name في Google/Azure). */
+  readonly voiceId: string;
+  /** سرعة النطق [0.5, 2.0]. الافتراضي 1.0. */
+  readonly speed?: number;
+  /**
+   * **مرجع** المفتاح في التخزين الآمن — لا المفتاح نفسه.
+   * المحرك يمرّره إلى layer التخزين الذي يعيد المفتاح لحظياً ثم يُنسى
+   * بعد الاستدعاء. صيغة اقتراحية: `"vault:tenants/<tid>/tts/<provider>"`.
+   */
+  readonly apiKeyRef?: string;
+}
+
 // ── الشارات ────────────────────────────────────────────
 
 export interface UrgentBadge {
@@ -561,4 +588,10 @@ export interface BrandKit {
    * `packages/engine/src/layers/caption.ts`.
    */
   readonly transcription?: BrandTranscription;
+  /**
+   * إعدادات التعليق الصوتي — BYO-key. اختيارية: عند غيابها، المحرك
+   * لا يُنتج تعليقاً صوتياً (لا يفشل — يتخطّاه صامتاً). راجع
+   * `packages/tts` و `docs/12 §10`.
+   */
+  readonly tts?: BrandTts;
 }

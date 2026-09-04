@@ -20,6 +20,9 @@ importers:
       '@pf-mediakit/templates':
         specifier: workspace:*
         version: link:packages/templates
+      '@pf-mediakit/tts':
+        specifier: workspace:*
+        version: link:packages/tts
       '@types/node':
         specifier: 20.17.10
         version: 20.17.10
@@ -119,6 +122,19 @@ importers:
       '@pf-mediakit/shared':
         specifier: workspace:*
         version: link:../shared
+
+  packages/tts:
+    dependencies:
+      '@pf-mediakit/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: 2.1.9
+        version: 2.1.9(@types/node@20.17.10)
 
 packages:
 
