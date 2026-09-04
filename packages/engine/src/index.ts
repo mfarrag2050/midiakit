@@ -1,6 +1,12 @@
 export * from './text/index.js';
 export * from './layers/index.js';
 export * from './brand/index.js';
+export { applyLocaleToBrand } from './locale.js';
+export {
+  checkFontCoverage,
+  type CoverageWarning,
+  type CheckCoverageOptions,
+} from './font-coverage.js';
 export {
   renderFrame,
   executeLayer,

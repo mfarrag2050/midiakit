@@ -383,3 +383,55 @@ Free Music Archive (قسم CC0 فقط) · ccMixter (Public Domain) · Musopen (�
 ## الهوية الافتراضية
 
 يجب أن يوجد `DEFAULT_BRAND` **محايد تماماً** — ألوان رمادية، خط مفتوح، بلا شعار — يعمل عليه المنتج من أول ثانية قبل أن يرفع العميل أي شيء. هذا اختبار صحة للفصل: إن احتاج المحرك لقيمة من AA لكي يعمل، فالفصل لم يكتمل.
+
+---
+
+## الخطوط لكل لغة (2026-09-04 · L-49)
+
+الوكالة الواحدة قد تنتج بلغات متعدّدة. `brand.fonts.primary` كان
+الوحيد؛ بعد `content.locale` (docs/04) صار الخط قابلاً للتخصيص لكل
+مجموعة لغة:
+
+```jsonc
+{
+  "fonts": {
+    "primary":    { "family": "IBM Plex Sans Arabic", ... },  // fallback
+    "fallback":   "IBM Plex Sans Arabic, sans-serif",
+    "capabilities": { "kashida": true, ... },
+    "byLocale": {                                              // اختياري
+      "ar":    { "family": "IBM Plex Sans Arabic", ... },
+      "latin": { "family": "Inter", ... }
+    }
+  }
+}
+```
+
+- **مجموعتان فقط:** `ar` · `latin`. أيّ لغة غير عربية تُصنَّف `latin`
+  (L-49 · فرنسية/تركية/إنجليزية بنفس المسار).
+- **`primary` يبقى** — تراجع صامت حين لا يوجد `byLocale[<group>]`.
+  الهويّات الحالية (كلّها عربية) تعمل بلا تعديل.
+- المحرك يختار عبر `fontForLocale(fonts, group)` من
+  `packages/shared/src/brand-kit.ts`.
+
+### فحص التغطية عند الرفع
+
+خط عربي مرفوع قد لا يغطّي `ı ğ ş ç` التركية. `checkFontCoverage(ctx,
+{fontString, locales})` يعيد `warnings[]` — واجهة رفع الخط تعرضها
+قبل القبول. **الاختيار للعميل**، لكن الخلل مكشوف قبل التصدير (لا
+مربّعات فارغة في المخرج المنشور).
+
+## انعكاس الأنكور عند LTR (`mirrorOnLTR`)
+
+```jsonc
+{
+  "placement": {
+    "logo":  { "anchor": "bottom-left", "offset": {"x": 40, "y": 40} },
+    "mirrorOnLTR": true
+  }
+}
+```
+
+- `true`: `bottom-left` عربياً يصبح `bottom-right` عند `content.locale=en`
+  — الشعار يبقى في «زاوية البداية» بصرياً.
+- `false` (الافتراضي): الأنكور كما هو — يتيح للعميل خياراً.
+- **العمودي لا ينعكس** — `top`/`bottom` مستقل عن اللغة.

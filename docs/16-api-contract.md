@@ -657,13 +657,20 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
   "brand_kit_id": "brk_... (required)",
   "template_id": "tpl_... (required)",
   "content": "object (optional, empty by default)",
+  "locale": "ar | en | fr | tr | es | de (optional, default: ar)",
   "workflow_id": "wfl_... (optional, uses tenant default if omitted)"
 }
 ```
+
+**`locale`** — لغة **المحتوى** المُنتَج (2026-09-04 · L-49). مستقلة عن
+`users.locale` (واجهة الموظف) و `brand.locale` (رسائل مؤسسية). تُحدّد
+سلوك المحرك: اتجاه، كشيدة، كسر دلالي، خط. تفصيل في `docs/04`.
+
 **الاستجابة (201):** Project في الحالة الأولى من workflow المعتمد.
 **الأخطاء:**
 - 404 `BRAND_KIT_NOT_FOUND` / `TEMPLATE_NOT_FOUND` / `WORKFLOW_NOT_FOUND`
 - 422 `PLAN_LIMIT_REACHED` (عدد المشاريع النشطة في الخطة)
+- 422 `LOCALE_UNSUPPORTED` (`locale` خارج القائمة المدعومة)
 
 ### 7.4 PATCH /v1/projects/:id
 
