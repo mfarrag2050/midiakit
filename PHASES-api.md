@@ -60,8 +60,8 @@
 |---|---|---|---|
 | A1 | البنية الأساسية للقاعدة + المستخدمان | ✅ | commit `9bb1e1a` |
 | **A2** | المخطط الكامل + RLS+FORCE | ✅ | 16 جدولاً، كلها rowsecurity=t + forcerowsecurity=t، سياسات ALL على 15، 4 سياسات على tenants (INSERT مفتوح، الباقي مقيّد) |
-| **A3** | آلية `SET LOCAL app.tenant_id` | 🔄 | SQL helper + test helper |
-| A4 | **G-P4-1** بوابة عزل المستأجرين | ⏳ | فحوص وجود + ثبات + سلبيّة على كل جدول |
+| A3 | آلية `SET LOCAL app.tenant_id` | ✅ | `app_set_tenant(uuid)` + `withTenant` / `withoutTenant` في packages/db/src |
+| **A4** | **G-P4-1** بوابة عزل المستأجرين | 🔄 | فحوص وجود + ثبات + سلبيّة على كل جدول |
 | A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ | بعد A4 |
 
 ### المجموعة B–F: endpoints (لاحقاً)
@@ -101,6 +101,12 @@
   `colima start mediakit`. معزولة عن `~/Minhaj` و `~/PrimeMind`.
 - **A1 مكتمل:** infra/docker-compose.yml + init/01-roles.sql +
   packages/db (node-pg-migrate + wrapper) + PHASES-api.md + ATTRIBUTIONS.md.
+- **A3 مكتمل:** `app_set_tenant(uuid)` SQL function (GRANT EXECUTE على
+  app_user و migration_user، REVOKE من PUBLIC). helpers TS في
+  `packages/db/src/test-helpers.ts` — `withTenant(pool, id, fn)` و
+  `withoutTenant(pool, fn)` تُستهلَك من scripts/verify والاختبارات.
+  **signed URLs توثيق مبدئي:** مسارات renders/assets تُبنى بانتهاء
+  صلاحية في A11/A18 — لا معرّفات متسلسلة قابلة للتخمين.
 - **A2 مكتمل:** 16 جدولاً في migration واحدة `20260904141100_initial-schema-and-rls.ts`
   + init/02-extensions.sql (pgcrypto+citext كـsuperuser، لا CREATE على
   migration_user). سياسة `tenants` استثنائية: INSERT مفتوح للـsignup،
