@@ -139,8 +139,8 @@
 | A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.52s، 17 جدولاً، ANY_TENANT + FORCE، سلبيّتان حاسمتان، revisions-orphan، auth_lookup، find_user_by_email |
 | **A5** | schema المصادقة + find_user_by_email | ✅ | password_reset_tokens (RLS+FORCE) + login_attempts (استثناء موثّق) + users.is_active + auth_lookup + الدالة الوحيدة SECURITY DEFINER |
 | **A6** | `auth/session.ts` — الطبقة الوحيدة | ✅ | argon2id PHC + jose HS256 + sessions قابلة للإبطال + refresh rotation + rate limit + constant-time. `pnpm --filter @pf-mediakit/api smoke:auth` يمرّ. |
-| A7 | tenant-hook + auth middleware + routes | 🔄 التالي | onRequest hook مركزي لـSET LOCAL + Fastify routes |
-| A8 | **G-P4-2** بوابة نقاء المصادقة | ⏳ | تسجيل/دخول/دعوة/إبطال + سلبيّة كاشفة |
+| **A7** | Fastify server + authenticated hook + routes | ✅ | preHandler واحد (authenticated) يجمع JWT verify + session check + tx open + SET LOCAL. onResponse/onError يقفلان الـtx. 6 endpoints في /v1/auth/*. HTTP smoke: signup 201، logout 204، revoked 401، bad token 401. |
+| A8 | **G-P4-2** بوابة نقاء المصادقة | 🔄 التالي | grep guard + HTTP integration + timing + rate limit + non-disclosure |
 
 ### المجموعة B–F: endpoints (لاحقاً)
 
@@ -207,6 +207,20 @@
   في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
   + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
   G-P4-11 تُفعَّل مع A11.
+- **A7 مكتمل — Fastify + hooks + routes:**
+  * `apps/api/src/server.ts`: Fastify 5 + helmet + cors + rate-limit عام
+    (300/دقيقة) + errorHandler موحّد (docs/16 §1.4).
+  * `plugins/auth-guard.ts`: `fastify.authenticated` preHandler واحد
+    يجمع (JWT verify → session check → BEGIN + SET LOCAL app.tenant_id
+    → set req.auth + req.dbClient). **قرار المالك:** لا استعلام يجري
+    خارج hook مرّت به. أيّ استعلام عبر pool.query مباشرة من handler
+    مصادَق سيفشل بـRLS (0 صفوف).
+  * `plugins/tenant-tx.ts`: onResponse يعمل COMMIT + release، onError
+    يعمل ROLLBACK + release. re-entry guard (متغيّر محلّي قبل تصفير
+    req.dbClient).
+  * `routes/health.ts` + `routes/auth/{signup,login,refresh,logout,forgot-password,reset-password}.ts`.
+  * HTTP integration smoke: signup 201، logout بـtoken 204، logout بجلسة
+    مُبطلة 401 SESSION_REVOKED، logout بـtoken تالف 401 TOKEN_INVALID.
 - **A6 مكتمل — apps/api + auth/session.ts:** الطبقة الوحيدة للمصادقة
   في `apps/api/src/auth/session.ts` (المرجع الوحيد لـjose و @node-rs/argon2
   — G-P4-2 grep guard). القيود المطبَّقة:

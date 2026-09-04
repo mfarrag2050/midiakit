@@ -33,15 +33,18 @@
     "db:migrate:test": "pnpm --filter @pf-mediakit/db migrate:up:test"
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "vitest": "2.1.9",
+    "@pf-mediakit/engine": "workspace:*",
+    "@pf-mediakit/renderer": "workspace:*",
+    "@pf-mediakit/shared": "workspace:*",
+    "@pf-mediakit/templates": "workspace:*",
+    "@pf-mediakit/tts": "workspace:*",
     "@types/node": "20.17.10",
     "skia-canvas": "3.0.8",
     "tsx": "4.19.2",
-    "@pf-mediakit/engine": "workspace:*",
-    "@pf-mediakit/shared": "workspace:*",
-    "@pf-mediakit/templates": "workspace:*",
-    "@pf-mediakit/renderer": "workspace:*",
-    "@pf-mediakit/tts": "workspace:*"
+    "typescript": "5.6.3",
+    "vitest": "2.1.9"
+  },
+  "dependencies": {
+    "pino-pretty": "^13.1.3"
   }
 }
