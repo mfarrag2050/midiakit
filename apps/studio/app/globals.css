@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── الهوية البصرية ─────────────────────────────────────────────
+ * لوحة داكنة تحريرية — تناسب جلسات تحرير طويلة، وتتقارب مع لوحات
+ * التشغيل (apps/dashboard) بلا تطابق مطلق. الأصفر الترابي (--accent)
+ * يستدعي المطبعة/الصحافة لا واجهات المنتَجات العامة.
+ * أرقام العتبات محايدة (rem/px) لأنها UI لا Canvas — L-02 يخصّ القياس
+ * البصري على القماش.
+ * ---------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0d10;
+  --surface: #12151a;
+  --surface-2: #191d24;
+  --border: rgba(255, 255, 255, 0.08);
+
+  --fg: #eee7d8;
+  --fg-muted: #a8a396;
+  --fg-subtle: #6b6f76;
+
+  --accent: #d4a017;
+  --accent-fg: #1a1207;
+
+  --danger: #dc5f45;
+  --success: #6a9e6f;
+  --warning: #d69833;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: 'ss01' on, 'cv11' on;
+}
+
+/* أرقام جدولية أوضح داخل الجداول والمقاييس */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* focus حلقة بلون الهوية لا افتراضي المتصفح */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* حوار: تعطيل تمرير الصفحة عند فتحه */
+body.overflow-locked {
+  overflow: hidden;
+}
