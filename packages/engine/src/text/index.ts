@@ -63,3 +63,10 @@ export {
   measuredLineHeight,
   type CanvasBoundsContext,
 } from './dynamic-line-height.js';
+export {
+  hasTashkil,
+  measurePixelHeight,
+  type PixelHeightContext,
+  type PixelHeightFactory,
+  type PixelHeightResult,
+} from './pixel-height.js';
