@@ -33,9 +33,35 @@
 
 - `infra/postgres/init/01-roles.sql` يُنشئ `migration_user` و `app_user`
   بـ`NOSUPERUSER NOBYPASSRLS`.
-- G-P4-1 (`scripts/verify-tenant-isolation.mjs`) يضيف فحص **وجود** صريحاً
-  (L-46): لا دور في القاعدة يحمل `rolbypassrls = true`. أيّ دور جديد
-  ينشأ بلا حرص = فشل البوابة.
+- G-P4-1 (`packages/db/scripts/verify-isolation.mjs`) يضيف فحص **وجود**
+  صريحاً (L-46): لا دور في القاعدة يحمل `rolbypassrls = true`. أيّ دور
+  جديد ينشأ بلا حرص = فشل البوابة.
+
+---
+
+## القاعدة الثانية (2026-09-04) — signed URLs بلا استثناء
+
+**كل مسار مخرَج يُخدَم عبر signed URL بانتهاء صلاحية. المفاتيح الخام
+(`storage_key`, `output_storage_key`) لا تُعاد في أيّ استجابة، ولا تُرَنْدَر
+كروابط مباشرة، ولا تُخمَّن بالتسلسل.**
+
+**لماذا لا يكفي RLS:** RLS يحمي القراءة من القاعدة. المخرَج (بطاقة، فيديو)
+يُخدَم من S3/R2 عبر HTTP مباشر بلا مرور بالقاعدة. رابط قابل للتخمين ==
+بطاقة عميل تُقرأ بلا مصادقة أصلاً.
+
+### الحماية الآلية — أين تُبنى، ولا تُبنى الآن
+
+| المكوّن | الموضع | يبنى في |
+|---|---|---|
+| مغلَّف موحَّد `apps/api/src/storage/signed-url.ts` | مغلَّف واحد يُستدعى من كل endpoint يعيد رابط أصل/تصدير | مع بدء A11 |
+| `POST /v1/assets/upload-url` (signed PUT للرفع) | docs/16 §9.1 | A11 |
+| `POST /v1/assets/:id/refresh-url` (signed GET بانتهاء) | docs/16 §9.5 | A11 |
+| `GET /v1/assets/:id` — يعيد `publicUrl` موقَّت لا `storage_key` | docs/16 §9.4 | A11 |
+| `GET /v1/renders/:id/output` — signed URL بصلاحية ساعة | docs/16 §8.4 | A18 |
+| G-P4-11 — منع تسرّب المفاتيح الخام | فحص عبر endpoint responses | تُفعَّل مع A11 |
+
+**اسم المفتاح الخام (`storage_key`, `output_storage_key`) في المخطط يبقى
+داخلي القاعدة. أيّ استجابة تحويها = فشل G-P4-11.**
 
 ---
 
@@ -61,8 +87,8 @@
 | A1 | البنية الأساسية للقاعدة + المستخدمان | ✅ | commit `9bb1e1a` |
 | **A2** | المخطط الكامل + RLS+FORCE | ✅ | 16 جدولاً، كلها rowsecurity=t + forcerowsecurity=t، سياسات ALL على 15، 4 سياسات على tenants (INSERT مفتوح، الباقي مقيّد) |
 | A3 | آلية `SET LOCAL app.tenant_id` | ✅ | `app_set_tenant(uuid)` + `withTenant` / `withoutTenant` في packages/db/src |
-| A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.39s، 16 جدولاً، سلبيّتان حاسمتان (بلا SET LOCAL + بلا FORCE) + لا BYPASSRLS |
-| A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ | بعد A4 |
+| A4 | **G-P4-1** بوابة عزل المستأجرين | ✅ | `pnpm verify:tenant-isolation` — 1.40s، 16 جدولاً، ANY_TENANT + FORCE على 15، سلبيّتان حاسمتان، revisions-orphan، لا BYPASSRLS |
+| A5–A8 | المصادقة (`sessions` + `auth/session.ts` + middleware) | ⏳ خطة للاعتماد | بعد A4 |
 
 ### المجموعة B–F: endpoints (لاحقاً)
 
@@ -74,8 +100,9 @@
 
 | البوابة | الوصف | الحالة |
 |---|---|---|
-| **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
-| G-P4-2 | نقاء المصادقة | ⏳ بعد A8 |
+| **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + ANY_TENANT + revisions-orphan + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
+| G-P4-2 | نقاء المصادقة (تسجيل/دخول/دعوة/إبطال + سلبيّة) | ⏳ بعد A8 |
+| **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ⏳ تُفعَّل مع A11 |
 | G-P4-3 | اكتمال سجل المراجعات | ⏳ |
 | G-P4-4 | ثبات `brand_snapshot` | ⏳ |
 | G-P4-5 | المفاتيح لا تُعاد | ⏳ |
@@ -102,14 +129,21 @@
 - **A1 مكتمل:** infra/docker-compose.yml + init/01-roles.sql +
   packages/db (node-pg-migrate + wrapper) + PHASES-api.md + ATTRIBUTIONS.md.
 - **A4 مكتمل + G-P4-1 PASSED:** `packages/db/scripts/verify-isolation.mjs`
-  ينفّذ في 1.39s على قاعدة test. كل الفحوص خضراء على 16 جدولاً:
+  ينفّذ في 1.40s على قاعدة test. كل الفحوص خضراء على 16 جدولاً:
   * وجود على 15 جدولاً تحت مستأجر + tenants الخاص.
   * ثبات: 100 استدعاء متطابق لكل جدول (1500 استعلام إجمالاً).
   * سلبيّة بـID: SELECT/UPDATE/DELETE بـID مستأجر آخر → 0 صفوف/متأثّرات.
   * سلبيّة INSERT: INSERT بـtenant_id=B من جلسة A → RLS rejected (42501).
   * **سلبي حاسم بلا SET LOCAL:** 16 جدولاً → 0 صفوف مرئية.
-  * **سلبي حاسم بلا FORCE:** جدول usage → مع FORCE ترى 1 صف، بلا FORCE
-    ترى 2 (migration_user يتجاوز RLS كـOWNER). يُبرهن أن FORCE ضرورية.
+  * **ANY_TENANT + FORCE على 15 جدولاً:** بتعطيل FORCE مؤقتاً على كل
+    جدول، migration_user (OWNER) يرى 2 صفوف (كل مستأجر)، مع FORCE يرى
+    1 (tenant_A فقط). فحصان في آلية واحدة (L-46 صريحاً):
+    - ANY_TENANT: 2 صفوف بلا FORCE = القاعدة ليست فارغة، فالصفر في
+      الفحوص السلبيّة نتاج RLS لا قاعدة خالية.
+    - FORCE ضرورية: with=1 vs without=2 = FORCE يمنع تجاوز OWNER.
+  * **revisions-orphan:** حذف brand_kit يُبقي revision يتيمة (بلا مورد).
+    السياسة تفحص tenant_id مباشرة (لا انتساب عبر resource_id)، لذا
+    المراجعة تبقى مرئية لصاحبها، محجوبة عن الآخر، وDELETE منه = 0.
   * لا دور بـBYPASSRLS في القاعدة (postgres تنازل عنه رمزياً).
   * لا SUPERUSER يمكن تسجيل دخول من التطبيق (postgres مستثنى — bootstrap
     فقط، لا يمرّ عبر إعداد التطبيق).
@@ -117,6 +151,10 @@
   * **اكتُشِف بگ في السياسات القديمة:** custom GUCs تعود إلى empty string
     بعد SET LOCAL على اتصال Pool مُعاد استعماله (لا NULL). أُصلح في
     `20260904141300_fix-empty-string-guc.ts` عبر NULLIF على كل السياسات.
+- **signed URLs — القاعدة الثانية (2026-09-04):** أُضيفت كقاعدة حاكمة
+  في §القاعدة الثانية أعلاه. لا تُبنى الآن؛ موضعها A11 (assets endpoints)
+  + A18 (renders output) + مغلَّف واحد `apps/api/src/storage/signed-url.ts`.
+  G-P4-11 تُفعَّل مع A11.
 - **A3 مكتمل:** `app_set_tenant(uuid)` SQL function (GRANT EXECUTE على
   app_user و migration_user، REVOKE من PUBLIC). helpers TS في
   `packages/db/src/test-helpers.ts` — `withTenant(pool, id, fn)` و

@@ -449,45 +449,130 @@ async function checkWithoutSetLocal(appPool) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  فحص بلا FORCE — يُبرهن أن FORCE ضرورية
+//  فحص ANY_TENANT + FORCE — على كل الجداول
+//
+//  فحصان في آلية واحدة (L-46):
+//   • ANY_TENANT: بلا FORCE، migration_user (OWNER) يتجاوز RLS → يرى
+//     كل الصفوف. لو كان الجدول فارغاً، نراه الآن. يُبرهن أن الصفر
+//     في الفحوص السلبيّة جاء من RLS لا من قاعدة فارغة.
+//   • FORCE ضرورية: مع FORCE=1 (مقيّد بـSET LOCAL)، بلا FORCE=2
+//     (migration_user يتجاوز). لو تساويا، إما migration_user
+//     SUPERUSER/BYPASSRLS (يخالف القاعدة)، أو RLS نفسها لا تُطبَّق.
 // ══════════════════════════════════════════════════════════════════
 
-async function checkWithoutForce(migrationPool) {
-  console.log(`\n▶ Negative: without FORCE (على جدول 'usage')`);
+async function checkAnyTenantAndForce(migrationPool) {
+  console.log(`\n▶ ANY_TENANT + FORCE على 15 جدولاً`);
   const client = await migrationPool.connect();
   try {
-    await client.query('BEGIN');
-    await client.query('SELECT app_set_tenant($1)', [TENANT_A]);
-    const withForce = await client.query(`SELECT count(*)::int AS n FROM usage`);
-    await client.query('COMMIT');
+    for (const table of TABLES_UNDER_TENANT) {
+      await client.query('BEGIN');
+      await client.query('SELECT app_set_tenant($1)', [TENANT_A]);
+      const withForce = await client.query(`SELECT count(*)::int AS n FROM ${table}`);
+      await client.query('COMMIT');
 
-    await client.query(`ALTER TABLE usage NO FORCE ROW LEVEL SECURITY`);
+      await client.query(`ALTER TABLE ${table} NO FORCE ROW LEVEL SECURITY`);
 
-    await client.query('BEGIN');
-    await client.query('SELECT app_set_tenant($1)', [TENANT_A]);
-    const withoutForce = await client.query(`SELECT count(*)::int AS n FROM usage`);
-    await client.query('COMMIT');
+      await client.query('BEGIN');
+      await client.query('SELECT app_set_tenant($1)', [TENANT_A]);
+      const withoutForce = await client.query(`SELECT count(*)::int AS n FROM ${table}`);
+      await client.query('COMMIT');
 
-    await client.query(`ALTER TABLE usage FORCE ROW LEVEL SECURITY`);
+      // إعادة FORCE فوراً — لا حالة عابرة تعبر إلى بقية الاختبارات.
+      await client.query(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
 
-    // مع FORCE: migration_user (المالك) مقيّد → 1 صف (tenant_A فقط).
-    // بلا FORCE: migration_user (المالك) يتجاوز → 2 صف (كلاهما).
-    if (withForce.rows[0].n === 1 && withoutForce.rows[0].n === 2) {
-      pass(`FORCE effect: with=${withForce.rows[0].n} without=${withoutForce.rows[0].n} — يؤكّد أن FORCE ضرورية`);
-    } else if (withForce.rows[0].n === withoutForce.rows[0].n) {
-      fail(
-        `FORCE necessity`,
-        `مع/بدون FORCE أعطيا نفس النتيجة (${withForce.rows[0].n})؛ FORCE بلا أثر — تحقّق أن migration_user ليس SUPERUSER أو BYPASSRLS`,
-      );
-    } else {
-      fail(
-        `FORCE effect`,
-        `unexpected: with=${withForce.rows[0].n} without=${withoutForce.rows[0].n} (متوقع 1 vs 2)`,
-      );
+      const wf = withForce.rows[0].n;
+      const wof = withoutForce.rows[0].n;
+
+      // ANY_TENANT: يجب أن يكون هناك ≥1 صف مرئي بلا FORCE. لو 0،
+      // القاعدة فارغة والفحوص السلبيّة السابقة لا معنى لها.
+      if (wof === 0) {
+        fail(`${table} ANY_TENANT`, `bez FORCE أعطى 0 صفوف — القاعدة فارغة، الفحوص السلبيّة السابقة لا تُثبت العزل`);
+        continue;
+      }
+
+      // FORCE ضرورية: مع FORCE يجب أن يكون < بلا FORCE.
+      if (wf === wof) {
+        fail(
+          `${table} FORCE necessity`,
+          `مع/بدون FORCE أعطيا نفس النتيجة (${wf}) — FORCE بلا أثر؛ تحقّق أن migration_user ليس SUPERUSER أو BYPASSRLS`,
+        );
+        continue;
+      }
+
+      if (wf < wof && wf >= 1) {
+        pass(`${table}: any_tenant=${wof} force=${wf} — RLS يقلّل الرؤية، FORCE يمنع تجاوز OWNER`);
+      } else {
+        fail(
+          `${table} FORCE effect`,
+          `unexpected: force=${wf} without=${wof} (متوقع force<without و force≥1)`,
+        );
+      }
     }
   } finally {
     client.release();
   }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  فحص revisions-orphan
+//
+//  السيناريو: تنشئ tenant_A brand_kit ثم revision عليه، ثم تحذف
+//  الـbrand_kit. المراجعة تحمل tenant_id=A لكن resource_id يشير
+//  إلى مورد محذوف. الاختبار:
+//   • المراجعة تبقى مرئيّة لـtenant_A (audit trail محفوظ).
+//   • المراجعة **لا تظهر** لـtenant_B (سياسة revisions تفحص tenant_id
+//     مباشرة، لا انتساب عبر resource_id → لا leak).
+//   • حذف الـtenant كاملاً يحذف المراجعة (CASCADE على tenants).
+// ══════════════════════════════════════════════════════════════════
+
+async function checkRevisionsOrphan(appPool) {
+  console.log(`\n▶ revisions-orphan: حذف المورد لا يكشف المراجعات`);
+
+  // 1. tenant_A ينشئ brand_kit جديد ثم revision عليه
+  const { bkId, revId } = await inTxAsTenant(appPool, TENANT_A, async (c) => {
+    const bk = await c.query(
+      `INSERT INTO brand_kits(tenant_id, name, config) VALUES ($1, 'Orphan Test', '{}') RETURNING id`,
+      [TENANT_A],
+    );
+    const bkId = bk.rows[0].id;
+    const rev = await c.query(
+      `INSERT INTO revisions(tenant_id, resource_type, resource_id, action, snapshot, reason)
+       VALUES ($1, 'brand_kit', $2, 'create', '{"name":"Orphan Test"}', 'seed for orphan test') RETURNING id`,
+      [TENANT_A, bkId],
+    );
+    return { bkId, revId: rev.rows[0].id };
+  });
+
+  // 2. tenant_A يحذف brand_kit
+  const deleted = await inTxAsTenant(appPool, TENANT_A, (c) =>
+    c.query(`DELETE FROM brand_kits WHERE id = $1`, [bkId]),
+  );
+  if (deleted.rowCount !== 1) {
+    fail(`revisions-orphan setup`, `expected 1 brand_kit deleted, got ${deleted.rowCount}`);
+    return;
+  }
+  pass(`setup: brand_kit ${bkId.slice(0, 8)}… deleted (revision يتيمة الآن)`);
+
+  // 3. tenant_A يجب أن يبقى قادراً على قراءة revision (audit)
+  const aSees = await inTxAsTenant(appPool, TENANT_A, (c) =>
+    c.query(`SELECT id, resource_id FROM revisions WHERE id = $1`, [revId]),
+  );
+  if (aSees.rowCount === 1) pass(`tenant_A لا يزال يرى المراجعة اليتيمة (audit محفوظ)`);
+  else fail(`revisions-orphan A visible`, `expected 1 row for tenant_A, got ${aSees.rowCount}`);
+
+  // 4. tenant_B يجب ألا يرى المراجعة اليتيمة
+  const bSees = await inTxAsTenant(appPool, TENANT_B, (c) =>
+    c.query(`SELECT id FROM revisions WHERE id = $1`, [revId]),
+  );
+  if (bSees.rowCount === 0) pass(`tenant_B لا يرى المراجعة اليتيمة (السياسة تفحص tenant_id مباشرة، لا انتساب)`);
+  else fail(`revisions-orphan B leak`, `LEAK: tenant_B رأى ${bSees.rowCount} مراجعة يتيمة لـtenant_A`);
+
+  // 5. tenant_B لا يمكنه UPDATE/DELETE للمراجعة اليتيمة
+  const bUpdate = await inTxAsTenant(appPool, TENANT_B, (c) =>
+    c.query(`DELETE FROM revisions WHERE id = $1`, [revId]),
+  );
+  if (bUpdate.rowCount === 0) pass(`tenant_B DELETE على مراجعة يتيمة → 0 (RLS يمنع)`);
+  else fail(`revisions-orphan B write`, `tenant_B حذف ${bUpdate.rowCount} مراجعة!`);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -568,7 +653,8 @@ async function main() {
       await checkTable(appPool, table);
     }
     await checkWithoutSetLocal(appPool);
-    await checkWithoutForce(migrationPool);
+    await checkAnyTenantAndForce(migrationPool);
+    await checkRevisionsOrphan(appPool);
     await checkNoBypassRls(migrationPool);
     await checkNoAppSuperuser(migrationPool);
     await checkAllTablesRlsAndForce(migrationPool);
