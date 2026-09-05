@@ -44,7 +44,8 @@
     "verify:auth": "pnpm --filter @pf-mediakit/api verify:auth",
     "verify:brand-kits": "pnpm --filter @pf-mediakit/api verify:brand-kits",
     "verify:tenant": "pnpm --filter @pf-mediakit/api verify:tenant",
-    "verify:users": "pnpm --filter @pf-mediakit/api verify:users"
+    "verify:users": "pnpm --filter @pf-mediakit/api verify:users",
+    "verify:assets": "pnpm --filter @pf-mediakit/api verify:assets"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

@@ -18,8 +18,6 @@ import type { FastifyPluginAsync } from 'fastify';
 import { randomBytes, createHash } from 'node:crypto';
 import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
-import { getEmailer } from '../../emailer.js';
-import { config } from '../../config.js';
 import {
   UserAlreadyMember, PendingInviteExists,
 } from '../../errors.js';
@@ -80,19 +78,12 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     const inv = inserted.rows[0]!;
 
-    // 5. إرسال البريد (dev = طباعة، prod = SMTP)
-    // بند مؤجَّل صريح: لا نقطة قبول في A10 — الرمز غير قابل للاستهلاك.
-    const emailer = getEmailer(config);
-    await emailer.send({
-      to: inv.email,
-      subject: 'You are invited (A10 pending — no accept endpoint yet)',
-      body:
-        `دعوة إلى ${inv.email} بدور ${inv.role}.\n\n` +
-        `الرمز:\n${tokenPlain}\n\n` +
-        `**A10 مؤجَّل:** نقطة قبول الدعوة (POST /v1/users/accept-invite)\n` +
-        `غير مبنيّة بعد. الرمز مُنشأ لكن لا يعمل حتى تُبنى.\n` +
-        `ينتهي: ${inv.expires_at.toISOString()}`,
-    });
+    // بند مؤجَّل A11 (قرار #3): لا يُرسَل بريد حتى تُبنى نقطة القبول
+    // (POST /v1/users/accept-invite). البريد يُفعَّل في نفس التذكرة
+    // التي تبنيها. السبب البنيوي: بريد يحمل رابطاً لا يعمل يُشوّش
+    // المدعوّ، والاعتماد على «تذكّر إيقاف الإرسال قبل النشر» انضباط
+    // لا بنية. `tokenPlain` مُنشأ داخل الطلب ولا يُطبَع.
+    void tokenPlain;
 
     reply.status(201).send({
       id: inv.id,

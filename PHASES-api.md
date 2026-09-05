@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A12 مبنيّ. A9 · A10 · A11 متخطّاة، غير مبنية.**
+> الحالة: **A9 · A10 · A11 · A12 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -170,7 +170,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 |---|---|---|---|
 | **A9** | Tenants (GET/PATCH `/v1/tenant`) | ✅ | `pnpm verify:tenant` — G-P4-4، 6 طبقات، 27 فحصاً. انحرافات معلَنة عن docs/16 §3: id UUID خام (لا `tnt_`)، `plan` enum مختلف، `seats.limit=null` حتى تُعرَّف الخرائط. |
 | **A10** | Users + invite (5 endpoints) | ✅ | `pnpm verify:users` — G-P4-5، 6 طبقات + 3 حالات خاصة + auth_lookup discrimination. جدول `invitations` جديد + 6 أكواد أخطاء. **بند مؤجَّل:** قبول الدعوة (accept-invite) — يُبنى في مرحلة لاحقة، الرمز الحالي مُنشأ لكن غير قابل للاستهلاك (dev log ينبّه). **بند مؤجَّل:** reassignedProjects/deletedDrafts ثابتتان 0 حتى A14. |
-| A11 | Assets (pre-signed upload + …) | ⏳ | docs/16 §9؛ G-P4-11 (signed URLs) تُفعَّل هنا |
+| **A11** | Assets (8 endpoints) | ✅ | `pnpm verify:assets` — G-P4-6، 6 طبقات + 11 حالة سلبية. جدول assets مُوسَّع بـ6 أعمدة (ackBy/ackAt/filename/sizeBytes/contentType/warnings). طبقة تخزين مجرَّدة: memory (dev/test) + s3 (`@aws-sdk/client-s3` + `s3-request-presigner`، SDK رسمي بلا fetch). قرار #1: assetId في `brand_kits.config` — `filter[inUse]` يطابق عليه حصراً عبر JSONPath. **بند مؤجَّل:** كشف الوجوه الفعلي (docs/12) — `POST /:id/detect-faces` يعيد `{faces:[]}` حتى موديل الكشف. **بند مؤجَّل:** SEATS_EXHAUSTED/STORAGE_QUOTA_EXCEEDED معلَنان غير مُنفَّذين حتى A21. **بند مؤجَّل:** استخراج FontCaps من ملف الخط (docs/12 §fonts) — metadata.capabilities يبقى فارغاً بعد finalize في A11. |
 | **A12** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات + Layer 3.5 (RFC 7396). commits: `ac863a4`, `4827975`, `389c35f`, `9540215`, `712020d`. **A9-V كشف نقص fill-in عند القراءة — بند 10، لم يُصلَح.** |
 | A13+ | Templates · Projects · Workflows · Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A13-A25) |
 
@@ -195,7 +195,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + ANY_TENANT + revisions-orphan + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
 | **G-P4-2** | نقاء المصادقة (grep guard + HTTP + non-disclosure + rate limit) | ✅ passed 2026-09-04 |
 | **G-P4-3** | Brand Kits (وجود + عزل 404-لا-403 + سلبي + RBAC + L-58/L-59 + policy-off-fails) | ✅ passed 2026-09-05 |
-| **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ⏳ تُفعَّل مع A11 |
+| **G-P4-6** | Assets (وجود 8 + عزل 6-methods + سلبي 11 + RBAC editor/writer + L-58 + policy-off حاسم) | ✅ passed 2026-09-06 |
+| **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ✅ passed 2026-09-06 — مضمَّن في G-P4-6 (§9.4/§9.5 يعيدان publicUrl موقَّت لا storage_key؛ mapper لا يكشف storage_key؛ القائمة بلا publicUrl صراحةً) |
 | G-P4-3-rev | اكتمال سجل المراجعات (بند مؤجَّل — رقم سيُعاد ترقيمه عند A20) | ⏳ |
 | **G-P4-5** | Users + invite (6 طبقات + 3 حالات خاصة + auth_lookup discrimination) | ✅ passed 2026-09-06 |
 | **G-P4-4** | Tenants (وجود + عزل + سلبي + RBAC + L-58 + policy-off SELECT/UPDATE منفصلَين) | ✅ passed 2026-09-05 |

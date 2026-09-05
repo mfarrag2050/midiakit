@@ -30,6 +30,18 @@ export type ErrorCode =
   | 'LAST_OWNER'
   | 'REASON_TOO_SHORT'
   | 'ACCOUNT_SUSPENDED'            // معلَن في §2.2، غير مُنفَّذ حتى A21
+  // Assets (§9)
+  | 'UNSUPPORTED_KIND'                    // §9.1 kind خارج القائمة
+  | 'UNSUPPORTED_CONTENT_TYPE_FOR_KIND'   // §9.1 image/png على kind=font مثلاً
+  | 'SIZE_TOO_LARGE'                      // §9.1 sizeBytes > MAX
+  | 'STORAGE_QUOTA_EXCEEDED'              // §9.1، مُعلَن — الحصّة غير مُنفَّذة حتى A21
+  | 'UPLOAD_NOT_COMPLETED'                // §9.2 ملف S3 غير موجود
+  | 'INVALID_FONT_FILE'                   // §9.2 kind=font ليس ttf/otf/woff2
+  | 'INVALID_LOTTIE_SCHEMA'               // §9.2 kind=lottie JSON غير صالح
+  | 'INVALID_SVG_WITH_TEXT_WARNING'       // §9.2 svg يحمل <text>، لم يُقرّ acknowledgedWarnings
+  | 'INVALID_FILTER_FIELD'                // §9.3 فلتر غير مسموح
+  | 'INVALID_KIND_VALUE'                  // §9.3 قيمة kind غير معروفة
+  | 'ASSET_IN_USE_BY_BRAND_KIT'           // §9.6 حذف أصل مُشار إليه
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -118,3 +130,17 @@ export const UserAlreadyMember = () => new ApiError('USER_ALREADY_MEMBER', 409, 
 export const PendingInviteExists = () => new ApiError('PENDING_INVITE_EXISTS', 409, 'email');
 export const LastOwner = () => new ApiError('LAST_OWNER', 409);
 export const ReasonTooShort = () => new ApiError('REASON_TOO_SHORT', 400, 'reason');
+// Assets (§9)
+export const UnsupportedKind = () => new ApiError('UNSUPPORTED_KIND', 400, 'kind');
+export const UnsupportedContentTypeForKind = () => new ApiError('UNSUPPORTED_CONTENT_TYPE_FOR_KIND', 400, 'contentType');
+export const SizeTooLarge = () => new ApiError('SIZE_TOO_LARGE', 413, 'sizeBytes');
+export const StorageQuotaExceeded = () => new ApiError('STORAGE_QUOTA_EXCEEDED', 422);
+export const UploadNotCompleted = () => new ApiError('UPLOAD_NOT_COMPLETED', 404);
+export const InvalidFontFile = () => new ApiError('INVALID_FONT_FILE', 400);
+export const InvalidLottieSchema = () => new ApiError('INVALID_LOTTIE_SCHEMA', 400);
+export const InvalidSvgWithTextWarning = () => new ApiError('INVALID_SVG_WITH_TEXT_WARNING', 400);
+export const InvalidFilterField = (field: string) => new ApiError('INVALID_FILTER_FIELD', 400, field);
+export const InvalidKindValue = () => new ApiError('INVALID_KIND_VALUE', 400, 'filter[kind]');
+export const AssetInUseByBrandKit = () => new ApiError('ASSET_IN_USE_BY_BRAND_KIT', 409);
+// Generic
+export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

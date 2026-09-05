@@ -11,12 +11,15 @@
     "verify:auth": "node --import tsx scripts/verify-auth.mjs",
     "verify:brand-kits": "node --import tsx scripts/verify-brand-kits.mjs",
     "verify:tenant": "node --import tsx scripts/verify-tenant.mjs",
-    "verify:users": "node --import tsx scripts/verify-users.mjs"
+    "verify:users": "node --import tsx scripts/verify-users.mjs",
+    "verify:assets": "node --import tsx scripts/verify-assets.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",
     "@fastify/helmet": "12.0.1",
     "@fastify/rate-limit": "10.2.1",
+    "@aws-sdk/client-s3": "3.717.0",
+    "@aws-sdk/s3-request-presigner": "3.717.0",
     "@node-rs/argon2": "2.0.2",
     "dotenv": "16.4.7",
     "fastify": "5.1.0",

@@ -38,6 +38,14 @@ import brandKitsDeleteRoute from './routes/brand-kits/delete.js';
 import brandKitsFontAckRoute from './routes/brand-kits/font-ack.js';
 import brandKitsLogoAckRoute from './routes/brand-kits/logo-ack.js';
 import brandKitsAssetsVersionRoute from './routes/brand-kits/assets-version.js';
+import assetsUploadUrlRoute from './routes/assets/upload-url.js';
+import assetsFinalizeRoute from './routes/assets/finalize.js';
+import assetsListRoute from './routes/assets/list.js';
+import assetsGetRoute from './routes/assets/get.js';
+import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
+import assetsDeleteRoute from './routes/assets/delete.js';
+import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
+import assetsPatchFacesRoute from './routes/assets/patch-faces.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -116,6 +124,17 @@ export async function buildServer() {
       await bk.register(brandKitsLogoAckRoute);
       await bk.register(brandKitsAssetsVersionRoute);
     }, { prefix: '/brand-kits' });
+
+    await v1.register(async (a) => {
+      await a.register(assetsUploadUrlRoute);
+      await a.register(assetsFinalizeRoute);
+      await a.register(assetsListRoute);
+      await a.register(assetsGetRoute);
+      await a.register(assetsRefreshUrlRoute);
+      await a.register(assetsDeleteRoute);
+      await a.register(assetsDetectFacesRoute);
+      await a.register(assetsPatchFacesRoute);
+    }, { prefix: '/assets' });
   }, { prefix: '/v1' });
 
   return fastify;
