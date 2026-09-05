@@ -32,7 +32,30 @@ const ROOT = join(__dirname, '..');
 const SKILL_PATH = join(ROOT, 'docs/SKILL-mediakit.md');
 const BEGIN = '<!-- BEGIN:GENERATED -->';
 const END = '<!-- END:GENERATED -->';
-const MAX_LINES = 300;
+const MAX_LINES = 400;
+
+// ── رأس YAML — ثابت، خارج المنطقتين ──────────────────
+// `description` هو ما يجعل السكيل يُستدعى في واجهة Claude عند ذكر
+// المشاريع المستهدفة. النصّ ثابت في السكربت — لا يُشتقّ من الملفات
+// (لا معنى لاشتقاق وصف السكيل من محتوياته). المولّد يضمن وجوده في
+// كل بناء: إن غاب يُضاف، وإن اختلف يُستبدَل بنسخة السكربت.
+const FRONTMATTER = `---
+name: mediakit
+description: |
+  مرجع مشروع «Media Kit» عبر الجلسات — تحويل أداة الإنتاج البصري
+  العربية (بطاقات، عاجل، ريلز) من إضافة Photopea داخلية بُنيت
+  لوكالة الأناضول إلى منتج SaaS متعدد الهويات لوكالات السوشيال
+  ميديا العربية. يحمل القواعد التسع، القيم المستخرجة من الكود
+  الأصلي، الخندق التنافسي (الكشيدة، الكسر الدلالي، التشكيل،
+  BiDi)، معمارية المنصة وقراراتها، الدَين المفتوح، وقواعد
+  المراجعة. استخدمها كلما لمس العمل هذا المشروع — المحرك،
+  brandKit، القوالب، الرندر، الطوابير، mk-api، mk-studio،
+  التسعير، العميل الأول — أو حين يسأل «أين توقفنا». مشغّلات:
+  Media Kit، ميديا كيت، brandKit، الكشيدة، التطويل، drawAt،
+  بطاقة العاجل، الريلز، الخط الزمني، SYNC-α. لا تستخدمها لـ
+  aqop-portal أو aql-* أو aa-* أو topia أو primemind أو minhaj.
+---
+`;
 
 // أخطاء البناء: كل واحد يُميَّز بالقسم والأمر الذي فشل.
 class SectionReadError extends Error {
@@ -309,6 +332,23 @@ function inject(fileContent, generated) {
   return fileContent.slice(0, s + BEGIN.length) + '\n' + generated + '\n' + fileContent.slice(e);
 }
 
+/**
+ * يضمن أن الملف يبدأ برأس YAML الثابت. إن غاب يُضاف. إن وُجد
+ * (سواء صحيحاً أو محرَّفاً) يُستبدَل بنسخة السكربت — الرأس ملك
+ * المولّد لا المحرِّر.
+ */
+function ensureFrontmatter(content) {
+  if (content.startsWith('---\n')) {
+    // نبحث عن سطر '---' الختامي.
+    const endIdx = content.indexOf('\n---\n', 4);
+    if (endIdx >= 0) {
+      return FRONTMATTER + content.slice(endIdx + '\n---\n'.length);
+    }
+    // '---' افتتاحي بلا ختام ⇒ الملف تالف؛ نستبدل الرأس ونُبقي البقية.
+  }
+  return FRONTMATTER + content;
+}
+
 // ── التنفيذ ──────────────────────────────────────────
 
 let generated;
@@ -328,7 +368,8 @@ if (process.argv.includes('--stdout')) {
 }
 
 const current = readFileSync(SKILL_PATH, 'utf8');
-const updated = inject(current, generated);
+const withFrontmatter = ensureFrontmatter(current);
+const updated = inject(withFrontmatter, generated);
 const lines = updated.split('\n');
 
 if (lines.length > MAX_LINES) {
