@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `4d157da` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `e646568` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -50,7 +50,7 @@ description: |
 | **3.8** | **امتدادات المحرك** (بعد مسح 12) | 3–4 أسابيع | 5 امتدادات نموذجية + تكامل نظيف | ☑ |
 | **3.9** | **حراسة المحرك — البوابات الست** (G1..G6) | **أسبوع** | 4/6 مبنيّة · G6 skeleton · G1 و G2 غير مبنيَّين (تصحيح 2026-09-05) | ◐ |
 | **3.10** | **content.locale — امتداد محرك متعدّد اللغات** | **يوم** | العربية بالخندق + اللاتينية بلف صحيح؛ برهان بصري ar/en/tr مع اختبار سلبي (bypass applyLocaleToBrand) | ☑ |
-| 4 | المنصة (بعد اكتشاف بنود 2026-09-02) | **6–8 أسابيع** | عميل يعمل ذاتياً + سجل مراجعات + سير عمل تحريري + دورة حياة أصول | ☐ |
+| 4 | المنصة (بعد اكتشاف بنود 2026-09-02) | **6–8 أسابيع** | عميل يعمل ذاتياً + سجل مراجعات + سير عمل تحريري + دورة حياة أصول | ◐ جارية — الحالة التفصيلية في `PHASES-api.md` (feat/api) و `PHASES-studio.md` (feat/studio). `main` لا يتتبّع تقدّم المسارين. |
 | 5 | النمو | مستمر | — | ☐ |
 
 ### الفروع — عبر الفروع (`git for-each-ref`)
@@ -58,10 +58,10 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `942756a` | 116 |
+| `feat/api` | `410cc33` | 117 |
 | `feat/studio` | `536d661` | 94 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `942756a` | 116 |
+| `origin/feat/api` | `410cc33` | 117 |
 | `origin/feat/studio` | `536d661` | 94 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
@@ -69,6 +69,11 @@ description: |
 - **main (14):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 - **feat/api (19):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:script-paths` · `check:skill-fresh` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts`
 - **feat/studio (16):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+
+### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
+
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A12` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S5` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 

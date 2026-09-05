@@ -145,6 +145,71 @@ function checksFromLocal(section) {
   return extractChecks(src, section, `readFileSync package.json`);
 }
 
+// ── حالة المرحلة 4 عبر الفروع ────────────────────────
+//
+// السبب البنيوي: PHASES.md على main لا يرى تقدّم المسارين — الحالة
+// الحقيقية في PHASES-api.md (feat/api) و PHASES-studio.md (feat/studio).
+// السكيل يقرأ الملفَّين بـ`git show` (لا checkout) ويستخرج آخر مهمة
+// مبنيّة + نقاط التزامن المفتوحة.
+
+/** أعلى A# أو S# معلَّم ✅ من نصّ PHASES. الحرف = 'A' أو 'S'. */
+function highestDoneTask(src, prefix) {
+  // صيغتان:
+  //   جدول: `| A9 | ... | ✅ |`  أو  `| **A12** | ... | ✅ |`
+  //   عنوان: `## S5 — ... ✅` أو `## امتداد — ... ✅`
+  const tableRe = new RegExp(`\\|\\s*\\*{0,2}${prefix}(\\d+)\\*{0,2}\\s*\\|[^|\\n]*\\|\\s*✅`, 'g');
+  const headerRe = new RegExp(`^##\\s+${prefix}(\\d+)\\b[^\\n]*✅`, 'gm');
+  let max = 0;
+  for (const m of src.matchAll(tableRe)) max = Math.max(max, parseInt(m[1], 10));
+  for (const m of src.matchAll(headerRe)) max = Math.max(max, parseInt(m[1], 10));
+  return max;
+}
+
+/** خطوط SYNC مفتوحة مع تاريخها. */
+function openSyncLines(src) {
+  const lines = [];
+  const re = /^-\s+\*\*(SYNC-[^\*]+)\*\*/gm;
+  for (const m of src.matchAll(re)) {
+    const header = m[1].trim();
+    // نستخرج تاريخ «فُتحت YYYY-MM-DD» إن وُجد.
+    const dateMatch = header.match(/(\d{4}-\d{2}-\d{2})/);
+    lines.push({ header, date: dateMatch ? dateMatch[1] : null });
+  }
+  return lines;
+}
+
+/** رؤوس ## بحالة 🟡 (جارٍ جزئياً). */
+function partialHeaders(src) {
+  const re = /^##\s+([^\n]+?)\s+🟡[^\n]*/gm;
+  return [...src.matchAll(re)].map((m) => m[1].trim());
+}
+
+function apiTrackStatus() {
+  const section = 'حالة feat/api';
+  const src = shOrFail(section, 'git show origin/feat/api:PHASES-api.md');
+  const lastA = highestDoneTask(src, 'A');
+  if (lastA === 0) {
+    throw new SectionReadError(section, 'parse PHASES-api.md', 'لم يُعثر على مهمة A# معلَّمة ✅');
+  }
+  return {
+    lastDone: `A${lastA}`,
+    syncOpen: openSyncLines(src),
+  };
+}
+
+function studioTrackStatus() {
+  const section = 'حالة feat/studio';
+  const src = shOrFail(section, 'git show origin/feat/studio:PHASES-studio.md');
+  const lastS = highestDoneTask(src, 'S');
+  if (lastS === 0) {
+    throw new SectionReadError(section, 'parse PHASES-studio.md', 'لم يُعثر على مهمة S# معلَّمة ✅');
+  }
+  return {
+    lastDone: `S${lastS}`,
+    partial: partialHeaders(src),
+  };
+}
+
 // ── نقاط النهاية على feat/api ────────────────────────
 
 function endpointsFromApi() {
@@ -271,6 +336,8 @@ function buildGenerated() {
   const mainChecks = checksFromLocal('الفحوص — main');
   const apiChecks = checksFromRef('origin/feat/api', 'الفحوص — feat/api');
   const studioChecks = checksFromRef('origin/feat/studio', 'الفحوص — feat/studio');
+  const apiTrack = apiTrackStatus();
+  const studioTrack = studioTrackStatus();
 
   // القوائم كاملة — لا اقتطاع.
   const fmtFull = (arr) => arr.length ? arr.map((x) => `\`${x}\``).join(' · ') : '(لا شيء)';
@@ -301,6 +368,19 @@ ${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.count} |`).join('\n
 - **main (${mainChecks.length}):** ${fmtFull(mainChecks)}
 - **feat/api (${apiChecks.length}):** ${fmtFull(apiChecks)}
 - **feat/studio (${studioChecks.length}):** ${fmtFull(studioChecks)}
+
+### حالة المرحلة 4 — عبر الفروع (\`PHASES-api.md\` · \`PHASES-studio.md\`)
+
+- **mk-api (feat/api):** آخر مبنيّ ✅ = \`${apiTrack.lastDone}\` · نقاط التزامن المفتوحة: ${
+    apiTrack.syncOpen.length
+      ? apiTrack.syncOpen.map((s) => `\`${s.header}\``).join(' · ')
+      : '(لا شيء)'
+  }
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = \`${studioTrack.lastDone}\` · جارٍ 🟡: ${
+    studioTrack.partial.length
+      ? studioTrack.partial.map((h) => `\`${h}\``).join(' · ')
+      : '(لا شيء)'
+  }
 
 ### الدروس — من main (\`docs/LESSONS.md\`)
 
