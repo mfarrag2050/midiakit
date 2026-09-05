@@ -45,17 +45,19 @@ REVOKE ALL ON SCHEMA public FROM PUBLIC;
 GRANT USAGE ON SCHEMA public TO migration_user, app_user;
 GRANT CREATE ON SCHEMA public TO migration_user;
 
--- الصلاحيات الافتراضية: أيّ جدول ينشئه migration_user يمنح app_user
--- SELECT/INSERT/UPDATE/DELETE تلقائياً. app_user لا يمتلك الجداول
--- (شرط RLS مع FORCE أن يكون المتصل غير مالك ولا SUPERUSER ولا BYPASSRLS).
-ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
-    GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO app_user;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE migration_user IN SCHEMA public
-    GRANT EXECUTE ON FUNCTIONS TO app_user;
+-- الصلاحيات الافتراضية (SEC-1 القرار 2026-09-05 — Option B):
+-- **مُلغَاة.** كل migration ينشئ جدولاً تطبيقياً يجب أن يمنح app_user
+-- صراحةً (سطران في كل migration). المبرّر: أدوات خارجية (node-pg-migrate،
+-- extensions) كانت ترث DML وتنشئ فجوات أمن (تسرّب pgmigrations).
+-- migration 20260905100000_lock-down-app-user-grants.ts يُلغيها من قواعد
+-- سبق تفعيلها فيها.
+--
+-- الجداول الموجودة اليوم تحمل منحها من إنشائها الأصلي (default كان مفعّلاً
+-- حينذاك). التغيير يمنع الوراثة المستقبلية فقط.
+--
+-- G-SEC-2 (في scripts/verify-isolation.mjs) يفحص أن قائمة المنح الفعلية
+-- تطابق قائمة مُعلَنة في الكود — أي جدول جديد بلا GRANT يدوي يظهر
+-- كإخفاق «grant غائب»، وأي جدول خارج القائمة يظهر كإخفاق «grant غير مُعلَن».
 
 -- إزالة BYPASSRLS من دور postgres الجذري (docker bootstrap).
 -- ملاحظة: postgres يبقى SUPERUSER (شرط docker)، و SUPERUSER يتجاوز RLS

@@ -63,6 +63,33 @@ const TABLES_UNDER_TENANT = [
 // أيّ جدول آخر يظهر بلا RLS = فشل البوابة.
 const TABLES_WITHOUT_RLS_ALLOWED = new Set(['login_attempts', 'pgmigrations']);
 
+// SEC-1 G-SEC-2 — قائمة الصلاحيات المُعلَنة لـapp_user (Option B: صريحة).
+// كل جدول app_user يظهر هنا مع مجموعة الصلاحيات المتوقّعة.
+// جدول خارج القائمة يحمل أيّ منح = فشل. جدول في القائمة بلا المنح المتوقّع = فشل.
+const APP_USER_EXPECTED_GRANTS = {
+  // 17 جدولاً بـDML كامل
+  tenants:               'DELETE,INSERT,SELECT,UPDATE',
+  users:                 'DELETE,INSERT,SELECT,UPDATE',
+  sessions:              'DELETE,INSERT,SELECT,UPDATE',
+  brand_kits:            'DELETE,INSERT,SELECT,UPDATE',
+  templates:             'DELETE,INSERT,SELECT,UPDATE',
+  assets:                'DELETE,INSERT,SELECT,UPDATE',
+  workflows:             'DELETE,INSERT,SELECT,UPDATE',
+  projects:              'DELETE,INSERT,SELECT,UPDATE',
+  project_state:         'DELETE,INSERT,SELECT,UPDATE',
+  transitions:           'DELETE,INSERT,SELECT,UPDATE',
+  annotations:           'DELETE,INSERT,SELECT,UPDATE',
+  renders:               'DELETE,INSERT,SELECT,UPDATE',
+  revisions:             'DELETE,INSERT,SELECT,UPDATE',
+  ai_integrations:       'DELETE,INSERT,SELECT,UPDATE',
+  subscriptions:         'DELETE,INSERT,SELECT,UPDATE',
+  usage:                 'DELETE,INSERT,SELECT,UPDATE',
+  password_reset_tokens: 'DELETE,INSERT,SELECT,UPDATE',
+  // جدول واحد بـINSERT فقط
+  login_attempts:        'INSERT',
+  // pgmigrations: بلا منح (SEC-1 fix) — لا يظهر
+};
+
 let failures = 0;
 const failLog = [];
 
@@ -677,6 +704,73 @@ async function checkNoRlsExceptions(migrationPool) {
 //  GRANT: INSERT + SELECT فقط لـapp_user، لا UPDATE ولا DELETE.
 // ══════════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════════
+//  G-SEC-2 — قائمة منح app_user تطابق القائمة المُعلَنة
+// ══════════════════════════════════════════════════════════════════
+
+async function checkAppUserGrantsMatchDeclared(migrationPool) {
+  console.log(`\n▶ SEC-1 G-SEC-2: قائمة منح app_user تطابق APP_USER_EXPECTED_GRANTS`);
+  const r = await migrationPool.query(
+    `SELECT table_name, string_agg(privilege_type, ',' ORDER BY privilege_type) AS privs
+     FROM information_schema.table_privileges
+     WHERE grantee='app_user' AND table_schema='public'
+     GROUP BY table_name ORDER BY table_name`,
+  );
+  const found = Object.fromEntries(r.rows.map((row) => [row.table_name, row.privs]));
+  const declared = APP_USER_EXPECTED_GRANTS;
+
+  // جداول خارج القائمة (سُرِّب منح)
+  const extra = Object.keys(found).filter((t) => !(t in declared));
+  if (extra.length === 0) pass(`لا جدول ممنوح خارج القائمة`);
+  else fail(`جداول ممنوحة لـapp_user خارج القائمة: ${extra.join(', ')} (يشمل leakage محتمل)`);
+
+  // جداول مُعلَنة بلا منح فعلي
+  const missing = Object.keys(declared).filter((t) => !(t in found));
+  if (missing.length === 0) pass(`كل الجداول المُعلَنة تحمل منحاً فعلياً`);
+  else fail(`جداول مُعلَنة بلا منح: ${missing.join(', ')} — منح مفقود في migration`);
+
+  // مطابقة المجموعة
+  for (const [table, expected] of Object.entries(declared)) {
+    const actual = found[table];
+    if (!actual) continue;   // مغطّاة أعلاه
+    if (actual === expected) pass(`${table}: ${actual}`);
+    else fail(`${table}: expected [${expected}]، actual [${actual}]`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  G-SEC-2 negative — اختبار وجود: منح إضافي يجب أن يُفشل الحارس
+// ══════════════════════════════════════════════════════════════════
+
+async function checkAppUserGrantsEnforcement(migrationPool) {
+  console.log(`\n▶ SEC-1 G-SEC-2 negative (L-46): منح إضافي على pgmigrations → الحارس يفشل`);
+  // نمنح app_user SELECT مؤقتاً على pgmigrations (محاكاة تسرّب)، نرى
+  // أن السكربت يرصدها، ثم نزيلها.
+  await migrationPool.query(`GRANT SELECT ON TABLE pgmigrations TO app_user`);
+  try {
+    const r = await migrationPool.query(
+      `SELECT string_agg(privilege_type, ',' ORDER BY privilege_type) AS privs
+       FROM information_schema.table_privileges
+       WHERE grantee='app_user' AND table_schema='public' AND table_name='pgmigrations'`,
+    );
+    const privs = r.rows[0]?.privs ?? null;
+    if (privs === 'SELECT') {
+      pass(`الحارس يرصد المنح المتسرّب (pgmigrations = 'SELECT' خارج القائمة)`);
+    } else {
+      fail(`اختبار الوجود: توقّعنا privs='SELECT'، وجدنا '${privs}'`);
+    }
+  } finally {
+    // تنظيف — أساسي حتى لا نترك تسرّباً حقيقياً
+    await migrationPool.query(`REVOKE ALL ON TABLE pgmigrations FROM app_user`);
+  }
+  const after = await migrationPool.query(
+    `SELECT count(*)::int AS n FROM information_schema.table_privileges
+     WHERE grantee='app_user' AND table_schema='public' AND table_name='pgmigrations'`,
+  );
+  if (after.rows[0]?.n === 0) pass(`تنظيف بعد الاختبار: pgmigrations بلا منح لـapp_user`);
+  else fail(`تنظيف فشل: pgmigrations لا يزال ممنوحاً`);
+}
+
 async function checkLoginAttemptsGrants(migrationPool) {
   console.log(`\n▶ login_attempts: صلاحيات app_user محدودة (A8+ hardening)`);
   const r = await migrationPool.query(
@@ -847,6 +941,8 @@ async function main() {
     await checkNoAppSuperuser(migrationPool);
     await checkAllTablesRlsAndForce(migrationPool);
     await checkNoRlsExceptions(migrationPool);
+    await checkAppUserGrantsMatchDeclared(migrationPool);
+    await checkAppUserGrantsEnforcement(migrationPool);
     await checkLoginAttemptsGrants(migrationPool);
     await checkAuthLookupRole(migrationPool);
     await checkFindUserByEmail(appPool);
