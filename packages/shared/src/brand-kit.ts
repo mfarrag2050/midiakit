@@ -45,6 +45,20 @@ export interface FontCaps {
 }
 
 export interface FontWeight {
+  /**
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
+   */
+  readonly assetId?: string;
   readonly url: string;
   readonly value: number;
 }
@@ -110,6 +124,20 @@ export interface BrandWatermark {
 }
 
 export interface BrandLogo {
+  /**
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
+   */
+  readonly assetId?: string;
   readonly url: string;
   readonly size: number;
   readonly margin: number;
@@ -483,6 +511,20 @@ export interface BrandOutputs {
 }
 
 export interface BrandAudioTrack {
+  /**
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
+   */
+  readonly assetId?: string;
   readonly url: string;
   readonly label: string;
   readonly licenseAck: boolean;
