@@ -46,11 +46,19 @@ export interface FontCaps {
 
 export interface FontWeight {
   /**
-   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
-   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
-   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
-   * على feat/api. لا `fetch(brand.fonts.*.url)` مسموح.
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
    */
+  readonly assetId?: string;
   readonly url: string;
   readonly value: number;
 }
@@ -117,11 +125,19 @@ export interface BrandWatermark {
 
 export interface BrandLogo {
   /**
-   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
-   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
-   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
-   * على feat/api. لا `fetch(brand.logo.url)` مسموح.
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
    */
+  readonly assetId?: string;
   readonly url: string;
   readonly size: number;
   readonly margin: number;
@@ -496,11 +512,19 @@ export interface BrandOutputs {
 
 export interface BrandAudioTrack {
   /**
-   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
-   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
-   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
-   * على feat/api. لا `fetch(brand.audio[i].url)` مسموح.
+   * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
+   * (2026-09-06): يُشار إلى أصولنا بـassetId بجانب url، لا بدلاً
+   * منه — الروابط الموقَّعة تنتهي وتتجدّد (docs/16 §9.5 refresh)،
+   * فمرجع مبنيّ على url يتعفّن؛ استبداله كلّياً يكسر عقد A12 §5.7.
+   *   موجود ⇒ الأصل مرفوع عندنا؛ url مشتقّ منه ومتغيّر، ولا يُعتمد
+   *          للمطابقة. `filter[inUse]` يطابق على assetId حصراً.
+   *   غائب  ⇒ رابط خارجي وضعه المستأجر، على مسؤوليته.
+   *
+   * `url` مسار ملفي محلّي أو رابط أصل — ليس عنوان شبكة يُجلب. أيّ
+   * جلب HTTP عليه يفتح SSRF (127.0.0.1:19041 · 169.254.169.254).
+   * محروس بـ`scripts/check-no-brand-url-fetch.mjs` على feat/api.
    */
+  readonly assetId?: string;
   readonly url: string;
   readonly label: string;
   readonly licenseAck: boolean;
