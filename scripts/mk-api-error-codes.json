@@ -18,7 +18,7 @@
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-05",
-  "mirroredFromCommit": "4965092",
+  "mirroredFromCommit": "7222b7b",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -78,6 +78,17 @@
     "REASON_REQUIRED_FOR_THIS_TRANSITION",
     "INVALID_SEGMENT_INDEX",
     "LAYER_NOT_FOUND",
+
+    "RENDER_NOT_ALLOWED_IN_CURRENT_STATE",
+    "QUOTA_EXCEEDED_VIDEOS",
+    "QUOTA_EXCEEDED_RENDERS",
+    "RATE_LIMIT_EXCEEDED",
+    "OUTPUT_NOT_READY",
+    "RENDER_RUNNING",
+    "RENDER_ALREADY_TERMINAL",
+    "UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS",
+    "BRAND_SNAPSHOT_NOT_FOUND",
+    "TEMPLATE_SNAPSHOT_NOT_FOUND",
 
     "INSUFFICIENT_ROLE",
     "BRAND_KIT_IN_USE",

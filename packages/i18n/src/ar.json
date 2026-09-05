@@ -282,6 +282,17 @@
     "INVALID_SEGMENT_INDEX": "رقم المقطع غير صحيح.",
     "LAYER_NOT_FOUND": "الطبقة المطلوبة غير موجودة في القالب.",
 
+    "RENDER_NOT_ALLOWED_IN_CURRENT_STATE": "التصدير غير مسموح في الحالة الحالية للمشروع.",
+    "QUOTA_EXCEEDED_VIDEOS": "استُنفدت حصّتك الشهرية من الفيديوهات — رقّ باقتك.",
+    "QUOTA_EXCEEDED_RENDERS": "استُنفدت حصّتك الشهرية من التصديرات — رقّ باقتك.",
+    "RATE_LIMIT_EXCEEDED": "تجاوزت حدّ المعدّل — انتظر قليلاً ثم أعد.",
+    "OUTPUT_NOT_READY": "المخرَج لم يكتمل بعد — انتظر ثم أعد.",
+    "RENDER_RUNNING": "التصدير قيد التنفيذ — لا يمكن التعديل عليه الآن.",
+    "RENDER_ALREADY_TERMINAL": "التصدير بلغ حالة نهائية — لا إجراء متاح.",
+    "UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS": "الهوية تعتمد أصولاً خارجية غير مدعومة — راجعها.",
+    "BRAND_SNAPSHOT_NOT_FOUND": "لقطة الهوية لهذا التصدير غير موجودة.",
+    "TEMPLATE_SNAPSHOT_NOT_FOUND": "لقطة القالب لهذا التصدير غير موجودة.",
+
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",
     "LAST_BRAND_KIT": "لا يمكن حذف آخر هوية.",
