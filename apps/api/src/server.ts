@@ -23,6 +23,8 @@ import refreshRoute from './routes/auth/refresh.js';
 import logoutRoute from './routes/auth/logout.js';
 import forgotPasswordRoute from './routes/auth/forgot-password.js';
 import resetPasswordRoute from './routes/auth/reset-password.js';
+import brandKitsListRoute from './routes/brand-kits/list.js';
+import brandKitsGetRoute from './routes/brand-kits/get.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -77,6 +79,11 @@ export async function buildServer() {
       await auth.register(forgotPasswordRoute);
       await auth.register(resetPasswordRoute);
     }, { prefix: '/auth' });
+
+    await v1.register(async (bk) => {
+      await bk.register(brandKitsListRoute);
+      await bk.register(brandKitsGetRoute);
+    }, { prefix: '/brand-kits' });
   }, { prefix: '/v1' });
 
   return fastify;
