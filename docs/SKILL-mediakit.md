@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `e646568` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `33ef602` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -59,26 +59,26 @@ description: |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
 | `feat/api` | `410cc33` | 117 |
-| `feat/studio` | `536d661` | 94 |
+| `feat/studio` | `1534960` | 95 |
 | `origin/aa-internal` | `ee178ca` | 1 |
 | `origin/feat/api` | `410cc33` | 117 |
-| `origin/feat/studio` | `536d661` | 94 |
+| `origin/feat/studio` | `1534960` | 95 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (14):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **main (15):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 - **feat/api (19):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:script-paths` · `check:skill-fresh` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts`
-- **feat/studio (16):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **feat/studio (17):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
 - **mk-api (feat/api):** آخر مبنيّ ✅ = `A12` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S5` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S6` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-66
-- **العدد الفريد:** 61 · **الإدخالات:** 61
+- **المدى:** L-1 → L-67
+- **العدد الفريد:** 62 · **الإدخالات:** 62
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
