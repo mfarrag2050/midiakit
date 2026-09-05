@@ -298,6 +298,92 @@ async function checkNegative(fastify, ctx) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+//  Layer 3.5 — Merge Patch semantics (A9-V بند 8 و 9)
+// ══════════════════════════════════════════════════════════════════
+
+async function checkMergePatchSemantics(fastify, ctx) {
+  console.log('\n▶ Layer 3.5 — RFC 7396 Merge Patch (null delete + array replace + read-time fill-in)');
+
+  // brand kit جديد يحمل DEFAULT_BRAND كاملاً
+  const created = await fastify.inject({
+    method: 'POST', url: '/v1/brand-kits',
+    headers: H(ctx.a.token), payload: { name: 'MergePatch Kit' },
+  });
+  const kitId = json(created).id;
+
+  // ── 8a: null-delete — RFC 7396 §1 ──────────────────────────
+  // PATCH بمفتاح قيمته null: يجب أن يحذف المفتاح، لا أن يخزّن null.
+  // (DEFAULT_BRAND.logo.size = 63)
+  const patch1 = await fastify.inject({
+    method: 'PATCH', url: `/v1/brand-kits/${kitId}`,
+    headers: H(ctx.a.token), payload: { logo: { size: null } },
+  });
+  if (patch1.statusCode !== 200) { fail(`8a PATCH null → ${patch1.statusCode}: ${patch1.body}`); return; }
+
+  const cfgAfterDelete = json(patch1)?.config;
+  const logoAfterDelete = cfgAfterDelete?.logo;
+
+  // 8a.i: المفتاح غير موجود (لا size = null)
+  if (logoAfterDelete && !('size' in logoAfterDelete)) {
+    pass('8a-i: PATCH {logo:{size:null}} يحذف size من config (لا يعيّنه null)');
+  } else if (logoAfterDelete && logoAfterDelete.size === null) {
+    fail('8a-i: size = null بدل الحذف — يخالف RFC 7396 §1');
+  } else {
+    fail(`8a-i: config.logo unexpected shape: ${JSON.stringify(logoAfterDelete)}`);
+  }
+
+  // 8a.ii: بقية مفاتيح logo (margin, position…) لم تتأثّر
+  if (logoAfterDelete && 'margin' in logoAfterDelete) {
+    pass('8a-ii: مفاتيح logo الأخرى (margin, position, …) بقيت');
+  } else {
+    fail(`8a-ii: logo فقد مفاتيح أخرى: ${JSON.stringify(logoAfterDelete)}`);
+  }
+
+  // ── 8b: قراءة بعد الحذف — الاستبدال من DEFAULT_BRAND ─────
+  // docs/03: مفتاح محذوف يُقرأ من DEFAULT_BRAND (fill-in عند القراءة)
+  const rRead = await fastify.inject({
+    method: 'GET', url: `/v1/brand-kits/${kitId}`, headers: H(ctx.a.token),
+  });
+  if (rRead.statusCode !== 200) {
+    fail(`8b GET بعد الحذف → ${rRead.statusCode}: ${rRead.body}`);
+  } else {
+    const cfgRead = json(rRead)?.config;
+    // DEFAULT_BRAND.logo.size = 63
+    if (cfgRead?.logo?.size === 63) {
+      pass('8b: قراءة بعد null-delete → logo.size = 63 من DEFAULT_BRAND (fill-in عند القراءة موجود)');
+    } else if (cfgRead?.logo?.size === undefined) {
+      fail('8b: logo.size غائب في القراءة — لا fill-in من DEFAULT_BRAND (بند 10: fill-in عند الكتابة فقط)');
+    } else {
+      fail(`8b: logo.size unexpected value: ${cfgRead?.logo?.size}`);
+    }
+    // لا خطأ يُرمى (200 = read ناجح مهما كانت المفاتيح ناقصة)
+    pass('8b: GET بعد الحذف لا يرمي خطأ (200)');
+  }
+
+  // ── 9: PATCH بمصفوفة → استبدال كامل (لا دمج عنصري) ────────
+  // DEFAULT_BRAND.colors.placeholder = ['#3A3A3A', '#1A1A1A'] (طول 2)
+  const kit2 = await fastify.inject({
+    method: 'POST', url: '/v1/brand-kits',
+    headers: H(ctx.a.token), payload: { name: 'Array Patch Kit' },
+  });
+  const kit2Id = json(kit2).id;
+
+  const patch2 = await fastify.inject({
+    method: 'PATCH', url: `/v1/brand-kits/${kit2Id}`,
+    headers: H(ctx.a.token), payload: { colors: { placeholder: ['#FF0000'] } },
+  });
+  if (patch2.statusCode !== 200) { fail(`9 PATCH array → ${patch2.statusCode}: ${patch2.body}`); return; }
+
+  const cfg2 = json(patch2)?.config;
+  const placeholder = cfg2?.colors?.placeholder;
+  if (Array.isArray(placeholder) && placeholder.length === 1 && placeholder[0] === '#FF0000') {
+    pass('9: PATCH بمصفوفة → استبدال كامل (length=1, [\"#FF0000\"]) — لا دمج عنصري (RFC 7396)');
+  } else {
+    fail(`9: expected ['#FF0000'] (length 1)، وجدنا ${JSON.stringify(placeholder)} — احتمال دمج عنصري`);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  Layer 4 — RBAC (viewer)
 // ══════════════════════════════════════════════════════════════════
 
@@ -446,6 +532,7 @@ async function main() {
     await checkExistence(fastify, ctx);
     await checkIsolation(fastify, ctx);
     await checkNegative(fastify, ctx);
+    await checkMergePatchSemantics(fastify, ctx);
     await checkRbac(fastify, ctx);
     await checkPrivileges();
     await checkPolicyDisableFails(fastify, ctx);
