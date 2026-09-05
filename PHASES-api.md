@@ -209,6 +209,21 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
   `acknowledgedDiff` → 409. المخرَج الحرفي في تقرير SYNC-β.
   **يُطلق:** S9 · S10 · S11 على mk-studio.
 
+- **SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api**
+  الدليل: projects + workflows + transitions + assign + annotations
+  + renders + revisions على `127.0.0.1:19040` (Redis
+  `127.0.0.1:6379/3` بادئة `pf-mediakit` + MinIO 19043). كل النقاط
+  تعيد الشكل الذي يعرّفه العقد (§7 · §11 · §12 · §8 · §10 · §1.5)،
+  بما في ذلك: PATCH بـIf-Match قديم → 409 STALE_UPDATE، PATCH
+  بـstate → 400 IMMUTABLE_FIELD، submit من draft → review + history
+  1، submit مرة أخرى → 409 TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE،
+  annotations CRUD كامل، POST /renders → 202 مع snapshot_ids،
+  OUTPUT_NOT_READY على queued، revisions.ops = [update, update,
+  update, insert] بعد PATCHات، restore يعيد الاسم الأصلي، DELETE
+  مشروع بلا renders → 204، DELETE مشروع له renders → 409
+  PROJECT_HAS_RENDERS. المخرَج الحرفي في تقرير SYNC-γ.
+  **يُطلق:** S12 · S13 على mk-studio.
+
 ---
 
 ## البوابات — الحالة
