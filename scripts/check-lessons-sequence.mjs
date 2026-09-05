@@ -1,12 +1,20 @@
-// scripts/check-lessons-numbering — يتحقّق أن ترقيم LESSONS.md متصل.
+// scripts/check-lessons-sequence — يتحقّق من سلامة ترقيم LESSONS.md.
+//
+// **التمييز (شُدِّد 2026-09-05 بحسب قرار المالك):**
+//   • **التكرار = فشل** (exit 1). رقم يشير إلى شيئَين ⇒ إشارة غامضة
+//     بلا أن تبدو كذلك. الاستشهاد بالرقم يصير مُلبساً. L-58 حرفياً:
+//     استثناء موثَّق داخل حارس يبقى ثغرة — «التكرار مسموح» تسامح
+//     خفيّ يُبطل قيمة الحارس.
+//   • **الفجوة = تحذير** (exit 0). رقم لا يشير إلى شيء ⇒ يُكتشف عند
+//     أوّل استشهاد فيفشل ذلك الاستشهاد وحده. الفجوات الخمس الحالية
+//     (L-37/38/39/43/44) أرقام غير مستعملة تاريخياً، غير ضارّة.
 //
 // **الشاهد التاريخي (L-52 · L-53):** L-48 أُعلن كمُنجَز في تقرير
 // «معالجة المخرجات» لكنّه لم يُسجَّل — القفزة L-47 → L-49 كشفت الفجوة
-// بعد أسبوع. الفجوة في الترقيم مؤشر آلي على عمل أُعلن ولم يُنفَّذ
-// (على الأقلّ توثيقياً).
+// بعد أسبوع.
 //
-// **الاستخدام:** `node scripts/check-lessons-numbering.mjs`
-// **الخروج:** 0 عند الاتّصال، 1 عند فجوة.
+// **الاستخدام:** `node scripts/check-lessons-sequence.mjs`
+// **الخروج:** 0 عند غياب التكرار (فجوات مسموحة كتحذير) · 1 عند تكرار.
 
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -25,12 +33,10 @@ while ((match = HEADER_RE.exec(content)) !== null) {
 }
 
 if (numbers.length === 0) {
-  console.error('[check-lessons-numbering] ✗ لم يُوجَد أيّ درس (## L-N) في LESSONS.md');
+  console.error('[check-lessons-sequence] ✗ لم يُوجَد أيّ درس (## L-N) في LESSONS.md');
   process.exit(1);
 }
 
-// نُوحّد التسلسل — قد تظهر نسختان بنفس الرقم (تحرير مكرَّر يستحق مراجعة
-// لكن ليس فجوة).
 const unique = [...new Set(numbers)].sort((a, b) => a - b);
 const min = unique[0];
 const max = unique[unique.length - 1];
@@ -38,23 +44,23 @@ const expected = Array.from({ length: max - min + 1 }, (_, i) => min + i);
 const missing = expected.filter((n) => !unique.includes(n));
 const duplicates = numbers.filter((n, i) => numbers.indexOf(n) !== i);
 
-console.log(`[check-lessons-numbering] دروس مكتشفة: ${numbers.length} إدخال · ${unique.length} رقم فريد`);
+console.log(`[check-lessons-sequence] دروس مكتشفة: ${numbers.length} إدخال · ${unique.length} رقم فريد`);
 console.log(`   المدى: L-${min} → L-${max}`);
 
-let failed = 0;
+// الفجوة = تحذير
 if (missing.length > 0) {
-  console.error(`   ✗ فجوات في الترقيم (${missing.length}): ${missing.map((n) => `L-${n}`).join(', ')}`);
-  console.error(`     المعنى المرجَّح (L-52 · L-53): عمل أُعلن كمُنجَز لكن لم يُوثَّق.`);
-  failed++;
-}
-if (duplicates.length > 0) {
-  const uniqDupes = [...new Set(duplicates)];
-  console.warn(`   ⚠ أرقام مكرَّرة (${uniqDupes.length}): ${uniqDupes.map((n) => `L-${n}`).join(', ')}`);
-  console.warn(`     التكرار مسموح (تحرير عبر جولات) لكن يستحق دمجاً.`);
+  console.warn(`   ⚠ فجوات في الترقيم (${missing.length}): ${missing.map((n) => `L-${n}`).join(', ')}`);
+  console.warn(`     أرقام غير مستعملة — تحذير لا فشل. تُكتشف عند أوّل استشهاد.`);
 }
 
-if (failed === 0 && missing.length === 0) {
-  console.log(`   ✓ ترقيم متّصل بلا فجوات.`);
-  process.exit(0);
+// التكرار = فشل بنيوي
+if (duplicates.length > 0) {
+  const uniqDupes = [...new Set(duplicates)];
+  console.error(`   ✗ أرقام مكرَّرة (${uniqDupes.length}): ${uniqDupes.map((n) => `L-${n}`).join(', ')}`);
+  console.error(`     رقم يشير إلى درسَين ⇒ إشارة غامضة. افصلهما إلى رقمَين مختلفَين.`);
+  console.error(`     راجع docs/LESSONS.md § الدرسان المذكوران، وحدّد أيّهما يحتفظ بالرقم.`);
+  process.exit(1);
 }
-process.exit(1);
+
+console.log(`   ✓ لا تكرار — الترقيم سليم بنيوياً.`);
+process.exit(0);
