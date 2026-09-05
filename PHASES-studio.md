@@ -607,3 +607,78 @@ enumeration فيها يعدّ 31 (Auth 12 + Rate 1 + Tenants 1 + Brand Kits 12
 أيّ رمز يُضاف/يُحذف على mk-api يظهر عند أوّل `pnpm test`. `git fetch
 origin feat/api` قبل التشغيل شرط عملي (يُذكر في رسالة الخطأ عند
 غياب المرجع).
+
+## S8 — منتقي الأصول 🟡 (جزئي · divergences تُعلَن)
+
+**التسليم (2026-09-06 · مقابل A11 + A11-STORAGE على mk-api ·
+`c752b23`):**
+
+- `packages/i18n` كُبرت للأكواد الأحد عشر الجديدة من A11 (المرآة
+  38 → 48 مطابقة لـerrors.ts على mk-api).
+- `apps/studio/src/api/uploader.ts` — وحدة رفع مفصولة عن client.ts:
+  PUT مباشر إلى signed URL بلا Bearer، بلا refresh، XHR لدعم
+  onprogress. تفشل بأكواد مُعلَنة (`SIZE_TOO_LARGE`, `URL_EXPIRED`,
+  `NETWORK_ERROR`, `UPLOAD_FAILED`, `UPLOAD_ABORTED`) بدل رسائل خام.
+  Client-side size check قبل بدء الرفع.
+- `apps/studio/app/(app)/assets/page.tsx` — منتقي كامل: رفع بحالة
+  تقدّم، تبويبات فلترة `filter[kind]`، جدول، حذف بحوار تأكيد،
+  إقرار SVG-with-text.
+- `src/api/endpoints/assets.ts` أُعيد تشكيله للعقد الحالي.
+- `src/api/mock.ts` امتدّ ليحاكي 6 نقاط `/v1/assets/*` بمخزن
+  in-memory، مع مُشغِّلات نصّية للأخطاء وتحذير SVG.
+
+**تحقّق §0 (مقابل mk-api الحقيقي — إعلان بلا إصلاح):**
+
+Divergences جديدة بين docs/16 §9 والسلوك الفعلي:
+
+7. **`GET /v1/assets` response شكل:** يعيد `{items, nextCursor}`.
+   docs/16 §1.5 (نمط pagination الموحّد) و client.ts's `requestPage`
+   يتوقّعان `{data, nextCursor, hasMore}`. **الأثر:** UI لا يعرض
+   القائمة (page.data undefined → TypeError → banner NETWORK_ERROR).
+   الرفع يعمل بالكامل خادم-جانب (curl يؤكّد 2 assets في القاعدة
+   ومك-api log يُظهر sequence كامل)، فقط عرض القائمة معطَّل.
+
+8. **Asset row shape:** الحقول الحقيقية `sizeBytes, contentType,
+   updatedAt, finalizedAt, faces, warnings` (بعضها ليس في docs/16
+   §9.2). `warnings: null` بدل `undefined` عند غياب التحذيرات.
+
+**اللقطات الأربع في `demo/studio/`:**
+
+- `s8-upload-real-success.png` — بعد رفع `demo-avatar.png` (4 KB
+  PNG) عبر real mk-api + MinIO. الرفع نجح (mk-api log يؤكّد
+  `POST /v1/assets/upload-url` 200 · `POST /v1/assets/:id/finalize`
+  200، ووجود الأصل في قاعدة البيانات بـcurl). لكن UI لا يعرضه في
+  الجدول بسبب divergence #7 — البانر الأحمر يعرض «تعذّر الوصول
+  إلى الخدمة» مترجم من client-side TypeError. **جزئي.**
+- `s8-svg-warning.png` — الرفع لملف `text-in-svg.svg` (75 B، SVG
+  بنصّ). mk-api يعيد 400 `INVALID_SVG_WITH_TEXT_WARNING`. UI يعرض
+  تنبيه أصفر بعنوان «تحذير SVG» ونصّ توضيحي عربي كامل + زرّ «أقرّ
+  وأكمل» ذهبي. **G-S8-4 ✓ نظيف.**
+- `s8-svg-warning-acknowledged.png` — بعد الضغط على «أقرّ وأكمل»،
+  UI أعاد `finalize` بـ`acknowledgedWarnings: ['SVG_HAS_TEXT']`،
+  الخادم عاد 200، النموذج فُرّغ. البانر السفلي هو نفس list-error
+  من divergence #7.
+- `s8-size-too-large.png` — رفع `huge.png` بحجم 501 MB. mk-api يعيد
+  413 `SIZE_TOO_LARGE` من `/v1/assets/upload-url`. UI يعرض «الملف
+  أكبر من الحدّ المسموح.» **مترجَم لا خام. G-S8-5 ✓ نظيف.**
+
+**بوابات:**
+- **G-S8-1** typecheck ✓
+- **G-S8-2** الفحوص الخمسة ✓ (بما فيها error-code-coverage بعد
+  إضافة الأحد عشر — الحارس L-63 عمل قبل أيّ ربط)
+- **G-S8-3** رفع حقيقي: **جزئي** — العملية تنجح خادم-جانب
+  (evidence: mk-api log + curl على /v1/assets يعرض الأصلين)،
+  لكن UI list معطَّل بـdivergence #7. `s8-upload-real-success.png`
+  يوثّق الحال.
+- **G-S8-4** SVG warning ✓ نظيف
+- **G-S8-5** خطأ حقيقي (SIZE_TOO_LARGE) مترجَم ✓ نظيف
+- **G-S8-6** المبدِّل قائم — mock/real
+- **G-S8-7** diff داخل النطاق ✓
+
+**قرار مؤجَّل:** divergence #7 (list response shape) يحتاج
+- **A** — mk-api يعيد `{data, nextCursor, hasMore}` (يطابق §1.5)، أو
+- **B** — mk-studio يعدّل `requestPage` ليقبل `items` كبديل، أو
+- **C** — docs/16 §9.3 يوثّق شكل `items` كاستثناء موصوف.
+
+**SYNC-β لم تفتح:** S9 · S10 (Brand Kits) · S11 (Templates) محجوبة
+على A12 + A13. A13 لم تبدأ.

@@ -64,7 +64,42 @@
       "title": "Assets",
       "subtitle": "خطوط، شعارات، صور، ملفات صوتية، Lottie، SVG.",
       "empty": "No assets uploaded",
-      "emptyBody": "الرفع يمرّ برابط موقَّت من الخدمة (docs/16 §9)."
+      "emptyBody": "الرفع يمرّ برابط موقَّت من الخدمة (docs/16 §9).",
+      "upload": "Upload asset",
+      "chooseFile": "اختر ملفاً",
+      "uploading": "جارٍ الرفع…",
+      "finalize": "Finalize",
+      "delete": "Delete",
+      "confirmDelete": "Confirm asset deletion",
+      "confirmDeleteBody": "الحذف نهائي. الأصول المستعمَلة في هويات لا يمكن حذفها.",
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "font": "Font",
+        "logo": "Logo",
+        "image": "Image",
+        "audio": "Audio",
+        "video": "Video",
+        "lottie": "Lottie",
+        "svg": "SVG"
+      },
+      "col": {
+        "filename": "Filename",
+        "kind": "Kind",
+        "size": "Size",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "svgWarn": {
+        "title": "SVG warning",
+        "body": "الملف يحوي نصّاً غير محوَّل إلى مسارات — سيُحذف عند بعض المحرّكات. أقرّ للمتابعة.",
+        "acknowledge": "Acknowledge & continue"
+      },
+      "licenseAck": {
+        "title": "License acknowledgement",
+        "body": "الخطوط وملفات Lottie تحتاج إقراراً بأنك تملك حقّ استعمالها.",
+        "checkbox": "I acknowledge the license."
+      }
     },
     "renders": {
       "title": "Renders",
@@ -126,6 +161,9 @@
     "UNKNOWN": "حدث خطأ غير متوقّع.",
     "UNAUTHENTICATED": "انتهت جلستك. سجّل الدخول من جديد.",
     "NETWORK_ERROR": "تعذّر الوصول إلى الخدمة.",
+    "URL_EXPIRED": "انتهت صلاحية رابط الرفع — إعادة المحاولة ستطلب رابطاً جديداً.",
+    "UPLOAD_FAILED": "فشل الرفع — أعد المحاولة.",
+    "UPLOAD_ABORTED": "أُلغي الرفع.",
 
     "INVALID_CREDENTIALS": "بريد أو كلمة سر خاطئة.",
     "ACCOUNT_DISABLED": "الحساب متوقّف — راسل الدعم.",
@@ -150,6 +188,18 @@
     "LAST_OWNER": "لا يمكن حذف آخر مالك في الوكالة.",
     "REASON_TOO_SHORT": "السبب قصير — 10 أحرف على الأقل.",
     "ACCOUNT_SUSPENDED": "الحساب موقوف — راسل الدعم.",
+
+    "UNSUPPORTED_KIND": "نوع الأصل غير مدعوم.",
+    "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "نوع الملف لا يطابق نوع الأصل.",
+    "SIZE_TOO_LARGE": "الملف أكبر من الحدّ المسموح.",
+    "STORAGE_QUOTA_EXCEEDED": "استنفدت مساحة التخزين — احذف أصولاً أو رقّ باقتك.",
+    "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
+    "INVALID_FONT_FILE": "ملف الخط غير صالح.",
+    "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
+    "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
+    "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
+    "INVALID_KIND_VALUE": "قيمة نوع الأصل غير معروفة.",
+    "ASSET_IN_USE_BY_BRAND_KIT": "الأصل مستعمَل في هوية — أزل المرجع أولاً.",
 
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",

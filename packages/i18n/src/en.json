@@ -63,7 +63,42 @@
       "title": "Assets",
       "subtitle": "Fonts, logos, images, audio, Lottie, SVG.",
       "empty": "No assets uploaded",
-      "emptyBody": "Uploads go through a signed URL from the API (docs/16 §9)."
+      "emptyBody": "Uploads go through a signed URL from the API (docs/16 §9).",
+      "upload": "Upload asset",
+      "chooseFile": "Choose a file",
+      "uploading": "Uploading…",
+      "finalize": "Finalize",
+      "delete": "Delete",
+      "confirmDelete": "Confirm asset deletion",
+      "confirmDeleteBody": "Deletion is permanent. Assets in use by brand kits can't be deleted.",
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "font": "Font",
+        "logo": "Logo",
+        "image": "Image",
+        "audio": "Audio",
+        "video": "Video",
+        "lottie": "Lottie",
+        "svg": "SVG"
+      },
+      "col": {
+        "filename": "Filename",
+        "kind": "Kind",
+        "size": "Size",
+        "created": "Created",
+        "actions": "Actions"
+      },
+      "svgWarn": {
+        "title": "SVG warning",
+        "body": "The file contains text not converted to paths — some renderers will drop it. Acknowledge to continue.",
+        "acknowledge": "Acknowledge & continue"
+      },
+      "licenseAck": {
+        "title": "License acknowledgement",
+        "body": "Fonts and Lottie files require acknowledging you have the right to use them.",
+        "checkbox": "I acknowledge the license."
+      }
     },
     "renders": {
       "title": "Renders",
@@ -125,6 +160,9 @@
     "UNKNOWN": "Something went wrong.",
     "UNAUTHENTICATED": "Your session expired. Please sign in again.",
     "NETWORK_ERROR": "Can't reach the service.",
+    "URL_EXPIRED": "Upload URL expired — retry will request a fresh one.",
+    "UPLOAD_FAILED": "Upload failed — try again.",
+    "UPLOAD_ABORTED": "Upload cancelled.",
 
     "INVALID_CREDENTIALS": "Wrong email or password.",
     "ACCOUNT_DISABLED": "Account is disabled — contact support.",
@@ -149,6 +187,18 @@
     "LAST_OWNER": "Can't remove the agency's last owner.",
     "REASON_TOO_SHORT": "Reason is too short — 10 characters minimum.",
     "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+
+    "UNSUPPORTED_KIND": "Asset kind not supported.",
+    "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "File type doesn't match the asset kind.",
+    "SIZE_TOO_LARGE": "File is larger than the allowed limit.",
+    "STORAGE_QUOTA_EXCEEDED": "Storage quota exhausted — delete assets or upgrade your plan.",
+    "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
+    "INVALID_FONT_FILE": "Font file is invalid.",
+    "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
+    "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
+    "INVALID_FILTER_FIELD": "Unknown filter field.",
+    "INVALID_KIND_VALUE": "Unknown asset kind value.",
+    "ASSET_IN_USE_BY_BRAND_KIT": "Asset is referenced by a brand kit — remove the reference first.",
 
     "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
     "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",

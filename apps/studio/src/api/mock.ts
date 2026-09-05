@@ -77,6 +77,35 @@ async function delay(ms: number): Promise<void> {
 
 /** يستلم path + method + body ويعيد نتيجة mock أو يرمي ApiError.
  *  يُستدعى فقط حين `isMockEnabled()`. */
+// In-memory store لأصول mock — كي تظهر في القائمة بعد الرفع الوهمي.
+interface MockAsset {
+  id: string;
+  kind: string;
+  filename: string;
+  sizeBytes: number;
+  createdAt: string;
+  licenseAck?: boolean;
+  meta?: Record<string, unknown>;
+}
+const MOCK_ASSETS = new Map<string, MockAsset>();
+
+function mockAssetShape(a: MockAsset, withPublicUrl: boolean): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    id: a.id,
+    kind: a.kind,
+    filename: a.filename,
+    sizeBytes: a.sizeBytes,
+    createdAt: a.createdAt,
+    ...(a.licenseAck !== undefined ? { licenseAck: a.licenseAck } : {}),
+    ...(a.meta ? { meta: a.meta } : {}),
+  };
+  if (withPublicUrl) {
+    base.publicUrl = `mock://public/${a.id}`;
+    base.publicUrlExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  }
+  return base;
+}
+
 export async function handleMock(
   method: string,
   path: string,
@@ -87,6 +116,65 @@ export async function handleMock(
 
   const key = `${method} ${path}`;
   const b = (body ?? {}) as Record<string, unknown>;
+
+  // ── Assets (§9): مسارات ديناميكية تُعالَج قبل switch. ─────────
+  // POST /v1/assets/:id/finalize
+  const finalizeMatch = /^POST \/v1\/assets\/([^/]+)\/finalize$/.exec(key);
+  if (finalizeMatch) {
+    const id = finalizeMatch[1] ?? '';
+    const asset = MOCK_ASSETS.get(id);
+    if (!asset) err(404, 'UPLOAD_NOT_COMPLETED');
+    const filename = asset.filename;
+    // مُشغِّل SVG_HAS_TEXT: filename ينتهي بـ.svg و اسمه يحوي 'text'.
+    const ack = Array.isArray(b.acknowledgedWarnings)
+      ? (b.acknowledgedWarnings as string[])
+      : [];
+    if (filename.endsWith('.svg') && filename.includes('text') && !ack.includes('SVG_HAS_TEXT')) {
+      err(400, 'INVALID_SVG_WITH_TEXT_WARNING');
+    }
+    // license ack إلزامي للخطوط و lottie.
+    if (asset.kind === 'font' || asset.kind === 'lottie') {
+      if (b.licenseAck !== true) err(422, 'LICENSE_ACK_MUST_BE_TRUE', 'licenseAck');
+    }
+    asset.licenseAck = b.licenseAck === true;
+    asset.meta = (b.meta as Record<string, unknown>) ?? asset.meta ?? {};
+    const shape = mockAssetShape(asset, true);
+    if (filename.endsWith('.svg') && filename.includes('text')) {
+      shape.warnings = [
+        { code: 'SVG_HAS_TEXT', message: 'errors.INVALID_SVG_WITH_TEXT_WARNING' },
+      ];
+    }
+    return ok(200, shape);
+  }
+
+  // POST /v1/assets/:id/refresh-url
+  const refreshUrlMatch = /^POST \/v1\/assets\/([^/]+)\/refresh-url$/.exec(key);
+  if (refreshUrlMatch) {
+    const id = refreshUrlMatch[1] ?? '';
+    if (!MOCK_ASSETS.has(id)) err(404, 'NOT_FOUND');
+    return ok(200, {
+      publicUrl: `mock://public/${id}?ts=${Date.now()}`,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    });
+  }
+
+  // GET /v1/assets/:id
+  const getMatch = /^GET \/v1\/assets\/([^/]+)$/.exec(key);
+  if (getMatch) {
+    const id = getMatch[1] ?? '';
+    const a = MOCK_ASSETS.get(id);
+    if (!a) err(404, 'NOT_FOUND');
+    return ok(200, mockAssetShape(a, true));
+  }
+
+  // DELETE /v1/assets/:id
+  const deleteMatch = /^DELETE \/v1\/assets\/([^/]+)$/.exec(key);
+  if (deleteMatch) {
+    const id = deleteMatch[1] ?? '';
+    if (!MOCK_ASSETS.has(id)) err(404, 'NOT_FOUND');
+    MOCK_ASSETS.delete(id);
+    return ok(204);
+  }
 
   switch (key) {
     case 'POST /v1/auth/signup': {
@@ -147,6 +235,51 @@ export async function handleMock(
     case 'POST /v1/auth/forgot-password': {
       // دائماً 204 — لا كشف وجود البريد.
       return ok(204);
+    }
+
+    // ── Assets (§9) ────────────────────────────────────────────
+    case 'POST /v1/assets/upload-url': {
+      const kind = String(b.kind ?? '');
+      const filename = String(b.filename ?? '');
+      const contentType = String(b.contentType ?? '');
+      const sizeBytes = Number(b.sizeBytes ?? 0);
+      const KINDS = ['font', 'logo', 'image', 'audio', 'video', 'lottie', 'svg'];
+      if (!KINDS.includes(kind)) err(400, 'UNSUPPORTED_KIND', 'kind');
+      // مطابقة تقريبية kind→contentType كي يُختبر UNSUPPORTED_CONTENT_TYPE_FOR_KIND.
+      const kindPrefix: Record<string, string> = {
+        image: 'image/', audio: 'audio/', video: 'video/',
+        font: 'font/', logo: 'image/', svg: 'image/svg',
+        lottie: 'application/json',
+      };
+      const wantPrefix = kindPrefix[kind] ?? '';
+      if (wantPrefix && !contentType.startsWith(wantPrefix)) {
+        err(400, 'UNSUPPORTED_CONTENT_TYPE_FOR_KIND', 'contentType');
+      }
+      if (filename === 'quota.png') err(422, 'STORAGE_QUOTA_EXCEEDED');
+      if (sizeBytes > 500 * 1024 * 1024) err(413, 'SIZE_TOO_LARGE', 'sizeBytes');
+      const assetId = `ast_mock_${Date.now().toString(36)}`;
+      MOCK_ASSETS.set(assetId, {
+        id: assetId,
+        kind,
+        filename,
+        sizeBytes,
+        createdAt: new Date().toISOString(),
+      });
+      return ok(200, {
+        assetId,
+        uploadUrl: `mock://upload/${assetId}`,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        maxSizeBytes: 500 * 1024 * 1024,
+      });
+    }
+
+    case 'GET /v1/assets': {
+      // فلاتر مبسّطة — بعض المفاتيح تصل عبر query لا body، لكن mock
+      // handleMock لا يفكّها. المرآة كافية لعرض القائمة.
+      const rows = [...MOCK_ASSETS.values()]
+        .sort((a, z) => (z.createdAt > a.createdAt ? 1 : -1))
+        .map((a) => mockAssetShape(a, false));
+      return ok(200, { data: rows, nextCursor: null, hasMore: false });
     }
 
     case 'POST /v1/auth/reset-password': {

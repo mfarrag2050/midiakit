@@ -18,7 +18,7 @@
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-05",
-  "mirroredFromCommit": "c11371a",
+  "mirroredFromCommit": "c752b23",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -43,6 +43,18 @@
     "LAST_OWNER",
     "REASON_TOO_SHORT",
     "ACCOUNT_SUSPENDED",
+
+    "UNSUPPORTED_KIND",
+    "UNSUPPORTED_CONTENT_TYPE_FOR_KIND",
+    "SIZE_TOO_LARGE",
+    "STORAGE_QUOTA_EXCEEDED",
+    "UPLOAD_NOT_COMPLETED",
+    "INVALID_FONT_FILE",
+    "INVALID_LOTTIE_SCHEMA",
+    "INVALID_SVG_WITH_TEXT_WARNING",
+    "INVALID_FILTER_FIELD",
+    "INVALID_KIND_VALUE",
+    "ASSET_IN_USE_BY_BRAND_KIT",
 
     "INSUFFICIENT_ROLE",
     "BRAND_KIT_IN_USE",
@@ -69,6 +81,13 @@
   },
   "clientOnlyCodes": {
     "$note": "Not from mk-api — UI-side fallbacks. Excluded from mirror-vs-errors.ts diff, but must exist in dictionaries.",
-    "codes": ["UNKNOWN", "UNAUTHENTICATED", "NETWORK_ERROR"]
+    "codes": [
+      "UNKNOWN",
+      "UNAUTHENTICATED",
+      "NETWORK_ERROR",
+      "URL_EXPIRED",
+      "UPLOAD_FAILED",
+      "UPLOAD_ABORTED"
+    ]
   }
 }
