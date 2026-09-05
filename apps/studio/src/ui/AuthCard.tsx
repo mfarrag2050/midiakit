@@ -60,14 +60,14 @@ function clientValidate(
   for (const f of fields) {
     const v = (values[f.name] ?? '').trim();
     if (f.required && !v) {
-      // مفتاح مطابق لأخطاء الخادم كي تعمل نفس الترجمة.
+      // مفاتيح مطابقة لأكواد mk-api الرسمية (بعد 410cc33).
       if (f.name === 'tenantName') errs[f.name] = 'errors.TENANT_NAME_EMPTY';
-      else if (f.name === 'email') errs[f.name] = 'errors.INVALID_EMAIL';
-      else errs[f.name] = 'errors.FIELD_REQUIRED';
+      else if (f.name === 'email') errs[f.name] = 'errors.EMAIL_INVALID';
+      else errs[f.name] = 'errors.VALIDATION_FAILED';
       continue;
     }
     if (f.emailFormat && v && !EMAIL_RE.test(v)) {
-      errs[f.name] = 'errors.INVALID_EMAIL';
+      errs[f.name] = 'errors.EMAIL_INVALID';
       continue;
     }
     if (f.minLength && v.length > 0 && v.length < f.minLength) {

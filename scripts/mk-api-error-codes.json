@@ -1,0 +1,56 @@
+{
+  "$comment": [
+    "Canonical list of mk-api error codes, mirrored from",
+    "apps/api/src/errors.ts (mk-api · 410cc33 · 2026-09-05).",
+    "check-error-code-coverage.mjs verifies each code has an",
+    "'errors.CODE' entry in every studio i18n dictionary.",
+    "",
+    "Update rule: when mk-api adds/renames/removes a code, mirror",
+    "here in the same commit that reflects mk-api's change on the",
+    "studio side. Never diverge silently — the check fails on any",
+    "gap in either direction."
+  ],
+  "source": "apps/api/src/errors.ts @ mk-api feat/api",
+  "mirroredAt": "2026-09-05",
+  "codes": [
+    "INVALID_CREDENTIALS",
+    "ACCOUNT_DISABLED",
+    "TOKEN_EXPIRED",
+    "TOKEN_INVALID",
+    "SESSION_REVOKED",
+    "REFRESH_TOKEN_INVALID",
+    "PASSWORD_TOO_WEAK",
+    "EMAIL_INVALID",
+    "EMAIL_TAKEN",
+    "RESET_TOKEN_EXPIRED",
+    "RESET_TOKEN_USED",
+    "RESET_TOKEN_INVALID",
+
+    "TOO_MANY_ATTEMPTS",
+
+    "TENANT_NAME_EMPTY",
+
+    "INSUFFICIENT_ROLE",
+    "BRAND_KIT_IN_USE",
+    "LAST_BRAND_KIT",
+    "IMMUTABLE_FIELD",
+    "LICENSE_ACK_MUST_BE_TRUE",
+    "LICENSE_ACK_REQUIRED",
+    "FONT_NOT_UPLOADED",
+    "UNKNOWN_PLATFORM",
+    "LOGO_MODE_NOT_OFFICIAL",
+    "INVALID_VERSION_FORMAT",
+    "VERSION_NOT_AVAILABLE",
+    "DIFF_NOT_ACKNOWLEDGED",
+
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "NOT_FOUND",
+    "VALIDATION_FAILED",
+    "INTERNAL_ERROR"
+  ],
+  "clientOnlyCodes": {
+    "$note": "Not from mk-api — UI-side fallbacks. Excluded from coverage guard but must exist in dictionaries.",
+    "codes": ["UNKNOWN", "UNAUTHENTICATED", "NETWORK_ERROR"]
+  }
+}

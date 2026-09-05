@@ -6,25 +6,23 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale, LocaleSwitcher } from '@pf-mediakit/i18n';
 import {
-  ApiError,
   clearSession,
   clearSessionInfo,
   getAccessToken,
   getSessionTenant,
   getSessionUser,
-  setSessionInfo,
-  tenants,
   type Tenant,
   type User,
 } from '@/src/api';
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول.
 //
-// **S7:** يعرض اسم المستأجر والمستخدم من الجلسة المخزَّنة (localStorage
-// بعد login/signup). يستدعي `GET /v1/tenant` عند mount ليضمن أن الجلسة
-// ما زالت صالحة وليُحدّث المعلومات — هذا الاستدعاء يمرّ عبر `client.ts`
-// الذي يفعّل single-flight refresh على 401 (منذ S1). إن فشل التجديد،
-// يمسح الجلسة ويحوّل إلى /login.
+// **S7 (بعد S6-FIX):** يقرأ tenant.name و user.email من الجلسة المخزَّنة
+// (localStorage بعد login/signup). login response صار يحمل
+// `tenant.{id,name,plan}` كاملاً بعد `410cc33` — الاستدعاء الإضافي
+// `GET /v1/tenant` عند mount **حُذف** (كان يعوّض عن نقص كان
+// مؤقّتاً في الاستجابة الأصلية).
+// **الحماية:** بلا access token = تحويل إلى `/login` مباشرةً.
 
 interface NavItem {
   readonly href: string;
@@ -54,27 +52,9 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
       router.replace('/login');
       return;
     }
-
-    // اقرأ ما هو مخزَّن (عرض سريع)، ثم حدّث من الخادم.
+    // اقرأ ما هو مخزَّن من login/signup — يحوي name + plan منذ 410cc33.
     setUser(getSessionUser());
     setTenant(getSessionTenant());
-
-    void (async () => {
-      try {
-        const fresh = await tenants.get();
-        setTenant(fresh);
-        const cachedUser = getSessionUser();
-        if (cachedUser) setSessionInfo(cachedUser, fresh);
-      } catch (err) {
-        // 401 بعد فشل refresh = جلسة منتهية نهائياً.
-        if (err instanceof ApiError && err.status === 401) {
-          clearSession();
-          clearSessionInfo();
-          router.replace('/login');
-        }
-        // أخطاء أخرى (شبكة، 500) — نحتفظ بالمخزَّن ونصمت.
-      }
-    })();
   }, [router]);
 
   const displayTenantName = tenant?.name ?? t('nav.user.placeholder');

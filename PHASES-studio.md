@@ -465,3 +465,96 @@ G-S6-7 diff داخل النطاق ✓.
 - **B** — mk-studio يعدّل client.ts + i18n dictionaries + AppShell
   ليتوافق مع الشكل الحالي.
 - **C** — كلاهما (docs/16 يُحدَّث ليطابق الواقع الجديد).
+
+## S6-FIX — محاذاة الـmock وإعادة اختبار التجديد ✅
+
+**التسليم (2026-09-05 · بعد A8-FIX من مسار A · `410cc33`):** mk-api
+صحّح 4 من 6 divergences (رقم 3، 5 جزئياً، 6). محاذاة الـmock هنا
+لتطابق الأسماء الحقيقية، إعادة اختبار refresh flow (سقط سابقاً)،
+تغطية القواميس لكل رمز.
+
+**تحقّق §0:**
+- `POST /v1/auth/refresh` صار مفروشاً: `{accessToken, refreshToken,
+  expiresIn}` بلا `session:` — يطابق docs/16 §2.3 وتوقّع client.ts.
+- `POST /v1/auth/login` `tenant` صار كاملاً: `{id, name, plan}`.
+- `error.message` صار مفتاح i18n كاملاً: `errors.INVALID_CREDENTIALS`
+  بدل `INVALID_CREDENTIALS` الخام.
+- `POST /v1/auth/login` `user` = `{id, role}` فقط (لا email). **الفرق
+  مع signup مقصود في العقد — signup يعيد `{id, email, role}` لأن
+  المستخدم أنشأ الحساب لتوّه ويحتاج التأكيد.** لا يُعامَل انحرافاً.
+
+**محاذاة الـmock:**
+- `src/api/mock.ts` مُعاد كتابته بأسماء mk-api الحرفية (32 رمزاً في
+  `apps/api/src/errors.ts`):
+  - `INVALID_EMAIL` → `EMAIL_INVALID`
+  - `ACCOUNT_SUSPENDED` → `ACCOUNT_DISABLED`
+  - `INVALID_RESET_TOKEN` → `RESET_TOKEN_INVALID` (+ إضافة
+    `RESET_TOKEN_EXPIRED`, `RESET_TOKEN_USED`)
+  - `RATE_LIMITED` → `TOO_MANY_ATTEMPTS`
+  - `TOKEN_EXPIRED` احتفظ (mk-api يستعمله للـaccess token المنتهي).
+  - إضافة `POST /v1/auth/refresh` mock (شكل مفروش).
+  - إضافة `DELETE /v1/auth/logout` mock (204).
+- `mock.err()` يبني `messageKey = 'errors.${code}'` تلقائياً —
+  يبرهن أن أيّ كود جديد يُترجم بلا نسيان بادئة.
+- `AuthCard.clientValidate` كذلك — استعمال `EMAIL_INVALID` و
+  `VALIDATION_FAILED` بدل الأسماء القديمة.
+
+**تغطية القواميس (G-S6-9):**
+- `scripts/mk-api-error-codes.json` مرآة يدوية معلَنة لـ32 رمزاً من
+  mk-api + 3 UI-only fallback (`UNKNOWN`, `UNAUTHENTICATED`,
+  `NETWORK_ERROR`). **31 رمزاً بحسب العدّ الفعلي من التذكرة، لا 32
+  المذكورة في الملخص** — انحراف صغير معلَن.
+- `scripts/check-error-code-coverage.mjs` (فحص جديد، مربوط في
+  `package.json → test`): كل رمز mk-api يجب أن يحمل مفتاحاً
+  `errors.<CODE>` في القواميس الثلاثة، ولا زوائد. اختيار الفحص
+  الآلي على المراجعة اليدوية معلَن — سيلتقط أيّ انحراف مستقبلي
+  ثانية.
+- كل الثلاث دكاشن الآن يحمل 34 مفتاحاً في `errors.*` (31 mk-api +
+  3 UI-only).
+
+**سلسلة البادئة (لا double-prefix):**
+- `errors.ts:98`: `messageKey: e.message` — نسخ حرفي، لا إضافة.
+- `AuthCard:119`: `setTopErrorKey(err.messageKey)` — تمرير حرفي.
+- `Alert`: `t(titleKey)` — بحث مباشر.
+- **الخادم يرسل `errors.INVALID_CREDENTIALS`**، الواجهة تبحثه كما هو،
+  القاموس يعيد النصّ المترجم. صفر تعديل على المفتاح في الطريق.
+
+**AppShell (G-S6-10):**
+- `useEffect` بعد S6-FIX: قراءة session من localStorage فقط. لا
+  `GET /v1/tenant` عند mount (كان يعوّض نقص المعلومات في login
+  response الأصلي — بعد A8-FIX لم يعد لازماً).
+- grep على `tenants` في `AppShell.tsx`: مطابقة واحدة في **تعليق**
+  يفسّر الحذف. لا استيراد ولا استدعاء.
+
+**اختبار refresh (G-S6-5 المُعاد):**
+- CDP flow: login → corrupt access token → استدعاء
+  `GET /v1/tenant` مع bearer فاسد.
+- **sequence مُثبَت من mk-api log:**
+  ```
+  POST /v1/auth/login       200
+  GET  /v1/tenant           401  (bearer فاسد)
+  POST /v1/auth/refresh     200  (شكل مفروش)
+  GET  /v1/tenant           200  (bearer جديد)
+  ```
+- CDP eval نتيجة: `{initial401: 401, refresh: 200, newAccessOk: true,
+  retryStatus: 200, passed: true}`.
+- لقطة `s6fix-refresh-evidence.png` تُظهر المستخدم على `/projects`
+  بعد إعادة التحميل — لم يُرمَ إلى `/login`.
+
+**اللقطات الجديدة:**
+- `s6fix-login-real-401-translated.png` — banner أحمر بنصّ عربي
+  «بريد أو كلمة سر خاطئة.» (مترجَم لا خام). G-S6-8 ✓.
+- `s6fix-login-real-success.png` — `Studio Demo Agency` في الرأس
+  فوراً من login response (لا GET /v1/tenant تكميلي).
+- `s6fix-refresh-evidence.png` — post-refresh، المستخدم على /projects.
+
+**بوابات:** G-S6-1 typecheck ✓ · G-S6-2 الفحوص الأربعة + الخامس
+الجديد ✓ · G-S6-5 refresh يعمل (log + CDP) ✓ · G-S6-8 401 مترجَم ✓ ·
+G-S6-9 تغطية 31 رمزاً ✓ · G-S6-10 AppShell بلا tenants.get ✓ ·
+G-S6-6 المبدِّل قائم ✓ · G-S6-7 diff داخل النطاق ✓.
+
+**انحراف جديد ظهر:** التذكرة تقول «32 رمزاً» في الملخص، لكن
+enumeration فيها يعدّ 31 (Auth 12 + Rate 1 + Tenants 1 + Brand Kits 12
++ Generic 5 = 31). المرآة أخذت العدد المحسوب من enumeration، لا
+الملخص. إن كان mk-api يحمل 32 فعلاً، الفحص سيلتقط الناقص عند أول
+تحديث.
