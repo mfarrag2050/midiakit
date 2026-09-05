@@ -1,17 +1,24 @@
 {
   "$comment": [
     "Canonical list of mk-api error codes, mirrored from",
-    "apps/api/src/errors.ts (mk-api · 410cc33 · 2026-09-05).",
-    "check-error-code-coverage.mjs verifies each code has an",
-    "'errors.CODE' entry in every studio i18n dictionary.",
+    "apps/api/src/errors.ts on origin/feat/api.",
+    "",
+    "**Since S6-SYNC (2026-09-05):** check-error-code-coverage.mjs",
+    "reads this file AND `git show origin/feat/api:apps/api/src/errors.ts`",
+    "and fails on any diff either way. The mirror is effectively",
+    "derived; the JSON is retained only as a stable source for the",
+    "coverage guard on the studio branch (no cross-branch imports).",
     "",
     "Update rule: when mk-api adds/renames/removes a code, mirror",
     "here in the same commit that reflects mk-api's change on the",
-    "studio side. Never diverge silently — the check fails on any",
-    "gap in either direction."
+    "studio side. Both directions are enforced.",
+    "",
+    "Deferred codes (declared in errors.ts but the endpoint that",
+    "emits them isn't implemented until A21) are marked below."
   ],
-  "source": "apps/api/src/errors.ts @ mk-api feat/api",
+  "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-05",
+  "mirroredFromCommit": "c11371a",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -29,6 +36,13 @@
     "TOO_MANY_ATTEMPTS",
 
     "TENANT_NAME_EMPTY",
+
+    "USER_ALREADY_MEMBER",
+    "PENDING_INVITE_EXISTS",
+    "SEATS_EXHAUSTED",
+    "LAST_OWNER",
+    "REASON_TOO_SHORT",
+    "ACCOUNT_SUSPENDED",
 
     "INSUFFICIENT_ROLE",
     "BRAND_KIT_IN_USE",
@@ -49,8 +63,12 @@
     "VALIDATION_FAILED",
     "INTERNAL_ERROR"
   ],
+  "deferred": {
+    "$note": "Declared in errors.ts but the endpoint that emits them isn't wired until A21. Dictionary entries required now so translations are ready.",
+    "codes": ["SEATS_EXHAUSTED", "ACCOUNT_SUSPENDED"]
+  },
   "clientOnlyCodes": {
-    "$note": "Not from mk-api — UI-side fallbacks. Excluded from coverage guard but must exist in dictionaries.",
+    "$note": "Not from mk-api — UI-side fallbacks. Excluded from mirror-vs-errors.ts diff, but must exist in dictionaries.",
     "codes": ["UNKNOWN", "UNAUTHENTICATED", "NETWORK_ERROR"]
   }
 }

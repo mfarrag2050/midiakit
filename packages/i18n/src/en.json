@@ -143,6 +143,13 @@
 
     "TENANT_NAME_EMPTY": "Agency name is required.",
 
+    "USER_ALREADY_MEMBER": "User is already a member of your agency.",
+    "PENDING_INVITE_EXISTS": "A pending invite for this email already exists.",
+    "SEATS_EXHAUSTED": "Your plan's seats are exhausted — upgrade to invite more.",
+    "LAST_OWNER": "Can't remove the agency's last owner.",
+    "REASON_TOO_SHORT": "Reason is too short — 10 characters minimum.",
+    "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+
     "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
     "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",
     "LAST_BRAND_KIT": "Can't delete the last brand kit.",
