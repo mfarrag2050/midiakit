@@ -187,6 +187,17 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
   `{data,nextCursor,hasMore}`. المخرَج الحرفي في تقرير SYNC-α.
   **يُطلق:** S6 · S7 على mk-studio.
 
+- **SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api**
+  الدليل: templates + brand-kits + assets-version على
+  `127.0.0.1:19040` (MinIO على `127.0.0.1:19043`) — كل النقاط
+  تعيد الشكل الذي يعرّفه العقد (§6 · §5 · §1.5)، بما في ذلك:
+  الستة العامة من `filter[scope]=global`، `POST /templates` نسخة
+  خاصة من عام (201)، PATCH/DELETE على عام → 403
+  `GLOBAL_TEMPLATE_READONLY`، `POST /fonts/:family/ack`
+  بـ`licenseAck=false` → 422، `POST /assets-version` بلا
+  `acknowledgedDiff` → 409. المخرَج الحرفي في تقرير SYNC-β.
+  **يُطلق:** S9 · S10 · S11 على mk-studio.
+
 ---
 
 ## البوابات — الحالة
