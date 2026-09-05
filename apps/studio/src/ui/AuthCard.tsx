@@ -46,7 +46,7 @@ export function AuthCard({
     <div className="rounded-lg border border-border bg-surface p-8 shadow-soft">
       <div className="mb-6 space-y-1 text-center">
         <div className="text-[10px] uppercase tracking-widest text-accent">
-          Media Kit
+          {t('brand.name')}
         </div>
         <h1 className="text-xl font-semibold">{t(titleKey)}</h1>
         <p className="text-sm text-fg-muted">{t(subtitleKey)}</p>

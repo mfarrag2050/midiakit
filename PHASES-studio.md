@@ -37,8 +37,8 @@ pnpm workspace. المنفذ 19050. طبقة عميل mk-api مكتوبة بعق
     revisions, subscription, usage, ai.
   - `types.ts` — `Role`, `Locale`, `Plan`, `Tenant`, `User`.
 
-**اللقطة:** `apps/studio/screenshots/projects.png`,
-`apps/studio/screenshots/login.png`.
+**اللقطة:** `demo/studio/projects.png`,
+`demo/studio/login.png`.
 
 **ما رأيته في اللقطة (L-17):**
 - RTL يعمل — الشريط الجانبي على اليمين، المحتوى على اليسار.
@@ -87,7 +87,7 @@ i18n (`*Key`) لا نصوصاً (L-22 على مستوى الواجهة).
 atom + composite في مكان واحد. الغاية: مراجعة بصرية في كل جلسة قادمة
 تلمس نظام التصميم — L-17 يبقى ساري المفعول.
 
-**اللقطات:** `design-{ar,mixed,en}.png` في `apps/studio/screenshots/`.
+**اللقطات:** `design-{ar,mixed,en}.png` في `demo/studio/`.
 
 **ما رأيته:**
 - **AR**: Layout RTL — الشريط الجانبي على اليمين، بند «النظام» نشط.
@@ -130,7 +130,7 @@ atom + composite في مكان واحد. الغاية: مراجعة بصرية �
 - شاشات المصادقة (auth.*) عربية كاملة في mixed لأن الجملة الطويلة
   للتوجيه لا تحتمل الخلط داخل الجملة.
 
-**اللقطات (L-17):** ست شاشات في `apps/studio/screenshots/`:
+**اللقطات (L-17):** ست شاشات في `demo/studio/`:
 `projects-{ar,mixed,en}.png` و `login-{ar,mixed,en}.png`.
 
 **ما رأيته:**
@@ -190,3 +190,56 @@ atom + composite في مكان واحد. الغاية: مراجعة بصرية �
   فواصل الألوف بالفاصلة (en-US).
 
 **تحقّق:** `pnpm typecheck` أخضر.
+
+## S4.5 — فرض قواعد الواجهة ✅
+
+**التسليم:** أربعة فحوص آلية تفرض ما أعلنه تقرير S1–S4، مع نقل
+اللقطات من `apps/studio/screenshots/` إلى `demo/studio/` (L-48
+سابقة، L-55 حالياً) وتوثيق قرار عزل `DigitStyle` عن مسار المخرَج.
+
+**الفحوص الأربعة (scripts/):**
+
+- `check-logical-props.mjs` — منع `ml/mr/pl/pr/left/right/text-left/
+  text-right` في `apps/studio/src/ui/`. **يفرض RTL-first حسب S2.**
+- `check-ui-keys.mjs` — منع نصوص عربية أو كلمات لاتينية ≥ 3 أحرف
+  في JSX text تحت `apps/studio/src/ui/`. الاستثناء الوحيد:
+  `/design/` بسبب طبيعته كمعرض عرض. الاستثناء مكتوب داخل السكربت
+  بسببه، لا استثناء صامت. **يفرض L-22 على مستوى الواجهة.**
+- `check-locale-parity.mjs` — مقارنة مجموعات المفاتيح في ar/mixed/en
+  بالاتجاهين، مع تجاهل مفاتيح `_*` كتوثيق داخلي. **يمنع سقوط صامت
+  إلى العربية.**
+- `check-digit-style-isolation.mjs` — منع استيراد `useDigitStyle`
+  و`DigitStyle` وباقي `format/` في `apps/studio/src/api/` وأي مسار
+  preview/render/canvas/frame داخل studio. الفرع (ب) استباقي — يعلَن
+  أنه بلا ملفات اليوم.
+
+**كلها مربوطة في `package.json → test` بنفس نمط الفحوص القائمة.**
+لا آلية جديدة. `pnpm check:logical-props` `pnpm check:ui-keys`
+`pnpm check:locale-parity` `pnpm check:digit-style-isolation` — كلها
+`node scripts/*.mjs`.
+
+**مخالفات ظهرت وأُصلحت:**
+- `apps/studio/src/ui/AppShell.tsx:39` و `AuthCard.tsx:49` كلاهما
+  يحمل حرفية `"Media Kit"` كنصّ JSX. **الادعاء في تقرير S2 (L-22
+  على الواجهة) كان أوسع من الواقع** — بلا هذا الفحص كانت ستُنسى.
+  الحلّ: إضافة مفتاح `brand.name = "Media Kit"` في القواميس الثلاثة
+  واستبدال الحرفيتين بـ`{t('brand.name')}`.
+
+**قرار عزل الأرقام (§4 من التذكرة):**
+- `DigitStyle` = زينة واجهة (جداول · أحجام · تواريخ · لوحة). تفضيل
+  الموظف، لا هوية العميل.
+- `brand.bidi.numerals` وحده يحكم كل ما يُرسم على Canvas.
+- **السبب (القاعدة الثالثة):** صفر قيم مثبتة للهوية. الهوية مصدر
+  الحقيقة الوحيد للمخرَج. قيمة تصل من `localStorage` إلى Canvas
+  تكسر مبدأ المحرك.
+- **الخطر:** لا يظهر كخطأ — المعاينة تبدو سليمة عند الموظف وتختلف
+  عن مخرَج الخادم. مصري يفضّل 123 يرى هويّة خليج تطبع ١٢٣.
+
+**نقل اللقطات:** 14 ملفاً من `apps/studio/screenshots/` إلى
+`demo/studio/`. المجلد القديم غير موجود. `demo/README.md` يحمل قسماً
+جديداً يوثّق كل لقطة وما تُظهره، مع سطر خاص بعيّنة L-23 counter-example
+في المعرض — العيب معروضاً بجوار حلّه.
+
+**بوابات:** G-S4.5-1..4 تمرّ · G-S4.5-5 `pnpm --filter=@pf-mediakit/studio
+typecheck` أخضر (root `pnpm typecheck` يفشل على `packages/tts` — خارج
+النطاق، مقفَل على main).

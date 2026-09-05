@@ -36,7 +36,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
             {t('brand.tagline')}
           </div>
           <div className="mt-1 font-latin text-lg font-semibold tracking-tight">
-            Media Kit
+            {t('brand.name')}
           </div>
         </div>
         <nav className="p-3">
