@@ -50,7 +50,8 @@
     "verify:assets": "pnpm --filter @pf-mediakit/api verify:assets",
     "verify:templates": "pnpm --filter @pf-mediakit/api verify:templates",
     "verify:projects": "pnpm --filter @pf-mediakit/api verify:projects",
-    "verify:workflows": "pnpm --filter @pf-mediakit/api verify:workflows"
+    "verify:workflows": "pnpm --filter @pf-mediakit/api verify:workflows",
+    "verify:renders": "pnpm --filter @pf-mediakit/api verify:renders"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

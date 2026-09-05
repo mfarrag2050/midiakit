@@ -66,6 +66,17 @@ export type ErrorCode =
   // Annotations (§12)
   | 'INVALID_SEGMENT_INDEX'                        // §12.2 (400)
   | 'LAYER_NOT_FOUND'                              // §12.2 (404)
+  // Renders (§8)
+  | 'RENDER_NOT_ALLOWED_IN_CURRENT_STATE'          // §8.1 (403)
+  | 'QUOTA_EXCEEDED_VIDEOS'                        // §8.1 (422)
+  | 'QUOTA_EXCEEDED_RENDERS'                       // §8.1 concurrency (422)
+  | 'RATE_LIMIT_EXCEEDED'                          // §8.1 (429) - alias لـTOO_MANY_ATTEMPTS
+  | 'OUTPUT_NOT_READY'                             // §8.4 (404) status ≠ succeeded
+  | 'RENDER_RUNNING'                               // §8.7 (409) لا حذف قيد التنفيذ
+  | 'RENDER_ALREADY_TERMINAL'                      // §8.8 (409) إلغاء منتهية
+  | 'UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS'        // A18 MVP (400)
+  | 'BRAND_SNAPSHOT_NOT_FOUND'                     // §8.5 (404)
+  | 'TEMPLATE_SNAPSHOT_NOT_FOUND'                  // §8.6 (404)
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -190,5 +201,15 @@ export const ProjectHasNoWorkflow = () => new ApiError('PROJECT_HAS_NO_WORKFLOW'
 // Annotations (§12)
 export const InvalidSegmentIndex = () => new ApiError('INVALID_SEGMENT_INDEX', 400, 'target.segmentIndex');
 export const LayerNotFound = () => new ApiError('LAYER_NOT_FOUND', 404, 'target.layer');
+// Renders (§8)
+export const RenderNotAllowedInCurrentState = () => new ApiError('RENDER_NOT_ALLOWED_IN_CURRENT_STATE', 403);
+export const QuotaExceededVideos = () => new ApiError('QUOTA_EXCEEDED_VIDEOS', 422);
+export const QuotaExceededRenders = () => new ApiError('QUOTA_EXCEEDED_RENDERS', 422);
+export const OutputNotReady = () => new ApiError('OUTPUT_NOT_READY', 404);
+export const RenderRunning = () => new ApiError('RENDER_RUNNING', 409);
+export const RenderAlreadyTerminal = () => new ApiError('RENDER_ALREADY_TERMINAL', 409);
+export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS', 400);
+export const BrandSnapshotNotFound = () => new ApiError('BRAND_SNAPSHOT_NOT_FOUND', 404);
+export const TemplateSnapshotNotFound = () => new ApiError('TEMPLATE_SNAPSHOT_NOT_FOUND', 404);
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

@@ -46,8 +46,20 @@ const envSchema = z
     S3_SECRET_ACCESS_KEY: z.string().optional(),
     // TTL للرابط الموقَّت (upload PUT + download GET)
     S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+    // TTL خاص لـoutput (§8.4 يقول ساعة)
+    S3_OUTPUT_PRESIGN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
     // سقف حجم الرفع (§9.1 SIZE_TOO_LARGE + §9.1 uploadUrl.maxSizeBytes)
     STORAGE_MAX_SIZE_BYTES: z.coerce.number().int().positive().default(500 * 1024 * 1024), // 500 MB
+
+    // Redis + BullMQ (A19 — قناة الطوابير)
+    REDIS_URL: z.string().default('redis://127.0.0.1:6379/3'),
+    BULLMQ_PREFIX: z.string().default('pf-mediakit'),
+
+    // حصة الرندر المتزامن (§8 QUOTA_EXCEEDED_RENDERS).
+    // A18 يحمل حدّاً ثابتاً — خرائط plan → limits تُعرَّف في A21 (docs/17).
+    // الرقم 3 اختير كافتراضي «مساحة معقولة قبل A21» — small-team baseline
+    // من docs/17 §17 (1/3/8/15 حسب الباقة). أَعلَن كقيمة مؤقّتة.
+    RENDER_CONCURRENCY_LIMIT: z.coerce.number().int().positive().default(3),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'production') {

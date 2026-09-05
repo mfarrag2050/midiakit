@@ -68,7 +68,16 @@ import workflowsGetRoute from './routes/workflows/get.js';
 import workflowsCreateRoute from './routes/workflows/create.js';
 import workflowsUpdateRoute from './routes/workflows/update.js';
 import workflowsDeleteRoute from './routes/workflows/delete.js';
+import rendersListRoute from './routes/renders/list.js';
+import rendersGetRoute from './routes/renders/get.js';
+import rendersCreateRoute from './routes/renders/create.js';
+import rendersOutputRoute from './routes/renders/output.js';
+import rendersBrandSnapshotRoute from './routes/renders/brand-snapshot.js';
+import rendersTemplateSnapshotRoute from './routes/renders/template-snapshot.js';
+import rendersCancelRoute from './routes/renders/cancel.js';
+import rendersDeleteRoute from './routes/renders/delete.js';
 import { closePool } from './db.js';
+import { closeQueues } from './queues/index.js';
 
 export async function buildServer() {
   const loggerConfig = config.NODE_ENV === 'production'
@@ -188,6 +197,17 @@ export async function buildServer() {
       await w.register(workflowsUpdateRoute);
       await w.register(workflowsDeleteRoute);
     }, { prefix: '/workflows' });
+
+    await v1.register(async (r) => {
+      await r.register(rendersListRoute);
+      await r.register(rendersCreateRoute);
+      await r.register(rendersGetRoute);
+      await r.register(rendersOutputRoute);
+      await r.register(rendersBrandSnapshotRoute);
+      await r.register(rendersTemplateSnapshotRoute);
+      await r.register(rendersCancelRoute);
+      await r.register(rendersDeleteRoute);
+    }, { prefix: '/renders' });
   }, { prefix: '/v1' });
 
   return fastify;
@@ -200,6 +220,7 @@ async function main(): Promise<void> {
     fastify.log.info({ signal }, 'shutting down');
     await fastify.close();
     await closePool();
+    await closeQueues();
     process.exit(0);
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9 · A10 · A11 · A12 · A13 · A14 · A15 · A16 · A17 مبنية جميعاً.**
+> الحالة: **A9-A19 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -177,7 +177,9 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A15** | Workflows (5 endpoints) | ✅ | `pnpm verify:workflows` — G-P4-9 مشترك. CRUD كامل، states+transitions JSONB مع validator محلّي (WORKFLOW_SCHEMA_VIOLATION). CANNOT_DELETE_DEFAULT + WORKFLOW_IN_USE + WORKFLOW_IN_USE_IMMUTABLE_FIELD (409). **لا بذر افتراضي** — العقد صامت؛ التوصية للاستوديو presets تُقدَّم عند الإعداد الأوّل. |
 | **A16** | State + Transitions + Assign (3 endpoints) | ✅ | G-P4-9. state يجمع currentState + availableTransitions المشتقة + history من جدول transitions. TRANSITION_ROLE_REQUIRED (403) + TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE (409) + REASON_REQUIRED_FOR_THIS_TRANSITION (400) + PROJECT_HAS_NO_WORKFLOW (409). assign بـ`editor+` (Q7 مؤقّت). **project_state جدول غير مستعمل** — projects.state/assignee_id هي المصدر (تكرار في المخطط). |
 | **A17** | Annotations (4 endpoints) | ✅ | G-P4-9. target JSONB {kind:'layer', layer, segmentIndex} مطابق §12 (B4). LAYER_NOT_FOUND + INVALID_SEGMENT_INDEX. RBAC: viewer+ للإنشاء، المؤلّف أو editor+ للـPATCH، المؤلّف أو admin+ للـDELETE. |
-| A18+ | Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A18-A25) |
+| **A18** | Renders (8 endpoints) | ✅ | `pnpm verify:renders` — G-P4-10، 7 طبقات. brand_snapshot + template_snapshot يُلتقطان ذرّياً عند POST — تعديل brand_kit بعدها لا يمسّ اللقطة (اختبار Layer 7-هـ). RENDER_CONCURRENCY_LIMIT ثابت=3 (A21 يحلّه من plan). Idempotency-Key مدعوم. cancel + delete صحيحان. **MVP التخزين:** UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS يرفض brand فيها assetId أو URL خارجي (S3/HTTP) — worker يعمل مع brand مضمّنة فقط. حلّ SDK كامل في renderer بند مؤجَّل. |
+| **A19** | Queue integration (BullMQ) | ✅ | G-P4-10 Layer 7. `apps/api/src/queues/` توأمة لـ`apps/renderer/src/queues.ts` — نفس أسماء الطوابير (render-urgent/normal/edit/batch) + prefix pf-mediakit + Fair-share priority (`count(waiting same tenant) × 10 + 1`). POST /renders يُدخل job في render-normal (أو render-urgent) بشحنة كاملة (renderId + snapshots + content). Layer 7 يُثبت end-to-end: POST → Redis (7 مفاتيح) → worker inline → MinIO PUT → GET /output signed URL → fetch حقيقي بايتات PNG صحيحة. |
+| A20+ | Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A20-A25) |
 
 **تحذير مسجَّل (فخّ للمستقبل — L-63):**
 - `projects.name` في القاعدة و `title` في العقد §7. Mapper يوحّد على `title` في السلك. الجدول له مراجع من annotations · project_state · renders · transitions — هجرة إعادة تسمية مكلفة. لن يُصلَح، لكنه فخّ لمن يكتب استعلاماً مباشراً على الجدول.
@@ -228,6 +230,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **G-P4-9** | Workflows + State + Transitions + Annotations (6 طبقات: وجود 13 · عزل 8 · سلبي 8 · RBAC 7 · L-58 على 4 جداول · حاسم على 3 جداول) | ✅ passed 2026-09-06 |
 | **G-P4-8** | Projects (6 طبقات + 5 حالات خاصة: قالب عام يعمل · قالب مستأجر آخر يُرفض · TEMPLATE_IN_USE · BRAND_KIT_IN_USE · user delete reassign) | ✅ passed 2026-09-06 |
 | G-P4-8-quotas | استرجاع الحصص (الاسم القديم — سيُعاد ترقيمه عند A21) | ⏳ |
+| **G-P4-10** | Renders + Queues (7 طبقات: وجود 8 + عزل 6 + سلبي 3 + RBAC 4 + L-58 + حاسم + **E2E: POST→Redis→Worker→MinIO→GET output→fetch bytes + snapshot frozen**) | ✅ passed 2026-09-06 |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
 | G-P4-10 | تكامل i18n | ⏳ |
 
