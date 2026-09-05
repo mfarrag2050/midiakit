@@ -28,6 +28,9 @@ import brandKitsGetRoute from './routes/brand-kits/get.js';
 import brandKitsCreateRoute from './routes/brand-kits/create.js';
 import brandKitsUpdateRoute from './routes/brand-kits/update.js';
 import brandKitsDeleteRoute from './routes/brand-kits/delete.js';
+import brandKitsFontAckRoute from './routes/brand-kits/font-ack.js';
+import brandKitsLogoAckRoute from './routes/brand-kits/logo-ack.js';
+import brandKitsAssetsVersionRoute from './routes/brand-kits/assets-version.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -89,6 +92,9 @@ export async function buildServer() {
       await bk.register(brandKitsCreateRoute);
       await bk.register(brandKitsUpdateRoute);
       await bk.register(brandKitsDeleteRoute);
+      await bk.register(brandKitsFontAckRoute);
+      await bk.register(brandKitsLogoAckRoute);
+      await bk.register(brandKitsAssetsVersionRoute);
     }, { prefix: '/brand-kits' });
   }, { prefix: '/v1' });
 
