@@ -21,6 +21,8 @@ export type ErrorCode =
   | 'RESET_TOKEN_INVALID'
   // Rate limit
   | 'TOO_MANY_ATTEMPTS'
+  // Tenants (§3)
+  | 'TENANT_NAME_EMPTY'
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -100,3 +102,4 @@ export const LogoModeNotOfficial = () => new ApiError('LOGO_MODE_NOT_OFFICIAL', 
 export const InvalidVersionFormat = () => new ApiError('INVALID_VERSION_FORMAT', 400, 'targetVersion');
 export const VersionNotAvailable = () => new ApiError('VERSION_NOT_AVAILABLE', 400, 'targetVersion');
 export const DiffNotAcknowledged = () => new ApiError('DIFF_NOT_ACKNOWLEDGED', 409, 'acknowledgedDiff');
+export const TenantNameEmpty = () => new ApiError('TENANT_NAME_EMPTY', 400, 'name');

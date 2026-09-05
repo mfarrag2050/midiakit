@@ -168,7 +168,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 
 | البند | العنوان | الحالة | ملاحظة |
 |---|---|---|---|
-| A9 | Tenants (GET/PATCH `/v1/tenant`) | ⏳ متخطّى، التالي | docs/16 §3 |
+| **A9** | Tenants (GET/PATCH `/v1/tenant`) | ✅ | `pnpm verify:tenant` — G-P4-4، 6 طبقات، 27 فحصاً. انحرافات معلَنة عن docs/16 §3: id UUID خام (لا `tnt_`)، `plan` enum مختلف، `seats.limit=null` حتى تُعرَّف الخرائط. |
 | A10 | Users + invite (5 endpoints) | ⏳ | docs/16 §4 |
 | A11 | Assets (pre-signed upload + …) | ⏳ | docs/16 §9؛ G-P4-11 (signed URLs) تُفعَّل هنا |
 | **A12** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات + Layer 3.5 (RFC 7396). commits: `ac863a4`, `4827975`, `389c35f`, `9540215`, `712020d`. **A9-V كشف نقص fill-in عند القراءة — بند 10، لم يُصلَح.** |
@@ -197,7 +197,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **G-P4-3** | Brand Kits (وجود + عزل 404-لا-403 + سلبي + RBAC + L-58/L-59 + policy-off-fails) | ✅ passed 2026-09-05 |
 | **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ⏳ تُفعَّل مع A11 |
 | G-P4-3-rev | اكتمال سجل المراجعات (بند مؤجَّل — رقم سيُعاد ترقيمه عند A20) | ⏳ |
-| G-P4-4 | ثبات `brand_snapshot` | ⏳ |
+| **G-P4-4** | Tenants (وجود + عزل + سلبي + RBAC + L-58 + policy-off SELECT/UPDATE منفصلَين) | ✅ passed 2026-09-05 |
+| G-P4-4-brand-snapshot | ثبات `brand_snapshot` (بند لاحق — سيُعاد ترقيمه) | ⏳ |
 | G-P4-5 | المفاتيح لا تُعاد | ⏳ |
 | G-P4-6 | `licenseAck` إلزامي | ⏳ |
 | G-P4-7 | صلاحية Workflow | ⏳ |

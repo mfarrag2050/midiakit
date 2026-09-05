@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "smoke:auth": "node --import tsx scripts/smoke-auth.ts",
     "verify:auth": "node --import tsx scripts/verify-auth.mjs",
-    "verify:brand-kits": "node --import tsx scripts/verify-brand-kits.mjs"
+    "verify:brand-kits": "node --import tsx scripts/verify-brand-kits.mjs",
+    "verify:tenant": "node --import tsx scripts/verify-tenant.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

@@ -41,7 +41,8 @@
     "db:migrate": "pnpm --filter @pf-mediakit/db migrate:up",
     "db:migrate:test": "pnpm --filter @pf-mediakit/db migrate:up:test",
     "verify:auth": "pnpm --filter @pf-mediakit/api verify:auth",
-    "verify:brand-kits": "pnpm --filter @pf-mediakit/api verify:brand-kits"
+    "verify:brand-kits": "pnpm --filter @pf-mediakit/api verify:brand-kits",
+    "verify:tenant": "pnpm --filter @pf-mediakit/api verify:tenant"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",
