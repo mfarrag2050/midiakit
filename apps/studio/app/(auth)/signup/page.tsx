@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { AuthCard } from '@/src/ui/AuthCard';
-import { auth } from '@/src/api';
+import { auth, setSessionInfo } from '@/src/api';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -40,11 +40,18 @@ export default function SignupPage() {
         },
       ]}
       onSubmit={async (values) => {
-        await auth.signup({
+        const res = await auth.signup({
           tenantName: values.tenantName ?? '',
           email: values.email ?? '',
           password: values.password ?? '',
         });
+        // signup يعيد user (role='owner') + tenant + session تلقائياً.
+        // ملاحظة: SignupResponse.user يحمل {id,email,role} فقط — نصنع
+        // شكل User الكامل (بلا createdAt، سيُحدَّث من /v1/users لاحقاً).
+        setSessionInfo(
+          { ...res.user, createdAt: new Date().toISOString() },
+          res.tenant
+        );
         router.push('/projects');
       }}
     />

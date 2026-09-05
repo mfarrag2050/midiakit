@@ -36,7 +36,8 @@
     "renders": "Renders",
     "design": "Design",
     "user": {
-      "placeholder": "Account"
+      "placeholder": "Account",
+      "signOut": "Sign out"
     }
   },
   "pages": {

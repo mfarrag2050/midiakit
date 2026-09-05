@@ -391,3 +391,77 @@ Input · PageHeader · Table · Textarea) في `packages/ui/`. الـi18n
 
 **SYNC-α لم تُفتح:** يحتاج `curl` فعلياً من مسار A مقابل
 19040-19042. S6 و S7 مؤجّلتان حتى حينها.
+
+## S6 · S7 — ربط حقيقي + تخطيط رئيسي 🟡 (جزئي — divergences تُعلَن)
+
+**التسليم (2026-09-05 · بعد فتح SYNC-α من قِبَل مسار A · `7ebf19c`):**
+- `NEXT_PUBLIC_API_MOCK=false` + `NEXT_PUBLIC_API_URL=http://127.0.0.1:19040`
+  في `apps/studio/.env.local` (غير مُتَتبَّع).
+- المبدِّل يبقى — `NEXT_PUBLIC_API_MOCK=true` يعيد الـmock بلا تعديل صفحة.
+- `setSessionInfo(user, tenant)` عند login/signup الناجح يخزّن الجلسة.
+- `AppShell` (S7): يعرض `tenant.name` في الرأس + `user.email` في قائمة
+  الحساب + زرّ «تسجيل الخروج». يستدعي `GET /v1/tenant` عند mount
+  للتحقّق ولتحديث المعلومات؛ 401 → مسح جلسة → تحويل إلى `/login`.
+
+**§0 — الفرق بين mock وmk-api الحقيقي (يُعلَن، لا يُصلَح في هذه
+التذكرة — قرار حسم مشترك):**
+
+| موقف | mk-api الحقيقي (19040) | mock (S5) | الأثر |
+|---|---|---|---|
+| كلمة سرّ خاطئة | 401 `INVALID_CREDENTIALS` field=null | 401 `INVALID_CREDENTIALS` field=null | ✓ متطابق |
+| حقل ناقص | 400 `VALIDATION_FAILED` field=`password` | 400 `PASSWORD_TOO_WEAK` field=`password` | **يختلف رمز الخطأ** |
+| اسم مستأجر ناقص | 400 `VALIDATION_FAILED` field=`tenantName` | 400 `TENANT_NAME_EMPTY` field=`tenantName` | **يختلف** |
+| بريد مشوَّه | 400 `EMAIL_INVALID` field=`email` | 400 `INVALID_EMAIL` field=`email` | **قلب ترتيب الكلمتين** |
+| forgot-password | 204 (بلا body) | 204 | ✓ متطابق |
+
+**Divergences إضافية اكتُشفت أثناء الربط (تُعلَن معاً):**
+
+3. **`POST /v1/auth/refresh` response shape:**
+   mk-api يعيد `{ session: { accessToken, refreshToken, expiresIn } }`.
+   docs/16 §2.3 وclient.ts يتوقّعان `{ accessToken, refreshToken,
+   expiresIn }` بلا wrapper `session`. **الأثر:** auto-refresh
+   يفشل صامتاً — client.ts يقرأ `body.accessToken` كـundefined،
+   يكتبه في localStorage، ثم retry فاشل → مسح جلسة → تحويل login.
+
+4. **`POST /v1/auth/login` response `user` جزئي:**
+   يعيد `{ id, role }` فقط. docs/16 §2.2 يعد بـ`email`, `createdAt`
+   أيضاً. **الأثر:** AppShell يعرض placeholder «الحساب» بدل بريد
+   المستخدم.
+
+5. **`POST /v1/auth/login` response `tenant` جزئي:**
+   يعيد `{ id }` فقط. docs/16 §2.2 يعد بـ`name`, `plan`, `locale`,
+   `createdAt`, `seats`. **الأثر:** الشاشة الأولى تظهر بلا اسم
+   مستأجر ~200ms حتى ينتهي `GET /v1/tenant` من AppShell mount (الذي
+   يعيد الشكل الكامل صحيحاً).
+
+6. **`error.message` = code خام، لا مفتاح i18n:**
+   docs/16 §1.4 يقول «`message` مفتاح i18n لا نصّ (L-22)». mk-api
+   يعيد `message: "INVALID_CREDENTIALS"` (نفس code). لا كلمة
+   `errors.` قبله. **الأثر:** `t('INVALID_CREDENTIALS')` لا يجد
+   المفتاح → يعيد الاسم الخام. البانر الأحمر يعرض
+   `INVALID_CREDENTIALS` بدل «بريد أو كلمة سر خاطئة.».
+
+**لقطات دليلية في `demo/studio/`:**
+- `s6-login-real-success.png` — نجاح حقيقي. الرأس يعرض
+  `Studio Demo Agency` (اسم المستأجر من `GET /v1/tenant`)، البند
+  النشط «المشاريع»، زرّ «تسجيل الخروج».
+- `s6-login-real-401.png` — كلمة سر خاطئة على 19040. البانر الأحمر
+  يعرض `INVALID_CREDENTIALS` **خام** (divergence #6 — L-22 مكسور من
+  الخادم).
+- `s6-refresh-evidence.png` — بعد إفساد access token وإعادة التحميل،
+  المستخدم على `/login`. **G-S6-5 يفشل** لأن divergence #3 يكسر
+  refresh flow في client.ts.
+
+**بوابات:** G-S6-1 typecheck ✓ · G-S6-2 الفحوص الأربعة ✓ ·
+G-S6-3 login حقيقي مع اسم مستأجر ظاهر ✓ · G-S6-4 حالة خطأ حقيقية
+✓ لكن **رمز خام لا رسالة مترجمة** (divergence #6) · **G-S6-5 يفشل**
+(divergence #3) · G-S6-6 المبدِّل قائم — S5 lقطات تُثبت وضع mock ·
+G-S6-7 diff داخل النطاق ✓.
+
+**قرار مؤجَّل:** الخيارات الحاسمة:
+- **A** — mk-api يصحّح divergences 3-6 (يعيد `session: {…}` من
+  refresh، يُثري user+tenant في login، يستعمل `errors.{CODE}` في
+  message، يوحّد رموز validation).
+- **B** — mk-studio يعدّل client.ts + i18n dictionaries + AppShell
+  ليتوافق مع الشكل الحالي.
+- **C** — كلاهما (docs/16 يُحدَّث ليطابق الواقع الجديد).

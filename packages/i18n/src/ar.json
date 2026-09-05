@@ -36,7 +36,8 @@
     "renders": "التصديرات",
     "design": "النظام",
     "user": {
-      "placeholder": "الحساب"
+      "placeholder": "الحساب",
+      "signOut": "تسجيل الخروج"
     }
   },
   "pages": {

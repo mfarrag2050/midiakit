@@ -24,4 +24,11 @@ export * as ai from './endpoints/ai';
 export { ApiError, parseApiError } from './errors';
 export type { ApiErrorCode, ApiErrorShape } from './errors';
 export type { Page } from './client';
+export {
+  setSessionInfo,
+  getSessionUser,
+  getSessionTenant,
+  clearSessionInfo,
+} from './session-info';
+export { getAccessToken, clearSession } from './tokens';
 export * from './types';
