@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9 · A10 · A11 · A12 · A13 مبنية جميعاً.**
+> الحالة: **A9 · A10 · A11 · A12 · A13 · A14 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -173,7 +173,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A11** | Assets (8 endpoints) | ✅ | `pnpm verify:assets` — G-P4-6، **7 طبقات** + 11 حالة سلبية. جدول assets مُوسَّع بـ6 أعمدة (ackBy/ackAt/filename/sizeBytes/contentType/warnings). طبقة تخزين مجرَّدة: memory (in-process test) + s3 (`@aws-sdk/client-s3` + `s3-request-presigner`، SDK رسمي بلا fetch). **A11-STORAGE (2026-09-05):** MinIO في `bin/mk` على 19043 + init container ينشئ bucket، فdev يسلك مسار الإنتاج (STORAGE_DRIVER=s3). Layer 7 يُثبت: PUT/GET حقيقيان بـfetch خارج العملية، رابط منتهي الصلاحية يُرفض (403)، رابط لمفتاح مُعدَّل يُرفض (403). قرار #1: assetId في `brand_kits.config` — `filter[inUse]` يطابق عليه حصراً عبر JSONPath. **بند مؤجَّل:** كشف الوجوه الفعلي (docs/12). **بند مؤجَّل:** SEATS_EXHAUSTED/STORAGE_QUOTA_EXCEEDED معلَنان غير مُنفَّذين حتى A21. **بند مؤجَّل:** استخراج FontCaps من ملف الخط. **بند لم يُبنَ:** توحيد مسار تخزين الرندر (يستعمل `apps/renderer/src/cli.ts:resolveFontPath` قرصاً محلياً — راجع تقرير A11-STORAGE §4). |
 | **A12** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات + Layer 3.5 (RFC 7396). commits: `ac863a4`, `4827975`, `389c35f`, `9540215`, `712020d`. **A9-V كشف نقص fill-in عند القراءة — بند 10، لم يُصلَح.** |
 | **A13** | Templates (5 endpoints) | ✅ | `pnpm verify:templates` — G-P4-7، 7 طبقات + طبقة العام (مستأجر جديد يرى الستة، النسخ لا يمسّ الأصل، check-template-sync L-46). **النمط الموحَّد للبيانات المرجعية العامة** (يرثه A26 لـplans): سياسات أربع منفصلة (SELECT/INSERT/UPDATE/DELETE)، رفض عن global بـ403 من التطبيق (لا 404 من صفر صفوف — L-61). أعمدة جديدة: source_ref + definition_hash + deleted_at. البذر من `packages/templates/src/templates/*.json` داخل الهجرة نفسها. فهرسان جزئيّان: `(name) WHERE scope='global'` و `(tenant_id, name) WHERE scope='tenant' AND deleted_at IS NULL` (L-62). check-template-sync يحرس مصدرَي الحقيقة (الحزمة + DB). **قرار #1:** لا `/duplicate` (العقد يعرّف 5 نقاط لا 6). **قرار #2 (ADR-012):** بذر + مرجع/بصمة + حارس. **قرار #3:** soft delete. **انحراف مُعلَن:** filter[kind] يقبل static/video (قيم template.kind الفعلية) لا card/breaking/reel كما في §6.1 (Q4 مفتوح). |
-| A14+ | Projects · Workflows · Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A14-A25) |
+| **A14** | Projects (5 endpoints) | ✅ | `pnpm verify:projects` — G-P4-8، 6 طبقات + 5 حالات خاصّة. 4 أعمدة جديدة (state/assignee_id/locale/deleted_at) + CHECK على locale. 8 أكواد أخطاء جديدة (BRAND_KIT_NOT_FOUND · TEMPLATE_NOT_FOUND · WORKFLOW_NOT_FOUND · PLAN_LIMIT_REACHED · LOCALE_UNSUPPORTED · TRANSITION_ROLE_REQUIRED · STALE_UPDATE · PROJECT_HAS_RENDERS). **البند 1 من التذكرة محسوم:** (أ) DELETE user يُنفَّذ إعادة الإسناد الفعلي (§4.5 B1) — reassignedProjects/deletedDrafts صحيحان الآن. (ب+ج) template_snapshot + brand_snapshot **موضعهما A18** (§8 صريح: «يُلتقطان عند POST /renders»). Q5 حُسم: PROJECT_HAS_RENDERS يرفض الحذف. **انحرافات مُعلَنة:** DB يستعمل `name` والعقد يستعمل `title` (Mapper يوحّد على title). PATCH لا يفرض workflow state role check (يُبنى في A15 — الكود مُعلَّم TRANSITION_ROLE_REQUIRED). STALE_UPDATE معلَن غير مُنفَّذ حتى A20. PLAN_LIMIT_REACHED معلَن غير مُنفَّذ حتى A21. سجل revisions لإعادة الإسناد بند A20. |
+| A15+ | Workflows · Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A15-A25) |
 
 ---
 
@@ -217,7 +218,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | G-P4-6 | `licenseAck` إلزامي | ⏳ |
 | **G-P4-7** | Templates (7 طبقات: وجود 5 + عزل + سلبي 5 + RBAC + L-58 + policy-off حاسم + **Layer 7 العام: مستأجر جديد يرى 6 + نسخ لا يمسّ الأصل + check-template-sync L-46**) | ✅ passed 2026-09-06 |
 | G-P4-7-workflow | صلاحية Workflow (الاسم القديم — سيُعاد ترقيمه عند A15) | ⏳ |
-| G-P4-8 | استرجاع الحصص | ⏳ |
+| **G-P4-8** | Projects (6 طبقات + 5 حالات خاصة: قالب عام يعمل · قالب مستأجر آخر يُرفض · TEMPLATE_IN_USE · BRAND_KIT_IN_USE · user delete reassign) | ✅ passed 2026-09-06 |
+| G-P4-8-quotas | استرجاع الحصص (الاسم القديم — سيُعاد ترقيمه عند A21) | ⏳ |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
 | G-P4-10 | تكامل i18n | ⏳ |
 

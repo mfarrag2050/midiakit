@@ -61,18 +61,37 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     const newOwnerId = newOwnerR.rows[0]?.id ?? null;
 
-    // TODO(A14): إعادة إسناد المشاريع + حذف المسوّدات
-    //   - reassignedProjects: UPDATE projects SET created_by = newOwnerId
-    //     WHERE created_by = id AND (state != 'draft' OR state IS NULL)
-    //     RETURNING id — عدد الصفوف
-    //   - deletedDrafts: DELETE FROM projects WHERE created_by = id AND state = 'draft'
-    //     RETURNING id — عدد الصفوف
-    //   - كل reassignment ينشئ revision بـaction='reassign' مع reason
-    // حتى A14 القيمتان ثابتتان 0 (projects table غير موجودة كـFK محقّق للـsource).
-    const reassignedProjects = 0;
-    const deletedDrafts = 0;
+    // A14: مسوّدات (state='draft') تُحذَف حذفاً ناعماً، الباقي يُعاد إسناده
+    // إلى newOwnerId (§4.5 قرار B1). RLS يقصر التأثير على المستأجر تلقائياً
+    // (created_by user id → users → tenant_id).
+    //
+    // ملاحظة: revisions log لكل إعادة إسناد بند A20 (لا جدول revisions
+    // يستعمل بعد — نُعلَنه في الانحرافات).
+    let reassignedProjects = 0;
+    let deletedDrafts = 0;
+    if (newOwnerId != null) {
+      const reass = await req.dbClient!.query(
+        `UPDATE projects SET created_by = $1
+         WHERE created_by = $2
+           AND deleted_at IS NULL
+           AND state != 'draft'`,
+        [newOwnerId, id],
+      );
+      reassignedProjects = reass.rowCount ?? 0;
+    }
+    // مسوّدات المنشئ تُحذف ناعماً (state='draft' وحده — لا فحص PROJECT_HAS_RENDERS
+    // لأن المسوّدات بلا renders بحكم الحالة).
+    const drafts = await req.dbClient!.query(
+      `UPDATE projects SET deleted_at = now()
+       WHERE created_by = $1
+         AND deleted_at IS NULL
+         AND state = 'draft'`,
+      [id],
+    );
+    deletedDrafts = drafts.rowCount ?? 0;
 
-    // DELETE (CASCADE على sessions, password_reset_tokens; SET NULL على FK's أخرى)
+    // DELETE (CASCADE على sessions, password_reset_tokens; SET NULL على FK's أخرى
+    // مثل projects.created_by — لكن بعد UPDATE أعلاه صار مسنداً لـnewOwnerId).
     await req.dbClient!.query(`DELETE FROM users WHERE id = $1`, [id]);
 
     return {

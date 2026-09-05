@@ -46,6 +46,15 @@ export type ErrorCode =
   | 'GLOBAL_TEMPLATE_READONLY'            // §6.4/§6.5 تعديل/حذف قالب عام
   | 'TEMPLATE_SCHEMA_VIOLATION'           // §6.3 validateTemplate أخفق
   | 'TEMPLATE_IN_USE'                     // §6.5 حذف قالب مستعمل في مشاريع
+  // Projects (§7)
+  | 'BRAND_KIT_NOT_FOUND'                 // §7.3
+  | 'TEMPLATE_NOT_FOUND'                  // §7.3
+  | 'WORKFLOW_NOT_FOUND'                  // §7.3 (يُطلَق مع A15)
+  | 'PLAN_LIMIT_REACHED'                  // §7.3 (معلَن، A21)
+  | 'LOCALE_UNSUPPORTED'                  // §7.3
+  | 'TRANSITION_ROLE_REQUIRED'            // §7.4 (يُطلَق مع A15 workflow state)
+  | 'STALE_UPDATE'                        // §7.4 (يُطلَق مع A20 revisions concurrency)
+  | 'PROJECT_HAS_RENDERS'                 // §7.5 (Q5 حسم: نرفض الحذف)
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -150,5 +159,14 @@ export const AssetInUseByBrandKit = () => new ApiError('ASSET_IN_USE_BY_BRAND_KI
 export const GlobalTemplateReadonly = () => new ApiError('GLOBAL_TEMPLATE_READONLY', 403);
 export const TemplateSchemaViolation = (field: string) => new ApiError('TEMPLATE_SCHEMA_VIOLATION', 400, field);
 export const TemplateInUse = () => new ApiError('TEMPLATE_IN_USE', 409);
+// Projects (§7)
+export const BrandKitNotFound = () => new ApiError('BRAND_KIT_NOT_FOUND', 404, 'brand_kit_id');
+export const TemplateNotFound = () => new ApiError('TEMPLATE_NOT_FOUND', 404, 'template_id');
+export const WorkflowNotFound = () => new ApiError('WORKFLOW_NOT_FOUND', 404, 'workflow_id');
+export const PlanLimitReached = () => new ApiError('PLAN_LIMIT_REACHED', 422);
+export const LocaleUnsupported = () => new ApiError('LOCALE_UNSUPPORTED', 422, 'locale');
+export const TransitionRoleRequired = () => new ApiError('TRANSITION_ROLE_REQUIRED', 403);
+export const StaleUpdate = () => new ApiError('STALE_UPDATE', 409);
+export const ProjectHasRenders = () => new ApiError('PROJECT_HAS_RENDERS', 409);
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

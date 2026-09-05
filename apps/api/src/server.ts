@@ -51,6 +51,11 @@ import templatesGetRoute from './routes/templates/get.js';
 import templatesCreateRoute from './routes/templates/create.js';
 import templatesUpdateRoute from './routes/templates/update.js';
 import templatesDeleteRoute from './routes/templates/delete.js';
+import projectsListRoute from './routes/projects/list.js';
+import projectsGetRoute from './routes/projects/get.js';
+import projectsCreateRoute from './routes/projects/create.js';
+import projectsUpdateRoute from './routes/projects/update.js';
+import projectsDeleteRoute from './routes/projects/delete.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -148,6 +153,14 @@ export async function buildServer() {
       await t.register(templatesUpdateRoute);
       await t.register(templatesDeleteRoute);
     }, { prefix: '/templates' });
+
+    await v1.register(async (p) => {
+      await p.register(projectsListRoute);
+      await p.register(projectsGetRoute);
+      await p.register(projectsCreateRoute);
+      await p.register(projectsUpdateRoute);
+      await p.register(projectsDeleteRoute);
+    }, { prefix: '/projects' });
   }, { prefix: '/v1' });
 
   return fastify;
