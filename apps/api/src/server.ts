@@ -56,6 +56,18 @@ import projectsGetRoute from './routes/projects/get.js';
 import projectsCreateRoute from './routes/projects/create.js';
 import projectsUpdateRoute from './routes/projects/update.js';
 import projectsDeleteRoute from './routes/projects/delete.js';
+import projectsStateRoute from './routes/projects/state.js';
+import projectsTransitionsRoute from './routes/projects/transitions.js';
+import projectsAssignRoute from './routes/projects/assign.js';
+import annotationsListRoute from './routes/projects/annotations/list.js';
+import annotationsCreateRoute from './routes/projects/annotations/create.js';
+import annotationsUpdateRoute from './routes/projects/annotations/update.js';
+import annotationsDeleteRoute from './routes/projects/annotations/delete.js';
+import workflowsListRoute from './routes/workflows/list.js';
+import workflowsGetRoute from './routes/workflows/get.js';
+import workflowsCreateRoute from './routes/workflows/create.js';
+import workflowsUpdateRoute from './routes/workflows/update.js';
+import workflowsDeleteRoute from './routes/workflows/delete.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -160,7 +172,22 @@ export async function buildServer() {
       await p.register(projectsCreateRoute);
       await p.register(projectsUpdateRoute);
       await p.register(projectsDeleteRoute);
+      await p.register(projectsStateRoute);
+      await p.register(projectsTransitionsRoute);
+      await p.register(projectsAssignRoute);
+      await p.register(annotationsListRoute);
+      await p.register(annotationsCreateRoute);
+      await p.register(annotationsUpdateRoute);
+      await p.register(annotationsDeleteRoute);
     }, { prefix: '/projects' });
+
+    await v1.register(async (w) => {
+      await w.register(workflowsListRoute);
+      await w.register(workflowsGetRoute);
+      await w.register(workflowsCreateRoute);
+      await w.register(workflowsUpdateRoute);
+      await w.register(workflowsDeleteRoute);
+    }, { prefix: '/workflows' });
   }, { prefix: '/v1' });
 
   return fastify;

@@ -55,6 +55,17 @@ export type ErrorCode =
   | 'TRANSITION_ROLE_REQUIRED'            // §7.4 (يُطلَق مع A15 workflow state)
   | 'STALE_UPDATE'                        // §7.4 (يُطلَق مع A20 revisions concurrency)
   | 'PROJECT_HAS_RENDERS'                 // §7.5 (Q5 حسم: نرفض الحذف)
+  // Workflows (§11)
+  | 'WORKFLOW_IN_USE'                              // §11.5 حذف workflow مستعمل
+  | 'CANNOT_DELETE_DEFAULT'                        // §11.5 حذف is_default
+  | 'WORKFLOW_IN_USE_IMMUTABLE_FIELD'              // §11.4
+  | 'WORKFLOW_SCHEMA_VIOLATION'                    // JSON غير صالح (states/transitions)
+  | 'TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE'  // §11.7 (409)
+  | 'REASON_REQUIRED_FOR_THIS_TRANSITION'          // §11.7 (400)
+  | 'PROJECT_HAS_NO_WORKFLOW'                      // §11.6/7 (بدون workflow لا حالة)
+  // Annotations (§12)
+  | 'INVALID_SEGMENT_INDEX'                        // §12.2 (400)
+  | 'LAYER_NOT_FOUND'                              // §12.2 (404)
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -168,5 +179,16 @@ export const LocaleUnsupported = () => new ApiError('LOCALE_UNSUPPORTED', 422, '
 export const TransitionRoleRequired = () => new ApiError('TRANSITION_ROLE_REQUIRED', 403);
 export const StaleUpdate = () => new ApiError('STALE_UPDATE', 409);
 export const ProjectHasRenders = () => new ApiError('PROJECT_HAS_RENDERS', 409);
+// Workflows (§11)
+export const WorkflowInUse = () => new ApiError('WORKFLOW_IN_USE', 409);
+export const CannotDeleteDefault = () => new ApiError('CANNOT_DELETE_DEFAULT', 409);
+export const WorkflowInUseImmutableField = (field: string) => new ApiError('WORKFLOW_IN_USE_IMMUTABLE_FIELD', 409, field);
+export const WorkflowSchemaViolation = (field: string) => new ApiError('WORKFLOW_SCHEMA_VIOLATION', 400, field);
+export const TransitionNotAvailableFromCurrentState = () => new ApiError('TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE', 409);
+export const ReasonRequiredForThisTransition = () => new ApiError('REASON_REQUIRED_FOR_THIS_TRANSITION', 400, 'reason');
+export const ProjectHasNoWorkflow = () => new ApiError('PROJECT_HAS_NO_WORKFLOW', 409);
+// Annotations (§12)
+export const InvalidSegmentIndex = () => new ApiError('INVALID_SEGMENT_INDEX', 400, 'target.segmentIndex');
+export const LayerNotFound = () => new ApiError('LAYER_NOT_FOUND', 404, 'target.layer');
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

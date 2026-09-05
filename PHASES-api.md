@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9 · A10 · A11 · A12 · A13 · A14 مبنية جميعاً.**
+> الحالة: **A9 · A10 · A11 · A12 · A13 · A14 · A15 · A16 · A17 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -174,7 +174,14 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A12** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات + Layer 3.5 (RFC 7396). commits: `ac863a4`, `4827975`, `389c35f`, `9540215`, `712020d`. **A9-V كشف نقص fill-in عند القراءة — بند 10، لم يُصلَح.** |
 | **A13** | Templates (5 endpoints) | ✅ | `pnpm verify:templates` — G-P4-7، 7 طبقات + طبقة العام (مستأجر جديد يرى الستة، النسخ لا يمسّ الأصل، check-template-sync L-46). **النمط الموحَّد للبيانات المرجعية العامة** (يرثه A26 لـplans): سياسات أربع منفصلة (SELECT/INSERT/UPDATE/DELETE)، رفض عن global بـ403 من التطبيق (لا 404 من صفر صفوف — L-61). أعمدة جديدة: source_ref + definition_hash + deleted_at. البذر من `packages/templates/src/templates/*.json` داخل الهجرة نفسها. فهرسان جزئيّان: `(name) WHERE scope='global'` و `(tenant_id, name) WHERE scope='tenant' AND deleted_at IS NULL` (L-62). check-template-sync يحرس مصدرَي الحقيقة (الحزمة + DB). **قرار #1:** لا `/duplicate` (العقد يعرّف 5 نقاط لا 6). **قرار #2 (ADR-012):** بذر + مرجع/بصمة + حارس. **قرار #3:** soft delete. **انحراف مُعلَن:** filter[kind] يقبل static/video (قيم template.kind الفعلية) لا card/breaking/reel كما في §6.1 (Q4 مفتوح). |
 | **A14** | Projects (5 endpoints) | ✅ | `pnpm verify:projects` — G-P4-8، 6 طبقات + 5 حالات خاصّة. 4 أعمدة جديدة (state/assignee_id/locale/deleted_at) + CHECK على locale. 8 أكواد أخطاء جديدة (BRAND_KIT_NOT_FOUND · TEMPLATE_NOT_FOUND · WORKFLOW_NOT_FOUND · PLAN_LIMIT_REACHED · LOCALE_UNSUPPORTED · TRANSITION_ROLE_REQUIRED · STALE_UPDATE · PROJECT_HAS_RENDERS). **البند 1 من التذكرة محسوم:** (أ) DELETE user يُنفَّذ إعادة الإسناد الفعلي (§4.5 B1) — reassignedProjects/deletedDrafts صحيحان الآن. (ب+ج) template_snapshot + brand_snapshot **موضعهما A18** (§8 صريح: «يُلتقطان عند POST /renders»). Q5 حُسم: PROJECT_HAS_RENDERS يرفض الحذف. **انحرافات مُعلَنة:** DB يستعمل `name` والعقد يستعمل `title` (Mapper يوحّد على title). PATCH لا يفرض workflow state role check (يُبنى في A15 — الكود مُعلَّم TRANSITION_ROLE_REQUIRED). STALE_UPDATE معلَن غير مُنفَّذ حتى A20. PLAN_LIMIT_REACHED معلَن غير مُنفَّذ حتى A21. سجل revisions لإعادة الإسناد بند A20. |
-| A15+ | Workflows · Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A15-A25) |
+| **A15** | Workflows (5 endpoints) | ✅ | `pnpm verify:workflows` — G-P4-9 مشترك. CRUD كامل، states+transitions JSONB مع validator محلّي (WORKFLOW_SCHEMA_VIOLATION). CANNOT_DELETE_DEFAULT + WORKFLOW_IN_USE + WORKFLOW_IN_USE_IMMUTABLE_FIELD (409). **لا بذر افتراضي** — العقد صامت؛ التوصية للاستوديو presets تُقدَّم عند الإعداد الأوّل. |
+| **A16** | State + Transitions + Assign (3 endpoints) | ✅ | G-P4-9. state يجمع currentState + availableTransitions المشتقة + history من جدول transitions. TRANSITION_ROLE_REQUIRED (403) + TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE (409) + REASON_REQUIRED_FOR_THIS_TRANSITION (400) + PROJECT_HAS_NO_WORKFLOW (409). assign بـ`editor+` (Q7 مؤقّت). **project_state جدول غير مستعمل** — projects.state/assignee_id هي المصدر (تكرار في المخطط). |
+| **A17** | Annotations (4 endpoints) | ✅ | G-P4-9. target JSONB {kind:'layer', layer, segmentIndex} مطابق §12 (B4). LAYER_NOT_FOUND + INVALID_SEGMENT_INDEX. RBAC: viewer+ للإنشاء، المؤلّف أو editor+ للـPATCH، المؤلّف أو admin+ للـDELETE. |
+| A18+ | Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A18-A25) |
+
+**تحذير مسجَّل (فخّ للمستقبل — L-63):**
+- `projects.name` في القاعدة و `title` في العقد §7. Mapper يوحّد على `title` في السلك. الجدول له مراجع من annotations · project_state · renders · transitions — هجرة إعادة تسمية مكلفة. لن يُصلَح، لكنه فخّ لمن يكتب استعلاماً مباشراً على الجدول.
+- `project_state` جدول قائم من A2 مع أعمدة (current_state, assignee_id, workflow_id) تُكرّر ما في `projects` بعد A14. A15/A16 لم يستعمله — كل الحالة في `projects`. الجدول يبقى بلا استعمال حتى تُحسم إزالته أو ترحيل الحالة إليه.
 
 ---
 
@@ -217,7 +224,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | G-P4-5 | المفاتيح لا تُعاد | ⏳ |
 | G-P4-6 | `licenseAck` إلزامي | ⏳ |
 | **G-P4-7** | Templates (7 طبقات: وجود 5 + عزل + سلبي 5 + RBAC + L-58 + policy-off حاسم + **Layer 7 العام: مستأجر جديد يرى 6 + نسخ لا يمسّ الأصل + check-template-sync L-46**) | ✅ passed 2026-09-06 |
-| G-P4-7-workflow | صلاحية Workflow (الاسم القديم — سيُعاد ترقيمه عند A15) | ⏳ |
+| G-P4-7-workflow | صلاحية Workflow (الاسم القديم — أُعيد ترقيمه بـG-P4-9) | ✅ |
+| **G-P4-9** | Workflows + State + Transitions + Annotations (6 طبقات: وجود 13 · عزل 8 · سلبي 8 · RBAC 7 · L-58 على 4 جداول · حاسم على 3 جداول) | ✅ passed 2026-09-06 |
 | **G-P4-8** | Projects (6 طبقات + 5 حالات خاصة: قالب عام يعمل · قالب مستأجر آخر يُرفض · TEMPLATE_IN_USE · BRAND_KIT_IN_USE · user delete reassign) | ✅ passed 2026-09-06 |
 | G-P4-8-quotas | استرجاع الحصص (الاسم القديم — سيُعاد ترقيمه عند A21) | ⏳ |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
