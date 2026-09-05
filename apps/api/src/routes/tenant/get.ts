@@ -6,9 +6,13 @@
  *
  * الانحرافات المُعلَنة عن العقد:
  *   • `id` = UUID خام (لا بادئة `tnt_...` — DB يستعمل uuid مباشرة)
- *   • `plan` enum: `trial|starter|pro|agency|enterprise` — العقد يذكر
- *     `starter|studio|agency|api` (اختلاف يحتاج مواءمة لاحقاً)
- *   • `seats.limit` = null حتى تُعرَّف خرائط plan→seat_limit في مكان ما
+ *   • `plan` enum: `trial|starter|studio|agency|api` — طابق docs/01
+ *     §نموذج الإيراد و docs/16 §3.1 (PLAN-FIX 2026-09-05،
+ *     migration 20260905110000).
+ *   • `seats.limit` = null: خرائط plan→seat_limit معرَّفة في
+ *     docs/01 (Starter 2 · Studio 5 · Agency 15 · API —)، لكن
+ *     الفرض مؤجَّل إلى A21 بقرار docs/17:229 (العملاء الأوائل
+ *     بحسابات يدوية لكشف الحدود الصحيحة قبل تثبيتها).
  */
 import type { FastifyPluginAsync } from 'fastify';
 import { NotFound } from '../../errors.js';
