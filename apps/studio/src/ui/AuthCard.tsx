@@ -1,10 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useLocale } from '@/src/i18n/LocaleProvider';
-import { Button } from './Button';
-import { Field } from './Field';
-import { Input } from './Input';
+import { useLocale } from '@pf-mediakit/i18n';
+import { Button, Field, Input } from '@pf-mediakit/ui';
 
 // AuthCard — بطاقة مصادقة عامة (login/signup/forgot/reset).
 // **عرض فقط** حتى S5 — لا تستدعي أيّ endpoint.

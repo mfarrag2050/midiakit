@@ -18,7 +18,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const I18N = join(ROOT, 'apps', 'studio', 'src', 'i18n');
+// بعد S2-X (2026-09-05): القواميس في packages/i18n. override للاختبار.
+const OVERRIDE = process.env.CHECK_SCOPE;
+const I18N = OVERRIDE ? join(ROOT, OVERRIDE) : join(ROOT, 'packages', 'i18n', 'src');
 
 const LOCALES = ['ar', 'mixed', 'en'];
 
@@ -35,15 +37,22 @@ function flatten(obj, prefix = '', out = new Set()) {
   return out;
 }
 
+// حراسة الإبطال — L-46 على مستوى وجود القواميس نفسها.
 const sets = {};
 for (const loc of LOCALES) {
   const p = join(I18N, `${loc}.json`);
-  const raw = await readFile(p, 'utf8');
-  sets[loc] = flatten(JSON.parse(raw));
+  try {
+    const raw = await readFile(p, 'utf8');
+    sets[loc] = flatten(JSON.parse(raw));
+  } catch {
+    console.error(`[check-locale-parity] ✗ قاموس مفقود: ${p}`);
+    console.error('  نطاق فارغ = فحص مبطَل صامتاً. تحقّق من مسار I18N في السكربت.');
+    process.exit(1);
+  }
 }
 
 const total = Math.max(...Object.values(sets).map((s) => s.size));
-console.log(`[check-locale-parity] فحص ${LOCALES.length} قواميس — ${total} مفتاح أقصى …`);
+console.log(`[check-locale-parity] فحص ${LOCALES.length} قواميس في ${relative(ROOT, I18N)} — ${total} مفتاح أقصى …`);
 
 const missing = {};
 let anyMiss = false;

@@ -1,5 +1,5 @@
-import { PageHeader } from '@/src/ui/PageHeader';
-import { EmptyState } from '@/src/ui/EmptyState';
+import { PageHeader } from '@pf-mediakit/ui';
+import { EmptyState } from '@pf-mediakit/ui';
 
 // شاشة المشاريع — تُملأ في S12 بعد A14. حتى ذلك، صفحة فارغة موصوفة.
 export default function ProjectsPage() {

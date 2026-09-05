@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 
 // Alert — تنبيهات مضمنة (inline) بأربعة أنماط. لا animate — نُظهرها
 // حين تصل معلومة، ولا نجذب الانتباه لفترة طويلة.

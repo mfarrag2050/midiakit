@@ -84,13 +84,12 @@ pnpm workspace. المنفذ 19050. طبقة عميل mk-api مكتوبة بعق
 **غير مطلوب في S1:** استدعاء أيّ endpoint من أيّ صفحة (تنتظر SYNC-α
 حسب `docs/17 §5`).
 
-## S2 — نظام التصميم ✅  ·  بتحفّظ
+## S2 — نظام التصميم ✅  ·  عُولج التحفّظ في S2-X
 
-**تحفّظ يُسجَّل ولا يُعالَج هنا:** `docs/17 §4.1` يعرّف **S2**
-بأنها **`packages/ui` — حزمة مشتركة**. المبنيّ في
-`apps/studio/src/ui/` — **حبيس تطبيق واحد**. قرار معماري اتُّخذ
-ضمناً بلا مراجعة `docs/17`. يُعالَج في **S2-X** (تذكرة تالية).
-كلفة الاستخراج مقاسة في `~/mk-audit-r2.md` (2026-09-05).
+**التحفّظ الأصلي (يُسجَّل للتاريخ):** `docs/17 §4.1` يعرّف **S2**
+بأنها `packages/ui` — حزمة مشتركة. المبنيّ في `apps/studio/src/ui/`
+كان حبيس تطبيق واحد. قرار معماري اتُّخذ ضمناً بلا مراجعة `docs/17`.
+**عُولج في S2-X (2026-09-05)** — راجع القسم الأخير أدناه.
 
 **التسليم:** مكتبة atoms + composites تحت `apps/studio/src/ui/`،
 **RTL-first**: استعمال خصائص منطقية (`ms-*`, `pe-*`, `text-start/end`)
@@ -281,3 +280,66 @@ atom + composite في مكان واحد. الغاية: مراجعة بصرية �
 **بوابات:** G-S4.5-1..4 تمرّ · G-S4.5-5 `pnpm --filter=@pf-mediakit/studio
 typecheck` أخضر (root `pnpm typecheck` يفشل على `packages/tts` — خارج
 النطاق، مقفَل على main).
+
+## S2-X — استخراج packages/ui و packages/i18n ✅
+
+**التسليم (2026-09-05):** التحفّظ المعلَن في S2 عُولج. الذرّات الإحدى
+عشرة (Alert · Badge · Button · Card · Dialog · EmptyState · Field ·
+Input · PageHeader · Table · Textarea) في `packages/ui/`. الـi18n
+(LocaleProvider · LocaleSwitcher · Ltr + قواميس ar/mixed/en) في
+`packages/i18n/`. القشور الثلاث (AppShell · AuthShell · AuthCard)
+تبقى في `apps/studio/src/ui/` لأنها تحمل اعتماد `next/link` و
+`usePathname` — لا داعي لحقن تنقّل عبر props.
+
+**§0 divergence check (شرط أساسي قبل النقل):**
+- `LocaleProvider.tsx` بين apps/dashboard و apps/studio: تعليقات
+  مختلفة + مفتاح تخزين `pfmk.{dashboard|studio}.locale` (متوقّع بـL-49
+  — لكل موظف/تطبيق مفتاح).
+- `LocaleSwitcher.tsx`: dashboard يستعمل ألواناً hard-coded
+  (`text-white/40`)، studio يستعمل tokens (`text-fg-subtle`).
+- `Ltr.tsx`: تعليقات فقط، السلوك متطابق.
+- **الحكم:** تباعد صغير. سلوك متطابق. تعارض حقيقي واحد فقط
+  (LocaleSwitcher الألوان) يُحسم لصالح tokens. dashboard لا يُهاجَر
+  هنا (ادعاء ثابت في §5 من التذكرة) — نسخته تبقى بلا تغيير حتى
+  تذكرة الهجرة بعد S7.
+
+**التغييرات:**
+- إنشاء `packages/i18n` + `packages/ui` بنموذج `packages/engine`
+  (`main`/`types` إلى `src/index.ts`، بلا build step).
+- `packages/ui` يعتمد `packages/i18n` بـ`workspace:*`.
+- `apps/studio` يعتمد الاثنتين، `tsconfig.paths` يوجّه اسم الحزمة
+  إلى مصادر الحزم مباشرةً (نمط pnpm workspace TypeScript).
+- **Tailwind preset مشترك:** `packages/ui/tailwind-preset.ts` يحمل
+  الألوان الاثنتَي عشرة والخطوط والحواف والظلال. `apps/studio/
+  tailwind.config.ts` يستورده كـ`presets: [preset]` ويوسّع `content`
+  إلى مسارَي الحزمتين (وإلا Tailwind يُقلّم الأصناف — أخطر نقطة).
+- **CSS tokens مشتركة:** `packages/ui/styles/tokens.css` يحمل كتلة
+  `:root` وحدها؛ `apps/studio/app/globals.css` يستوردها قبل
+  `@tailwind base;`.
+- **تحديث الاستيرادات:** كل `from '@/src/i18n/...'` صار
+  `from '@pf-mediakit/i18n'`، وكل `from '@/src/ui/{atom}'` صار
+  `from '@pf-mediakit/ui'`. القشور الباقية (AppShell/AuthCard/
+  AuthShell) تستورد `@pf-mediakit/ui` للذرّات التي تحتاجها.
+
+**اللوحة لم تُهاجَر (§5 من التذكرة):**
+- `apps/dashboard` يبقى كما هو، لا يعتمد الحزمتين.
+- **التباعد البصري بين اللوحة والاستوديو قائم.** اللوحة تحمل نظام
+  tokens أقلّ نضجاً (لا `--surface`, `--accent`). الاستخراج **أنشأ
+  الحدّ**، ولم يُنهِ التباعد. الهجرة تذكرة مستقلة بعد S7.
+
+**تحديث الفحوص الأربعة:**
+- نطاق كل فحص وُسِّع إلى `apps/studio/src` + `packages/ui/src` +
+  `packages/i18n/src` — بلا استثناء يُترك بلا حماية بعد النقل (L-46).
+- **حراسة الإبطال:** كل فحص يُعلن عدد الملفات لكل نطاق ويفشل إن كان
+  نطاق فارغاً (تحت `CHECK_SCOPE=empty` يفشل بوضوح). يمنع مسحاً على
+  مجلد غير موجود يمرّ خضراء صامتاً.
+- `check-locale-parity` يتبع القواميس إلى `packages/i18n/src`.
+- `check-digit-style-isolation` يمسح كل الجذور الثلاثة + يفشل إن
+  كان نطاق (أ) API فارغاً (الحارس العامل الفعلي).
+
+**بوابات:** G-X-1 typecheck أخضر · G-X-2 الأربعة تمرّ بعدّ ملفات
+> 0 · G-X-3 كلها تفشل على نطاق فارغ · G-X-4 `/design` مرسوم بأنماطه
+(`demo/studio/design-ar-post-extract.png` يماثل `demo/studio/design-ar.png`)
+· G-X-5 `apps/studio/src/ui/` تحوي القشور الثلاث فقط · G-X-6 `grep
+"from 'next/" packages/ui` = 0 · G-X-7 diff داخل النطاق · G-X-8
+`'use client'` باقٍ في 12 ملفاً.

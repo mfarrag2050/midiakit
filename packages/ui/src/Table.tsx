@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 
 // Table عام. يستقبل أعمدة معرَّفة و rows، يرسم رأساً وسطراً لكل سجل.
 // **RTL:** لا `text-left` — نستعمل `text-start` كي تنعكس تلقائياً.

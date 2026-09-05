@@ -1,5 +1,5 @@
-import { PageHeader } from '@/src/ui/PageHeader';
-import { EmptyState } from '@/src/ui/EmptyState';
+import { PageHeader } from '@pf-mediakit/ui';
+import { EmptyState } from '@pf-mediakit/ui';
 
 export default function RendersPage() {
   return (

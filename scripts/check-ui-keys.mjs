@@ -32,7 +32,18 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const SCOPE = join(ROOT, 'apps', 'studio', 'src', 'ui');
+
+// **بعد S2-X (2026-09-05):** الذرّات في packages/ui، الـi18n في
+// packages/i18n، والقشور (AppShell…) في apps/studio/src/ui.
+// **حراسة الإبطال (G-X-3):** نطاق فارغ = فحص مفصول عن الشيفرة (L-46).
+const OVERRIDE_SCOPE = process.env.CHECK_SCOPE;
+const SCOPES = OVERRIDE_SCOPE
+  ? [join(ROOT, OVERRIDE_SCOPE)]
+  : [
+      join(ROOT, 'apps', 'studio', 'src', 'ui'),
+      join(ROOT, 'packages', 'ui', 'src'),
+      join(ROOT, 'packages', 'i18n', 'src'),
+    ];
 
 const ARABIC_RANGE = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
 const LATIN_WORD = /[A-Za-z]{3,}/g;
@@ -140,34 +151,52 @@ async function walk(dir, out = []) {
   return out;
 }
 
-const files = await walk(SCOPE);
 const violations = [];
+let totalFiles = 0;
+const scopeCounts = [];
 
-for (const file of files) {
-  const rel = relative(ROOT, file);
-  // استثناء المعرض — راجع رأس الملف للسبب.
-  if (rel.includes('/design/') || rel.endsWith('/design.tsx')) continue;
+for (const scope of SCOPES) {
+  const scopeFiles = await walk(scope);
+  scopeCounts.push({ scope: relative(ROOT, scope), count: scopeFiles.length });
+  totalFiles += scopeFiles.length;
 
-  const raw = await readFile(file, 'utf8');
-  const texts = extractJsxText(raw);
-  for (const t of texts) {
-    if (ARABIC_RANGE.test(t)) {
-      violations.push({ file: rel, kind: 'arabic', text: t.slice(0, 100) });
-      continue;
-    }
-    const words = t.match(LATIN_WORD);
-    if (words && words.length > 0) {
-      violations.push({
-        file: rel,
-        kind: 'latin-word',
-        text: t.slice(0, 100),
-        words: words.slice(0, 3).join(', '),
-      });
+  for (const file of scopeFiles) {
+    const rel = relative(ROOT, file);
+    // استثناء المعرض — راجع رأس الملف للسبب.
+    if (rel.includes('/design/') || rel.endsWith('/design.tsx')) continue;
+
+    const raw = await readFile(file, 'utf8');
+    const texts = extractJsxText(raw);
+    for (const t of texts) {
+      if (ARABIC_RANGE.test(t)) {
+        violations.push({ file: rel, kind: 'arabic', text: t.slice(0, 100) });
+        continue;
+      }
+      const words = t.match(LATIN_WORD);
+      if (words && words.length > 0) {
+        violations.push({
+          file: rel,
+          kind: 'latin-word',
+          text: t.slice(0, 100),
+          words: words.slice(0, 3).join(', '),
+        });
+      }
     }
   }
 }
 
-console.log(`[check-ui-keys] فحص ${files.length} مكوّن tsx تحت apps/studio/src/ui/ …`);
+console.log(`[check-ui-keys] فحص ${totalFiles} مكوّن tsx عبر ${SCOPES.length} نطاق:`);
+for (const s of scopeCounts) {
+  console.log(`    · ${s.scope}: ${s.count}`);
+}
+
+// حراسة الإبطال — L-46 على مستوى نطاق الفحص.
+const emptyScopes = scopeCounts.filter((s) => s.count === 0);
+if (emptyScopes.length > 0) {
+  console.error(`  ✗ نطاق فارغ = فحص مبطَل صامتاً. النطاقات الفارغة:`);
+  for (const s of emptyScopes) console.error(`    · ${s.scope}`);
+  process.exit(1);
+}
 
 if (violations.length === 0) {
   console.log('  ✓ نظيف — كل النصوص تمرّ عبر t(*Key) (L-22).');

@@ -1,18 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert } from '@/src/ui/Alert';
-import { Badge } from '@/src/ui/Badge';
-import { Button } from '@/src/ui/Button';
-import { Card } from '@/src/ui/Card';
-import { Dialog } from '@/src/ui/Dialog';
-import { Field } from '@/src/ui/Field';
-import { Input } from '@/src/ui/Input';
-import { PageHeader } from '@/src/ui/PageHeader';
-import { Table, type Column } from '@/src/ui/Table';
-import { Textarea } from '@/src/ui/Textarea';
-import { useLocale } from '@/src/i18n/LocaleProvider';
-import { Ltr } from '@/src/i18n/Ltr';
+import { Alert } from '@pf-mediakit/ui';
+import { Badge } from '@pf-mediakit/ui';
+import { Button } from '@pf-mediakit/ui';
+import { Card } from '@pf-mediakit/ui';
+import { Dialog } from '@pf-mediakit/ui';
+import { Field } from '@pf-mediakit/ui';
+import { Input } from '@pf-mediakit/ui';
+import { PageHeader } from '@pf-mediakit/ui';
+import { Table, type Column } from '@pf-mediakit/ui';
+import { Textarea } from '@pf-mediakit/ui';
+import { useLocale } from '@pf-mediakit/i18n';
+import { Ltr } from '@pf-mediakit/i18n';
 import {
   formatBytes,
   formatDateTime,

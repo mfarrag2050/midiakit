@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 
 // Field — يلفّ label + input + help/error. يقرأ i18n keys بدل النصوص
 // (L-22 على مستوى الواجهة كذلك — لا نصّ مكرَّر في المكوّنات).

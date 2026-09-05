@@ -96,6 +96,12 @@ importers:
 
   apps/studio:
     dependencies:
+      '@pf-mediakit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@pf-mediakit/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: 14.2.15
         version: 14.2.15(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -149,6 +155,19 @@ importers:
         specifier: ^9.0.0
         version: 9.0.0
 
+  packages/i18n:
+    dependencies:
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: 18.3.11
+        version: 18.3.11
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+
   packages/shared: {}
 
   packages/templates:
@@ -169,6 +188,25 @@ importers:
       vitest:
         specifier: 2.1.9
         version: 2.1.9(@types/node@20.17.10)
+
+  packages/ui:
+    dependencies:
+      '@pf-mediakit/i18n':
+        specifier: workspace:*
+        version: link:../i18n
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/react':
+        specifier: 18.3.11
+        version: 18.3.11
+      tailwindcss:
+        specifier: 3.4.14
+        version: 3.4.14
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
 
 packages:
 

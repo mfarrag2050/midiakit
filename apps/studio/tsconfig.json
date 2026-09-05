@@ -21,7 +21,10 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@pf-mediakit/i18n": ["../../packages/i18n/src/index.ts"],
+      "@pf-mediakit/ui": ["../../packages/ui/src/index.ts"],
+      "@pf-mediakit/ui/tailwind-preset": ["../../packages/ui/tailwind-preset.ts"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

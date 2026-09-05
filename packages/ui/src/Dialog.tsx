@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 import { Button } from './Button';
 
 // Dialog قائم على `<dialog>` — يدير focus + backdrop + Escape بلا JS يدوي.

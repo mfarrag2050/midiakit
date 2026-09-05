@@ -3,8 +3,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useLocale } from '@/src/i18n/LocaleProvider';
-import { LocaleSwitcher } from '@/src/i18n/LocaleSwitcher';
+import { useLocale } from '@pf-mediakit/i18n';
+import { LocaleSwitcher } from '@pf-mediakit/i18n';
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول: شريط جانبي + رأس + مضمون.
 // المكوّنات الذرّية (Button, Field…) تُبنى في S2. هنا التخطيط فقط.

@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@pf-mediakit/i18n": "workspace:*",
+    "@pf-mediakit/ui": "workspace:*",
     "next": "14.2.15",
     "react": "18.3.1",
     "react-dom": "18.3.1"

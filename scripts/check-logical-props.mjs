@@ -22,7 +22,21 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const SCOPE = join(ROOT, 'apps', 'studio', 'src', 'ui');
+
+// النطاقات — كل واحد يحوي ملفات JSX يجب أن تحترم RTL بالخصائص المنطقية.
+// **بعد S2-X (2026-09-05):** الذرّات هاجرت إلى packages/ui؛ القشور
+// (AppShell, AuthShell, AuthCard) بقيت في apps/studio/src/ui.
+// **حراسة الإبطال (G-X-3):** كل نطاق يجب أن يحوي ≥ 1 ملف — نطاق فارغ
+// = دلالة أن الفحص انفصل عن مسار الشيفرة الفعلي (L-46).
+// override بمتغيّر بيئة CHECK_SCOPE إن أردنا اختبار نطاق فارغ.
+const OVERRIDE_SCOPE = process.env.CHECK_SCOPE;
+const SCOPES = OVERRIDE_SCOPE
+  ? [join(ROOT, OVERRIDE_SCOPE)]
+  : [
+      join(ROOT, 'apps', 'studio', 'src', 'ui'),
+      join(ROOT, 'packages', 'ui', 'src'),
+      join(ROOT, 'packages', 'i18n', 'src'),
+    ];
 
 // كل نمط: [رمز الشرح، regex يلتقط الاستعمال الفعلي]
 // نستعمل حدود كلمة قبل، والحرف بعد ما يميّز token (رقم/حرف كبير) من
@@ -80,33 +94,51 @@ async function walk(dir, out = []) {
   return out;
 }
 
-const files = await walk(SCOPE);
 const violations = [];
+let totalFiles = 0;
+const scopeCounts = [];
 
-for (const file of files) {
-  const raw = await readFile(file, 'utf8');
-  const clean = stripComments(raw);
-  const rel = relative(ROOT, file);
-  const lines = clean.split('\n');
-  for (let idx = 0; idx < lines.length; idx++) {
-    const line = lines[idx];
-    for (const [label, re] of BANNED) {
-      re.lastIndex = 0;
-      let m;
-      while ((m = re.exec(line)) !== null) {
-        violations.push({
-          file: rel,
-          line: idx + 1,
-          token: m[0],
-          rule: label,
-          snippet: line.trim().slice(0, 120),
-        });
+for (const scope of SCOPES) {
+  const files = await walk(scope);
+  scopeCounts.push({ scope: relative(ROOT, scope), count: files.length });
+  totalFiles += files.length;
+  for (const file of files) {
+    const raw = await readFile(file, 'utf8');
+    const clean = stripComments(raw);
+    const rel = relative(ROOT, file);
+    const lines = clean.split('\n');
+    for (let idx = 0; idx < lines.length; idx++) {
+      const line = lines[idx];
+      for (const [label, re] of BANNED) {
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(line)) !== null) {
+          violations.push({
+            file: rel,
+            line: idx + 1,
+            token: m[0],
+            rule: label,
+            snippet: line.trim().slice(0, 120),
+          });
+        }
       }
     }
   }
 }
 
-console.log(`[check-logical-props] فحص ${files.length} ملف تحت apps/studio/src/ui/ …`);
+console.log(`[check-logical-props] فحص ${totalFiles} ملف عبر ${SCOPES.length} نطاق:`);
+for (const s of scopeCounts) {
+  console.log(`    · ${s.scope}: ${s.count}`);
+}
+
+// حراسة الإبطال — L-46 على مستوى نطاق الفحص نفسه.
+const emptyScopes = scopeCounts.filter((s) => s.count === 0);
+if (emptyScopes.length > 0) {
+  console.error(`  ✗ نطاق فارغ = فحص مبطَل صامتاً. النطاقات الفارغة:`);
+  for (const s of emptyScopes) console.error(`    · ${s.scope}`);
+  console.error('  إمّا أن النطاق حُذف بلا تحديث السكربت، أو أن الاستخراج نقل الملفات بلا مواكبة.');
+  process.exit(1);
+}
 
 if (violations.length === 0) {
   console.log('  ✓ نظيف — كل الخصائص منطقية (ms/me · ps/pe · start/end · text-start/end).');

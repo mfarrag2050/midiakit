@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import './globals.css';
-import { LocaleProvider } from '@/src/i18n/LocaleProvider';
+import { LocaleProvider } from '@pf-mediakit/i18n';
 
 export const metadata: Metadata = {
   title: 'Media Kit — Studio',

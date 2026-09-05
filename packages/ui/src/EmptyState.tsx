@@ -1,6 +1,6 @@
 'use client';
 
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 
 interface Props {
   readonly titleKey: string;

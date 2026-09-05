@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { LocaleSwitcher } from '@/src/i18n/LocaleSwitcher';
+import { LocaleSwitcher } from '@pf-mediakit/i18n';
 
 // AuthShell — عمود مركزي هادئ لشاشات المصادقة، مع مبدّل لغة يتيح
 // اختيار اللغة قبل الحساب.

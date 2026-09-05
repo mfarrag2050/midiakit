@@ -1,0 +1,29 @@
+/* @pf-mediakit/ui — tokens بصرية.
+ * كتلة :root وحدها. مستقلّة عن Tailwind — تعيش خارج @layer base
+ * كي تعمل حتى إذا لم يستهلكها المستهلك عبر @tailwind base.
+ *
+ * القيم مسحوبة من apps/studio/app/globals.css قبل استخراج S2-X
+ * (2026-09-05). المستهلك يستوردها من globals.css:
+ *
+ *   @import '@pf-mediakit/ui/styles/tokens.css';
+ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0d10;
+  --surface: #12151a;
+  --surface-2: #191d24;
+  --border: rgba(255, 255, 255, 0.08);
+
+  --fg: #eee7d8;
+  --fg-muted: #a8a396;
+  --fg-subtle: #6b6f76;
+
+  --accent: #d4a017;
+  --accent-fg: #1a1207;
+
+  --danger: #dc5f45;
+  --success: #6a9e6f;
+  --warning: #d69833;
+}

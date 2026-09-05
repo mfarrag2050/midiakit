@@ -31,7 +31,19 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const STUDIO_SRC = join(ROOT, 'apps', 'studio', 'src');
+
+// **بعد S2-X (2026-09-05):** نطاق المسح يشمل الحزم الجديدة أيضاً —
+// لو ظهر يوماً ملفٌ preview/render/canvas/frame داخل packages/ui أو
+// packages/i18n، يخضع لنفس عزل DigitStyle. الفرع (أ) API يبقى في
+// apps/studio/src/api كما هو.
+const OVERRIDE = process.env.CHECK_SCOPE;
+const WALK_ROOTS = OVERRIDE
+  ? [join(ROOT, OVERRIDE)]
+  : [
+      join(ROOT, 'apps', 'studio', 'src'),
+      join(ROOT, 'packages', 'ui', 'src'),
+      join(ROOT, 'packages', 'i18n', 'src'),
+    ];
 
 // أسماء يُمنع استيرادها في النطاقات المحرَّمة.
 const BANNED_NAMES = [
@@ -53,15 +65,22 @@ const BANNED_NAMES = [
 function isForbiddenScope(rel) {
   // (أ) طبقة API
   if (rel.startsWith('apps/studio/src/api/')) return { branch: 'api', active: true };
-  // (ب) استباقي: أي ملف يحمل preview/render/canvas/frame في مسار studio/src
-  if (rel.startsWith('apps/studio/src/')) {
+  // (ب) استباقي: أي ملف يحمل preview/render/canvas/frame في مسار
+  // مسحوب — يشمل apps/studio/src و packages/ui/src و packages/i18n/src.
+  const isScanned =
+    rel.startsWith('apps/studio/src/') ||
+    rel.startsWith('packages/ui/src/') ||
+    rel.startsWith('packages/i18n/src/');
+  if (isScanned) {
     const parts = rel.split('/');
     const filename = parts[parts.length - 1] ?? '';
     const forbidden = /(preview|render|canvas|frame)/i;
-    for (const seg of parts.slice(3)) {
+    // نتخطّى الأجزاء الأولى (apps/studio/src أو packages/ui/src …) قبل
+    // فحص الأجزاء الوسطى.
+    const prefixSkip = rel.startsWith('apps/') ? 3 : 3;
+    for (const seg of parts.slice(prefixSkip)) {
       if (forbidden.test(seg)) return { branch: 'preview', active: true };
     }
-    // اسم الملف نفسه أيضاً
     if (forbidden.test(filename)) return { branch: 'preview', active: true };
   }
   return null;
@@ -112,7 +131,14 @@ async function walk(dir, out = []) {
   return out;
 }
 
-const files = await walk(STUDIO_SRC);
+const files = [];
+const rootStats = [];
+for (const root of WALK_ROOTS) {
+  const walked = await walk(root);
+  rootStats.push({ root: relative(ROOT, root), count: walked.length });
+  files.push(...walked);
+}
+
 const violations = [];
 let apiFilesScanned = 0;
 let previewFilesScanned = 0;
@@ -150,9 +176,27 @@ for (const file of files) {
   }
 }
 
-console.log(`[check-digit-style-isolation] النطاق (أ) API: ${apiFilesScanned} ملف · (ب) preview/render: ${previewFilesScanned} ملف …`);
+console.log(`[check-digit-style-isolation] الجذور الممسوحة:`);
+for (const s of rootStats) {
+  console.log(`    · ${s.root}: ${s.count} ملف`);
+}
+console.log(`  النطاقات المُصنَّفة: (أ) API=${apiFilesScanned} · (ب) preview/render=${previewFilesScanned}`);
 if (previewFilesScanned === 0) {
   console.log('  ℹ  الفرع (ب) بلا ملفات اليوم — استباقي. راجع رأس السكربت.');
+}
+
+// حراسة الإبطال — L-46:
+// - كل جذر يجب أن يحوي > 0 ملف (وإلا انفصل السكربت عن الشيفرة).
+// - النطاق (أ) API يجب أن يحوي > 0 ملف (وإلا الحارس العامل معطَّل).
+const emptyRoots = rootStats.filter((s) => s.count === 0);
+if (emptyRoots.length > 0) {
+  console.error(`  ✗ جذر فارغ = فحص مبطَل صامتاً:`);
+  for (const s of emptyRoots) console.error(`    · ${s.root}`);
+  process.exit(1);
+}
+if (apiFilesScanned === 0) {
+  console.error(`  ✗ نطاق API (أ) صفر — الحارس العامل معطَّل.`);
+  process.exit(1);
 }
 
 if (violations.length === 0) {

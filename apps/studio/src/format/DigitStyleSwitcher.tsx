@@ -2,7 +2,7 @@
 
 import { useDigitStyle } from './settings';
 import type { DigitStyle } from './digits';
-import { useLocale } from '@/src/i18n/LocaleProvider';
+import { useLocale } from '@pf-mediakit/i18n';
 
 const OPTIONS: readonly DigitStyle[] = ['latin', 'arabic-indic'];
 
