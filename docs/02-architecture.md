@@ -193,6 +193,104 @@ subscriptions · usage. **الاختبار السلبي الحاسم (L-46):** �
 **نتيجة:** بند A1-A4 في `docs/17-phase4-plan.md` يُبنى يوم 1 من مسار A،
 ولا يُفتح أيّ endpoint حتى تُجتاز G-P4-1 على الجداول كاملةً.
 
+### ADR-012 — القوالب: جدول واحد بـ`tenant_id` nullable (2026-09-05)
+
+**السياق:** الستّة قوالب المبنيّة في `packages/templates` (breaking ·
+card_centered · card_bottom · card_kicker · reel · plain) ملفات JSON
+يفسّرها المحرك — أساسية مشتركة بين كل المستأجرين. لكن **القالب المخصّص
+طبقة تسعير (ADR-007)** — الوكالة الكبيرة تُنشئ قالبها الخاصّ. الاثنان
+يحتاجان الظهور في قائمة العميل بنقطة نهاية واحدة، وحقلاً يُستعلَم
+بحدّاثة عدّه (لأنّه محسوب في الخطة).
+
+**القرار:**
+```sql
+CREATE TABLE templates (
+  id            uuid PRIMARY KEY,
+  tenant_id     uuid NULL,               -- NULL = مشترك؛ قيمة = خاصّ
+  name          text NOT NULL,
+  definition    jsonb NOT NULL,
+  source_ref    text,                    -- L-52 (مرجع الحقيقة للأساسي)
+  definition_hash text,                  -- نفس السبب
+  created_at    timestamptz NOT NULL DEFAULT now(),
+
+  CONSTRAINT templates_tenant_source
+    UNIQUE (tenant_id, source_ref)       -- لكل مستأجر، source_ref فريد
+);
+
+-- L-62: القيد أعلاه NULL-هارب. فهرس جزئي منفصل يغلق الحالة الأساسية:
+CREATE UNIQUE INDEX templates_shared_source
+  ON templates (source_ref)
+  WHERE tenant_id IS NULL;
+```
+
+**سياستان منفصلتان (L-61):**
+```sql
+-- القراءة ترى المشترك (tenant_id IS NULL) والخاصّ (المستأجر الحالي)
+CREATE POLICY templates_read ON templates
+  FOR SELECT USING (
+    tenant_id IS NULL
+    OR tenant_id = current_tenant()
+  );
+
+-- الكتابة تشترط tenant_id مطابقاً بـUSING و WITH CHECK كليهما
+CREATE POLICY templates_write ON templates
+  FOR INSERT WITH CHECK (tenant_id = current_tenant());
+
+CREATE POLICY templates_modify ON templates
+  FOR UPDATE
+  USING       (tenant_id = current_tenant())
+  WITH CHECK  (tenant_id = current_tenant());
+
+CREATE POLICY templates_remove ON templates
+  FOR DELETE USING (tenant_id = current_tenant());
+```
+
+**رفض على الأساسي بطبقتَين (L-58):**
+1. **فحص التطبيق:** يفحص `tenant_id IS NULL` قبل الاستعلام ⇒ 403 صريح.
+2. **RLS يرفض حتى لو سقط فحص التطبيق:** `WITH CHECK (tenant_id = current_tenant())`
+   يمنع أيّ INSERT/UPDATE على `tenant_id IS NULL` من مستأجر (لأن
+   `NULL = current_tenant()` تُقيَّم `NULL` = رفض).
+
+**مصدر الحقيقة للأساسية:** `source_ref` يشير إلى ملف في
+`packages/templates/src/` (مثلاً `breaking@2026-09-05`). `definition_hash`
+يمنع الانحراف. فحص آلي `scripts/check-template-sync.mjs` يقارن الـhash
+بين الجدول والملف عند الـmigration.
+
+**البدائل المرفوضة:**
+1. **جدولان منفصلان (`shared_templates` + `tenant_templates`):**
+   - يضاعف نقاط النهاية (`GET /shared/templates` + `GET /templates`).
+   - يضاعف السياسات (RLS مختلفة على كل جدول).
+   - النسخ من مشترك إلى خاصّ يصبح انتقالاً بين جدولَين — عملية معقّدة
+     بلا فائدة معمارية.
+2. **قوالب أساسية ملفات فقط بلا صفوف قاعدة:**
+   - لا `GET /templates` واحد يجمع القائمتَين.
+   - العدّاد التسعيري لا يعمل على «ملفات».
+   - الواجهة تحتاج فحصَين منفصلَين (fs + db).
+
+**المقايضة الصريحة:**
+- **كل استعلام قراءة يحمل شرط `IS NULL`** — عبء تعبيري في كل مكان،
+  لكنه مقابل جدول واحد ومنطق موحّد.
+- **خطأ في سياسة واحدة يكشف قوالب مستأجر لآخر** — لذا **بوابتان لا
+  واحدة** (L-58 + L-61): USING + WITH CHECK منفصلتان، فحص تطبيق أعلى،
+  اختبار سلبي لكل حالة (SELECT من مستأجر آخر · UPDATE عليها ·
+  INSERT بـtenant_id مغاير).
+
+**اختبارات القبول (تُبنى في A10):**
+1. `SELECT * FROM templates` من `tenant_a` ⇒ يُرجع مشترك + خاصّ لـA
+   فقط. لا خاصّ لـB.
+2. `INSERT INTO templates (tenant_id, ...) VALUES ('B', ...)` من `A`
+   ⇒ فشل بـ`RLS violation` صريح (لا 0 rows).
+3. `UPDATE templates SET name='...' WHERE tenant_id IS NULL` من `A`
+   ⇒ فشل بـ`RLS violation` (لا صمت).
+4. تكرار `source_ref` لقالبَين أساسيَّين (`tenant_id IS NULL`) ⇒
+   فشل بـ`unique_violation` من الفهرس الجزئي.
+5. `INSERT` قالب مستأجر بـ`source_ref` مكرَّر من نفس المستأجر ⇒
+   فشل بالقيد المركّب.
+
+**نتيجة:** A10.1 يُنشئ الجدول والسياسات. A10.2 يُعبِّئ القوالب الستّة
+الأساسية بـ`tenant_id NULL` من `packages/templates`. A10.3 يفعّل
+`template_snapshot` في `POST /renders` (docs/16 §8.1).
+
 ---
 
 ## نموذج البيانات (مبدئي)

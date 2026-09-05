@@ -695,7 +695,8 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
 
 ## 8. Renders
 
-**tenant_id:** ضمنيّ. **`brand_snapshot` يُلتقط عند POST — نقطة تجميد.**
+**tenant_id:** ضمنيّ. **`brand_snapshot` و `template_snapshot` يُلتقطان
+عند POST — نقطتا تجميد.**
 
 ### 8.1 POST /v1/renders
 
@@ -719,7 +720,8 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
   "status": "'queued'",
   "queuedAt": "ISO",
   "estimatedStartAt": "ISO (best-effort)",
-  "brand_snapshot_id": "bks_..."
+  "brand_snapshot_id": "bks_...",
+  "template_snapshot_id": "tks_..."
 }
 ```
 
@@ -728,6 +730,15 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
   لحظة إنشاء المهمة. كل تعديل لاحق على brand_kit لا يؤثّر على هذا التصدير.
 - **`brand_snapshot_id`** يُخزَّن في سجل الـrender ويُشار إليه في §revisions
   عبر `brand_revision_id` المرتبط (docs/14 §تكامل).
+- **`template_snapshot` يُنشأ ذرياً** — لقطة كاملة من `template.definition`
+  المستعمل في المشروع، **بجانب** `brand_snapshot`. كلاهما يُجمَّد لحظة
+  التصدير.
+  - **التبرير:** العميل ينسخ قالباً أساسياً ويعدّله بعد شهر (تغيير مواضع
+    الطبقات أو نصوصها). إعادة رندر مشروع قديم يجب أن تعطي **ما نُشر**
+    لا **ما صار عليه القالب** — نفس منطق `brand_snapshot`.
+  - **`template_snapshot_id`** يُخزَّن في سجل الـrender ويُقرأ عند
+    أيّ re-render لاحقة (§8.6 إعادة الإخراج بلا تغيير).
+  - **التنفيذ في A10.3** — هذه الوثيقة تسبق الكود.
 - `Idempotency-Key` مقبول (§1.7).
 
 **الأخطاء:**
@@ -755,6 +766,7 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
       "output_url": "string|null (signed, expires in 1h — see 8.4)",
       "duration_ms": "int|null (final render duration)",
       "brand_snapshot_id": "bks_...",
+      "template_snapshot_id": "tks_...",
       "createdAt": "ISO",
       "startedAt": "ISO|null",
       "completedAt": "ISO|null"
@@ -791,14 +803,26 @@ docs/02) تظهر لكل المستأجرين للقراءة فقط.
 **الفائدة:** «لماذا يبدو هذا التصدير مختلفاً عن الحالي؟» — الجواب في
 الفرق بين هذا الـsnapshot و `GET /brand-kits/:id` الحالي.
 
-### 8.6 DELETE /v1/renders/:id
+### 8.6 GET /v1/renders/:id/template-snapshot
+
+**الوصف:** استرجاع لقطة القالب (`definition` JSON كاملة) المستعمَلة في
+هذا التصدير.
+**الدور:** `viewer` فما فوق.
+**الاستجابة (200):** كائن Template كامل كما كان لحظة الإنشاء (بنفس
+شكل `templates.definition` — راجع docs/04).
+
+**الفائدة:** إعادة رندر مشروع قديم تعطي **ما نُشر** لا **ما صار عليه
+القالب** بعد تعديل العميل. مع `brand-snapshot` (8.5)، اللقطتان معاً
+تُعيدان بناء التصدير بايت-ببايت.
+
+### 8.7 DELETE /v1/renders/:id
 
 **الوصف:** حذف سجل render + ملف المخرَج.
 **الدور:** `admin`+.
 **الاستجابة (204).**
-**الأخطاء:** 409 `RENDER_RUNNING` (لا حذف مهمة قيد التنفيذ — استعمل §8.7).
+**الأخطاء:** 409 `RENDER_RUNNING` (لا حذف مهمة قيد التنفيذ — استعمل §8.8).
 
-### 8.7 POST /v1/renders/:id/cancel
+### 8.8 POST /v1/renders/:id/cancel
 
 **الوصف:** إلغاء مهمة `queued` أو `running`.
 **الدور:** `admin`+ (أو صاحب المهمة).
