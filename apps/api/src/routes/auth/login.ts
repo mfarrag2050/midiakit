@@ -22,9 +22,33 @@ const route: FastifyPluginAsync = async (fastify) => {
       ip: req.ip,
     });
 
+    // A8-FIX 2026-09-05: tenant.name + tenant.plan مضافة بحسب docs/16 §2.2.
+    // AppShell كان يُضطرّ لاستدعاء GET /v1/tenant زائد للحصول عليهما.
+    // نستعمل اتصالاً قصيراً مع SET LOCAL لجلب الحقلين — RLS يحرس.
+    const pool = getPool();
+    const c = await pool.connect();
+    let tenantName = '';
+    let tenantPlan = '';
+    try {
+      await c.query('BEGIN');
+      await c.query('SELECT app_set_tenant($1::uuid)', [result.tenantId]);
+      const t = await c.query<{ name: string; plan: string }>(
+        `SELECT name, plan FROM tenants WHERE id = $1`,
+        [result.tenantId],
+      );
+      await c.query('COMMIT');
+      tenantName = t.rows[0]?.name ?? '';
+      tenantPlan = t.rows[0]?.plan ?? '';
+    } catch (err) {
+      await c.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      c.release();
+    }
+
     reply.status(200).send({
       user: { id: result.userId, role: result.role },
-      tenant: { id: result.tenantId },
+      tenant: { id: result.tenantId, name: tenantName, plan: tenantPlan },
       session: {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,

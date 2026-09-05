@@ -66,7 +66,10 @@ export class ApiError extends Error {
     return {
       error: {
         code: this.code,
-        message: this.code,   // مفتاح i18n — الواجهة تُترجم
+        // A8-FIX 2026-09-05: مفتاح قاموس كامل بحسب L-22 (message = key، لا text).
+        // الاستوديو يستدعي t('errors.INVALID_CREDENTIALS') — مفتاح خام
+        // بلا بادئة يُعرض للمستخدم كنصّ. البادئة errors. تُشير للمترجم.
+        message: `errors.${this.code}`,
         field: this.field,
         ...(requestId ? { requestId } : {}),
       },

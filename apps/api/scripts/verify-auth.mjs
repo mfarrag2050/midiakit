@@ -126,7 +126,10 @@ async function checkHttp(fastify) {
   else fail(`refresh → ${refreshRes.statusCode}: ${refreshRes.body}`);
 
   const refreshBody = json(refreshRes);
-  const rotatedAccess = refreshBody?.session?.accessToken;
+  // A8-FIX 2026-09-05: refresh body مفروش بلا غلاف session (docs/16 §2.3)
+  const rotatedAccess = refreshBody?.accessToken;
+  if (!rotatedAccess) fail(`refresh body مفروش متوقّع (docs/16 §2.3) — لم يوجد accessToken على المستوى الأعلى`);
+  if (refreshBody?.session) fail(`refresh body يحمل غلاف session — يخالف docs/16 §2.3`);
 
   // ── refresh with old token → 401 ───────────────────
   const refreshAgain = await fastify.inject({

@@ -22,7 +22,7 @@ const plugin: FastifyPluginAsync = async (fastify) => {
       reply.status(400).send({
         error: {
           code: 'VALIDATION_FAILED',
-          message: 'VALIDATION_FAILED',
+          message: 'errors.VALIDATION_FAILED',
           field: first?.path.join('.') ?? null,
           requestId,
         },
@@ -35,7 +35,7 @@ const plugin: FastifyPluginAsync = async (fastify) => {
       reply.status(400).send({
         error: {
           code: 'VALIDATION_FAILED',
-          message: 'VALIDATION_FAILED',
+          message: 'errors.VALIDATION_FAILED',
           field: (err as any).validation[0]?.instancePath?.replace(/^\//, '') ?? null,
           requestId,
         },
@@ -47,7 +47,7 @@ const plugin: FastifyPluginAsync = async (fastify) => {
     reply.status(500).send({
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'INTERNAL_ERROR',
+        message: 'errors.INTERNAL_ERROR',
         field: null,
         requestId,
       },
