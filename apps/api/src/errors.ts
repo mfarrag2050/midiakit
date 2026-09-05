@@ -42,6 +42,10 @@ export type ErrorCode =
   | 'INVALID_FILTER_FIELD'                // §9.3 فلتر غير مسموح
   | 'INVALID_KIND_VALUE'                  // §9.3 قيمة kind غير معروفة
   | 'ASSET_IN_USE_BY_BRAND_KIT'           // §9.6 حذف أصل مُشار إليه
+  // Templates (§6)
+  | 'GLOBAL_TEMPLATE_READONLY'            // §6.4/§6.5 تعديل/حذف قالب عام
+  | 'TEMPLATE_SCHEMA_VIOLATION'           // §6.3 validateTemplate أخفق
+  | 'TEMPLATE_IN_USE'                     // §6.5 حذف قالب مستعمل في مشاريع
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -142,5 +146,9 @@ export const InvalidSvgWithTextWarning = () => new ApiError('INVALID_SVG_WITH_TE
 export const InvalidFilterField = (field: string) => new ApiError('INVALID_FILTER_FIELD', 400, field);
 export const InvalidKindValue = () => new ApiError('INVALID_KIND_VALUE', 400, 'filter[kind]');
 export const AssetInUseByBrandKit = () => new ApiError('ASSET_IN_USE_BY_BRAND_KIT', 409);
+// Templates (§6)
+export const GlobalTemplateReadonly = () => new ApiError('GLOBAL_TEMPLATE_READONLY', 403);
+export const TemplateSchemaViolation = (field: string) => new ApiError('TEMPLATE_SCHEMA_VIOLATION', 400, field);
+export const TemplateInUse = () => new ApiError('TEMPLATE_IN_USE', 409);
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

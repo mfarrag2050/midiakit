@@ -18,8 +18,9 @@
     "check:skill-fresh": "node scripts/check-skill-fresh.mjs",
     "check:script-paths": "node scripts/check-script-paths.mjs",
     "check:no-git-internals": "node scripts/check-no-git-internals.mjs",
+    "check:template-sync": "pnpm --filter @pf-mediakit/db check:template-sync",
     "skill:build": "node scripts/build-skill.mjs",
-    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && vitest run",
+    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:template-sync && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
@@ -45,7 +46,8 @@
     "verify:brand-kits": "pnpm --filter @pf-mediakit/api verify:brand-kits",
     "verify:tenant": "pnpm --filter @pf-mediakit/api verify:tenant",
     "verify:users": "pnpm --filter @pf-mediakit/api verify:users",
-    "verify:assets": "pnpm --filter @pf-mediakit/api verify:assets"
+    "verify:assets": "pnpm --filter @pf-mediakit/api verify:assets",
+    "verify:templates": "pnpm --filter @pf-mediakit/api verify:templates"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

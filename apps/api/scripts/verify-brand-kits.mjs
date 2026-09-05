@@ -440,27 +440,38 @@ async function checkPrivileges() {
     pass(`app_user على brand_kits: [${perms.join(', ')}] — DML كامل، لا زوائد`);
   } else fail(`brand_kits grants: متوقع [DELETE, INSERT, SELECT, UPDATE]، وجدنا [${perms.join(', ')}]`);
 
-  // templates: نتحقّق أن سياسة RLS تحرس globals من التعديل من app_user.
-  // scope='global' مع tenant_id NULL. حتى لو owner كتب SQL يدوياً،
-  // WITH CHECK يرفض tenant_id != app.tenant_id → NULL != uuid → false.
-  const c = await migPool.connect();
+  // templates: نتحقّق أن سياسة templates_insert (A13) تحرس globals من
+  // التعديل من app_user. النمط الجديد يسمح لـmigration_user فقط
+  // (للبذر) و tenant لكل مستأجر. app_user في هذا الاختبار = عميل
+  // API حقيقي، فيجب أن يُرفَض بـ42501 (RLS).
+  //
+  // الاختبار السابق استعمل migPool (migration_user) وكان يمرّ صدفة
+  // لأن السياسة الواحدة القديمة رفضت الجميع. النمط الجديد يميّز،
+  // فالاختبار يجب أن يستعمل APP_URL الفعلي.
+  const APP_URL = process.env.DATABASE_URL_APP;
+  if (!APP_URL) { fail('DATABASE_URL_APP غائبة'); return; }
+  const appPool = new Pool({ connectionString: APP_URL, max: 1 });
   try {
-    await c.query('BEGIN');
-    // نضبط tenant وهمي
-    await c.query(`SELECT app_set_tenant('11111111-1111-1111-1111-111111111111'::uuid)`);
+    const c = await appPool.connect();
     try {
-      await c.query(
-        `INSERT INTO templates(tenant_id, scope, kind, name, definition)
-         VALUES (NULL, 'global', 'card', 'Malicious Global', '{}')`,
-      );
-      fail(`app_user استطاع INSERT template scope='global' — سياسة templates ضعيفة`);
-    } catch (err) {
-      if (err.code === '42501' || /row-level security/i.test(err.message)) {
-        pass(`app_user لا يستطيع INSERT templates scope='global' (${err.code || 'msg'})`);
-      } else fail(`unexpected: ${err.code} ${err.message}`);
-    }
-    await c.query('ROLLBACK');
-  } finally { c.release(); }
+      await c.query('BEGIN');
+      await c.query(`SELECT app_set_tenant('11111111-1111-1111-1111-111111111111'::uuid)`);
+      try {
+        // نُمرِّر source_ref+definition_hash لتجاوز CHECK templates_global_has_source،
+        // ليصل الاختبار إلى سياسة RLS templates_insert نفسها.
+        await c.query(
+          `INSERT INTO templates(tenant_id, scope, kind, name, definition, source_ref, definition_hash)
+           VALUES (NULL, 'global', 'card', 'Malicious Global', '{}', 'evil', 'evil-hash')`,
+        );
+        fail(`app_user استطاع INSERT template scope='global' — سياسة templates ضعيفة`);
+      } catch (err) {
+        if (err.code === '42501' || /row-level security/i.test(err.message)) {
+          pass(`app_user لا يستطيع INSERT templates scope='global' (${err.code || 'msg'})`);
+        } else fail(`unexpected: ${err.code} ${err.message}`);
+      }
+      await c.query('ROLLBACK');
+    } finally { c.release(); }
+  } finally { await appPool.end(); }
 }
 
 // ══════════════════════════════════════════════════════════════════

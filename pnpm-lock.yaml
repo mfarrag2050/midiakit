@@ -66,6 +66,9 @@ importers:
       '@pf-mediakit/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@pf-mediakit/templates':
+        specifier: workspace:*
+        version: link:../../packages/templates
       dotenv:
         specifier: 16.4.7
         version: 16.4.7

@@ -46,6 +46,11 @@ import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
 import assetsDeleteRoute from './routes/assets/delete.js';
 import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
 import assetsPatchFacesRoute from './routes/assets/patch-faces.js';
+import templatesListRoute from './routes/templates/list.js';
+import templatesGetRoute from './routes/templates/get.js';
+import templatesCreateRoute from './routes/templates/create.js';
+import templatesUpdateRoute from './routes/templates/update.js';
+import templatesDeleteRoute from './routes/templates/delete.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -135,6 +140,14 @@ export async function buildServer() {
       await a.register(assetsDetectFacesRoute);
       await a.register(assetsPatchFacesRoute);
     }, { prefix: '/assets' });
+
+    await v1.register(async (t) => {
+      await t.register(templatesListRoute);
+      await t.register(templatesGetRoute);
+      await t.register(templatesCreateRoute);
+      await t.register(templatesUpdateRoute);
+      await t.register(templatesDeleteRoute);
+    }, { prefix: '/templates' });
   }, { prefix: '/v1' });
 
   return fastify;

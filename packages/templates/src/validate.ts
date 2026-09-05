@@ -145,7 +145,8 @@ function validateLayerCommon(o: Record<string, unknown>, path: string): void {
     if (!Array.isArray(o['fallback'])) {
       bail(`${path}.fallback`, 'يجب أن يكون array');
     }
-    o['fallback'].forEach((fb, i) => {
+    const fallback = o['fallback'] as unknown[];
+    fallback.forEach((fb: unknown, i: number) => {
       validateLayer(fb, `${path}.fallback[${i}]`);
     });
   }
@@ -393,7 +394,8 @@ export function validateTemplate(raw: unknown): Template {
   const o = raw as Record<string, unknown>;
 
   if (!isString(o['id'])) bail('id', 'يجب أن يكون string');
-  if (!/^[a-z][a-z0-9_-]*$/.test(o['id'])) {
+  const idStr = o['id'] as string;
+  if (!/^[a-z][a-z0-9_-]*$/.test(idStr)) {
     bail('id', 'يجب أن يبدأ بحرف صغير ويحوي [a-z0-9_-] فقط');
   }
   if (!isString(o['name']) || o['name'].length === 0) {
@@ -406,19 +408,22 @@ export function validateTemplate(raw: unknown): Template {
   if (!Array.isArray(o['sizes']) || o['sizes'].length === 0) {
     bail('sizes', 'يجب أن يكون array غير فارغ من strings');
   }
-  o['sizes'].forEach((s, i) => {
+  const sizes = o['sizes'] as unknown[];
+  sizes.forEach((s: unknown, i: number) => {
     if (!isString(s)) bail(`sizes[${i}]`, 'يجب أن يكون string');
   });
 
   if (o['fields'] !== undefined) {
     if (!Array.isArray(o['fields'])) bail('fields', 'يجب أن يكون array');
-    o['fields'].forEach((f, i) => validateField(f, `fields[${i}]`));
+    const fields = o['fields'] as unknown[];
+    fields.forEach((f: unknown, i: number) => validateField(f, `fields[${i}]`));
   }
 
-  if (!Array.isArray(o['layers']) || o['layers'].length === 0) {
+  if (!Array.isArray(o['layers']) || (o['layers'] as unknown[]).length === 0) {
     bail('layers', 'يجب أن يكون array غير فارغ');
   }
-  o['layers'].forEach((l, i) => validateLayer(l, `layers[${i}]`));
+  const layers = o['layers'] as unknown[];
+  layers.forEach((l: unknown, i: number) => validateLayer(l, `layers[${i}]`));
 
   if (o['video'] !== undefined) validateVideo(o['video'], 'video');
 
@@ -444,7 +449,8 @@ function validateVideo(raw: unknown, path: string): void {
   if (!Array.isArray(o['animation'])) {
     bail(`${path}.animation`, 'يجب أن يكون array');
   }
-  o['animation'].forEach((a, i) => validateAnimation(a, `${path}.animation[${i}]`));
+  const animation = o['animation'] as unknown[];
+  animation.forEach((a: unknown, i: number) => validateAnimation(a, `${path}.animation[${i}]`));
 
   const outro = o['outro'];
   if (!isString(outro) && !isNumber(outro)) {
