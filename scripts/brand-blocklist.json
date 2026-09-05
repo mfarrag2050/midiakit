@@ -4,9 +4,10 @@
     "توسّع كلّما ظهرت مؤسسة أخرى في نص عيّنة.",
     "استثناء تلقائي: reference/ · التوثيق التاريخي (docs/00, docs/01, ",
     "docs/06, docs/09, docs/PROJECT_INSTRUCTIONS, docs/INVENTORY, ",
-    "docs/LESSONS, PHASES, CLAUDE, README) · تعليقات // المرجع: ",
-    "reference/aa-media-kit.html · scripts/brand-blocklist.json نفسه ",
-    "· scripts/check-no-brand-leak.mjs نفسه.",
+    "docs/LESSONS, PHASES, CLAUDE, README, SKILL-mediakit) · مولّد ",
+    "السكيل (scripts/build-skill.mjs — يبني وصفاً تاريخياً للمشروع) ",
+    "· تعليقات // المرجع: reference/aa-media-kit.html · ",
+    "scripts/brand-blocklist.json نفسه · scripts/check-no-brand-leak.mjs نفسه.",
     "تفاصيل في CLAUDE.md §القاعدة 10."
   ],
   "blocklist": [
@@ -16,6 +17,7 @@
     { "term": "AA Media Kit",  "reason": "اسم الأداة الأصلية — نفس السبب" }
   ],
   "$expansionNote": "أضف مؤسسات أخرى هنا بأمر صريح من صاحب المشروع — لا تجتهد. أمثلة محتملة (لم تُقرَّر): 'الجزيرة'/'aljazeera' (يظهر حالياً في RSS pipeline كمعرِّف مصدر، ليس نص اختبار).",
+  "$skillPathsNote": "docs/SKILL-mediakit.md · scripts/build-skill.mjs — وثائق داخلية تذكر أصل المشروع تاريخياً. القاعدة السابعة تمنع أصول أناضول في المنتج (خط · شعار · لون · قالب)، لا ذكر المصدر في توثيق لا يُشحن ولا يراه عميل. نفس صنف PHASES.md و CLAUDE.md و LESSONS.md المستثناة قبلها.",
   "excludeGlobs": [
     "reference/**",
     "node_modules/**",
@@ -31,6 +33,8 @@
     "docs/PROJECT_INSTRUCTIONS.md",
     "docs/INVENTORY.md",
     "docs/LESSONS.md",
+    "docs/SKILL-mediakit.md",
+    "scripts/build-skill.mjs",
     "fixtures/audio/**",
     "services/*/out/**",
     "services/transcriber/scripts/measure_news_wer.py",

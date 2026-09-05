@@ -279,41 +279,47 @@ function buildGenerated() {
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ\`pnpm skill:build\`.
 > **تاريخ التوليد:** ${m.date} · **HEAD:** \`${m.head}\` (\`${m.branch}\`)
+>
+> **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
+> الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
+> السطر «packages: engine · shared · templates · tts» صحيح لـmain
+> ولا يصف المشروع كله — packages/ui و packages/i18n موجودتان على
+> feat/studio (تصحيح 2026-09-06).
 
-### المراحل — من \`PHASES.md §نظرة عامة\`
+### المراحل — من main (\`PHASES.md §نظرة عامة\`)
 
 ${phaseTable}
 
-### الفروع — من \`git for-each-ref\`
+### الفروع — عبر الفروع (\`git for-each-ref\`)
 
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 ${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.count} |`).join('\n')}
 
-### الفحوص الآلية — من \`package.json\` الجذر على كل فرع
+### الفحوص الآلية — عبر الفروع (\`package.json\` الجذر)
 
 - **main (${mainChecks.length}):** ${fmtFull(mainChecks)}
 - **feat/api (${apiChecks.length}):** ${fmtFull(apiChecks)}
 - **feat/studio (${studioChecks.length}):** ${fmtFull(studioChecks)}
 
-### الدروس — من \`docs/LESSONS.md\`
+### الدروس — من main (\`docs/LESSONS.md\`)
 
 - **المدى:** L-${lessons.min} → L-${lessons.max}
 - **العدد الفريد:** ${lessons.count} · **الإدخالات:** ${lessons.entries}
 - **فجوات:** ${lessons.gaps.length ? lessons.gaps.map((n) => `L-${n}`).join(' · ') : '(لا فجوات)'}
 - **تكرار:** ${lessons.dupes.length ? lessons.dupes.map((n) => `L-${n}`).join(' · ') : '(لا تكرار)'}
 
-### قوائم المرحلة 4 — من \`docs/17-phase4-plan.md\`
+### قوائم المرحلة 4 — من main (\`docs/17-phase4-plan.md\`)
 
 - **A-list (${l17.a.length}):** ${fmtFull(l17.a)}
 - **S-list (${l17.s.length}):** ${fmtFull(l17.s)}
 - **SYNC (${l17.sync.length}):** ${fmtFull(l17.sync)}
 
-### نقاط النهاية المبنيّة — \`git ls-tree origin/feat/api apps/api/src/routes/\`
+### نقاط النهاية المبنيّة — عبر الفروع (\`git ls-tree origin/feat/api apps/api/src/routes/\`)
 
 ${eps.length ? eps.map((e) => `- \`${e}\``).join('\n') : '- (لا ملفات مطابقة في origin/feat/api:apps/api/src/routes/)'}
 
-### محتويات المستودع — من \`ls\`
+### محتويات المستودع — من main (\`ls\`)
 
 - **\`packages/\`:** ${c.packages.length ? c.packages.map((p) => `\`${p}\``).join(' · ') : '(فارغ)'}
 - **\`demo/\`:** ${c.demoCount} ملف

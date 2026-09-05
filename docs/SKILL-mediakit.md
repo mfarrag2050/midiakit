@@ -27,9 +27,15 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `4d5abc1` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `4d157da` (`main`)
+>
+> **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
+> الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
+> السطر «packages: engine · shared · templates · tts» صحيح لـmain
+> ولا يصف المشروع كله — packages/ui و packages/i18n موجودتان على
+> feat/studio (تصحيح 2026-09-06).
 
-### المراحل — من `PHASES.md §نظرة عامة`
+### المراحل — من main (`PHASES.md §نظرة عامة`)
 
 | # | المرحلة | المدة | البوابة | الحالة |
 |---|---|---|---|---|
@@ -47,37 +53,37 @@ description: |
 | 4 | المنصة (بعد اكتشاف بنود 2026-09-02) | **6–8 أسابيع** | عميل يعمل ذاتياً + سجل مراجعات + سير عمل تحريري + دورة حياة أصول | ☐ |
 | 5 | النمو | مستمر | — | ☐ |
 
-### الفروع — من `git for-each-ref`
+### الفروع — عبر الفروع (`git for-each-ref`)
 
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `d422bfd` | 91 |
-| `feat/studio` | `f70d202` | 91 |
+| `feat/api` | `942756a` | 116 |
+| `feat/studio` | `536d661` | 94 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `d422bfd` | 91 |
-| `origin/feat/studio` | `f70d202` | 91 |
+| `origin/feat/api` | `942756a` | 116 |
+| `origin/feat/studio` | `536d661` | 94 |
 
-### الفحوص الآلية — من `package.json` الجذر على كل فرع
+### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (14):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (10):** `check:engine-purity` · `check:no-brand-leak` · `verify:auth` · `verify:brand-kits` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tenant-isolation` · `verify:tts`
+- **feat/api (19):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:script-paths` · `check:skill-fresh` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts`
 - **feat/studio (16):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
-### الدروس — من `docs/LESSONS.md`
+### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-65
-- **العدد الفريد:** 60 · **الإدخالات:** 60
+- **المدى:** L-1 → L-66
+- **العدد الفريد:** 61 · **الإدخالات:** 61
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
-### قوائم المرحلة 4 — من `docs/17-phase4-plan.md`
+### قوائم المرحلة 4 — من main (`docs/17-phase4-plan.md`)
 
-- **A-list (25):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25`
+- **A-list (28):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28`
 - **S-list (22):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22`
 - **SYNC (8):** `SYNC-α` · `SYNC-β` · `SYNC-γ` · `SYNC-δ` · `SYNC-ε` · `SYNC-ζ` · `SYNC-η` · `SYNC-θ`
 
-### نقاط النهاية المبنيّة — `git ls-tree origin/feat/api apps/api/src/routes/`
+### نقاط النهاية المبنيّة — عبر الفروع (`git ls-tree origin/feat/api apps/api/src/routes/`)
 
 - `apps/api/src/routes/auth/forgot-password.ts`
 - `apps/api/src/routes/auth/login.ts`
@@ -94,8 +100,10 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/health.ts`
+- `apps/api/src/routes/tenant/get.ts`
+- `apps/api/src/routes/tenant/patch.ts`
 
-### محتويات المستودع — من `ls`
+### محتويات المستودع — من main (`ls`)
 
 - **`packages/`:** `engine` · `shared` · `templates` · `tts`
 - **`demo/`:** 15 ملف
@@ -288,12 +296,12 @@ Opus يخطّط ويصوغ التذاكر ← Muhammed يلصقها ← Claude C
 
 ## التالي
 
-**`mk-api`:** تذكرة أمن (`pgmigrations` · حارس SSRF · الحُرّاس
-الناقصة) ثم A9 → A10 → A11 → A13.
-**`mk-studio`:** S2-X (استخراج `packages/ui` و `packages/i18n`)
-ثم S5.
-**`SYNC-α`** جاهزة — تنتظر `curl` فعلياً على `/v1/auth/login`.
-**العميل الأول:** بعد الاكتمال والاختبار — قرار المالك.
+الترتيب العام الثابت (لا تذاكر جارية هنا — تعيش في PHASES.md و
+docs/17):
+
+- **mk-api:** A9 → A10 → A11 → A13 → **A26 → A27 → A28**
+- **mk-studio:** S5 → S6 → S7 → S8 → …
+- **العميل الأول:** بعد الاكتمال والاختبار — قرار المالك.
 
 ## عند الشك
 

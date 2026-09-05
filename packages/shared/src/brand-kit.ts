@@ -45,6 +45,12 @@ export interface FontCaps {
 }
 
 export interface FontWeight {
+  /**
+   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
+   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
+   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
+   * على feat/api. لا `fetch(brand.fonts.*.url)` مسموح.
+   */
   readonly url: string;
   readonly value: number;
 }
@@ -110,6 +116,12 @@ export interface BrandWatermark {
 }
 
 export interface BrandLogo {
+  /**
+   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
+   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
+   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
+   * على feat/api. لا `fetch(brand.logo.url)` مسموح.
+   */
   readonly url: string;
   readonly size: number;
   readonly margin: number;
@@ -483,6 +495,12 @@ export interface BrandOutputs {
 }
 
 export interface BrandAudioTrack {
+  /**
+   * **تحذير SSRF (2026-09-06):** مسار ملفي محلّي أو معرّف أصل — ليس
+   * عنوان شبكة. أيّ جلب HTTP يفتح SSRF (127.0.0.1:19041 ·
+   * 169.254.169.254). محروس بـ `scripts/check-no-brand-url-fetch.mjs`
+   * على feat/api. لا `fetch(brand.audio[i].url)` مسموح.
+   */
   readonly url: string;
   readonly label: string;
   readonly licenseAck: boolean;
