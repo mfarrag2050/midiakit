@@ -7,6 +7,10 @@
     "docs/LESSONS, PHASES, CLAUDE, README) · تعليقات // المرجع: ",
     "reference/aa-media-kit.html · scripts/brand-blocklist.json نفسه ",
     "· scripts/check-no-brand-leak.mjs نفسه.",
+    "SEC-1d 2026-09-05 — إضافة docs/SKILL-mediakit.md + scripts/build-skill.mjs:",
+    "وثائق داخلية تذكر أصل المشروع تاريخياً. القاعدة السابعة تمنع الأصول",
+    "في المنتج (خط · شعار · لون · قالب) لا ذكر المصدر في التوثيق. لا",
+    "تُشحن مع المنتج ولا يراها عميل.",
     "تفاصيل في CLAUDE.md §القاعدة 10."
   ],
   "blocklist": [
@@ -38,6 +42,8 @@
     "scripts/brand-blocklist.json",
     "scripts/check-no-brand-leak.mjs",
     "scripts/compare-cleanup-snapshots.mjs",
+    "docs/SKILL-mediakit.md",
+    "scripts/build-skill.mjs",
     "pnpm-lock.yaml",
     "data/external/**",
     "out/**",
