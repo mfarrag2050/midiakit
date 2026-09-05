@@ -2,23 +2,27 @@
 /**
  * G-P4-6 — بوابة Assets (docs/17 §A11، docs/16 §9).
  *
- * ست طبقات + حالات خاصّة:
- *   1. وجود   — 8 endpoints (docs/16 §9.1–§9.8)
+ * سبع طبقات + حالات خاصّة:
+ *   1. وجود   — 8 endpoints (docs/16 §9.1–§9.8) عبر fastify.inject
  *   2. عزل    — كل method من مستأجر آخر → 404
- *   3. سلبي   — 9 أكواد أخطاء (§9): UNSUPPORTED_KIND ·
- *              UNSUPPORTED_CONTENT_TYPE_FOR_KIND · SIZE_TOO_LARGE ·
- *              UPLOAD_NOT_COMPLETED · LICENSE_ACK_MUST_BE_TRUE ·
- *              INVALID_SVG_WITH_TEXT_WARNING · INVALID_FILTER_FIELD ·
- *              INVALID_KIND_VALUE · ASSET_IN_USE_BY_BRAND_KIT
+ *   3. سلبي   — 9 أكواد أخطاء (§9)
  *   4. RBAC   — editor/viewer على مسارات writer+/admin+ → 403
  *   5. L-58   — grants app_user على assets (SEC-1 القائمة)
  *   6. حاسم   — DISABLE RLS على assets → تسريب → ENABLE+FORCE
+ *   7. الحدّ   — PUT/GET حقيقيان خارج العملية على presigned URLs:
+ *              (أ) رفع → finalize → قراءة publicUrl → تطابق بايتات
+ *              (ب) رابط منتهي الصلاحية ⇒ يُرفض (S3 signature)
+ *              (ج) رابط لمفتاح مُعدَّل ⇒ يُرفض (signature bound to key)
+ *              يتخطّى بحرص إن كان STORAGE_DRIVER=memory (لا شبكة).
  */
 import 'dotenv/config';
 import pg from 'pg';
 import { buildServer } from '../src/server.js';
 import { closePool } from '../src/db.js';
 import { getStorage } from '../src/storage/index.js';
+import { config } from '../src/config.js';
+import { randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { hashPassword } from '../src/auth/session.js';
 
 const { Pool } = pg;
@@ -433,6 +437,70 @@ async function checkPolicyDisableFails(fastify, ctx) {
   else fail(`استعادة فاشلة — قبل ${bSees}، بعد ${afterB.length}`);
 }
 
+// ── Layer 7 — الحدّ الخارجي (PUT/GET حقيقيان) ─────────────────────
+async function checkExternalHTTP(fastify, ctx) {
+  console.log('\n▶ Layer 7 — PUT/GET حقيقيان خارج العملية (STORAGE_DRIVER=' + config.STORAGE_DRIVER + ')');
+
+  if (config.STORAGE_DRIVER !== 's3') {
+    fail(`Layer 7 تحتاج STORAGE_DRIVER=s3 (MinIO في dev). الحالي: memory — الطبقة لا تُختبَر.`);
+    return;
+  }
+
+  // (أ) الرفع الحقيقي — presign → PUT → finalize → GET publicUrl → تطابق
+  const rUp = await fastify.inject({
+    method: 'POST', url: '/v1/assets/upload-url',
+    headers: H(ctx.a.session.accessToken),
+    payload: { kind: 'image', filename: 'l7-http.png', sizeBytes: 8, contentType: 'image/png' },
+  });
+  const upBody = json(rUp);
+  const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  const putRes = await fetch(upBody.uploadUrl, {
+    method: 'PUT', body: bytes, headers: { 'Content-Type': 'image/png' },
+  });
+  if (putRes.status === 200) pass(`(أ.1) PUT حقيقي على uploadUrl → 200 (${bytes.length} بايت)`);
+  else fail(`(أ.1) PUT فشل: HTTP ${putRes.status}`);
+
+  const rFin = await fastify.inject({
+    method: 'POST', url: `/v1/assets/${upBody.assetId}/finalize`,
+    headers: H(ctx.a.session.accessToken), payload: { meta: { label: 'L7' } },
+  });
+  if (rFin.statusCode === 200 && json(rFin)?.publicUrl) pass(`(أ.2) finalize → 200 مع publicUrl`);
+  else fail(`(أ.2) finalize: ${rFin.statusCode}`);
+
+  const rGet = await fastify.inject({
+    method: 'GET', url: `/v1/assets/${upBody.assetId}`, headers: H(ctx.a.session.accessToken),
+  });
+  const pubUrl = json(rGet)?.publicUrl;
+  const dl = await fetch(pubUrl);
+  const dlBuf = Buffer.from(await dl.arrayBuffer());
+  if (dl.status === 200 && dlBuf.equals(bytes)) {
+    pass(`(أ.3) GET publicUrl بـfetch → 200، البايتات متطابقة (${dlBuf.length})`);
+  } else fail(`(أ.3) GET publicUrl: status=${dl.status}, len=${dlBuf.length}, match=${dlBuf.equals(bytes)}`);
+
+  // (ب) رابط منتهي الصلاحية — نُنشئ presign بـTTL=1s ثم ننام 3s ثم PUT
+  const expiredKey = `${ctx.a.tenant.id}/${randomUUID()}/expired.png`;
+  const shortP = await getStorage().presignUpload(expiredKey, 'image/png', 100, 1);
+  await sleep(3000);
+  const expiredPut = await fetch(shortP.uploadUrl, {
+    method: 'PUT', body: bytes, headers: { 'Content-Type': 'image/png' },
+  });
+  if (expiredPut.status === 403) pass(`(ب) PUT على رابط منتهي الصلاحية → 403 (S3 expired signature)`);
+  else fail(`(ب) expired URL: expected 403, got ${expiredPut.status}`);
+
+  // (ج) رابط لمفتاح مُعدَّل — نأخذ presign لمفتاح صحيح ثم نبدّل المفتاح في المسار
+  const legitKey = `${ctx.a.tenant.id}/${randomUUID()}/legit.png`;
+  const legitP = await getStorage().presignUpload(legitKey, 'image/png', 100, 900);
+  // نستبدل tenant_id في المسار بـtenant B — نفس صيغة URL لكن key مختلف
+  const tamperedUrl = legitP.uploadUrl.replace(ctx.a.tenant.id, ctx.b.tenant.id);
+  const tamperedPut = await fetch(tamperedUrl, {
+    method: 'PUT', body: bytes, headers: { 'Content-Type': 'image/png' },
+  });
+  // S3 signature ملزوم بـKey. تعديل tenant_id في المسار يفشل بـ403.
+  if (tamperedPut.status === 403) pass(`(ج) PUT على مفتاح مُعدَّل (tenant A → tenant B path) → 403 (signature bound to key)`);
+  else fail(`(ج) tampered key: expected 403, got ${tamperedPut.status}`);
+}
+
 // ── Main ─────────────────────────────────────────────────────────
 async function main() {
   console.log('▶ G-P4-6 — بوابة Assets');
@@ -446,6 +514,7 @@ async function main() {
     await checkRbac(fastify, ctx);
     await checkPrivileges();
     await checkPolicyDisableFails(fastify, ctx);
+    await checkExternalHTTP(fastify, ctx);
   } finally {
     await fastify.close();
     await closePool();
