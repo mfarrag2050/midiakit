@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `aebfc1a` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `7688189` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -58,22 +58,22 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `c11371a` | 118 |
-| `feat/studio` | `385a872` | 96 |
+| `feat/api` | `4e66332` | 128 |
+| `feat/studio` | `a7f2322` | 97 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `c11371a` | 118 |
-| `origin/feat/studio` | `385a872` | 96 |
+| `origin/feat/api` | `4e66332` | 128 |
+| `origin/feat/studio` | `a7f2322` | 97 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (15):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (20):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:script-paths` · `check:skill-fresh` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users`
+- **feat/api (25):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users`
 - **feat/studio (17):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
-- **mk-api (feat/api):** آخر مبنيّ ✅ = `A12` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S6` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي`
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A13` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S6` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
@@ -90,6 +90,16 @@ description: |
 
 ### نقاط النهاية المبنيّة — عبر الفروع (`git ls-tree origin/feat/api apps/api/src/routes/`)
 
+- `apps/api/src/routes/assets/delete.ts`
+- `apps/api/src/routes/assets/detect-faces.ts`
+- `apps/api/src/routes/assets/finalize.ts`
+- `apps/api/src/routes/assets/get.ts`
+- `apps/api/src/routes/assets/list.ts`
+- `apps/api/src/routes/assets/patch-faces.ts`
+- `apps/api/src/routes/assets/refresh-url.ts`
+- `apps/api/src/routes/assets/shared/kind-rules.ts`
+- `apps/api/src/routes/assets/shared/mapper.ts`
+- `apps/api/src/routes/assets/upload-url.ts`
 - `apps/api/src/routes/auth/forgot-password.ts`
 - `apps/api/src/routes/auth/login.ts`
 - `apps/api/src/routes/auth/logout.ts`
@@ -105,6 +115,12 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/health.ts`
+- `apps/api/src/routes/templates/create.ts`
+- `apps/api/src/routes/templates/delete.ts`
+- `apps/api/src/routes/templates/get.ts`
+- `apps/api/src/routes/templates/list.ts`
+- `apps/api/src/routes/templates/shared/mapper.ts`
+- `apps/api/src/routes/templates/update.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
 - `apps/api/src/routes/users/delete.ts`
