@@ -17,8 +17,8 @@
     "emits them isn't implemented until A21) are marked below."
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
-  "mirroredAt": "2026-09-05",
-  "mirroredFromCommit": "7222b7b",
+  "mirroredAt": "2026-09-06",
+  "mirroredFromCommit": "086e182",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -78,6 +78,10 @@
     "REASON_REQUIRED_FOR_THIS_TRANSITION",
     "INVALID_SEGMENT_INDEX",
     "LAYER_NOT_FOUND",
+
+    "REVISION_NOT_FOUND",
+    "RESTORE_WOULD_BREAK_REFERENCES",
+    "IF_MATCH_REQUIRED",
 
     "RENDER_NOT_ALLOWED_IN_CURRENT_STATE",
     "QUOTA_EXCEEDED_VIDEOS",

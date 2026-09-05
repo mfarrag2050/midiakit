@@ -282,6 +282,10 @@
     "INVALID_SEGMENT_INDEX": "Segment index is invalid.",
     "LAYER_NOT_FOUND": "Requested layer doesn't exist in the template.",
 
+    "REVISION_NOT_FOUND": "The requested revision doesn't exist.",
+    "RESTORE_WOULD_BREAK_REFERENCES": "Restoring this revision would break existing references — review linked templates first.",
+    "IF_MATCH_REQUIRED": "Request requires an If-Match header — reload the current version and retry.",
+
     "RENDER_NOT_ALLOWED_IN_CURRENT_STATE": "Rendering isn't allowed in the project's current state.",
     "QUOTA_EXCEEDED_VIDEOS": "You've used your monthly video quota — upgrade your plan.",
     "QUOTA_EXCEEDED_RENDERS": "You've used your monthly render quota — upgrade your plan.",
