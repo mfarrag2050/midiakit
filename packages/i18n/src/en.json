@@ -89,7 +89,8 @@
       "title": "Reset password",
       "subtitle": "We'll send a recovery link to your email.",
       "submit": "Send reset link",
-      "backToLogin": "Back to sign in"
+      "backToLogin": "Back to sign in",
+      "sent": "If your email is on file, a reset link is on its way."
     },
     "reset": {
       "title": "Set a new password",
@@ -123,7 +124,18 @@
     "UNKNOWN": "Something went wrong.",
     "UNAUTHENTICATED": "Your session expired. Please sign in again.",
     "NETWORK_ERROR": "Can't reach the service.",
-    "INTERNAL_ERROR": "Server error. Try again later."
+    "INTERNAL_ERROR": "Server error. Try again later.",
+    "INVALID_EMAIL": "Not a valid email address.",
+    "PASSWORD_TOO_WEAK": "Password too short — 12 characters minimum.",
+    "TENANT_NAME_EMPTY": "Agency name is required.",
+    "FIELD_REQUIRED": "This field is required.",
+    "EMAIL_TAKEN": "Email is already in use — sign in instead.",
+    "INVALID_CREDENTIALS": "Wrong email or password.",
+    "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+    "INVALID_RESET_TOKEN": "Reset link is invalid.",
+    "TOKEN_EXPIRED": "Reset link expired — request a new one.",
+    "RATE_LIMITED": "Too many attempts — wait a moment and try again.",
+    "NOT_FOUND": "Not found."
   },
   "design": {
     "title": "Design System",

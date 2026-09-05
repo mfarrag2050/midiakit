@@ -343,3 +343,51 @@ Input · PageHeader · Table · Textarea) في `packages/ui/`. الـi18n
 · G-X-5 `apps/studio/src/ui/` تحوي القشور الثلاث فقط · G-X-6 `grep
 "from 'next/" packages/ui` = 0 · G-X-7 diff داخل النطاق · G-X-8
 `'use client'` باقٍ في 12 ملفاً.
+
+## S5 — صفحات المصادقة ✅  ·  على mocks حتى A6-A8
+
+**التسليم (2026-09-05):** الصفحات الأربع (`login` · `signup` ·
+`forgot-password` · `reset-password`) مبنيّة على `packages/ui` +
+`packages/i18n`، تدير حالة الإدخال محلياً، تتحقّق من المدخلات في
+المتصفح قبل الشبكة، وتستدعي طبقة `src/api/endpoints/auth.ts` القائمة
+منذ S1. الطبقة تمرّ عبر مُبدِّل `NEXT_PUBLIC_API_MOCK` — إن `=true`
+تروي `src/api/mock.ts` بدل `fetch`. عند فتح SYNC-α: احذف المتغيّر،
+لا تعديل صفحة.
+
+**AuthCard الآن ذكيّ:**
+- `onSubmit` من الصفحة، `successKey` للحالات بلا تحويل (forgot).
+- حالات داخلية: `values` (uncontrolled بأي شكل)، `errors` لكل حقل،
+  `topErrorKey` للخطأ العام، `loading` يعطّل النموذج والزرّ.
+- تحقّق مسبق: `emailFormat` regex بسيط · `minLength` (12 لكلمة السر)
+  · `required` بمفاتيح دلالية (`errors.INVALID_EMAIL`, …).
+- `ApiError` تُترجم بمفتاح الرسالة. إن كان `field` مطابقاً لحقل معلوم،
+  يُعرض تحته؛ وإلا في شريط `Alert kind="danger"` أعلى النموذج.
+
+**طبقة mock (`src/api/mock.ts`):**
+- تحاكي docs/16 §1.4 حرفياً — `code`/`field`/`message`/`requestId`.
+- كل رمز خطأ من docs/16 §2 مغطّى بمُشغِّل نصّي معلَن (تعليق رأسي في
+  الملف): `email=throttle@x.com` → 429، `password!=='letmein12345'`
+  → 401، `email مشوَّه` → 400 INVALID_EMAIL، إلخ.
+- تأخير 200ms لمحاكاة زمن الشبكة كي تُرى حالة `loading`.
+
+**مفاتيح i18n جديدة (متطابقة عبر ar/mixed/en):**
+- `errors.{INVALID_EMAIL, PASSWORD_TOO_WEAK, TENANT_NAME_EMPTY,
+  FIELD_REQUIRED, EMAIL_TAKEN, INVALID_CREDENTIALS, ACCOUNT_SUSPENDED,
+  INVALID_RESET_TOKEN, TOKEN_EXPIRED, RATE_LIMITED, NOT_FOUND}`.
+- `auth.forgot.sent` — الرسالة الوحيدة عند 204 من forgot-password.
+
+**اللقطات في `demo/studio/`:**
+- 12 صفحة أساسية: `s5-{login,signup,forgot-password,reset-password}
+  -{ar,mixed,en}.png`.
+- 1 حالة خطأ: `s5-login-ar-error-401.png` — يُظهر شريط أحمر أعلى
+  النموذج بنصّ «بريد أو كلمة سر خاطئة.» مفكوكاً من
+  `error.code=INVALID_CREDENTIALS`.
+
+**بوابات:** G-S5-1 typecheck أخضر · G-S5-2 الفحوص الأربعة تمرّ
+بعدد ملفات > 0 · G-S5-3 12 لقطة أساسية · G-S5-4 لقطة خطأ مفكوكة
+· G-S5-5 صفر استدعاء لأي endpoint حقيقي (كل نداء عبر `auth.*` الذي
+يمرّ عبر `handleMock` حين `NEXT_PUBLIC_API_MOCK=true`) · G-S5-6 diff
+داخل النطاق.
+
+**SYNC-α لم تُفتح:** يحتاج `curl` فعلياً من مسار A مقابل
+19040-19042. S6 و S7 مؤجّلتان حتى حينها.

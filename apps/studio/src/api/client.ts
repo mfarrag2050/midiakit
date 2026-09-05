@@ -14,6 +14,7 @@
 // - كل استدعاء يمرّ عبر `request()` — لا `fetch` مباشر في مكوّنات.
 
 import { parseApiError, ApiError } from './errors';
+import { handleMock, isMockEnabled } from './mock';
 import {
   getAccessToken,
   getRefreshToken,
@@ -39,7 +40,7 @@ function apiBase(): string {
   const url = process.env.NEXT_PUBLIC_API_URL;
   if (!url) {
     throw new Error(
-      'NEXT_PUBLIC_API_URL غير معرَّف — أضفه في .env قبل استدعاء طبقة API'
+      'NEXT_PUBLIC_API_URL غير معرَّف — أضفه في .env قبل استدعاء طبقة API (أو ضع NEXT_PUBLIC_API_MOCK=true)'
     );
   }
   return url.replace(/\/+$/, '');
@@ -123,6 +124,15 @@ export async function request<T>(
   opts: RequestOptions = {}
 ): Promise<T> {
   const method = opts.method ?? 'GET';
+
+  // Mock switch — يعمل قبل fetch كي لا تحتاج NEXT_PUBLIC_API_URL.
+  // ApiError يخرج من `handleMock` كما لو من الشبكة — بلا فرق للمستدعي.
+  if (isMockEnabled()) {
+    const result = await handleMock(method, path, opts.body);
+    if (result.status === 204) return undefined as T;
+    return result.body as T;
+  }
+
   const url =
     `${apiBase()}${path}` + (opts.query ? buildQuery(opts.query) : '');
 

@@ -1,8 +1,13 @@
-import { AuthCard } from '@/src/ui/AuthCard';
+'use client';
 
-// شاشة تسجيل الدخول — البنية والحقول جاهزة، الربط بـ`/v1/auth/login`
-// يتم في S5 بعد اكتمال A6 (endpoints مصادقة في mk-api).
+import { useRouter } from 'next/navigation';
+import { AuthCard } from '@/src/ui/AuthCard';
+import { auth } from '@/src/api';
+
+// شاشة تسجيل الدخول — S5 على mocks حتى A6-A8. تنتقل إلى الحقيقي
+// حين يُزال `NEXT_PUBLIC_API_MOCK=true` من البيئة.
 export default function LoginPage() {
+  const router = useRouter();
   return (
     <AuthCard
       titleKey="auth.login.title"
@@ -11,12 +16,30 @@ export default function LoginPage() {
       linkKey="auth.login.needAccount"
       linkHref="/signup"
       fields={[
-        { name: 'email', labelKey: 'auth.field.email', type: 'email', autoComplete: 'email' },
-        { name: 'password', labelKey: 'auth.field.password', type: 'password', autoComplete: 'current-password' },
+        {
+          name: 'email',
+          labelKey: 'auth.field.email',
+          type: 'email',
+          autoComplete: 'email',
+          required: true,
+          emailFormat: true,
+        },
+        {
+          name: 'password',
+          labelKey: 'auth.field.password',
+          type: 'password',
+          autoComplete: 'current-password',
+          required: true,
+        },
       ]}
-      footerLinks={[
-        { key: 'auth.login.forgot', href: '/forgot-password' },
-      ]}
+      footerLinks={[{ key: 'auth.login.forgot', href: '/forgot-password' }]}
+      onSubmit={async (values) => {
+        await auth.login({
+          email: values.email ?? '',
+          password: values.password ?? '',
+        });
+        router.push('/projects');
+      }}
     />
   );
 }
