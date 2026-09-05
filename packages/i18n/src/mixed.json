@@ -273,6 +273,16 @@
     "STALE_UPDATE": "التعديل قديم — أُعيد تحميل الصفحة.",
     "PROJECT_HAS_RENDERS": "المشروع له تصديرات — الحذف يحتاج قراراً منفصلاً.",
 
+    "WORKFLOW_IN_USE": "سير العمل مستعمَل — لا يمكن حذفه.",
+    "WORKFLOW_IN_USE_IMMUTABLE_FIELD": "هذا الحقل من سير العمل ثابت طالما يُستعمل.",
+    "WORKFLOW_SCHEMA_VIOLATION": "بنية سير العمل لا تطابق المخطّط.",
+    "CANNOT_DELETE_DEFAULT": "لا يمكن حذف العنصر الافتراضي.",
+    "PROJECT_HAS_NO_WORKFLOW": "المشروع بلا سير عمل — لا تحوّلات متاحة.",
+    "TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE": "التحوّل المطلوب غير متاح من الحالة الحالية.",
+    "REASON_REQUIRED_FOR_THIS_TRANSITION": "هذا التحوّل يستلزم سبباً — أدخل سطراً على الأقل.",
+    "INVALID_SEGMENT_INDEX": "رقم المقطع غير صحيح.",
+    "LAYER_NOT_FOUND": "الطبقة المطلوبة غير موجودة في القالب.",
+
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",
     "LAST_BRAND_KIT": "لا يمكن حذف آخر هوية.",

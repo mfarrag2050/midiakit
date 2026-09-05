@@ -272,6 +272,16 @@
     "STALE_UPDATE": "Your edit is out of date — please reload.",
     "PROJECT_HAS_RENDERS": "Project has renders — deletion needs a separate decision.",
 
+    "WORKFLOW_IN_USE": "Workflow is in use — can't delete.",
+    "WORKFLOW_IN_USE_IMMUTABLE_FIELD": "This workflow field is fixed while the workflow is in use.",
+    "WORKFLOW_SCHEMA_VIOLATION": "Workflow structure violates the schema.",
+    "CANNOT_DELETE_DEFAULT": "Can't delete the default item.",
+    "PROJECT_HAS_NO_WORKFLOW": "Project has no workflow — no transitions available.",
+    "TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE": "Requested transition isn't available from the current state.",
+    "REASON_REQUIRED_FOR_THIS_TRANSITION": "This transition requires a reason — enter at least one line.",
+    "INVALID_SEGMENT_INDEX": "Segment index is invalid.",
+    "LAYER_NOT_FOUND": "Requested layer doesn't exist in the template.",
+
     "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
     "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",
     "LAST_BRAND_KIT": "Can't delete the last brand kit.",
