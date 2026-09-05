@@ -150,13 +150,29 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A7** | Fastify server + authenticated hook + routes | ✅ | preHandler واحد (authenticated) يجمع JWT verify + session check + tx open + SET LOCAL. onResponse/onError يقفلان الـtx. 6 endpoints في /v1/auth/*. HTTP smoke: signup 201، logout 204، revoked 401، bad token 401. |
 | **A8** | **G-P4-2** بوابة نقاء المصادقة | ✅ | `pnpm verify:auth` — 4 طبقات، 18+ فحصاً، timing 1.02× |
 
-### المجموعة B — Brand Kits + Templates + Projects…
+### المجموعة B — Tenants → Users → Assets → Brand Kits → Templates → …
+
+> **تنبيه ترقيم (2026-09-05):**
+> ما سُمّي في رسائل الالتزام A9.1–A9.4
+> (`ac863a4` · `4827975` · `389c35f` · `9540215`) هو **A12 (Brand Kits)**
+> في `docs/17`. التسمية بدأت في المحادثة قبل مراجعة docs/17 وتتابعت
+> في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
+> التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
+> ترقيم `docs/17` وحده.**
+> الحالة: **A12 مبنيّ. A9 · A10 · A11 متخطّاة، غير مبنية.**
+>
+> **الترتيب التالي (محسوم 2026-09-05):**
+> جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
+> `assetId` في المستودع) — لا تبعية بنيوية بين A12 و A11. الترتيب
+> يتبع docs/17: **A9 → A10 → A11.**
 
 | البند | العنوان | الحالة | ملاحظة |
 |---|---|---|---|
-| **A9** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات، 34 فحصاً |
-| A10 | Users + invite | ⏳ |  |
-| A11+ | Assets + Templates + Projects… | ⏳ | docs/17 §3.3 |
+| A9 | Tenants (GET/PATCH `/v1/tenant`) | ⏳ متخطّى، التالي | docs/16 §3 |
+| A10 | Users + invite (5 endpoints) | ⏳ | docs/16 §4 |
+| A11 | Assets (pre-signed upload + …) | ⏳ | docs/16 §9؛ G-P4-11 (signed URLs) تُفعَّل هنا |
+| **A12** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات + Layer 3.5 (RFC 7396). commits: `ac863a4`, `4827975`, `389c35f`, `9540215`, `712020d`. **A9-V كشف نقص fill-in عند القراءة — بند 10، لم يُصلَح.** |
+| A13+ | Templates · Projects · Workflows · Renders · Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A13-A25) |
 
 ---
 
