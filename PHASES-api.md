@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9-A20 مبنية جميعاً.**
+> الحالة: **A9-A20 + A26 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -181,6 +181,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A19** | Queue integration (BullMQ) | ✅ | G-P4-10 Layer 7. `apps/api/src/queues/` توأمة لـ`apps/renderer/src/queues.ts` — نفس أسماء الطوابير (render-urgent/normal/edit/batch) + prefix pf-mediakit + Fair-share priority (`count(waiting same tenant) × 10 + 1`). POST /renders يُدخل job في render-normal (أو render-urgent) بشحنة كاملة (renderId + snapshots + content). Layer 7 يُثبت end-to-end: POST → Redis (7 مفاتيح) → worker inline → MinIO PUT → GET /output signed URL → fetch حقيقي بايتات PNG صحيحة. |
 | **A20** | Revisions (3 endpoints × 5 موارد) | ✅ | `pnpm verify:revisions` — G-P4-11. **DB triggers على 5 جداول** (brand_kits · projects · templates · users · assets) تكتب revisions تلقائياً على INSERT/UPDATE/DELETE — صفر انضباط handlers. `app_set_actor(uuid)` GUC جديد يُضبَط من auth-guard. factory pattern لواحد أو 15 endpoint (`GET :id/revisions` · `GET :id/revisions/:revId` · `POST :id/revisions/:revId/restore`). restorableColumns مصرَّحة لكل مورد. **STALE_UPDATE مُطلَق الآن** (§7.4): `If-Match: <updated_at ISO>` header اختياري على PATCH /projects — إن قُدِّم بقيمة قديمة → 409. البند A10 محسوم: user delete يُنشئ revision صريح بـaction='reassign' + reason لكل مشروع مُعاد إسناده. |
 | A21+ | Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A21-A25) |
+| **A26** | طبقة الإعداد (plans + plan_overrides) | ✅ | `pnpm verify:plans` — G-P4-12، 6 طبقات + طبقة البيانات المرجعية. جدول `plans` (5 صفوف مبذورة: trial/starter/studio/agency/api) مطابق docs/16 §17 + docs/01. `tenants.plan` من CHECK إلى FK (ON DELETE RESTRICT). `tenants.plan_overrides jsonb` — مفتاح موجود يعلو، غائب يُقرأ من plans (لا دمج غامض). `getEffectiveLimits(client, tenantId)` قراءة فقط — الفرض في A21/A23. **نمط A13 مُعاد استعماله حرفياً** (ADR-012): قراءة عامة (`FOR SELECT USING true`)، كتابة `migration_user` فقط (السياسة). L-58: `app_user` = SELECT فقط. حارس `check:plan-sync` (نمط A13): يفشل عند تعديل قيمة يدوياً — يفرض الهجرة. **المقاسات ومنصّات الشعارات مؤجَّلتان** (البند 4): `default-brand.ts` مقفل + العقد لا يفرض النقل الآن. |
 
 **تحذير مسجَّل (فخّ للمستقبل — L-63):**
 - `projects.name` في القاعدة و `title` في العقد §7. Mapper يوحّد على `title` في السلك. الجدول له مراجع من annotations · project_state · renders · transitions — هجرة إعادة تسمية مكلفة. لن يُصلَح، لكنه فخّ لمن يكتب استعلاماً مباشراً على الجدول.
@@ -248,6 +249,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | G-P4-8-quotas | استرجاع الحصص (الاسم القديم — سيُعاد ترقيمه عند A21) | ⏳ |
 | **G-P4-10** | Renders + Queues (7 طبقات: وجود 8 + عزل 6 + سلبي 3 + RBAC 4 + L-58 + حاسم + **E2E: POST→Redis→Worker→MinIO→GET output→fetch bytes + snapshot frozen**) | ✅ passed 2026-09-06 |
 | **G-P4-11** | Revisions (6 طبقات + حالة (د): triggers على 5 جداول · restore عبر factory · STALE_UPDATE بـIf-Match · user delete → revisions.action=reassign) | ✅ passed 2026-09-06 |
+| **G-P4-12** | plans + plan_overrides (7 طبقات: وجود · سلبي (FK) · RBAC (app_user لا يكتب) · L-58 (SELECT فقط) · حاسم (GRANT وحده يحرس بلا RLS) · طبقة البيانات المرجعية (override يعلو · حذف مستعمل → RESTRICT · check:plan-sync L-46)) | ✅ passed 2026-09-06 |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
 | G-P4-10 | تكامل i18n | ⏳ |
 

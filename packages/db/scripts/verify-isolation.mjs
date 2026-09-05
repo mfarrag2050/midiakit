@@ -88,6 +88,9 @@ const APP_USER_EXPECTED_GRANTS = {
   invitations:           'DELETE,INSERT,SELECT,UPDATE',
   // جدول واحد بـINSERT فقط
   login_attempts:        'INSERT',
+  // A26: plans — بيانات مرجعية عامة، SELECT فقط لـapp_user
+  //           (الكتابة migration_user حصراً عبر السياسة)
+  plans:                 'SELECT',
   // pgmigrations: بلا منح (SEC-1 fix) — لا يظهر
 };
 

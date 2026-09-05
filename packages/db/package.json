@@ -11,7 +11,9 @@
     "migrate:down:test": "node --import tsx scripts/migrate.ts down --test",
     "migrate:redo": "node --import tsx scripts/migrate.ts down && node --import tsx scripts/migrate.ts up",
     "migrate:create": "node --import tsx scripts/migrate.ts create",
-    "verify:isolation": "node --import tsx scripts/verify-isolation.mjs"
+    "verify:isolation": "node --import tsx scripts/verify-isolation.mjs",
+    "check:template-sync": "node scripts/check-template-sync.mjs",
+    "check:plan-sync": "node scripts/check-plan-sync.mjs"
   },
   "dependencies": {
     "node-pg-migrate": "7.9.1",

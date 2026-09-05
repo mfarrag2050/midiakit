@@ -17,7 +17,8 @@
     "verify:projects": "node --import tsx scripts/verify-projects.mjs",
     "verify:workflows": "node --import tsx scripts/verify-workflows.mjs",
     "verify:renders": "node --import tsx scripts/verify-renders.mjs",
-    "verify:revisions": "node --import tsx scripts/verify-revisions.mjs"
+    "verify:revisions": "node --import tsx scripts/verify-revisions.mjs",
+    "verify:plans": "node --import tsx scripts/verify-plans.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",
