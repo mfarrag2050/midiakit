@@ -16,7 +16,8 @@
     "verify:templates": "node --import tsx scripts/verify-templates.mjs",
     "verify:projects": "node --import tsx scripts/verify-projects.mjs",
     "verify:workflows": "node --import tsx scripts/verify-workflows.mjs",
-    "verify:renders": "node --import tsx scripts/verify-renders.mjs"
+    "verify:renders": "node --import tsx scripts/verify-renders.mjs",
+    "verify:revisions": "node --import tsx scripts/verify-revisions.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

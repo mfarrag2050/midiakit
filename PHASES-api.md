@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9-A19 مبنية جميعاً.**
+> الحالة: **A9-A20 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -179,7 +179,8 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A17** | Annotations (4 endpoints) | ✅ | G-P4-9. target JSONB {kind:'layer', layer, segmentIndex} مطابق §12 (B4). LAYER_NOT_FOUND + INVALID_SEGMENT_INDEX. RBAC: viewer+ للإنشاء، المؤلّف أو editor+ للـPATCH، المؤلّف أو admin+ للـDELETE. |
 | **A18** | Renders (8 endpoints) | ✅ | `pnpm verify:renders` — G-P4-10، 7 طبقات. brand_snapshot + template_snapshot يُلتقطان ذرّياً عند POST — تعديل brand_kit بعدها لا يمسّ اللقطة (اختبار Layer 7-هـ). RENDER_CONCURRENCY_LIMIT ثابت=3 (A21 يحلّه من plan). Idempotency-Key مدعوم. cancel + delete صحيحان. **MVP التخزين:** UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS يرفض brand فيها assetId أو URL خارجي (S3/HTTP) — worker يعمل مع brand مضمّنة فقط. حلّ SDK كامل في renderer بند مؤجَّل. |
 | **A19** | Queue integration (BullMQ) | ✅ | G-P4-10 Layer 7. `apps/api/src/queues/` توأمة لـ`apps/renderer/src/queues.ts` — نفس أسماء الطوابير (render-urgent/normal/edit/batch) + prefix pf-mediakit + Fair-share priority (`count(waiting same tenant) × 10 + 1`). POST /renders يُدخل job في render-normal (أو render-urgent) بشحنة كاملة (renderId + snapshots + content). Layer 7 يُثبت end-to-end: POST → Redis (7 مفاتيح) → worker inline → MinIO PUT → GET /output signed URL → fetch حقيقي بايتات PNG صحيحة. |
-| A20+ | Revisions · Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A20-A25) |
+| **A20** | Revisions (3 endpoints × 5 موارد) | ✅ | `pnpm verify:revisions` — G-P4-11. **DB triggers على 5 جداول** (brand_kits · projects · templates · users · assets) تكتب revisions تلقائياً على INSERT/UPDATE/DELETE — صفر انضباط handlers. `app_set_actor(uuid)` GUC جديد يُضبَط من auth-guard. factory pattern لواحد أو 15 endpoint (`GET :id/revisions` · `GET :id/revisions/:revId` · `POST :id/revisions/:revId/restore`). restorableColumns مصرَّحة لكل مورد. **STALE_UPDATE مُطلَق الآن** (§7.4): `If-Match: <updated_at ISO>` header اختياري على PATCH /projects — إن قُدِّم بقيمة قديمة → 409. البند A10 محسوم: user delete يُنشئ revision صريح بـaction='reassign' + reason لكل مشروع مُعاد إسناده. |
+| A21+ | Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A21-A25) |
 
 **تحذير مسجَّل (فخّ للمستقبل — L-63):**
 - `projects.name` في القاعدة و `title` في العقد §7. Mapper يوحّد على `title` في السلك. الجدول له مراجع من annotations · project_state · renders · transitions — هجرة إعادة تسمية مكلفة. لن يُصلَح، لكنه فخّ لمن يكتب استعلاماً مباشراً على الجدول.
@@ -231,6 +232,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **G-P4-8** | Projects (6 طبقات + 5 حالات خاصة: قالب عام يعمل · قالب مستأجر آخر يُرفض · TEMPLATE_IN_USE · BRAND_KIT_IN_USE · user delete reassign) | ✅ passed 2026-09-06 |
 | G-P4-8-quotas | استرجاع الحصص (الاسم القديم — سيُعاد ترقيمه عند A21) | ⏳ |
 | **G-P4-10** | Renders + Queues (7 طبقات: وجود 8 + عزل 6 + سلبي 3 + RBAC 4 + L-58 + حاسم + **E2E: POST→Redis→Worker→MinIO→GET output→fetch bytes + snapshot frozen**) | ✅ passed 2026-09-06 |
+| **G-P4-11** | Revisions (6 طبقات + حالة (د): triggers على 5 جداول · restore عبر factory · STALE_UPDATE بـIf-Match · user delete → revisions.action=reassign) | ✅ passed 2026-09-06 |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
 | G-P4-10 | تكامل i18n | ⏳ |
 

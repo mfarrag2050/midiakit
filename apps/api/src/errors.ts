@@ -77,6 +77,10 @@ export type ErrorCode =
   | 'UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS'        // A18 MVP (400)
   | 'BRAND_SNAPSHOT_NOT_FOUND'                     // §8.5 (404)
   | 'TEMPLATE_SNAPSHOT_NOT_FOUND'                  // §8.6 (404)
+  // Revisions (§10)
+  | 'REVISION_NOT_FOUND'                           // §10.3 (404)
+  | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)
+  | 'IF_MATCH_REQUIRED'                            // §7.4 STALE_UPDATE (400 — قرار مُختار: A)
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -211,5 +215,9 @@ export const RenderAlreadyTerminal = () => new ApiError('RENDER_ALREADY_TERMINAL
 export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS', 400);
 export const BrandSnapshotNotFound = () => new ApiError('BRAND_SNAPSHOT_NOT_FOUND', 404);
 export const TemplateSnapshotNotFound = () => new ApiError('TEMPLATE_SNAPSHOT_NOT_FOUND', 404);
+// Revisions (§10)
+export const RevisionNotFound = () => new ApiError('REVISION_NOT_FOUND', 404);
+export const RestoreWouldBreakReferences = () => new ApiError('RESTORE_WOULD_BREAK_REFERENCES', 409);
+export const IfMatchRequired = () => new ApiError('IF_MATCH_REQUIRED', 400, 'If-Match');
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

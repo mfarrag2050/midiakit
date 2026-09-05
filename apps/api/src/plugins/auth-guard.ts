@@ -48,6 +48,9 @@ const plugin: FastifyPluginAsync = async (fastify) => {
     try {
       await client.query('BEGIN');
       await client.query('SELECT app_set_tenant($1::uuid)', [claims.tenant_id]);
+      // A20: app.actor_id — triggers على 5 جداول تكتب revisions مع actor_id.
+      // بلا هذا SET، revisions.actor_id يصبح NULL (system-triggered).
+      await client.query('SELECT app_set_actor($1::uuid)', [claims.sub]);
 
       // 4. فحص الجلسة النشطة (DB-backed — لا JWT بلا حالة)
       await getActiveSession(client, claims.session_id); // SESSION_REVOKED

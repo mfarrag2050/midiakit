@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { toFull, type DbProjectRow } from './shared/mapper.js';
 import {
-  NotFound, ImmutableField, LocaleUnsupported, WorkflowNotFound,
+  NotFound, ImmutableField, LocaleUnsupported, WorkflowNotFound, StaleUpdate,
 } from '../../errors.js';
 
 const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'es', 'de'] as const;
@@ -50,6 +50,15 @@ const route: FastifyPluginAsync = async (fastify) => {
       `SELECT * FROM projects WHERE id = $1 AND deleted_at IS NULL`, [id],
     );
     if (cur.rowCount === 0) throw NotFound();
+
+    // A20: STALE_UPDATE عبر If-Match: <updated_at ISO> (قرار A، §7.4)
+    // If-Match اختياري — إن قُدِّم، يُقارَن بـupdated_at. اختلاف ⇒ 409.
+    const ifMatch = req.headers['if-match'];
+    if (ifMatch && typeof ifMatch === 'string') {
+      const clean = ifMatch.replace(/^["']|["']$/g, '');  // strip weak/strong ETag quotes
+      const currentIso = cur.rows[0]!.updated_at.toISOString();
+      if (clean !== currentIso) throw StaleUpdate();
+    }
 
     if (body.locale !== undefined && !(SUPPORTED_LOCALES as readonly string[]).includes(body.locale)) {
       throw LocaleUnsupported();

@@ -62,14 +62,29 @@ const route: FastifyPluginAsync = async (fastify) => {
     const newOwnerId = newOwnerR.rows[0]?.id ?? null;
 
     // A14: مسوّدات (state='draft') تُحذَف حذفاً ناعماً، الباقي يُعاد إسناده
-    // إلى newOwnerId (§4.5 قرار B1). RLS يقصر التأثير على المستأجر تلقائياً
-    // (created_by user id → users → tenant_id).
+    // إلى newOwnerId (§4.5 قرار B1). RLS يقصر التأثير على المستأجر تلقائياً.
     //
-    // ملاحظة: revisions log لكل إعادة إسناد بند A20 (لا جدول revisions
-    // يستعمل بعد — نُعلَنه في الانحرافات).
+    // A20: كل إعادة إسناد + كل مسوّدة محذوفة تُنشئ revision تلقائياً عبر
+    // trigger projects_log_revision. إضافة `action='reassign'` + `reason`
+    // في نفس المعاملة عبر INSERT مباشر إلى revisions قبل UPDATE — لأن
+    // trigger يكتب action='update'. نُدرِج revision صريح بـaction='reassign'.
     let reassignedProjects = 0;
     let deletedDrafts = 0;
     if (newOwnerId != null) {
+      // نجلب المشاريع المرشّحة أولاً لتسجيلها فردياً
+      const targets = await req.dbClient!.query<{ id: string; snapshot: unknown }>(
+        `SELECT id, to_jsonb(projects.*) AS snapshot FROM projects
+         WHERE created_by = $1 AND deleted_at IS NULL AND state != 'draft'`,
+        [id],
+      );
+      for (const t of targets.rows) {
+        // revision يدوي بـaction='reassign' + reason (قبل التعديل)
+        await req.dbClient!.query(
+          `INSERT INTO revisions(tenant_id, resource_type, resource_id, actor_id, action, snapshot, reason)
+           VALUES ($1, 'project', $2, $3, 'reassign', $4::jsonb, $5)`,
+          [req.auth!.tenantId, t.id, req.auth!.userId, JSON.stringify(t.snapshot), body.reason],
+        );
+      }
       const reass = await req.dbClient!.query(
         `UPDATE projects SET created_by = $1
          WHERE created_by = $2

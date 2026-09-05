@@ -76,6 +76,7 @@ import rendersBrandSnapshotRoute from './routes/renders/brand-snapshot.js';
 import rendersTemplateSnapshotRoute from './routes/renders/template-snapshot.js';
 import rendersCancelRoute from './routes/renders/cancel.js';
 import rendersDeleteRoute from './routes/renders/delete.js';
+import { makeRevisionsPlugin } from './routes/revisions/factory.js';
 import { closePool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
@@ -208,6 +209,28 @@ export async function buildServer() {
       await r.register(rendersCancelRoute);
       await r.register(rendersDeleteRoute);
     }, { prefix: '/renders' });
+
+    // A20 Revisions — 3 endpoints × 5 موارد
+    await v1.register(makeRevisionsPlugin({
+      resourceType: 'brand_kit', table: 'brand_kits',
+      restorableColumns: ['name', 'config'],
+    }), { prefix: '/brand-kits' });
+    await v1.register(makeRevisionsPlugin({
+      resourceType: 'project', table: 'projects',
+      restorableColumns: ['name', 'content', 'state', 'assignee_id', 'locale', 'workflow_id'],
+    }), { prefix: '/projects' });
+    await v1.register(makeRevisionsPlugin({
+      resourceType: 'template', table: 'templates',
+      restorableColumns: ['name', 'kind', 'definition'],
+    }), { prefix: '/templates' });
+    await v1.register(makeRevisionsPlugin({
+      resourceType: 'user', table: 'users',
+      restorableColumns: ['role', 'is_active'],
+    }), { prefix: '/users' });
+    await v1.register(makeRevisionsPlugin({
+      resourceType: 'asset', table: 'assets',
+      restorableColumns: ['metadata', 'faces', 'warnings', 'license_ack', 'ack_by', 'ack_at'],
+    }), { prefix: '/assets' });
   }, { prefix: '/v1' });
 
   return fastify;
