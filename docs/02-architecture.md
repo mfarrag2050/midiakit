@@ -193,7 +193,14 @@ subscriptions · usage. **الاختبار السلبي الحاسم (L-46):** �
 **نتيجة:** بند A1-A4 في `docs/17-phase4-plan.md` يُبنى يوم 1 من مسار A،
 ولا يُفتح أيّ endpoint حتى تُجتاز G-P4-1 على الجداول كاملةً.
 
-### ADR-012 — القوالب: جدول واحد بـ`tenant_id` nullable (2026-09-05)
+### ADR-012 — القوالب: عمود `scope` صريح + `tenant_id` مقيَّد بـCHECK مركّب (2026-09-05 · صُحِّح 2026-09-05)
+
+> **تصحيح مسجَّل:** المسوّدة الأولى (نفس التاريخ) اقترحت `tenant_id`
+> nullable وحده كإشارة إلى الأساسي. الواقع في mk-api
+> (`packages/db/migrations/20260904141100_initial-schema-and-rls.ts`)
+> يستعمل **عمود `scope` صريح + CHECK مركّب**. هذا التصحيح يوفّق ADR
+> مع الجدول القائم — يوثّق **ما بُني**، لا ما اقتُرح. L-63 حرفياً:
+> الوثيقة تُكتب من الملفات، لا من نيّة سابقة.
 
 **السياق:** الستّة قوالب المبنيّة في `packages/templates` (breaking ·
 card_centered · card_bottom · card_kicker · reel · plain) ملفات JSON
@@ -202,94 +209,131 @@ card_centered · card_bottom · card_kicker · reel · plain) ملفات JSON
 يحتاجان الظهور في قائمة العميل بنقطة نهاية واحدة، وحقلاً يُستعلَم
 بحدّاثة عدّه (لأنّه محسوب في الخطة).
 
-**القرار:**
+**القرار — المخطط الفعلي (mk-api):**
 ```sql
 CREATE TABLE templates (
-  id            uuid PRIMARY KEY,
-  tenant_id     uuid NULL,               -- NULL = مشترك؛ قيمة = خاصّ
-  name          text NOT NULL,
-  definition    jsonb NOT NULL,
-  source_ref    text,                    -- L-52 (مرجع الحقيقة للأساسي)
-  definition_hash text,                  -- نفس السبب
-  created_at    timestamptz NOT NULL DEFAULT now(),
+  id           uuid PRIMARY KEY,
+  scope        text NOT NULL CHECK (scope IN ('global', 'tenant')),
+  tenant_id    uuid NULL,
+  name         text NOT NULL,
+  definition   jsonb NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now(),
 
-  CONSTRAINT templates_tenant_source
-    UNIQUE (tenant_id, source_ref)       -- لكل مستأجر، source_ref فريد
+  -- الحالات المستحيلة تُمنع بنيوياً:
+  CONSTRAINT templates_scope_tenant CHECK (
+    (scope = 'global' AND tenant_id IS NULL)
+    OR (scope = 'tenant' AND tenant_id IS NOT NULL)
+  )
 );
-
--- L-62: القيد أعلاه NULL-هارب. فهرس جزئي منفصل يغلق الحالة الأساسية:
-CREATE UNIQUE INDEX templates_shared_source
-  ON templates (source_ref)
-  WHERE tenant_id IS NULL;
 ```
 
-**سياستان منفصلتان (L-61):**
-```sql
--- القراءة ترى المشترك (tenant_id IS NULL) والخاصّ (المستأجر الحالي)
-CREATE POLICY templates_read ON templates
-  FOR SELECT USING (
-    tenant_id IS NULL
-    OR tenant_id = current_tenant()
-  );
+**لماذا عمود `scope` صريح — لا `tenant_id NULL` وحده:**
+- **الاستنتاج من `NULL` غامض:** `tenant_id IS NULL` يمكن أن يعني «مشترك
+  عمداً»، أو «لم يُملأ بعد»، أو «سُقط من هجرة سابقة». **عمود `scope`
+  يقول القصد بلغة الجدول** — القارئ يعرف بلا استنتاج.
+- **الـCHECK المركّب يمنع الحالات المستحيلة بنيوياً:** لا صفّ يمكن أن
+  يكون `scope='global' AND tenant_id='...'` أو
+  `scope='tenant' AND tenant_id IS NULL`. البنية تحرس الاتساق، لا كود
+  التطبيق.
+- **الاستعلامات تصير قابلة للقراءة:** `WHERE scope='global'` أوضح من
+  `WHERE tenant_id IS NULL`، وتتبع مقصد المؤلّف.
 
--- الكتابة تشترط tenant_id مطابقاً بـUSING و WITH CHECK كليهما
-CREATE POLICY templates_write ON templates
-  FOR INSERT WITH CHECK (tenant_id = current_tenant());
+**عيب حيّ مسجَّل — RLS على templates اليوم (يُعالَج في A13):**
 
-CREATE POLICY templates_modify ON templates
-  FOR UPDATE
-  USING       (tenant_id = current_tenant())
-  WITH CHECK  (tenant_id = current_tenant());
+> **الحالة الفعلية:** سياسة RLS واحدة على `templates`:
+> ```sql
+> tenant_id = app.tenant_id
+> ```
+>
+> **الأثر:** كل صفوف `scope='global'` **محجوبة عن كل مستأجر** — لأن
+> `NULL = app.tenant_id` تُقيَّم `NULL` = رفض. القائمة لمستأجر جديد
+> تُعيد **صفر قوالب لا ستة**. القوالب الأساسية غير مرئية لأحد.
+>
+> **السبب (L-61):** سياسة واحدة **تخلط الرؤية بالإذن**. الرؤية يجب أن
+> ترى العام والخاصّ؛ الإذن يجب أن يشترط تطابق `tenant_id`.
+>
+> **الحلّ المطلوب في A13:**
+> ```sql
+> -- قراءة: العام مرئي للجميع + الخاصّ لصاحبه
+> CREATE POLICY templates_read ON templates
+>   FOR SELECT USING (
+>     scope = 'global'
+>     OR tenant_id = current_tenant()
+>   );
+>
+> -- كتابة: يشترط tenant_id مطابقاً بـUSING و WITH CHECK كليهما
+> CREATE POLICY templates_insert ON templates
+>   FOR INSERT WITH CHECK (
+>     scope = 'tenant' AND tenant_id = current_tenant()
+>   );
+>
+> CREATE POLICY templates_modify ON templates
+>   FOR UPDATE
+>   USING      (scope = 'tenant' AND tenant_id = current_tenant())
+>   WITH CHECK (scope = 'tenant' AND tenant_id = current_tenant());
+>
+> CREATE POLICY templates_delete ON templates
+>   FOR DELETE USING (scope = 'tenant' AND tenant_id = current_tenant());
+> ```
+> **رفض التعديل على `scope='global'`** يُنتج **403 من التطبيق** (فحص
+> صريح قبل الاستعلام) لا **404 من صفر صفوف** (L-61).
+>
+> **الحالة اليوم:** ✗ **غير معالَج** — مسجَّل هنا كعيب معروف، مؤجَّل
+> إلى تذكرة A13 (Templates) في `docs/17-phase4-plan.md`.
 
-CREATE POLICY templates_remove ON templates
-  FOR DELETE USING (tenant_id = current_tenant());
-```
+**سؤال مفتوح للتحقّق في A13:**
 
-**رفض على الأساسي بطبقتَين (L-58):**
-1. **فحص التطبيق:** يفحص `tenant_id IS NULL` قبل الاستعلام ⇒ 403 صريح.
-2. **RLS يرفض حتى لو سقط فحص التطبيق:** `WITH CHECK (tenant_id = current_tenant())`
-   يمنع أيّ INSERT/UPDATE على `tenant_id IS NULL` من مستأجر (لأن
-   `NULL = current_tenant()` تُقيَّم `NULL` = رفض).
-
-**مصدر الحقيقة للأساسية:** `source_ref` يشير إلى ملف في
-`packages/templates/src/` (مثلاً `breaking@2026-09-05`). `definition_hash`
-يمنع الانحراف. فحص آلي `scripts/check-template-sync.mjs` يقارن الـhash
-بين الجدول والملف عند الـmigration.
+> **هل يوجد قيد تفرّد على `(tenant_id, slug)` أو `(tenant_id, name)`؟**
+>
+> إن وُجد، فهو **معطَّل للصفوف العامة** لأن `NULL != NULL` في SQL —
+> يُمكن إدراج قالبَين عامَّين بنفس الاسم/الـslug بلا خطأ (L-62). الحلّ:
+> فهرس جزئي منفصل `... WHERE scope = 'global'`.
+>
+> **يُتحقَّق في A13:** فحص `pg_indexes WHERE tablename = 'templates'`
+> على الجدول الفعلي، ثمّ إن وُجد النقص، إضافة migration للفهرس الجزئي.
 
 **البدائل المرفوضة:**
 1. **جدولان منفصلان (`shared_templates` + `tenant_templates`):**
-   - يضاعف نقاط النهاية (`GET /shared/templates` + `GET /templates`).
-   - يضاعف السياسات (RLS مختلفة على كل جدول).
+   - يضاعف نقاط النهاية والسياسات.
    - النسخ من مشترك إلى خاصّ يصبح انتقالاً بين جدولَين — عملية معقّدة
      بلا فائدة معمارية.
 2. **قوالب أساسية ملفات فقط بلا صفوف قاعدة:**
    - لا `GET /templates` واحد يجمع القائمتَين.
    - العدّاد التسعيري لا يعمل على «ملفات».
    - الواجهة تحتاج فحصَين منفصلَين (fs + db).
+3. **`tenant_id NULL` وحده بلا `scope`:** الأصل المقترَح في المسوّدة —
+   يعتمد على استنتاج القصد من غياب قيمة. **مرفوض** لصالح العمود الصريح
+   للأسباب أعلاه.
 
 **المقايضة الصريحة:**
-- **كل استعلام قراءة يحمل شرط `IS NULL`** — عبء تعبيري في كل مكان،
-  لكنه مقابل جدول واحد ومنطق موحّد.
+- **الاستعلامات تحمل شرط `scope='global' OR tenant_id=current_tenant()`
+  في القراءة، `scope='tenant'` في الكتابة** — عبء تعبيري في كل سياسة،
+  لكنّه مقابل عمود صريح يقول القصد بلغة الجدول.
 - **خطأ في سياسة واحدة يكشف قوالب مستأجر لآخر** — لذا **بوابتان لا
   واحدة** (L-58 + L-61): USING + WITH CHECK منفصلتان، فحص تطبيق أعلى،
   اختبار سلبي لكل حالة (SELECT من مستأجر آخر · UPDATE عليها ·
   INSERT بـtenant_id مغاير).
 
-**اختبارات القبول (تُبنى في A10):**
-1. `SELECT * FROM templates` من `tenant_a` ⇒ يُرجع مشترك + خاصّ لـA
-   فقط. لا خاصّ لـB.
-2. `INSERT INTO templates (tenant_id, ...) VALUES ('B', ...)` من `A`
-   ⇒ فشل بـ`RLS violation` صريح (لا 0 rows).
-3. `UPDATE templates SET name='...' WHERE tenant_id IS NULL` من `A`
-   ⇒ فشل بـ`RLS violation` (لا صمت).
-4. تكرار `source_ref` لقالبَين أساسيَّين (`tenant_id IS NULL`) ⇒
-   فشل بـ`unique_violation` من الفهرس الجزئي.
-5. `INSERT` قالب مستأجر بـ`source_ref` مكرَّر من نفس المستأجر ⇒
-   فشل بالقيد المركّب.
+**اختبارات القبول (A13):**
+1. `SELECT * FROM templates` من `tenant_a` ⇒ يُرجع global + خاصّ لـA.
+   لا خاصّ لـB.
+2. `INSERT INTO templates (scope, tenant_id, ...) VALUES ('tenant', 'B', ...)`
+   من `A` ⇒ فشل بـRLS violation صريح.
+3. `UPDATE templates SET name='...' WHERE scope='global'` من `A` ⇒
+   فشل بـRLS violation (لا صمت من 0 rows).
+4. `INSERT` قالب `global` بـslug/name مكرَّر ⇒ يجب أن يفشل بـunique
+   violation (إن وُجد الفهرس الجزئي · وإلّا **العيب موثَّق أعلاه**).
+5. محاولة `INSERT` بـ`scope='global' AND tenant_id='X'` ⇒ فشل بـCHECK
+   المركّب.
 
-**نتيجة:** A10.1 يُنشئ الجدول والسياسات. A10.2 يُعبِّئ القوالب الستّة
-الأساسية بـ`tenant_id NULL` من `packages/templates`. A10.3 يفعّل
-`template_snapshot` في `POST /renders` (docs/16 §8.1).
+**الترقيم:** A13 (Templates) في `docs/17-phase4-plan.md`.
+**A12** = Brand Kits. **ما سُمّي «A9» في رسائل الالتزام هو A12** —
+رسائل الالتزام تبقى كما هي (L-57: لا إعادة كتابة تاريخ مدفوع).
+
+**نتيجة:** الجدول قائم في hurgation initial-schema-and-rls (2026-09-04).
+**RLS ناقصة** — A13 يُعالج (١) استبدال السياسة الواحدة بالمنظومة أعلاه،
+(٢) التحقّق من فهرس التفرّد الجزئي وإضافته إن غاب، (٣) اختبارات القبول
+الخمسة.
 
 ---
 
