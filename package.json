@@ -31,7 +31,8 @@
     "db:reset": "./bin/mk -f infra/docker-compose.yml down -v && pnpm db:up",
     "db:migrate": "pnpm --filter @pf-mediakit/db migrate:up",
     "db:migrate:test": "pnpm --filter @pf-mediakit/db migrate:up:test",
-    "verify:auth": "pnpm --filter @pf-mediakit/api verify:auth"
+    "verify:auth": "pnpm --filter @pf-mediakit/api verify:auth",
+    "verify:brand-kits": "pnpm --filter @pf-mediakit/api verify:brand-kits"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

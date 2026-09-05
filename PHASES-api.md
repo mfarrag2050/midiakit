@@ -150,9 +150,13 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A7** | Fastify server + authenticated hook + routes | ✅ | preHandler واحد (authenticated) يجمع JWT verify + session check + tx open + SET LOCAL. onResponse/onError يقفلان الـtx. 6 endpoints في /v1/auth/*. HTTP smoke: signup 201، logout 204، revoked 401، bad token 401. |
 | **A8** | **G-P4-2** بوابة نقاء المصادقة | ✅ | `pnpm verify:auth` — 4 طبقات، 18+ فحصاً، timing 1.02× |
 
-### المجموعة B–F: endpoints (لاحقاً)
+### المجموعة B — Brand Kits + Templates + Projects…
 
-راجع `docs/17 §3.3` — 25 بنداً (A9-A25) لاحقاً بعد اجتياز G-P4-1 و G-P4-2.
+| البند | العنوان | الحالة | ملاحظة |
+|---|---|---|---|
+| **A9** | Brand Kits (8 endpoints) | ✅ | list/get/create/patch/delete + font-ack + logo-ack + assets-version. `pnpm verify:brand-kits` — 6 طبقات، 34 فحصاً |
+| A10 | Users + invite | ⏳ |  |
+| A11+ | Assets + Templates + Projects… | ⏳ | docs/17 §3.3 |
 
 ---
 
@@ -162,8 +166,9 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 |---|---|---|
 | **G-P4-1** | عزل المستأجرين على كل جدول (وجود + ثبات + 3 سلبيات + ANY_TENANT + revisions-orphan + لا-BYPASSRLS) | ✅ passed 2026-09-04 |
 | **G-P4-2** | نقاء المصادقة (grep guard + HTTP + non-disclosure + rate limit) | ✅ passed 2026-09-04 |
+| **G-P4-3** | Brand Kits (وجود + عزل 404-لا-403 + سلبي + RBAC + L-58/L-59 + policy-off-fails) | ✅ passed 2026-09-05 |
 | **G-P4-11** | signed URLs — لا تسرّب مفاتيح خام في أيّ استجابة | ⏳ تُفعَّل مع A11 |
-| G-P4-3 | اكتمال سجل المراجعات | ⏳ |
+| G-P4-3-rev | اكتمال سجل المراجعات (بند مؤجَّل — رقم سيُعاد ترقيمه عند A20) | ⏳ |
 | G-P4-4 | ثبات `brand_snapshot` | ⏳ |
 | G-P4-5 | المفاتيح لا تُعاد | ⏳ |
 | G-P4-6 | `licenseAck` إلزامي | ⏳ |
