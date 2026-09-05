@@ -142,12 +142,12 @@ async function checkExistence(fastify, ctx) {
   // 3. list
   const rL = await fastify.inject({ method: 'GET', url: '/v1/assets', headers: H(ctx.a.session.accessToken) });
   const lB = json(rL);
-  if (rL.statusCode === 200 && Array.isArray(lB?.items) && lB.items.length >= 1) {
-    pass(`GET /v1/assets → 200 (${lB.items.length} أصل)`);
+  if (rL.statusCode === 200 && Array.isArray(lB?.data) && lB.data.length >= 1) {
+    pass(`GET /v1/assets → 200 (${lB.data.length} أصل)`);
   } else fail(`list → ${rL.statusCode}: ${rL.body}`);
 
   // بلا publicUrl في القائمة (§9.3)
-  const noUrlInList = lB?.items?.every(it => !('publicUrl' in it));
+  const noUrlInList = lB?.data?.every(it => !('publicUrl' in it));
   if (noUrlInList) pass(`القائمة بلا publicUrl (§9.3 صراحةً)`);
   else fail(`القائمة تحتوي publicUrl — يخالف §9.3`);
 
@@ -182,8 +182,9 @@ async function checkExistence(fastify, ctx) {
     payload: { faces: [{ x: 0.3, y: 0.4, w: 0.2, h: 0.25 }] },
   });
   const pfB = json(rPF);
-  if (rPF.statusCode === 200 && Array.isArray(pfB?.faces) && pfB.faces.length === 1) {
-    pass(`PATCH /v1/assets/:id/faces → 200 مع faces مُخزَّنة`);
+  // A11-SHAPE: faces صار داخل meta (§9.2). كان top-level.
+  if (rPF.statusCode === 200 && Array.isArray(pfB?.meta?.faces) && pfB.meta.faces.length === 1) {
+    pass(`PATCH /v1/assets/:id/faces → 200 مع meta.faces مُخزَّنة (§9.2)`);
   } else fail(`patch-faces → ${rPF.statusCode}: ${rPF.body}`);
 
   // 8. DELETE (سنستعمل أصلاً منفصلاً لأن imageAssetId قد نحتاجه لاحقاً)
@@ -335,7 +336,7 @@ async function checkNegative(fastify, ctx) {
   const rInList = await fastify.inject({
     method: 'GET', url: '/v1/assets?filter[inUse]=true', headers: H(ctx.a.session.accessToken),
   });
-  const inList = json(rInList)?.items ?? [];
+  const inList = json(rInList)?.data ?? [];
   if (rInList.statusCode === 200 && inList.some(it => it.id === ctx.imageAssetId)) {
     pass(`filter[inUse]=true → يظهر imageAssetId (assetId مطابق في brand_kits.config)`);
   } else fail(`filter[inUse]=true: got ${inList.length} items`);
@@ -402,7 +403,7 @@ async function checkPolicyDisableFails(fastify, ctx) {
   const rBase = await fastify.inject({
     method: 'GET', url: '/v1/assets', headers: H(ctx.b.session.accessToken),
   });
-  const baseB = json(rBase)?.items ?? [];
+  const baseB = json(rBase)?.data ?? [];
   const bSees = baseB.length;
   pass(`baseline: B يرى ${bSees} أصل (كلها لـB)`);
 
@@ -432,7 +433,7 @@ async function checkPolicyDisableFails(fastify, ctx) {
   const rAfter = await fastify.inject({
     method: 'GET', url: '/v1/assets', headers: H(ctx.b.session.accessToken),
   });
-  const afterB = json(rAfter)?.items ?? [];
+  const afterB = json(rAfter)?.data ?? [];
   if (afterB.length === bSees) pass(`بعد ENABLE+FORCE: B يرى ${afterB.length} أصل مرة أخرى (تطابق baseline)`);
   else fail(`استعادة فاشلة — قبل ${bSees}، بعد ${afterB.length}`);
 }

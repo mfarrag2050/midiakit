@@ -182,11 +182,14 @@ const route: FastifyPluginAsync = async (fastify) => {
     const hasMore = rows.length > q.limit;
     const trimmed = hasMore ? rows.slice(0, q.limit) : rows;
 
+    // A11-SHAPE (2026-09-06): §1.5 يُلزم بـ{data, nextCursor, hasMore}.
+    // كان {items, nextCursor} — كسر عرض القائمة في mk-studio (S8).
     return {
-      items: trimmed.map(row => toAssetResponse(row)),
+      data: trimmed.map(row => toAssetResponse(row)),
       nextCursor: hasMore
         ? encodeCursor(trimmed[trimmed.length - 1]!.created_at, trimmed[trimmed.length - 1]!.id)
         : null,
+      hasMore,
     };
   });
 };
