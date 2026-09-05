@@ -21,6 +21,19 @@ export type ErrorCode =
   | 'RESET_TOKEN_INVALID'
   // Rate limit
   | 'TOO_MANY_ATTEMPTS'
+  // Brand Kits (§5)
+  | 'INSUFFICIENT_ROLE'
+  | 'BRAND_KIT_IN_USE'
+  | 'LAST_BRAND_KIT'
+  | 'IMMUTABLE_FIELD'                // محاولة تعديل حقل عبر PATCH ممنوع
+  | 'LICENSE_ACK_MUST_BE_TRUE'
+  | 'LICENSE_ACK_REQUIRED'
+  | 'FONT_NOT_UPLOADED'
+  | 'UNKNOWN_PLATFORM'
+  | 'LOGO_MODE_NOT_OFFICIAL'
+  | 'INVALID_VERSION_FORMAT'
+  | 'VERSION_NOT_AVAILABLE'
+  | 'DIFF_NOT_ACKNOWLEDGED'
   // Generic
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -74,3 +87,16 @@ export const ResetTokenUsed = () => new ApiError('RESET_TOKEN_USED', 400);
 export const ResetTokenInvalid = () => new ApiError('RESET_TOKEN_INVALID', 400);
 export const TooManyAttempts = () => new ApiError('TOO_MANY_ATTEMPTS', 429);
 export const Unauthorized = () => new ApiError('UNAUTHORIZED', 401);
+export const NotFound = () => new ApiError('NOT_FOUND', 404);
+export const InsufficientRole = () => new ApiError('INSUFFICIENT_ROLE', 403);
+export const BrandKitInUse = () => new ApiError('BRAND_KIT_IN_USE', 409);
+export const LastBrandKit = () => new ApiError('LAST_BRAND_KIT', 409);
+export const ImmutableField = (field: string) => new ApiError('IMMUTABLE_FIELD', 400, field);
+export const LicenseAckMustBeTrue = () => new ApiError('LICENSE_ACK_MUST_BE_TRUE', 422, 'licenseAck');
+export const LicenseAckRequired = () => new ApiError('LICENSE_ACK_REQUIRED', 422);
+export const FontNotUploaded = () => new ApiError('FONT_NOT_UPLOADED', 404);
+export const UnknownPlatform = () => new ApiError('UNKNOWN_PLATFORM', 400, 'platform');
+export const LogoModeNotOfficial = () => new ApiError('LOGO_MODE_NOT_OFFICIAL', 409);
+export const InvalidVersionFormat = () => new ApiError('INVALID_VERSION_FORMAT', 400, 'targetVersion');
+export const VersionNotAvailable = () => new ApiError('VERSION_NOT_AVAILABLE', 400, 'targetVersion');
+export const DiffNotAcknowledged = () => new ApiError('DIFF_NOT_ACKNOWLEDGED', 409, 'acknowledgedDiff');

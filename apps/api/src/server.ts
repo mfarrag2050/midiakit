@@ -25,6 +25,9 @@ import forgotPasswordRoute from './routes/auth/forgot-password.js';
 import resetPasswordRoute from './routes/auth/reset-password.js';
 import brandKitsListRoute from './routes/brand-kits/list.js';
 import brandKitsGetRoute from './routes/brand-kits/get.js';
+import brandKitsCreateRoute from './routes/brand-kits/create.js';
+import brandKitsUpdateRoute from './routes/brand-kits/update.js';
+import brandKitsDeleteRoute from './routes/brand-kits/delete.js';
 import { closePool } from './db.js';
 
 export async function buildServer() {
@@ -83,6 +86,9 @@ export async function buildServer() {
     await v1.register(async (bk) => {
       await bk.register(brandKitsListRoute);
       await bk.register(brandKitsGetRoute);
+      await bk.register(brandKitsCreateRoute);
+      await bk.register(brandKitsUpdateRoute);
+      await bk.register(brandKitsDeleteRoute);
     }, { prefix: '/brand-kits' });
   }, { prefix: '/v1' });
 
