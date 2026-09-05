@@ -22,3 +22,8 @@ services/*/*.egg-info/
 # Next.js build output — يُبنى من المصدر (apps/dashboard).
 .next/
 next-env.d.ts
+
+# ملفات صوتية مُشتقّة من fixtures/audio/ — يُنتَجها ffmpeg من المصادر
+# الأصلية. الأصل (*.m4a) والمرجع (*.txt) يُتَتبَّعان.
+fixtures/audio/*-16k.wav
+fixtures/audio/*-8k.wav

@@ -7,6 +7,7 @@ export {
   type SyntheticMeasureOptions,
 } from './measurer.js';
 export { wrapAlternating } from './wrap-alternating.js';
+export { wrapLatin, type WrapLatinConfig } from './wrap-latin.js';
 export {
   wrapOptimal,
   type OptimalMode,
@@ -62,3 +63,10 @@ export {
   measuredLineHeight,
   type CanvasBoundsContext,
 } from './dynamic-line-height.js';
+export {
+  hasTashkil,
+  measurePixelHeight,
+  type PixelHeightContext,
+  type PixelHeightFactory,
+  type PixelHeightResult,
+} from './pixel-height.js';

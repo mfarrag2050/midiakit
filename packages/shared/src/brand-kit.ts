@@ -2,6 +2,35 @@
 // كل قيمة كانت مثبتة داخل دوال الرسم في reference/aa-media-kit.html
 // تصبح مسحوبة من هنا. لا اختراع قيمة.
 
+// ── لغة المحتوى (Content Locale) ────────────────────────
+//
+// **قرار المالك 2026-09-04:** ثلاث لغات مستقلة (L-49):
+//   • واجهة الموظف (users.locale) — لا تخصّ المحرك.
+//   • الرسائل المؤسسية (brand.locale) — بريد/نماذج مشتركة.
+//   • **لغة المحتوى (content.locale)** — ما يظهر في البطاقة، وحدها
+//     تحدّد سلوك المحرك في الاتجاه والكشيدة والكسر الدلالي.
+//
+// **النطاق المعتمد (docs/12 §يُرفض):**
+//   العربية بالخندق الكامل + اللاتينية بجودة محترمة. **لا قواعد كسر
+//   دلالي لكل لغة** — «أن نكون ممتازين في العربية وعاديين في الباقي
+//   أفضل من متوسطين في الكلّ».
+//
+// **مجموعات السلوك:** كل locale يُحوَّل إلى LocaleGroup لأن السلوك
+// المعماري ثنائي (عربي vs لاتيني)، لا لغوي دقيق.
+
+export type Locale = 'ar' | 'en' | 'fr' | 'tr' | 'es' | 'de';
+export type LocaleGroup = 'ar' | 'latin';
+
+/** يحوّل Locale إلى مجموعة سلوك. `ar` منفرد؛ الباقي `latin`. */
+export function localeGroup(locale: Locale): LocaleGroup {
+  return locale === 'ar' ? 'ar' : 'latin';
+}
+
+/** الاتجاه المشتقّ من اللغة. */
+export function localeDirection(locale: Locale): 'rtl' | 'ltr' {
+  return locale === 'ar' ? 'rtl' : 'ltr';
+}
+
 // ── الخطوط ─────────────────────────────────────────────
 
 export type FontSource = 'custom' | 'builtin';
@@ -32,9 +61,23 @@ export interface FontFamily {
 }
 
 export interface BrandFonts {
+  /**
+   * الخطّ الافتراضي (متوافقٌ رجعياً — كانت الوحيدة). يُستعمل كـfallback
+   * حين لا يوجد `byLocale[<group>]` للمحتوى الحالي.
+   */
   readonly primary: FontFamily;
   readonly fallback: string;
   readonly capabilities: FontCaps;
+  /**
+   * خطوط حسب مجموعة اللغة — العربية شيء واللاتينية شيء آخر
+   * (قرار المالك 2026-09-04 · L-49). اختيارية: الهويّات الحالية (كلّها
+   * عربية) لا تحتاجها؛ الهويّة متعدّدة اللغات تُعرّف `byLocale.ar` +
+   * `byLocale.latin`. عند غياب المجموعة المطلوبة يُستعمل `primary`.
+   */
+  readonly byLocale?: {
+    readonly ar?: FontFamily;
+    readonly latin?: FontFamily;
+  };
 }
 
 // ── الألوان ────────────────────────────────────────────
@@ -480,6 +523,14 @@ export interface BrandPlacement {
   /** موضع طبقة الترجمة (caption). الافتراضي `bottom-center` (النمط
    *  التلفازي القياسي — سطر ترجمة أسفل الإطار). */
   readonly caption?: PlacementSpec;
+  /**
+   * حين `true`، الأنكورات ذات المحور الأفقي (`*-left` ⇄ `*-right`)
+   * تنعكس تلقائياً عند رسم محتوى `latin`. مفيد لحفاظ الشعار في «زاوية
+   * البداية» بصرياً — يمين في العربي، يسار في اللاتيني. `false`
+   * (الافتراضي) يُبقي الأنكور كما هو للاختين. **الإصدار العمودي
+   * (`top-*`/`bottom-*`) لا ينعكس** — الاتجاه العمودي مستقل عن اللغة.
+   */
+  readonly mirrorOnLTR?: boolean;
 }
 
 // ── الأصول (Assets pin) ────────────────────────────────
@@ -594,4 +645,28 @@ export interface BrandKit {
    * `packages/tts` و `docs/12 §10`.
    */
   readonly tts?: BrandTts;
+}
+
+// ── مساعدات locale-aware ────────────────────────────────
+
+/**
+ * يختار الخطّ المناسب لمجموعة اللغة. تراجع صامت إلى `primary` إن لم
+ * تُعرَّف مجموعة الطلب — الهويّات العربية الحالية تعمل بلا تعديل.
+ */
+export function fontForLocale(fonts: BrandFonts, group: LocaleGroup): FontFamily {
+  return fonts.byLocale?.[group] ?? fonts.primary;
+}
+
+/**
+ * يعكس المحور الأفقي في PlacementAnchor حين اقتضت الحاجة (locale=latin +
+ * mirrorOnLTR). المحور العمودي لا ينعكس. `*-center` يبقى كما هو.
+ */
+export function mirrorAnchorForLTR(
+  anchor: PlacementAnchor,
+  latinAndMirror: boolean
+): PlacementAnchor {
+  if (!latinAndMirror) return anchor;
+  const [v, h] = anchor.split('-') as [string, string];
+  const h2 = h === 'left' ? 'right' : h === 'right' ? 'left' : h;
+  return `${v}-${h2}` as PlacementAnchor;
 }
