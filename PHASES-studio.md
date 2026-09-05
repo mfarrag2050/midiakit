@@ -682,3 +682,97 @@ Divergences جديدة بين docs/16 §9 والسلوك الفعلي:
 
 **SYNC-β لم تفتح:** S9 · S10 (Brand Kits) · S11 (Templates) محجوبة
 على A12 + A13. A13 لم تبدأ.
+
+## S9+S10+S11 — الهويات والقوالب ✅
+
+**التسليم (2026-09-06 · مقابل A13 + A14 على mk-api · `7806f46`):**
+تسليم موحّد لأن الشاشات تتشارك نمطاً واحداً. المرآة نمت من 51 إلى
+**59 رمزاً** (A13: 3 · A14: 8 — أُضيفا مسبقاً رغم أنّ S12 محجوبة،
+احتراماً لضمان L-63 غير المشروط).
+
+**تحديث الديون السابقة:** mk-api اختار **A** في `58e4483` (A11-SHAPE).
+`GET /v1/assets` صار `{data, nextCursor, hasMore}` — divergences #7
+· #8 من S8 مغلقان. كودي في `/assets` يعمل بلا تعديل.
+
+**§0 verify — الأشكال المُثبَتة من fetch حقيقي:**
+- `GET /v1/templates` → `{data, nextCursor, hasMore}` · 6 قوالب عامة
+  بأسماء عربية (بسيط · بطاقة ذات كيكر · بطاقة سفلية · بطاقة متمركزة ·
+  بطاقة عاجل · ريلز).
+- `POST /v1/brand-kits` → 201 `{id, name, config, createdAt, updatedAt}`.
+- `POST /:id/fonts/:family/ack` → 200 `{fonts: {primary: {...}}}` جزء لا
+  كامل — دمج محلي بدل استبدال (ملاحظة العقد).
+- `POST /:id/assets-version` → 200 `{assets: {version, autoUpdate}}` جزء.
+  409 `DIFF_NOT_ACKNOWLEDGED` بلا `acknowledgedDiff`.
+
+**S11 — القوالب (`/templates`):**
+- قائمة مع `filter[scope]` و `filter[kind]` (أزرار تبويب).
+- **شارة «للقراءة فقط»** بجوار كل قالب عام — تظهر قبل أي محاولة (لا
+  بعد 403 GLOBAL_TEMPLATE_READONLY الذي يبقى معالَجاً احتياطاً).
+- **زرّ «نسخ»** على كل قالب — GET :id + POST / بالتعريف. اللاحقة
+  « — نسخة » من i18n.
+- **زرّ «حذف»** يظهر فقط على `scope=tenant` — 409 TEMPLATE_IN_USE
+  يعرض رسالة مترجَمة.
+
+**S9 — الهويات (`/brand-kits`):**
+- قائمة تعرض: الاسم، الخط الأساسي (font family + badge builtin/custom)،
+  إصدار الأصول، ثلاثة إجراءات (إقرار خط · ترقية إصدار · حذف).
+- **إقرار الخط:** حوار بحقل family + notes + checkbox. إن `licenseAck=false`
+  → mk-api يعيد 422 قبل أي تحقّق آخر، الواجهة تعرض «يجب الإقرار
+  بالترخيص لإتمام الإجراء.». عند النجاح، تعرض جدول read-only
+  `ackBy: {userId}` و `ackAt: {ISO}` — لا تحرير (§4.ب).
+- **الاستجابة الجزئية معالَجة:** الدمج المحلي مع الحالة المخزَّنة بدل
+  استبدال كامل.
+
+**S10 — إصدار الأصول (كخطوة تدفّق لا فشل):**
+- الحوار يعرض `الإصدار الحالي` + حقل `الإصدار الجديد` (YYYY.MM) +
+  زرّ «ترقية الآن».
+- **الضغط الأوّل يرسل `acknowledgedDiff: false` عمداً** → 409 يعود
+  → catch يكشف `err.code === 'DIFF_NOT_ACKNOWLEDGED'` → يبدّل الحالة
+  إلى step=`diff` → يعرض تنبيه أصفر «الفرق» + placeholder + checkbox.
+- الضغط الثاني بعد التحقّق يرسل `acknowledgedDiff: true` → 200.
+- **409 ليس رسالة خطأ للمستخدم** بل خطوة تصميم في الـUI (كنمط SVG
+  warning في S8).
+
+**البنود الثلاثة المعروفة (§4 من التذكرة):**
+- **(أ) DEFAULT_BRAND fallback:** قراءة `config` قد تعطي حقولاً
+  undefined. `extractFontSummary` يستعمل optional chaining و «—»
+  بديلاً في كل عمود.
+- **(ب) `ackBy`/`ackAt` قابلان للتعديل عبر PATCH:** الواجهة تعرضهما
+  في مربع أخضر للقراءة، ولا تتيح تحريرهما.
+- **(ج) `warnings` يُحذف عند غيابه:** كود S8's `/assets` يتحقّق
+  `err.code` لا `warnings` field من finalize الناجحة — لا تعديل مطلوب.
+
+**اللقطات في `demo/studio/`:**
+- `s9-11-templates-list.png` — 6 قوالب عامة بأسماء عربية + شارات
+  «للقراءة فقط» (G-S9-3 + G-S9-5).
+- `s9-11-templates-global-readonly.png` — filter=عام يبرز الشارات.
+- `s9-11-templates-duplicate-visible.png` — «بسيط — إثبات بوابة
+  المرحلة 2 — نسخة» ظاهر في filter=خاص بشارة خضراء + زرَّي
+  نسخ/حذف (G-S9-4).
+- `s9-fontack-422.png` — checkbox غير مؤشَّر → banner أحمر «يجب
+  الإقرار بالترخيص لإتمام الإجراء.» (G-S9-7).
+- `s9-fontack-success.png` — بعد التحقّق، مربع أخضر يعرض
+  `أقرّ بواسطة: {userId}` و `تاريخ الإقرار: {ISO}` (G-S9-6).
+- `s10-version-diff-step.png` — بعد ضغط أوّل، تنبيه أصفر «الفرق»
+  + checkbox (G-S9-8 · G-S9-9).
+- `s10-version-success.png` — بعد ack، الحوار أُغلق وعمود «إصدار
+  الأصول» يعرض `2026.06` (G-S9-8).
+
+**أداة CDP:** `puppeteer-core@23` أُضيف كـdevDep على مستوى workspace
+لتشغيل flows حقيقية. الحاجة نشأت في S9: التدفّقات هنا أطول من S6/S8،
+و`--experimental-websocket` في Node 20 أخفق بـ`Object reference chain
+too long` على استجابات Chrome-152. puppeteer-core لا يُبنى في studio
+ولا يُشغَّل في الإنتاج — أداة اختبار فقط.
+
+**بوابات:**
+- **G-S9-1** typecheck ✓
+- **G-S9-2** الفحوص الخمسة ✓ · error-code-coverage 59/59 مطابقة
+- **G-S9-3** ✓ · **G-S9-4** ✓ · **G-S9-5** ✓ · **G-S9-6** ✓ ·
+  **G-S9-7** ✓ · **G-S9-8** ✓ · **G-S9-9** ✓
+- **G-S9-10** المبدِّل قائم — mock يحمل mocks كاملة لـtemplates +
+  brand-kits بنفس أشكال العقد (بدائل uploader mock معدَّة).
+- **G-S9-11** ✓ diff داخل النطاق (packages/i18n · scripts · apps/studio ·
+  demo/studio · pnpm-lock.yaml + package.json لإضافة puppeteer-core)
+
+**SYNC-γ لم تفتح:** S12 (Projects) محجوبة بحكم هذه التذكرة — A14
+مبنيّة لكن لم يُطلب تسليم واجهة.

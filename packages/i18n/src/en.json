@@ -51,13 +51,72 @@
       "title": "Brand Kits",
       "subtitle": "Fonts, colors, logos, and typography rules per client.",
       "empty": "No brand kits yet",
-      "emptyBody": "A kit holds the font, palette, logo, margins, and motion rules."
+      "emptyBody": "A kit holds the font, palette, logo, margins, and motion rules.",
+      "create": "Create brand kit",
+      "createTitle": "Create a new brand kit",
+      "nameLabel": "Brand kit name",
+      "delete": "Delete",
+      "confirmDelete": "Confirm brand kit deletion",
+      "confirmDeleteBody": "Deletion is permanent.",
+      "col": {
+        "name": "Name",
+        "font": "Primary font",
+        "assetsVersion": "Assets version",
+        "actions": "Actions"
+      },
+      "fontAck": {
+        "title": "Acknowledge font license",
+        "body": "Uploaded fonts require an acknowledgement of usage rights. 'builtin' fonts do not.",
+        "family": "Font family",
+        "notes": "Notes (optional)",
+        "checkbox": "I acknowledge the license.",
+        "submit": "Save acknowledgement",
+        "ackedBy": "Acknowledged by",
+        "ackedAt": "Acknowledged at"
+      },
+      "assetsVersion": {
+        "title": "Bump assets version",
+        "body": "Bumping pins a new version. Review the diff before confirming (L-29).",
+        "current": "Current version",
+        "target": "New version",
+        "targetHint": "Format YYYY.MM (e.g. 2026.03).",
+        "diffTitle": "Diff",
+        "diffBody": "Expected asset changes for this bump.",
+        "diffPlaceholder": "No real diff in this MVP schema yet.",
+        "ackCheckbox": "I have reviewed the diff above.",
+        "submit": "Bump now"
+      }
     },
     "templates": {
       "title": "Templates",
       "subtitle": "Card, Urgent, and Reel templates — public and your own.",
       "empty": "No templates yet",
-      "emptyBody": "Templates are JSON files with fields you fill in to produce output."
+      "emptyBody": "Templates are JSON files with fields you fill in to produce output.",
+      "readOnly": "Read-only",
+      "duplicate": "Duplicate",
+      "duplicateSuffix": " — copy",
+      "delete": "Delete",
+      "confirmDelete": "Confirm template deletion",
+      "confirmDeleteBody": "Deletion is permanent. Templates in use by projects can't be deleted.",
+      "scope": {
+        "label": "Scope",
+        "all": "All",
+        "global": "Public",
+        "tenant": "Your own"
+      },
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "static": "Static",
+        "video": "Video"
+      },
+      "col": {
+        "name": "Name",
+        "scope": "Scope",
+        "kind": "Kind",
+        "created": "Created",
+        "actions": "Actions"
+      }
     },
     "assets": {
       "title": "Assets",
@@ -199,6 +258,19 @@
     "INVALID_FILTER_FIELD": "Unknown filter field.",
     "INVALID_KIND_VALUE": "Unknown asset kind value.",
     "ASSET_IN_USE_BY_BRAND_KIT": "Asset is referenced by a brand kit — remove the reference first.",
+
+    "GLOBAL_TEMPLATE_READONLY": "Global template is read-only — duplicate to modify.",
+    "TEMPLATE_SCHEMA_VIOLATION": "Template structure violates the schema.",
+    "TEMPLATE_IN_USE": "Template is referenced by projects — can't delete.",
+
+    "BRAND_KIT_NOT_FOUND": "Requested brand kit doesn't exist.",
+    "TEMPLATE_NOT_FOUND": "Requested template doesn't exist.",
+    "WORKFLOW_NOT_FOUND": "Requested workflow doesn't exist.",
+    "PLAN_LIMIT_REACHED": "You've reached your plan's limit — upgrade to continue.",
+    "LOCALE_UNSUPPORTED": "Requested locale isn't supported.",
+    "TRANSITION_ROLE_REQUIRED": "Your role doesn't allow this transition.",
+    "STALE_UPDATE": "Your edit is out of date — please reload.",
+    "PROJECT_HAS_RENDERS": "Project has renders — deletion needs a separate decision.",
 
     "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
     "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",

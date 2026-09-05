@@ -1,51 +1,58 @@
 // /v1/templates — docs/16 §6.
+// **بعد A13 + SYNC-β**: الأشكال المُثبَتة من fetch حقيقي:
+//   GET /v1/templates       → {data:[{id,scope,name,kind,createdAt}], nextCursor, hasMore}
+//   GET /v1/templates/:id   → {id, scope, name, kind, definition, createdAt, updatedAt}
+//   POST /v1/templates      → 201 نفس شكل :id
+//   PATCH/DELETE على scope=global → 403 GLOBAL_TEMPLATE_READONLY
 
 import { request, requestPage, type Page } from '../client';
 
 export type TemplateScope = 'global' | 'tenant';
-export type TemplateKind = 'card' | 'urgent' | 'reel';
+export type TemplateKind = 'static' | 'video';
 
-export interface TemplateSummary {
+export interface TemplateListItem {
   readonly id: string;
-  readonly name: string;
   readonly scope: TemplateScope;
+  readonly name: string;
   readonly kind: TemplateKind;
-  readonly updatedAt: string;
+  readonly createdAt: string;
 }
 
-export interface TemplateFull extends TemplateSummary {
+export interface Template extends TemplateListItem {
   readonly definition: unknown;
+  readonly updatedAt: string;
 }
 
 export function list(opts?: {
   readonly cursor?: string;
   readonly limit?: number;
-  readonly filter?: { readonly scope?: TemplateScope; readonly kind?: TemplateKind };
-}): Promise<Page<TemplateSummary>> {
-  return requestPage<TemplateSummary>('/v1/templates', {
+  readonly filter?: {
+    readonly scope?: TemplateScope;
+    readonly kind?: TemplateKind;
+  };
+}): Promise<Page<TemplateListItem>> {
+  return requestPage<TemplateListItem>('/v1/templates', {
     ...(opts?.cursor !== undefined ? { cursor: opts.cursor } : {}),
     ...(opts?.limit !== undefined ? { limit: opts.limit } : {}),
     ...(opts?.filter ? { filter: opts.filter as Record<string, string> } : {}),
   });
 }
 
-export function get(id: string): Promise<TemplateFull> {
-  return request<TemplateFull>(`/v1/templates/${encodeURIComponent(id)}`);
+export function get(id: string): Promise<Template> {
+  return request<Template>(`/v1/templates/${encodeURIComponent(id)}`);
 }
 
 export function create(input: {
   readonly name: string;
   readonly kind: TemplateKind;
   readonly definition: unknown;
-}): Promise<TemplateFull> {
-  return request<TemplateFull>('/v1/templates', {
-    method: 'POST',
-    body: input,
-  });
+}): Promise<Template> {
+  return request<Template>('/v1/templates', { method: 'POST', body: input });
 }
 
-export function patch(id: string, input: unknown): Promise<TemplateFull> {
-  return request<TemplateFull>(`/v1/templates/${encodeURIComponent(id)}`, {
+/** JSON Merge Patch — يفشل بـ403 GLOBAL_TEMPLATE_READONLY على القوالب العامة. */
+export function patch(id: string, input: unknown): Promise<Template> {
+  return request<Template>(`/v1/templates/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: input,
   });

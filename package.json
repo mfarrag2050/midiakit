@@ -36,15 +36,16 @@
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "vitest": "2.1.9",
-    "@types/node": "20.17.10",
-    "skia-canvas": "3.0.8",
-    "tsx": "4.19.2",
     "@pf-mediakit/engine": "workspace:*",
+    "@pf-mediakit/renderer": "workspace:*",
     "@pf-mediakit/shared": "workspace:*",
     "@pf-mediakit/templates": "workspace:*",
-    "@pf-mediakit/renderer": "workspace:*",
-    "@pf-mediakit/tts": "workspace:*"
+    "@pf-mediakit/tts": "workspace:*",
+    "@types/node": "20.17.10",
+    "puppeteer-core": "23",
+    "skia-canvas": "3.0.8",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.9"
   }
 }

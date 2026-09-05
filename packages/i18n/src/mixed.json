@@ -52,13 +52,72 @@
       "title": "Brand Kits",
       "subtitle": "خطوط وألوان وشعارات وقواعد الطباعة لكل عميل.",
       "empty": "No brand kits yet",
-      "emptyBody": "الهوية تحوي الخط والألوان والشعار والحواف وقواعد الحركة."
+      "emptyBody": "الهوية تحوي الخط والألوان والشعار والحواف وقواعد الحركة.",
+      "create": "Create brand kit",
+      "createTitle": "Create a new brand kit",
+      "nameLabel": "Brand kit name",
+      "delete": "Delete",
+      "confirmDelete": "Confirm brand kit deletion",
+      "confirmDeleteBody": "الحذف نهائي.",
+      "col": {
+        "name": "Name",
+        "font": "Primary font",
+        "assetsVersion": "Assets version",
+        "actions": "Actions"
+      },
+      "fontAck": {
+        "title": "Acknowledge font license",
+        "body": "الخطوط المرفوعة تحتاج إقراراً بحقّ الاستعمال. البنيوية 'builtin' لا تحتاج.",
+        "family": "Font family",
+        "notes": "Notes (optional)",
+        "checkbox": "I acknowledge the license.",
+        "submit": "Save acknowledgement",
+        "ackedBy": "Acknowledged by",
+        "ackedAt": "Acknowledged at"
+      },
+      "assetsVersion": {
+        "title": "Bump assets version",
+        "body": "الترقية تُثبِّت إصداراً جديداً. راجع الفرق قبل التأكيد (L-29).",
+        "current": "Current version",
+        "target": "New version",
+        "targetHint": "Format YYYY.MM (e.g. 2026.03).",
+        "diffTitle": "Diff",
+        "diffBody": "قائمة تغييرات الأصول المتوقّعة في هذه الترقية.",
+        "diffPlaceholder": "لا فرق فعلي في هذا المخطّط (MVP).",
+        "ackCheckbox": "I have reviewed the diff above.",
+        "submit": "Bump now"
+      }
     },
     "templates": {
       "title": "Templates",
       "subtitle": "قوالب البطاقات والعاجل والريلز — عامة وخاصة بك.",
       "empty": "No templates yet",
-      "emptyBody": "القوالب ملفات JSON بحقول تُملأ لتنتج مخرجاً."
+      "emptyBody": "القوالب ملفات JSON بحقول تُملأ لتنتج مخرجاً.",
+      "readOnly": "Read-only",
+      "duplicate": "Duplicate",
+      "duplicateSuffix": " — copy",
+      "delete": "Delete",
+      "confirmDelete": "Confirm template deletion",
+      "confirmDeleteBody": "الحذف نهائي. القالب المستعمَل في مشاريع لا يُحذف.",
+      "scope": {
+        "label": "Scope",
+        "all": "All",
+        "global": "Public",
+        "tenant": "Your own"
+      },
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "static": "Static",
+        "video": "Video"
+      },
+      "col": {
+        "name": "Name",
+        "scope": "Scope",
+        "kind": "Kind",
+        "created": "Created",
+        "actions": "Actions"
+      }
     },
     "assets": {
       "title": "Assets",
@@ -200,6 +259,19 @@
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
     "INVALID_KIND_VALUE": "قيمة نوع الأصل غير معروفة.",
     "ASSET_IN_USE_BY_BRAND_KIT": "الأصل مستعمَل في هوية — أزل المرجع أولاً.",
+
+    "GLOBAL_TEMPLATE_READONLY": "القالب العام للقراءة فقط — انسخه لتعديله.",
+    "TEMPLATE_SCHEMA_VIOLATION": "بنية القالب لا تطابق المخطّط.",
+    "TEMPLATE_IN_USE": "القالب مستعمَل في مشاريع — لا يمكن حذفه.",
+
+    "BRAND_KIT_NOT_FOUND": "الهوية المطلوبة غير موجودة.",
+    "TEMPLATE_NOT_FOUND": "القالب المطلوب غير موجود.",
+    "WORKFLOW_NOT_FOUND": "سير العمل المطلوب غير موجود.",
+    "PLAN_LIMIT_REACHED": "بلغت حدّ باقتك — رقّها للمتابعة.",
+    "LOCALE_UNSUPPORTED": "اللغة المطلوبة غير مدعومة.",
+    "TRANSITION_ROLE_REQUIRED": "دورك لا يسمح بهذا التحوّل.",
+    "STALE_UPDATE": "التعديل قديم — أُعيد تحميل الصفحة.",
+    "PROJECT_HAS_RENDERS": "المشروع له تصديرات — الحذف يحتاج قراراً منفصلاً.",
 
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",

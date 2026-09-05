@@ -18,7 +18,7 @@
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-05",
-  "mirroredFromCommit": "c752b23",
+  "mirroredFromCommit": "7806f46",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -55,6 +55,19 @@
     "INVALID_FILTER_FIELD",
     "INVALID_KIND_VALUE",
     "ASSET_IN_USE_BY_BRAND_KIT",
+
+    "GLOBAL_TEMPLATE_READONLY",
+    "TEMPLATE_SCHEMA_VIOLATION",
+    "TEMPLATE_IN_USE",
+
+    "BRAND_KIT_NOT_FOUND",
+    "TEMPLATE_NOT_FOUND",
+    "WORKFLOW_NOT_FOUND",
+    "PLAN_LIMIT_REACHED",
+    "LOCALE_UNSUPPORTED",
+    "TRANSITION_ROLE_REQUIRED",
+    "STALE_UPDATE",
+    "PROJECT_HAS_RENDERS",
 
     "INSUFFICIENT_ROLE",
     "BRAND_KIT_IN_USE",
