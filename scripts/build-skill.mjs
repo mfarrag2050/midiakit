@@ -187,16 +187,20 @@ function extractLists17() {
 
 function branchesInfo() {
   const section = 'الفروع';
+  // نستثني main و origin/main — قيمهما تتغيَّر مع كلّ commit على هذا
+  // الفرع، فتُبطل بوابة الطزاجة بلا فائدة (السطر يقول «main تغيَّر»
+  // — نعم، الالتزام الذي أضاف السطر غيَّره).
   const raw = shOrFail(section, `git for-each-ref --format='%(refname:short)|%(objectname:short)' refs/heads refs/remotes/origin`);
   const out = [];
   for (const line of raw.split('\n')) {
     const [name, hash] = line.split('|');
     if (!name || name.endsWith('/HEAD')) continue;
+    if (name === 'main' || name === 'origin/main') continue;
     const count = shOrFail(section, `git rev-list --count ${name}`);
     out.push({ name, hash, count });
   }
   if (out.length === 0) {
-    throw new SectionReadError(section, `git for-each-ref`, 'لا فروع');
+    throw new SectionReadError(section, `git for-each-ref`, 'لا فروع أخرى غير main');
   }
   return out;
 }

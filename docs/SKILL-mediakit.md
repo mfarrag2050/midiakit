@@ -11,7 +11,7 @@
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `d2b3461` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `0491f15` (`main`)
 
 ### المراحل — من `PHASES.md §نظرة عامة`
 
@@ -37,12 +37,10 @@
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
 | `feat/api` | `712020d` | 90 |
-| `feat/studio` | `7b54351` | 89 |
-| `main` | `d2b3461` | 90 |
+| `feat/studio` | `0fd8c4d` | 90 |
 | `origin/aa-internal` | `ee178ca` | 1 |
 | `origin/feat/api` | `712020d` | 90 |
-| `origin/feat/studio` | `7b54351` | 89 |
-| `origin/main` | `d2b3461` | 90 |
+| `origin/feat/studio` | `0fd8c4d` | 90 |
 
 ### الفحوص الآلية — من `package.json` الجذر على كل فرع
 

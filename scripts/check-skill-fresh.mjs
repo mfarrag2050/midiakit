@@ -27,15 +27,27 @@ function extractGenerated(content) {
   return content.slice(s + BEGIN.length, e).trim();
 }
 
-const current = extractGenerated(readFileSync(SKILL_PATH, 'utf8'));
+// نُهمل سطر «تاريخ التوليد · HEAD» في المقارنة — ميتا لا مصدر. تضمينه
+// يجعل الفحص يفشل بعد كلّ commit بلا فائدة (المصادر لم تتغيَّر).
+// المُستعرِض يرى السطر في الملف، لكنّ المقارنة لا تعتمد عليه.
+function stripVolatileMeta(text) {
+  return text
+    .split('\n')
+    .filter((line) => !line.startsWith('> **تاريخ التوليد:**'))
+    .join('\n')
+    .trim();
+}
+
+const current = stripVolatileMeta(extractGenerated(readFileSync(SKILL_PATH, 'utf8')));
 
 let fresh;
 try {
-  fresh = execSync('node scripts/build-skill.mjs --stdout', {
+  const raw = execSync('node scripts/build-skill.mjs --stdout', {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
+  fresh = stripVolatileMeta(raw);
 } catch (err) {
   console.error('[check-skill-fresh] ✗ build-skill --stdout فشل:');
   console.error(err.stderr ? err.stderr.toString() : err.message);
