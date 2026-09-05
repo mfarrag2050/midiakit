@@ -85,6 +85,7 @@ const APP_USER_EXPECTED_GRANTS = {
   subscriptions:         'DELETE,INSERT,SELECT,UPDATE',
   usage:                 'DELETE,INSERT,SELECT,UPDATE',
   password_reset_tokens: 'DELETE,INSERT,SELECT,UPDATE',
+  invitations:           'DELETE,INSERT,SELECT,UPDATE',
   // جدول واحد بـINSERT فقط
   login_attempts:        'INSERT',
   // pgmigrations: بلا منح (SEC-1 fix) — لا يظهر

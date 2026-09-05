@@ -25,6 +25,11 @@ import forgotPasswordRoute from './routes/auth/forgot-password.js';
 import resetPasswordRoute from './routes/auth/reset-password.js';
 import tenantGetRoute from './routes/tenant/get.js';
 import tenantPatchRoute from './routes/tenant/patch.js';
+import usersListRoute from './routes/users/list.js';
+import usersGetRoute from './routes/users/get.js';
+import usersInviteRoute from './routes/users/invite.js';
+import usersUpdateRoute from './routes/users/update.js';
+import usersDeleteRoute from './routes/users/delete.js';
 import brandKitsListRoute from './routes/brand-kits/list.js';
 import brandKitsGetRoute from './routes/brand-kits/get.js';
 import brandKitsCreateRoute from './routes/brand-kits/create.js';
@@ -92,6 +97,14 @@ export async function buildServer() {
       await t.register(tenantGetRoute);
       await t.register(tenantPatchRoute);
     }, { prefix: '/tenant' });
+
+    await v1.register(async (u) => {
+      await u.register(usersListRoute);
+      await u.register(usersGetRoute);
+      await u.register(usersInviteRoute);
+      await u.register(usersUpdateRoute);
+      await u.register(usersDeleteRoute);
+    }, { prefix: '/users' });
 
     await v1.register(async (bk) => {
       await bk.register(brandKitsListRoute);

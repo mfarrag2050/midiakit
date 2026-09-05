@@ -23,6 +23,13 @@ export type ErrorCode =
   | 'TOO_MANY_ATTEMPTS'
   // Tenants (§3)
   | 'TENANT_NAME_EMPTY'
+  // Users (§4)
+  | 'USER_ALREADY_MEMBER'
+  | 'PENDING_INVITE_EXISTS'
+  | 'SEATS_EXHAUSTED'              // معلَن في §4.3، غير مُنفَّذ حتى A21
+  | 'LAST_OWNER'
+  | 'REASON_TOO_SHORT'
+  | 'ACCOUNT_SUSPENDED'            // معلَن في §2.2، غير مُنفَّذ حتى A21
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -106,3 +113,8 @@ export const InvalidVersionFormat = () => new ApiError('INVALID_VERSION_FORMAT',
 export const VersionNotAvailable = () => new ApiError('VERSION_NOT_AVAILABLE', 400, 'targetVersion');
 export const DiffNotAcknowledged = () => new ApiError('DIFF_NOT_ACKNOWLEDGED', 409, 'acknowledgedDiff');
 export const TenantNameEmpty = () => new ApiError('TENANT_NAME_EMPTY', 400, 'name');
+// Users (§4)
+export const UserAlreadyMember = () => new ApiError('USER_ALREADY_MEMBER', 409, 'email');
+export const PendingInviteExists = () => new ApiError('PENDING_INVITE_EXISTS', 409, 'email');
+export const LastOwner = () => new ApiError('LAST_OWNER', 409);
+export const ReasonTooShort = () => new ApiError('REASON_TOO_SHORT', 400, 'reason');
