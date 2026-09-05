@@ -144,41 +144,111 @@ TTS Gateway مع mock adapter — موسيقى 220Hz + تعليق صوتي + duc
 
 ---
 
-## demo/studio — لقطات مراجعة الواجهة (S4.5 — 2026-09-05)
+## demo/studio — لقطات مراجعة الواجهة
 
-مادة مراجعة بشرية للواجهة (L-17)، مُلتزَمة في git (L-55). لا مقارنة
-md5 عليها لأن الواجهة تتغيّر مع كل تعديل تصميم — فحص يفشل دائماً
-يُعطَّل بعد أسبوع. `demo/` بديل `snapshots/`: الأخيرة مرجع آلي،
-الأولى للعين البشرية.
+**مادة مراجعة بشرية، لا مرجع تحقّق آلي.** الفرق عن `snapshots*/`
+(التي تُقارَن بـmd5 وتفشل عند بايت واحد يختلف): لقطات الواجهة تتغيّر
+مع كل تعديل تصميم — مقارنة بايتية عليها تعني فشلاً دائماً، والفحص
+الذي يفشل دائماً يُعطَّل بعد أسبوع (L-55). هذه اللقطات لعين المالك
+عند مراجعة أيّ تسليم يمسّ الواجهة (L-17). ملتزَمة في git لأن
+`demo/` هي مكان ما يُعرض (L-48).
 
-### شاشات التطبيق
+**نمط الأرشفة عبر المراحل:** كل مرحلة تُبقي لقطاتها السابقة كطبقات —
+`projects.png` (S1 بمفاتيح خام) لا يُستبدل بـ`projects-ar.png` (S4
+بترجمة). الجديد يُضاف، القديم يبقى كسجل مرئي لتطوّر الواجهة.
 
-- `projects.png` — أوّل التقاط بعد S1، مفاتيح i18n خام (`pages.projects.title`)
-  قبل ملء القواميس. يوثّق مرحلة الإطار العارية.
-- `projects-{ar,mixed,en}.png` — نفس الصفحة بعد S3 عبر ثلاث لغات.
-  ar: RTL كامل. en: LTR. mixed: RTL بلبن unit-level (Projects كوحدة
-  إنجليزية، الجملة الوصفية عربية) — L-24 مطبَّق.
-- `login.png` — أوّل التقاط لشاشة المصادقة (قبل i18n).
-- `login-{ar,mixed,en}.png` — بعد i18n. البطاقة المركزية، شارة ذهبية،
-  حقول dir=ltr للبريد وكلمة السر، زرّ ذهبي primary.
+### الإطار (S1 · `cadbb28`)
 
-### معرض النظام
+- `projects.png` — أوّل التقاط للتخطيط الرئيسي. مفاتيح i18n خام
+  (`pages.projects.title`, `nav.projects` …) قبل ملء القواميس.
+  الغاية: توثيق أن الإطار يعمل قبل i18n.
+- `login.png` — أوّل التقاط لشاشة المصادقة، بلا i18n بعد.
 
-- `design-{ar,mixed,en}.png` — S2: كل atom (Button × 4 variants × 2
-  sizes + loading + disabled · Input · Textarea · Field · Card · Table
-  · Dialog · Alert × 4 kinds · Badge) في مكان واحد.
-- `design-{ar-latin,ar-arab,en-latin}.png` — S4: بطاقة «Numbers &
-  Direction» تعرض `formatBytes`, `formatDateTime`, `formatRelative`
-  عبر تركيبة اللغة × نمط الأرقام:
-  - `ar-latin`: RTL + أرقام لاتينية (`460.4 GB / 108.0 GB` صحيح مع Ltr).
-  - `ar-arab`: RTL + أرقام هندية (`٤٦٠٫٤ GB / ١٠٨٫٠ GB`).
-  - `en-latin`: LTR + لاتينية عادية.
+### i18n ثلاث لغات (S4 من `docs/17` · `93fa429`)
 
-  **العيّنة L-23 counter-example:** بطاقة «Usage» فيها `42 / 100`
-  **بلا `<Ltr>`** — تظهر معكوسة `100 / 42` في RTL. تبقى في المعرض
-  عمداً بجوار البطاقة الصحيحة كي يرى المطوّر العيب مقروناً بحلّه.
+- `projects-ar.png` — RTL كامل، الشريط الجانبي على اليمين، نصوص
+  عربية مترجمة من `pages.projects.*`.
+- `projects-mixed.png` — RTL، وحدات مستقلّة إنجليزية (Projects,
+  Brand Kits …) + جمل توصيفية عربية. L-24 مطبَّق.
+- `projects-en.png` — LTR، كل النصوص إنجليزية، الشريط الجانبي
+  إلى اليسار.
+- `login-ar.png` — بطاقة مصادقة مركزية، شارة `MEDIA KIT` ذهبية،
+  عناوين عربية، حقول dir=ltr للبريد وكلمة السر، زرّ primary ذهبي.
+- `login-mixed.png` — نفس البطاقة، عناوين إنجليزية على unit-level،
+  رسائل عربية.
+- `login-en.png` — LTR كامل.
 
-### التحديث
+### نظام التصميم (S2 · `fe44d4f`)
 
-هذه اللقطات تتغيّر مع كل تعديل تصميم — لا مقارنة بايتية عليها،
-والغاية أن يفتحها المالك عند مراجعة أيّ تسليم يمسّ الواجهة (L-17).
+- `design-ar.png` — كل atom في مكان واحد: `Button` بـ4 variants ×
+  2 sizes + loading + disabled · `Input` · `Textarea` · `Field` ·
+  `Card` · `Table` · `Dialog` · `Alert` بـ4 أنواع · `Badge`. RTL.
+- `design-mixed.png` — نفس المحتوى، mixed. عناوين البطاقات إنجليزية.
+- `design-en.png` — نفس المحتوى، LTR كامل.
+
+### الأرقام والاتجاه (امتداد خارج ترقيم `docs/17` · `ef98a25`)
+
+- `design-ar-latin.png` — RTL + أرقام لاتينية. بطاقة «Numbers &
+  Direction» تُظهر `460.4 GB / 108.0 GB` (صحيح مع Ltr)،
+  `2026-09-04, 14:23`، «منذ 7 دقيقة».
+- `design-ar-arab.png` — RTL + أرقام هندية. تصبح `٤٦٠٫٤ GB /
+  ١٠٨٫٠ GB`، `٢٠٢٦-٠٩-٠٤, ١٤:٢٣`. الوحدة `GB` تبقى لاتينية (SI).
+- `design-en-latin.png` — LTR + لاتينية.
+
+**سطر يُكتب بسببه — العيّنة L-23 counter-example:** بطاقة «Usage»
+داخل `design-*` تعرض `42 / 100` **بلا `<Ltr>`**، فتظهر معكوسة
+`100 / 42` في اتجاه RTL بجوار بطاقة «Storage» الصحيحة (المغلَّفة
+بـLtr). **تبقى المعكوسة في المعرض عمداً** — الغاية أن يرى المطوّر
+العيب مقروناً بحلّه، لا شرحاً نظرياً عن `dir="ltr"`.
+
+### استخراج packages/ui + packages/i18n (S2-X · `f70d202`)
+
+- `design-ar-post-extract.png` — نفس صفحة `/design` بعد نقل الذرّات
+  إلى `packages/ui` واعتماد `tailwind-preset` مشترك + `tokens.css`.
+  الغاية: إثبات أن الاستخراج لم يكسر الرندر — الألوان، الخطوط،
+  الهوامش، الوحدات — بقيت مطابقة.
+
+**سطر يُكتب بسببه — حجم الملف مختلف عن `design-ar.png` (115,028
+مقابل 86,083 بايت):** الفرق كامله من ارتفاع الالتقاط
+(`--window-size=1440,1700` للجديد مقابل `1440,900` للأصل)، لا فرق
+رندر ولا فرق تصميم. المحتوى الظاهر في الـviewport متطابق.
+
+### صفحات المصادقة على mocks (S5 · `e32ca0e`)
+
+مبنيّة على `packages/ui` + `packages/i18n`، مربوطة بـ`src/api/mock.ts`
+عبر `NEXT_PUBLIC_API_MOCK=true`. لا استدعاء HTTP فعلي — SYNC-α لم
+تُفتح.
+
+- `s5-login-ar.png` — تسجيل الدخول، AR. الحقول فارغة، الزرّ primary.
+- `s5-login-mixed.png` — نفس الشاشة، mixed.
+- `s5-login-en.png` — نفس الشاشة، EN.
+- `s5-signup-ar.png` — إنشاء الحساب (اسم الوكالة + بريد + كلمة سر
+  جديدة)، AR. تلميح «12 حرفاً على الأقل» تحت حقل كلمة السر.
+- `s5-signup-mixed.png` — نفس الشاشة، mixed.
+- `s5-signup-en.png` — نفس الشاشة، EN. «At least 12 characters» hint.
+- `s5-forgot-password-ar.png` — استعادة كلمة السر (حقل بريد فقط)، AR.
+- `s5-forgot-password-mixed.png` — نفس الشاشة، mixed.
+- `s5-forgot-password-en.png` — نفس الشاشة، EN.
+- `s5-reset-password-ar.png` — تعيين كلمة سر جديدة (يقرأ `?token=…`
+  من URL)، AR.
+- `s5-reset-password-mixed.png` — نفس الشاشة، mixed.
+- `s5-reset-password-en.png` — نفس الشاشة، EN.
+
+**سطر يُكتب بسببه — `s5-login-ar-error-401.png`، مسار فكّ الخطأ
+كاملاً:**
+
+1. المستخدم أدخل `email=user@example.com` + `password=wrongwrongwrong`
+   (يتخطّى client-validate — البريد صحيح الشكل، كلمة السر 12 حرفاً+).
+2. `AuthCard.onSubmit` استدعى `auth.login(...)` → `request()` →
+   `handleMock('POST', '/v1/auth/login', body)`.
+3. الـmock طبَّق قاعدة «لا كلمة سر تُقبل إلا `letmein12345`» → رمى
+   `ApiError({ code: 'INVALID_CREDENTIALS', messageKey:
+   'errors.INVALID_CREDENTIALS', status: 401 })`.
+4. `AuthCard` التقط الاستثناء، فحص `err.field` (null) → عرض
+   `<Alert kind="danger" titleKey={err.messageKey} />`.
+5. `Alert` استدعى `useLocale().t('errors.INVALID_CREDENTIALS')` →
+   قرأ من `packages/i18n/src/ar.json` القيمة «بريد أو كلمة سر خاطئة.».
+6. الشريط الأحمر أعلى النموذج ظهر بالنصّ المفكوك.
+
+هذه اللقطة **تُثبت L-22 طرفاً إلى طرف** — رسائل الخادم مفاتيح، لا
+نصوصاً. الترجمة تحدث في الواجهة عبر المفتاح الوارد من الـerror body.
