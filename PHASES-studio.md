@@ -146,4 +146,47 @@ atom + composite في مكان واحد. الغاية: مراجعة بصرية �
 
 **تحقّق:** `pnpm typecheck` أخضر.
 
-## S4 — الأرقام والاتجاه ⏳
+## S4 — الأرقام والاتجاه ✅
+
+**التسليم:** `apps/studio/src/format/` مع أربع أدوات موحّدة تعالج
+درسَي L-23 (المركّبات الرقمية تحت RTL) و [[digit-preference-per-user]]
+(خيار الأرقام لكل مستخدم — CLAUDE.md §بنود إلزامية للعميل الأول).
+
+**ما بُني:**
+- `digits.ts` — `formatNumber` · `formatPercent` · `formatBytes` ·
+  `transliterateDigits` — كلها تقبل `DigitStyle` (`latin` |
+  `arabic-indic`) وتعتمد `Intl.NumberFormat` مع locale `ar-EG-u-nu-arab`
+  للهندي.
+- `datetime.ts` — `formatDate` · `formatDateTime` (ثابت YYYY-MM-DD،
+  UTC) · `formatRelative` (منذ 7 دقيقة … · مع مفاتيح `time.minAgo`
+  إلخ). كلاهما يحترم DigitStyle.
+- `bidi.ts` — ثابتَي `LRM`/`RLM` + مساعدات `isolateLatinNumbersInArabic`
+  للحالات النادرة التي لا يمكن فيها لفّ عنصر.
+- `settings.ts` — `useDigitStyle()` + `readDigitStyle` (localStorage
+  `pfmk.studio.digits`، `?digits=` override للاختبار). ينتقل إلى
+  endpoint المستخدم في A9.
+- `DigitStyleSwitcher.tsx` — مبدّل يماثل `LocaleSwitcher`.
+- `Ltr` (من S3) يُعاد تصديره من `format/index.ts` للاكتمال.
+
+**دمج في `/design`:**
+- بطاقة «Numbers & Direction» مع `DigitStyleSwitcher` في headerAction.
+- أربع بطاقات مقياس: التخزين (Ltr على `460.4 GB / 108.0 GB`)،
+  التصديرات (`12,345` أو `١٢٫٣٤٥`)، آخر تصدير (تاريخ + نسبي)،
+  الاستهلاك (`42 / 100` **بلا Ltr** — عيّنة L-23 counter-example
+  المرئية).
+
+**اللقطات (L-17):** `design-ar-latin.png` · `design-ar-arab.png` ·
+`design-en-latin.png`.
+
+**ما رأيته:**
+- **AR + latin**: التخزين «460.4 GB / 108.0 GB» صحيح، آخر تصدير
+  «2026-09-04, 14:23» صحيح، الاستهلاك «100 / 42» **معكوس** (كما
+  يجب — عيّنة L-23 counter-example).
+- **AR + arabic-indic**: نفس البنية — «٤٦٠٫٤ GB / ١٠٨٫٠ GB»،
+  «١٢٫٣٤٥»، «٢٠٢٦-٠٩-٠٤, ١٤:٢٣»، «منذ ٧ دقيقة». المبدّل يعمل من
+  URL و localStorage. الوحدة (GB) تبقى لاتينية دائماً — قرار مقصود
+  (SI standard مقروء عالمياً).
+- **EN + latin**: كل شيء LTR طبيعي — «42 / 100» بلا حاجة Ltr.
+  فواصل الألوف بالفاصلة (en-US).
+
+**تحقّق:** `pnpm typecheck` أخضر.

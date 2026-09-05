@@ -8,6 +8,24 @@
     "mixed": "Mixed",
     "en": "English"
   },
+  "digits": {
+    "label": "Digits",
+    "latin": "123",
+    "arabicIndic": "١٢٣"
+  },
+  "time": {
+    "now": "just now",
+    "future": "in the future",
+    "minAgo": "{n} min ago",
+    "hourAgo": "{n} h ago",
+    "dayAgo": "{n} d ago"
+  },
+  "format": {
+    "storage": "Storage",
+    "renders": "Renders",
+    "usage": "Usage",
+    "lastRender": "Last render"
+  },
   "nav": {
     "workspace": "Workspace",
     "projects": "Projects",
@@ -145,6 +163,10 @@
       "open": "Open dialog",
       "confirmTitle": "Delete confirmation",
       "confirmBody": "Really delete this item? This can't be undone."
+    },
+    "numeric": {
+      "title": "Numbers & Direction",
+      "subtitle": "Ltr for composites · LRM/RLM for inline separators · toggle latin/arabic-indic."
     }
   }
 }

@@ -12,6 +12,15 @@ import { PageHeader } from '@/src/ui/PageHeader';
 import { Table, type Column } from '@/src/ui/Table';
 import { Textarea } from '@/src/ui/Textarea';
 import { useLocale } from '@/src/i18n/LocaleProvider';
+import { Ltr } from '@/src/i18n/Ltr';
+import {
+  formatBytes,
+  formatDateTime,
+  formatNumber,
+  formatRelative,
+} from '@/src/format';
+import { useDigitStyle } from '@/src/format/settings';
+import { DigitStyleSwitcher } from '@/src/format/DigitStyleSwitcher';
 
 // /design — معرض النظام. يعرض كل atom + composite في مكان واحد للمراجعة
 // البصرية (L-17). لا ربط، لا API — صور حقيقية لكل حالة.
@@ -61,8 +70,13 @@ const COLUMNS: readonly Column<Row>[] = [
 ];
 
 export default function DesignPage() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { style } = useDigitStyle();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const opts = { style, locale };
+  const now = new Date('2026-09-04T14:23:11.523Z');
+  const someMinutesAgo = new Date(now.getTime() - 7 * 60 * 1000).toISOString();
+  const someHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString();
 
   return (
     <div className="space-y-8">
@@ -134,6 +148,57 @@ export default function DesignPage() {
           rows={ROWS}
           getRowKey={(r) => r.id}
         />
+      </Card>
+
+      <Card titleKey="design.numeric.title" subtitleKey="design.numeric.subtitle" headerAction={<DigitStyleSwitcher />}>
+        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+          <div className="rounded border border-border bg-surface-2 p-4">
+            <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              {t('format.storage')}
+            </div>
+            <div className="mt-1 text-fg">
+              <Ltr>
+                {formatBytes(460.4 * 1024 * 1024 * 1024, style)} / {formatBytes(108.0 * 1024 * 1024 * 1024, style)}
+              </Ltr>
+            </div>
+            <div className="mt-1 text-[10px] text-fg-subtle">
+              L-23: بلا Ltr يظهر «108 / 460» معكوساً في RTL.
+            </div>
+          </div>
+
+          <div className="rounded border border-border bg-surface-2 p-4">
+            <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              {t('format.renders')}
+            </div>
+            <div className="mt-1 text-fg tabular">
+              {formatNumber(12_345, style)}
+            </div>
+          </div>
+
+          <div className="rounded border border-border bg-surface-2 p-4">
+            <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              {t('format.lastRender')}
+            </div>
+            <div className="mt-1 text-fg">
+              <Ltr>{formatDateTime(now.toISOString(), opts)}</Ltr>
+            </div>
+            <div className="mt-1 text-fg-muted text-xs">
+              {formatRelative(someMinutesAgo, now, t, opts)} · {formatRelative(someHoursAgo, now, t, opts)}
+            </div>
+          </div>
+
+          <div className="rounded border border-border bg-surface-2 p-4">
+            <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              {t('format.usage')}
+            </div>
+            <div className="mt-1 tabular text-fg">
+              {formatNumber(42, style)} / {formatNumber(100, style)}
+            </div>
+            <div className="mt-1 text-[10px] text-fg-subtle">
+              بلا Ltr — «42 / 100» يظهر «100 / 42» في RTL (L-23 counter-example).
+            </div>
+          </div>
+        </div>
       </Card>
 
       <Card titleKey="design.dialog.title">

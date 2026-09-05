@@ -9,6 +9,24 @@
     "mixed": "Mixed",
     "en": "English"
   },
+  "digits": {
+    "label": "Digits",
+    "latin": "123",
+    "arabicIndic": "١٢٣"
+  },
+  "time": {
+    "now": "الآن",
+    "future": "لاحقاً",
+    "minAgo": "منذ {n} دقيقة",
+    "hourAgo": "منذ {n} ساعة",
+    "dayAgo": "منذ {n} يوم"
+  },
+  "format": {
+    "storage": "Storage",
+    "renders": "Renders",
+    "usage": "Usage",
+    "lastRender": "Last render"
+  },
   "nav": {
     "workspace": "Workspace",
     "projects": "Projects",
@@ -146,6 +164,10 @@
       "open": "Open dialog",
       "confirmTitle": "Delete confirmation",
       "confirmBody": "هل تريد فعلاً حذف هذا العنصر؟ لا يمكن التراجع."
+    },
+    "numeric": {
+      "title": "Numbers & Direction",
+      "subtitle": "Ltr للمركّبات · LRM/RLM للفواصل · تبديل بين لاتيني وهندي."
     }
   }
 }
