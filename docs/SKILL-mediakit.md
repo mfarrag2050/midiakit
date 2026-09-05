@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `7688189` (`main`)
+> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `ea0a35e` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -58,22 +58,22 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `4e66332` | 128 |
-| `feat/studio` | `a7f2322` | 97 |
+| `feat/api` | `29ed45e` | 132 |
+| `feat/studio` | `f48da95` | 117 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `4e66332` | 128 |
-| `origin/feat/studio` | `a7f2322` | 97 |
+| `origin/feat/api` | `29ed45e` | 132 |
+| `origin/feat/studio` | `f48da95` | 117 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (15):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (25):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users`
-- **feat/studio (17):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **main (16):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **feat/api (29):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/studio (21):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
-- **mk-api (feat/api):** آخر مبنيّ ✅ = `A13` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S6` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A20` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S9` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
@@ -84,7 +84,7 @@ description: |
 
 ### قوائم المرحلة 4 — من main (`docs/17-phase4-plan.md`)
 
-- **A-list (28):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28`
+- **A-list (29):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28` · `A18.5`
 - **S-list (22):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22`
 - **SYNC (8):** `SYNC-α` · `SYNC-β` · `SYNC-γ` · `SYNC-δ` · `SYNC-ε` · `SYNC-ζ` · `SYNC-η` · `SYNC-θ`
 
@@ -115,6 +115,29 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/health.ts`
+- `apps/api/src/routes/projects/annotations/create.ts`
+- `apps/api/src/routes/projects/annotations/delete.ts`
+- `apps/api/src/routes/projects/annotations/list.ts`
+- `apps/api/src/routes/projects/annotations/update.ts`
+- `apps/api/src/routes/projects/assign.ts`
+- `apps/api/src/routes/projects/create.ts`
+- `apps/api/src/routes/projects/delete.ts`
+- `apps/api/src/routes/projects/get.ts`
+- `apps/api/src/routes/projects/list.ts`
+- `apps/api/src/routes/projects/shared/mapper.ts`
+- `apps/api/src/routes/projects/state.ts`
+- `apps/api/src/routes/projects/transitions.ts`
+- `apps/api/src/routes/projects/update.ts`
+- `apps/api/src/routes/renders/brand-snapshot.ts`
+- `apps/api/src/routes/renders/cancel.ts`
+- `apps/api/src/routes/renders/create.ts`
+- `apps/api/src/routes/renders/delete.ts`
+- `apps/api/src/routes/renders/get.ts`
+- `apps/api/src/routes/renders/list.ts`
+- `apps/api/src/routes/renders/output.ts`
+- `apps/api/src/routes/renders/shared/mapper.ts`
+- `apps/api/src/routes/renders/template-snapshot.ts`
+- `apps/api/src/routes/revisions/factory.ts`
 - `apps/api/src/routes/templates/create.ts`
 - `apps/api/src/routes/templates/delete.ts`
 - `apps/api/src/routes/templates/get.ts`
@@ -128,6 +151,13 @@ description: |
 - `apps/api/src/routes/users/invite.ts`
 - `apps/api/src/routes/users/list.ts`
 - `apps/api/src/routes/users/update.ts`
+- `apps/api/src/routes/workflows/create.ts`
+- `apps/api/src/routes/workflows/delete.ts`
+- `apps/api/src/routes/workflows/get.ts`
+- `apps/api/src/routes/workflows/list.ts`
+- `apps/api/src/routes/workflows/shared/mapper.ts`
+- `apps/api/src/routes/workflows/shared/schema.ts`
+- `apps/api/src/routes/workflows/update.ts`
 
 ### محتويات المستودع — من main (`ls`)
 

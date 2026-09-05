@@ -449,36 +449,40 @@ try {
 }
 
 if (process.argv.includes('--stdout')) {
-  process.stdout.write(generated);
-  process.exit(0);
-}
+  // process.exit() لا ينتظر تفريغ stdout؛ الكتابة الكبيرة (أكبر
+  // من buffer الأنبوب ≈ 8192 بايت على macOS) تُقتَطع إن خرجنا
+  // فوراً بعد write. نُطلق exit من كولباك write ليضمن التفريغ.
+  // (تصحيح 2026-09-06 · حادثة check-skill-fresh السقوط عند نموّ
+  // نقاط النهاية.)
+  process.stdout.write(generated, (err) => process.exit(err ? 1 : 0));
+} else {
+  const current = readFileSync(SKILL_PATH, 'utf8');
+  const withFrontmatter = ensureFrontmatter(current);
+  const updated = inject(withFrontmatter, generated);
+  const lines = updated.split('\n');
 
-const current = readFileSync(SKILL_PATH, 'utf8');
-const withFrontmatter = ensureFrontmatter(current);
-const updated = inject(withFrontmatter, generated);
-const lines = updated.split('\n');
-
-if (lines.length > MAX_LINES) {
-  const sections = [];
-  let cur = { title: '(قبل أول قسم)', count: 0 };
-  for (const line of lines) {
-    if (/^#{2,3}\s/.test(line)) {
-      if (cur.count > 0) sections.push(cur);
-      cur = { title: line.trim(), count: 1 };
-    } else {
-      cur.count++;
+  if (lines.length > MAX_LINES) {
+    const sections = [];
+    let cur = { title: '(قبل أول قسم)', count: 0 };
+    for (const line of lines) {
+      if (/^#{2,3}\s/.test(line)) {
+        if (cur.count > 0) sections.push(cur);
+        cur = { title: line.trim(), count: 1 };
+      } else {
+        cur.count++;
+      }
     }
+    if (cur.count > 0) sections.push(cur);
+    sections.sort((a, b) => b.count - a.count);
+    console.error(`[build-skill] ✗ الملف ${lines.length} سطراً — يتجاوز الحد ${MAX_LINES}.`);
+    console.error(`  القوائم تبقى كاملة — أنت تقرّر ما يُختصر (عادةً المنطقة المُملاة).`);
+    console.error(`  أطول ثلاثة أقسام:`);
+    for (const sec of sections.slice(0, 3)) {
+      console.error(`    ${sec.count} سطراً — ${sec.title}`);
+    }
+    process.exit(1);
   }
-  if (cur.count > 0) sections.push(cur);
-  sections.sort((a, b) => b.count - a.count);
-  console.error(`[build-skill] ✗ الملف ${lines.length} سطراً — يتجاوز الحد ${MAX_LINES}.`);
-  console.error(`  القوائم تبقى كاملة — أنت تقرّر ما يُختصر (عادةً المنطقة المُملاة).`);
-  console.error(`  أطول ثلاثة أقسام:`);
-  for (const sec of sections.slice(0, 3)) {
-    console.error(`    ${sec.count} سطراً — ${sec.title}`);
-  }
-  process.exit(1);
-}
 
-writeFileSync(SKILL_PATH, updated);
-console.log(`[build-skill] ✓ docs/SKILL-mediakit.md (${lines.length} سطر · حد ${MAX_LINES})`);
+  writeFileSync(SKILL_PATH, updated);
+  console.log(`[build-skill] ✓ docs/SKILL-mediakit.md (${lines.length} سطر · حد ${MAX_LINES})`);
+}
