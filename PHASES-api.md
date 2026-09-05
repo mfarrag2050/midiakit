@@ -176,6 +176,18 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 
 ---
 
+## نقاط التزامن
+
+- **SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api**
+  الدليل: `POST /v1/auth/login` على `127.0.0.1:19040` → 200 بجسم يحمل
+  `session.accessToken` (JWT HS256). ثلاثة استدعاءات شكل: كلمة سرّ
+  خاطئة → 401 `INVALID_CREDENTIALS`، حقل ناقص → 400 `VALIDATION_FAILED`
+  مع `field: "password"`، GET /v1/brand-kits بـBearer → 200 بجسم
+  `{data,nextCursor,hasMore}`. المخرَج الحرفي في تقرير SYNC-α.
+  **يُطلق:** S6 · S7 على mk-studio.
+
+---
+
 ## البوابات — الحالة
 
 | البوابة | الوصف | الحالة |
