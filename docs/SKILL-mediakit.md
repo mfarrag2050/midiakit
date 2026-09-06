@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-06 · **HEAD:** `9f6c6bb` (`main`)
+> **تاريخ التوليد:** 2026-09-06 · **HEAD:** `4ba6d1d` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -58,22 +58,22 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `f7546cc` | 134 |
-| `feat/studio` | `01346a9` | 118 |
+| `feat/api` | `78315d9` | 135 |
+| `feat/studio` | `6d3cab0` | 120 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `f7546cc` | 134 |
-| `origin/feat/studio` | `01346a9` | 118 |
+| `origin/feat/api` | `78315d9` | 135 |
+| `origin/feat/studio` | `6d3cab0` | 120 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (16):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (31):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (33):** `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:control-plane` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (21):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
-- **mk-api (feat/api):** آخر مبنيّ ✅ = `A26` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S9` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A27` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S12` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
@@ -115,6 +115,11 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/health.ts`
+- `apps/api/src/routes/platform/auth/login.ts`
+- `apps/api/src/routes/platform/auth/logout.ts`
+- `apps/api/src/routes/platform/tenants/get.ts`
+- `apps/api/src/routes/platform/tenants/list.ts`
+- `apps/api/src/routes/platform/tenants/update.ts`
 - `apps/api/src/routes/projects/annotations/create.ts`
 - `apps/api/src/routes/projects/annotations/delete.ts`
 - `apps/api/src/routes/projects/annotations/list.ts`
@@ -348,7 +353,11 @@ Opus يخطّط ويصوغ التذاكر ← Muhammed يلصقها ← Claude C
   صفوفاً؛ الجدول يلزم للمخصّصة ولإظهار الستة في القائمة. غرضان
   قد يُحلّان بطريقتين. يُحسم في A13.
 - تعدد العضوية: القاعدة تدعمه، الواجهة تفترض واحداً.
-- Paddle: هل يقبل كياناً خليجياً؟
+
+**قرار محسوم 2026-09-07:** الكيان المسجَّل بريطاني/أوروبي (لا
+خليجي). سؤال «Paddle والكيان الخليجي» مغلق — الولايات ضمن Paddle
+الأساسية، و MoR يتولّى VAT. مزوّد إقليمي ثانٍ (Tap · PayTabs ·
+Moyasar) بند مسجَّل يُبنى عند الحاجة، لا قبلها.
 
 ## التالي
 
