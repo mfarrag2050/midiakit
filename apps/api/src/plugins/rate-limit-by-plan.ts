@@ -32,9 +32,9 @@ class RateLimitExceededError extends ApiError {
   constructor(public readonly retryAfterSeconds: number) {
     super('RATE_LIMIT_EXCEEDED', 429);
   }
-  toBody(requestId?: string) {
+  override toBody(requestId?: string) {
     const body = super.toBody(requestId);
-    (body.error as Record<string, unknown>)['retryAfter'] = this.retryAfterSeconds;
+    (body.error as unknown as Record<string, unknown>)['retryAfter'] = this.retryAfterSeconds;
     return body;
   }
 }
