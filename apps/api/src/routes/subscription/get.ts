@@ -41,12 +41,14 @@ const route: FastifyPluginAsync = async (fastify) => {
       `SELECT count(*)::bigint AS n FROM users`);
     const brandKitsUsed = await req.dbClient!.query<{ n: string }>(
       `SELECT count(*)::bigint AS n FROM brand_kits`);
+    // A22 — عدّ من `usage` (trigger على renders يملأها). مصدر واحد مع
+    // الفرض في POST /renders. صفر صفوف = مستأجر لم يُصدر رنداراً بعد.
     const rendersMonth = await req.dbClient!.query<{ videos: string; renders: string }>(
       `SELECT
-         COALESCE(SUM(CASE WHEN video_seconds > 0 THEN 1 ELSE 0 END), 0)::bigint AS videos,
-         COALESCE(SUM(renders_count), 0)::bigint AS renders
+         COALESCE(videos_count, 0)::bigint AS videos,
+         COALESCE(renders_count, 0)::bigint AS renders
        FROM usage
-       WHERE date_trunc('month', period) = date_trunc('month', now())`);
+       WHERE period = date_trunc('month', now())::date`);
 
     return {
       plan,
@@ -55,8 +57,8 @@ const route: FastifyPluginAsync = async (fastify) => {
       seats: { used: Number(seatsUsed.rows[0]!.n), limit: limits.seatsLimit },
       quotas: {
         brandKits: { used: Number(brandKitsUsed.rows[0]!.n), limit: limits.brandKitsLimit },
-        videos: { used: Number(rendersMonth.rows[0]!.videos), limit: limits.videosPerMonthLimit ?? 'unlimited' },
-        renders: { used: Number(rendersMonth.rows[0]!.renders), limit: 'unlimited' },
+        videos: { used: Number(rendersMonth.rows[0]?.videos ?? 0), limit: limits.videosPerMonthLimit ?? 'unlimited' },
+        renders: { used: Number(rendersMonth.rows[0]?.renders ?? 0), limit: 'unlimited' },
       },
       cancelAtPeriodEnd: cancelAt !== null,
     };

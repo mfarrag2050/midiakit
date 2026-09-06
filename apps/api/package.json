@@ -22,7 +22,8 @@
     "verify:control-plane": "node --import tsx scripts/verify-control-plane.mjs",
     "verify:a18-5": "node --import tsx scripts/verify-a18-5.mjs",
     "verify:a18-6": "node --import tsx scripts/verify-a18-6.mjs",
-    "verify:a21": "node --import tsx scripts/verify-a21.mjs"
+    "verify:a21": "node --import tsx scripts/verify-a21.mjs",
+    "verify:a22": "node --import tsx scripts/verify-a22.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

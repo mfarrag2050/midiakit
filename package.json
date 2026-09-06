@@ -60,7 +60,8 @@
     "verify:control-plane": "pnpm --filter @pf-mediakit/api verify:control-plane",
     "verify:a18-5": "pnpm --filter @pf-mediakit/api verify:a18-5",
     "verify:a18-6": "pnpm --filter @pf-mediakit/api verify:a18-6",
-    "verify:a21": "pnpm --filter @pf-mediakit/api verify:a21"
+    "verify:a21": "pnpm --filter @pf-mediakit/api verify:a21",
+    "verify:a22": "pnpm --filter @pf-mediakit/api verify:a22"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

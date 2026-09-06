@@ -96,14 +96,14 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     if ((active.rows[0]?.n ?? 0) >= limits.concurrentRendersLimit) throw QuotaExceededRenders();
 
-    // 3-ب. QUOTA_EXCEEDED_VIDEOS — عدّ mp4 هذا الشهر (البطاقات لا تُحسب، §17).
-    // نطلقه فقط عند format=mp4 لتفادي عمل زائد على PNG.
+    // 3-ب. QUOTA_EXCEEDED_VIDEOS — عدّ mp4 هذا الشهر من `usage` (نمط A22).
+    // A22 يُدير trigger على renders يزيد usage.videos_count عند التحويلة إلى
+    // 'succeeded'. مصدر واحد (usage) للفرض هنا والعرض في GET /subscription
+    // وGET /usage/current. البطاقات (png) لا تُحسب — trigger لا يزيدها إلا لـmp4.
     if (body.format === 'mp4' && limits.videosPerMonthLimit !== null) {
       const monthly = await req.dbClient!.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM renders
-         WHERE tenant_id = $1 AND format = 'mp4'
-           AND created_at >= date_trunc('month', now())
-           AND status != 'failed'`,
+        `SELECT COALESCE(videos_count, 0)::int AS n FROM usage
+         WHERE tenant_id = $1 AND period = date_trunc('month', now())::date`,
         [req.auth!.tenantId],
       );
       if ((monthly.rows[0]?.n ?? 0) >= limits.videosPerMonthLimit) throw QuotaExceededVideos();

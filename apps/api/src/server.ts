@@ -89,6 +89,8 @@ import subscriptionCancelRoute from './routes/subscription/cancel.js';
 import subscriptionResumeRoute from './routes/subscription/resume.js';
 import subscriptionInvoicesRoute from './routes/subscription/invoices.js';
 import webhookSubscriptionRoute from './routes/webhooks/subscription.js';
+import usageCurrentRoute from './routes/usage/current.js';
+import usageHistoryRoute from './routes/usage/history.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
@@ -283,6 +285,12 @@ export async function buildServer() {
     await v1.register(async (w) => {
       await w.register(webhookSubscriptionRoute);
     }, { prefix: '/webhooks' });
+
+    // A22 — Usage
+    await v1.register(async (u) => {
+      await u.register(usageCurrentRoute);
+      await u.register(usageHistoryRoute);
+    }, { prefix: '/usage' });
   }, { prefix: '/v1' });
 
   return fastify;
