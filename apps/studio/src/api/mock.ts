@@ -263,6 +263,43 @@ const DEFAULT_WORKFLOW: MockWorkflow = {
 };
 const MOCK_WORKFLOWS = new Map<string, MockWorkflow>([[DEFAULT_WORKFLOW.id, DEFAULT_WORKFLOW]]);
 
+// ── §12 Annotations — mock store ─────────────────────────
+interface MockAnnotation {
+  id: string;
+  projectId: string;
+  authorId: string;
+  body: string;
+  target: { kind: 'layer'; layer: string; segmentIndex: number };
+  resolved: boolean;
+  createdAt: string;
+}
+const MOCK_ANNOTATIONS = new Map<string, MockAnnotation>();
+
+// دور «المستخدم الحالي» في mock — يُبدَّل عبر مُشغِّل خاصّ في العنوان.
+// حالة افتراضية: reviewer (يستطيع submit/return/approve).
+// يُبدَّل إلى writer عبر titles تحتوي «[role:writer]».
+function inferActorRole(projectTitle: string): string {
+  const m = /\[role:([a-z]+)\]/.exec(projectTitle);
+  return m ? (m[1] ?? 'reviewer') : 'reviewer';
+}
+
+// ترتيب الأدوار — من الأقلّ إلى الأكثر امتيازاً. writer أقلّ من editor
+// أقلّ من reviewer أقلّ من admin. القاعدة: role الحالي ≥ requiredRole
+// = مسموح. غير ذلك = 403 TRANSITION_ROLE_REQUIRED.
+const ROLE_RANK: Record<string, number> = {
+  writer: 1,
+  editor: 2,
+  reviewer: 3,
+  admin: 4,
+};
+function roleGE(actor: string, required: string): boolean {
+  return (ROLE_RANK[actor] ?? 0) >= (ROLE_RANK[required] ?? 0);
+}
+
+// presets تُبنى على العميل ثم تُرسَل بـPOST. mock يستقبلها كما هي —
+// لا بذر خادم-جانب (تنبيه mk-api رقم ٢ للاستوديو).
+// —— لا نُصدّرها لأن الواجهة تحمل presets خاصةً بها.
+
 // ── §8 Renders — mock store ───────────────────────────────
 interface MockRender {
   id: string;
@@ -591,6 +628,13 @@ export async function handleMock(
     const trn = wf.transitions.find((t) => t.id === trnId);
     if (!trn) err(404, 'NOT_FOUND', 'transitionId');
     if (trn.from !== p.currentState) err(409, 'TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE');
+    // دور المستخدم مُستنتَج من عنوان المشروع (مُشغِّل mock). الدور
+    // الفعلي يعيش في jwt claims على mk-api الحقيقي.
+    const actorRole = inferActorRole(p.title);
+    if (!roleGE(actorRole, trn.requiredRole)) {
+      // 403 يحمل field=requiredRole لتُظهره الواجهة في الرسالة.
+      err(403, 'TRANSITION_ROLE_REQUIRED', trn.requiredRole);
+    }
     if (trn.requiresReason) {
       const reason = String(b.reason ?? '');
       if (reason.trim().length < 10) err(400, 'REASON_REQUIRED_FOR_THIS_TRANSITION', 'reason');
@@ -705,6 +749,120 @@ export async function handleMock(
     const w = MOCK_WORKFLOWS.get(id);
     if (!w) err(404, 'NOT_FOUND');
     return ok(200, w);
+  }
+  const wfPatch = /^PATCH \/v1\/workflows\/([^/]+)$/.exec(key);
+  if (wfPatch) {
+    const id = wfPatch[1] ?? '';
+    const w = MOCK_WORKFLOWS.get(id);
+    if (!w) err(404, 'NOT_FOUND');
+    // إعادة التحقّق: كل انتقال يشير إلى حالة موجودة.
+    const nextStates = (b.states as MockWorkflowState[] | undefined) ?? w.states;
+    const nextTrns = (b.transitions as MockWorkflowTransition[] | undefined) ?? w.transitions;
+    const ids = new Set(nextStates.map((s) => s.id));
+    for (let i = 0; i < nextTrns.length; i++) {
+      const trn = nextTrns[i];
+      if (!trn) continue;
+      if (!ids.has(trn.from)) err(400, 'WORKFLOW_SCHEMA_VIOLATION', `transitions[${i}].from`);
+      if (!ids.has(trn.to)) err(400, 'WORKFLOW_SCHEMA_VIOLATION', `transitions[${i}].to`);
+    }
+    if (typeof b.name === 'string') w.name = b.name;
+    if (Array.isArray(nextStates)) w.states = nextStates;
+    if (Array.isArray(nextTrns)) w.transitions = nextTrns;
+    return ok(200, w);
+  }
+  const wfDel = /^DELETE \/v1\/workflows\/([^/]+)$/.exec(key);
+  if (wfDel) {
+    const id = wfDel[1] ?? '';
+    const w = MOCK_WORKFLOWS.get(id);
+    if (!w) err(404, 'NOT_FOUND');
+    if (w.isDefault) err(409, 'CANNOT_DELETE_DEFAULT');
+    // مستعمل؟ نتحقّق من كل المشاريع.
+    for (const p of MOCK_PROJECTS.values()) {
+      if (p.workflow_id === id) err(409, 'WORKFLOW_IN_USE');
+    }
+    MOCK_WORKFLOWS.delete(id);
+    return ok(204);
+  }
+
+  // ── Annotations (§12) ─────────────────────────────────────
+  const annList = /^GET \/v1\/projects\/([^/]+)\/annotations$/.exec(key);
+  if (annList) {
+    const projectId = annList[1] ?? '';
+    if (!MOCK_PROJECTS.has(projectId)) err(404, 'NOT_FOUND');
+    const rows = [...MOCK_ANNOTATIONS.values()]
+      .filter((a) => a.projectId === projectId)
+      .sort((a, z) => (a.createdAt > z.createdAt ? -1 : 1))
+      .map((a) => ({
+        id: a.id,
+        authorId: a.authorId,
+        target: a.target,
+        body: a.body,
+        resolved: a.resolved,
+        createdAt: a.createdAt,
+      }));
+    return ok(200, { data: rows, nextCursor: null, hasMore: false });
+  }
+  const annCreate = /^POST \/v1\/projects\/([^/]+)\/annotations$/.exec(key);
+  if (annCreate) {
+    const projectId = annCreate[1] ?? '';
+    const p = MOCK_PROJECTS.get(projectId);
+    if (!p) err(404, 'NOT_FOUND');
+    const target = (b.target ?? {}) as { kind?: string; layer?: string; segmentIndex?: number };
+    const layer = String(target.layer ?? '');
+    const segmentIndex = Number(target.segmentIndex ?? -1);
+    if (!Number.isInteger(segmentIndex) || segmentIndex < 0) {
+      err(400, 'INVALID_SEGMENT_INDEX', 'target.segmentIndex');
+    }
+    // تحقّق الطبقة من تعريف القالب.
+    const tpl = MOCK_TEMPLATES.get(p.template_id);
+    const def = (tpl?.definition as { fields?: Array<{ id: string }> } | undefined);
+    const layers = new Set(def?.fields?.map((f) => f.id) ?? []);
+    if (!layers.has(layer)) err(404, 'LAYER_NOT_FOUND', 'target.layer');
+    const body = String(b.body ?? '');
+    if (!body.trim()) err(400, 'VALIDATION_FAILED', 'body');
+    if (body.length > 2000) err(400, 'VALIDATION_FAILED', 'body');
+    const id = `ann_mock_${Date.now().toString(36)}`;
+    const ann: MockAnnotation = {
+      id,
+      projectId,
+      authorId: 'usr_mock',
+      body,
+      target: { kind: 'layer', layer, segmentIndex },
+      resolved: false,
+      createdAt: new Date().toISOString(),
+    };
+    MOCK_ANNOTATIONS.set(id, ann);
+    return ok(201, {
+      id: ann.id,
+      authorId: ann.authorId,
+      target: ann.target,
+      body: ann.body,
+      resolved: ann.resolved,
+      createdAt: ann.createdAt,
+    });
+  }
+  const annPatch = /^PATCH \/v1\/projects\/([^/]+)\/annotations\/([^/]+)$/.exec(key);
+  if (annPatch) {
+    const annId = annPatch[2] ?? '';
+    const a = MOCK_ANNOTATIONS.get(annId);
+    if (!a) err(404, 'NOT_FOUND');
+    if (typeof b.body === 'string') a.body = b.body;
+    if (typeof b.resolved === 'boolean') a.resolved = b.resolved;
+    return ok(200, {
+      id: a.id,
+      authorId: a.authorId,
+      target: a.target,
+      body: a.body,
+      resolved: a.resolved,
+      createdAt: a.createdAt,
+    });
+  }
+  const annDel = /^DELETE \/v1\/projects\/([^/]+)\/annotations\/([^/]+)$/.exec(key);
+  if (annDel) {
+    const annId = annDel[2] ?? '';
+    if (!MOCK_ANNOTATIONS.has(annId)) err(404, 'NOT_FOUND');
+    MOCK_ANNOTATIONS.delete(annId);
+    return ok(204);
   }
 
   // ── Renders (§8) ──────────────────────────────────────────
@@ -954,6 +1112,34 @@ export async function handleMock(
         id: w.id, name: w.name, isDefault: w.isDefault,
       }));
       return ok(200, { data: rows, nextCursor: null, hasMore: false });
+    }
+
+    // ── §11.3 POST /v1/workflows ──────────────────────────
+    case 'POST /v1/workflows': {
+      const name = String(b.name ?? '');
+      const states = (b.states as MockWorkflowState[] | undefined) ?? [];
+      const trns = (b.transitions as MockWorkflowTransition[] | undefined) ?? [];
+      if (!name.trim()) err(400, 'VALIDATION_FAILED', 'name');
+      if (!Array.isArray(states) || states.length < 2) {
+        err(400, 'WORKFLOW_SCHEMA_VIOLATION', 'states');
+      }
+      const ids = new Set(states.map((s) => s.id));
+      for (let i = 0; i < trns.length; i++) {
+        const trn = trns[i];
+        if (!trn) continue;
+        if (!ids.has(trn.from)) err(400, 'WORKFLOW_SCHEMA_VIOLATION', `transitions[${i}].from`);
+        if (!ids.has(trn.to)) err(400, 'WORKFLOW_SCHEMA_VIOLATION', `transitions[${i}].to`);
+      }
+      const id = `wfl_mock_${Date.now().toString(36)}`;
+      const wf: MockWorkflow = {
+        id,
+        name,
+        isDefault: false,
+        states,
+        transitions: trns,
+      };
+      MOCK_WORKFLOWS.set(id, wf);
+      return ok(201, wf);
     }
 
     // ── §8.1 POST /v1/renders ─────────────────────────────

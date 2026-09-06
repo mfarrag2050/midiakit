@@ -17,6 +17,7 @@ import {
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import {
+  annotations as annotationsApi,
   ApiError,
   projects,
   renders,
@@ -30,6 +31,7 @@ import type {
   RevisionFull,
   RevisionSummary,
 } from '@/src/api/endpoints/revisions';
+import type { Annotation } from '@/src/api/endpoints/annotations';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -71,8 +73,18 @@ export default function ProjectEditorPage(): JSX.Element {
   const [savingNoticeKey, setSavingNoticeKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [transitionErrorKey, setTransitionErrorKey] = useState<string | null>(null);
+  // S15 — رفض ثلاثيّ برسائل مميزة:
+  //   409 ⇒ الحالة تغيّرت (نعيد التحميل ونعرض تنبيه)
+  //   403 ⇒ الدور غير كافٍ (رسالة تذكر الدور المطلوب من err.field)
+  //   400 ⇒ ينقص سبب (نفتح حقل السبب inline — لا بانر خطأ)
   const [transitionBusyId, setTransitionBusyId] = useState<string | null>(null);
+  // خطأ لكل انتقال — يُعرض تحت الصف. القيمة `{ kind, ... }`.
+  type TrnError =
+    | { kind: 'stale' }
+    | { kind: 'role'; requiredRole: string }
+    | { kind: 'reason' }
+    | { kind: 'other'; messageKey: string };
+  const [errByTrn, setErrByTrn] = useState<Record<string, TrnError>>({});
   const [reasonById, setReasonById] = useState<Record<string, string>>({});
 
   const [revsOpen, setRevsOpen] = useState(false);
@@ -88,6 +100,18 @@ export default function ProjectEditorPage(): JSX.Element {
   const [renderErrorKey, setRenderErrorKey] = useState<string | null>(null);
   const [renderBusy, setRenderBusy] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // S16 — التعليقات. الطبقات مقروءة من template.definition.fields،
+  // لا قائمة مثبَّتة في الواجهة.
+  const [anns, setAnns] = useState<Annotation[]>([]);
+  const [annsLoading, setAnnsLoading] = useState(false);
+  const [annFilter, setAnnFilter] = useState<'all' | 'open' | 'resolved'>('all');
+  const [annBody, setAnnBody] = useState('');
+  const [annLayer, setAnnLayer] = useState<string>('');
+  const [annSeg, setAnnSeg] = useState<number>(0);
+  const [annErrorKey, setAnnErrorKey] = useState<string | null>(null);
+  const [annErrorField, setAnnErrorField] = useState<string | null>(null);
+  const [annBusy, setAnnBusy] = useState(false);
 
   const fields = useMemo(() => extractFields(tpl), [tpl]);
 
@@ -109,11 +133,67 @@ export default function ProjectEditorPage(): JSX.Element {
       for (const f of defs) initial[f.id] = String(content[f.id] ?? '');
       setDraft(initial);
       setDirty(false);
+      if (defs.length > 0 && annLayer === '') {
+        const first = defs[0];
+        if (first) setAnnLayer(first.id);
+      }
+      void refreshAnns();
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function refreshAnns(): Promise<void> {
+    setAnnsLoading(true);
+    try {
+      const page = await annotationsApi.list(id);
+      setAnns([...page.data]);
+    } catch {
+      setAnns([]);
+    } finally {
+      setAnnsLoading(false);
+    }
+  }
+
+  async function doCreateAnn(): Promise<void> {
+    setAnnBusy(true);
+    setAnnErrorKey(null);
+    setAnnErrorField(null);
+    try {
+      const created = await annotationsApi.create(id, {
+        body: annBody.trim(),
+        target: { kind: 'layer', layer: annLayer, segmentIndex: annSeg },
+      });
+      setAnns([created, ...anns]);
+      setAnnBody('');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setAnnErrorKey(err.messageKey);
+        setAnnErrorField(err.field ?? null);
+      } else {
+        setAnnErrorKey('errors.UNKNOWN');
+      }
+    } finally {
+      setAnnBusy(false);
+    }
+  }
+
+  async function toggleAnnResolved(a: Annotation): Promise<void> {
+    try {
+      const updated = await annotationsApi.patch(id, a.id, {
+        resolved: !a.resolved,
+      });
+      setAnns(anns.map((x) => (x.id === a.id ? updated : x)));
+    } catch { /* تجاهل */ }
+  }
+
+  async function removeAnn(a: Annotation): Promise<void> {
+    try {
+      await annotationsApi.remove(id, a.id);
+      setAnns(anns.filter((x) => x.id !== a.id));
+    } catch { /* تجاهل */ }
   }
 
   useEffect(() => {
@@ -157,28 +237,71 @@ export default function ProjectEditorPage(): JSX.Element {
     const trn = state.availableTransitions.find((x) => x.id === trnId);
     if (!trn) return;
     setTransitionBusyId(trnId);
-    setTransitionErrorKey(null);
+    setErrByTrn((prev) => {
+      const next = { ...prev };
+      delete next[trnId];
+      return next;
+    });
     try {
       const input: { transitionId: string; reason?: string } = { transitionId: trnId };
       if (trn.requiresReason) {
         const reason = (reasonById[trnId] ?? '').trim();
-        if (reason.length < 10) {
-          setTransitionErrorKey('errors.REASON_REQUIRED_FOR_THIS_TRANSITION');
-          setTransitionBusyId(null);
-          return;
-        }
-        input.reason = reason;
+        if (reason.length > 0) input.reason = reason;
+        // لا نمنع الإرسال محلياً — نتركه للخادم كي يعطي 400 field=reason
+        // (نفس نمط S8/S10: نعتمد الخادم مصدر الحقيقة، الواجهة تُترجم).
       }
       const next = await projects.transition(id, input);
       setState(next);
-      // إعادة تحميل المشروع لأن updatedAt تغيّر (يمنع STALE_UPDATE لاحقاً).
       const fresh = await projects.get(id);
       setProject(fresh);
     } catch (err) {
-      setTransitionErrorKey(err instanceof ApiError ? err.messageKey : 'errors.UNKNOWN');
+      if (!(err instanceof ApiError)) {
+        setErrByTrn((prev) => ({ ...prev, [trnId]: { kind: 'other', messageKey: 'errors.UNKNOWN' } }));
+        return;
+      }
+      if (err.code === 'TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE') {
+        // 409 — الحالة تغيّرت. أعِد التحميل + اعرض تنبيه ذا معنى.
+        setErrByTrn((prev) => ({ ...prev, [trnId]: { kind: 'stale' } }));
+        try {
+          const st = await projects.getState(id);
+          setState(st);
+        } catch { /* تجاهل */ }
+      } else if (err.code === 'TRANSITION_ROLE_REQUIRED') {
+        // 403 — err.field يحمل الدور المطلوب.
+        setErrByTrn((prev) => ({
+          ...prev,
+          [trnId]: { kind: 'role', requiredRole: err.field ?? trn.id },
+        }));
+      } else if (err.code === 'REASON_REQUIRED_FOR_THIS_TRANSITION') {
+        // 400 — ينقص سبب. لا بانر خطأ — نفتح الحقل inline (رسالة رمادية
+        // تذكيرية) والحقل موجود أصلاً حين requiresReason=true.
+        setErrByTrn((prev) => ({ ...prev, [trnId]: { kind: 'reason' } }));
+      } else {
+        setErrByTrn((prev) => ({
+          ...prev,
+          [trnId]: { kind: 'other', messageKey: err.messageKey },
+        }));
+      }
     } finally {
       setTransitionBusyId(null);
     }
+  }
+
+  async function doAssignSelf(): Promise<void> {
+    if (!project) return;
+    try {
+      const res = await projects.assign(project.id, { assigneeId: 'usr_mock' });
+      setProject({ ...project, assigneeId: res.assigneeId });
+    } catch {
+      /* تجاهل — الرسالة تعرض عبر Alert لاحقاً إن لزم */
+    }
+  }
+  async function doUnassign(): Promise<void> {
+    if (!project) return;
+    try {
+      const res = await projects.assign(project.id, { assigneeId: null });
+      setProject({ ...project, assigneeId: res.assigneeId });
+    } catch { /* تجاهل */ }
   }
 
   async function doRender(): Promise<void> {
@@ -404,9 +527,25 @@ export default function ProjectEditorPage(): JSX.Element {
             <div className="text-sm font-medium text-fg-muted">
               {t('pages.projects.editor.workflow')}
             </div>
-            {transitionErrorKey && (
-              <Alert kind="danger" titleKey={transitionErrorKey} />
-            )}
+            <div className="flex items-center justify-between text-xs text-fg-subtle">
+              <span>
+                {t('pages.projects.editor2.assignee')}:{' '}
+                <span className="text-fg-muted">
+                  {project.assigneeId ?? t('pages.projects.editor2.unassigned')}
+                </span>
+              </span>
+              <div className="flex gap-1">
+                {project.assigneeId ? (
+                  <Button size="sm" variant="ghost" onClick={() => void doUnassign()}>
+                    {t('pages.projects.editor2.unassign')}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" onClick={() => void doAssignSelf()}>
+                    {t('pages.projects.editor2.assignSelf')}
+                  </Button>
+                )}
+              </div>
+            </div>
             <div className="text-xs text-fg-subtle">
               {t('pages.projects.editor.transitions')}:
             </div>
@@ -415,30 +554,57 @@ export default function ProjectEditorPage(): JSX.Element {
                 {t('pages.projects.editor.noTransitions')}
               </p>
             )}
-            {state.availableTransitions.map((tr) => (
-              <div key={tr.id} className="space-y-2 border-t border-border pt-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm">{tr.label}</div>
-                  <Button
-                    size="sm"
-                    onClick={() => void doTransition(tr.id)}
-                    loading={transitionBusyId === tr.id}
-                  >
-                    →
-                  </Button>
+            {state.availableTransitions.map((tr) => {
+              const trnErr = errByTrn[tr.id];
+              return (
+                <div key={tr.id} className="space-y-2 border-t border-border pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm">{tr.label}</div>
+                    <Button
+                      size="sm"
+                      onClick={() => void doTransition(tr.id)}
+                      loading={transitionBusyId === tr.id}
+                    >
+                      →
+                    </Button>
+                  </div>
+                  {tr.requiresReason && (
+                    <Textarea
+                      value={reasonById[tr.id] ?? ''}
+                      onChange={(e) =>
+                        setReasonById({ ...reasonById, [tr.id]: e.target.value })
+                      }
+                      placeholder={t('pages.projects.editor.reasonLabel')}
+                      rows={2}
+                      invalid={trnErr?.kind === 'reason'}
+                    />
+                  )}
+                  {trnErr?.kind === 'reason' && (
+                    <p className="text-[11px] text-fg-muted">
+                      {t('pages.projects.editor2.transitionReasonInline')}
+                    </p>
+                  )}
+                  {trnErr?.kind === 'role' && (
+                    <Alert kind="danger" titleKey="errors.TRANSITION_ROLE_REQUIRED">
+                      <p className="text-xs text-fg-muted">
+                        {t('pages.projects.editor2.transitionRoleRequired', {
+                          role: trnErr.requiredRole,
+                        })}
+                      </p>
+                    </Alert>
+                  )}
+                  {trnErr?.kind === 'stale' && (
+                    <Alert
+                      kind="warning"
+                      titleKey="errors.TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE"
+                    />
+                  )}
+                  {trnErr?.kind === 'other' && (
+                    <Alert kind="danger" titleKey={trnErr.messageKey} />
+                  )}
                 </div>
-                {tr.requiresReason && (
-                  <Textarea
-                    value={reasonById[tr.id] ?? ''}
-                    onChange={(e) =>
-                      setReasonById({ ...reasonById, [tr.id]: e.target.value })
-                    }
-                    placeholder={t('pages.projects.editor.reasonLabel')}
-                    rows={2}
-                  />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </section>
 
           <section className="space-y-3 rounded border border-border bg-surface-2 p-4">
@@ -487,6 +653,162 @@ export default function ProjectEditorPage(): JSX.Element {
             </Button>
           </section>
 
+          <section className="space-y-3 rounded border border-border bg-surface-2 p-4">
+            <div className="text-sm font-medium text-fg-muted">
+              {t('pages.projects.annotations.title')}
+            </div>
+            <p className="text-[11px] text-fg-subtle">
+              {t('pages.projects.annotations.hintLayerFromTemplate')}
+            </p>
+            {annErrorKey && !annErrorField && (
+              <Alert kind="danger" titleKey={annErrorKey} />
+            )}
+            <div className="grid gap-2 md:grid-cols-2">
+              <Field
+                labelKey="pages.projects.annotations.layer"
+                htmlFor="ann-layer"
+                {...(annErrorField === 'target.layer'
+                  ? { errorKey: 'errors.LAYER_NOT_FOUND' }
+                  : {})}
+              >
+                <select
+                  id="ann-layer"
+                  value={annLayer}
+                  onChange={(e) => setAnnLayer(e.target.value)}
+                  className="h-10 w-full rounded border border-border bg-surface-2 px-3 text-sm text-fg outline-none focus:border-accent"
+                >
+                  {fields.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.id}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                labelKey="pages.projects.annotations.segmentIndex"
+                htmlFor="ann-seg"
+                {...(annErrorField === 'target.segmentIndex'
+                  ? { errorKey: 'errors.INVALID_SEGMENT_INDEX' }
+                  : {})}
+              >
+                <Input
+                  id="ann-seg"
+                  type="number"
+                  min={0}
+                  value={annSeg}
+                  invalid={annErrorField === 'target.segmentIndex'}
+                  onChange={(e) => setAnnSeg(Number(e.target.value))}
+                />
+              </Field>
+            </div>
+            <Field labelKey="pages.projects.annotations.body" htmlFor="ann-body">
+              <Textarea
+                id="ann-body"
+                value={annBody}
+                rows={2}
+                onChange={(e) => setAnnBody(e.target.value)}
+              />
+            </Field>
+            <Button
+              size="sm"
+              onClick={() => void doCreateAnn()}
+              loading={annBusy}
+              disabled={annBusy || !annBody.trim() || !annLayer}
+            >
+              {t('pages.projects.annotations.add')}
+            </Button>
+
+            <div className="flex items-center gap-2 pt-2 text-xs">
+              {(['all', 'open', 'resolved'] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setAnnFilter(k)}
+                  className={
+                    'rounded border px-2 py-0.5 ' +
+                    (annFilter === k
+                      ? 'border-accent bg-accent/15 text-accent'
+                      : 'border-border bg-surface-2 text-fg-muted hover:text-fg')
+                  }
+                >
+                  {t(
+                    k === 'all'
+                      ? 'pages.projects.annotations.filterAll'
+                      : k === 'open'
+                        ? 'pages.projects.annotations.filterOpen'
+                        : 'pages.projects.annotations.filterResolved'
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {annsLoading ? (
+              <p className="text-xs text-fg-subtle">…</p>
+            ) : anns.length === 0 ? (
+              <p className="text-xs text-fg-subtle">
+                {t('pages.projects.annotations.empty')}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {anns
+                  .filter((a) =>
+                    annFilter === 'all'
+                      ? true
+                      : annFilter === 'open'
+                        ? !a.resolved
+                        : a.resolved
+                  )
+                  .map((a) => (
+                    <li
+                      key={a.id}
+                      className="space-y-1 border-t border-border pt-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-fg-subtle">
+                        <div className="flex items-center gap-2">
+                          <Badge tone="neutral">{a.target.layer}</Badge>
+                          <span dir="ltr" className="text-[10px]">
+                            #{a.target.segmentIndex}
+                          </span>
+                          <Badge tone={a.resolved ? 'success' : 'warning'}>
+                            {t(
+                              a.resolved
+                                ? 'pages.projects.annotations.resolvedTag'
+                                : 'pages.projects.annotations.openTag'
+                            )}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void toggleAnnResolved(a)}
+                          >
+                            {t(
+                              a.resolved
+                                ? 'pages.projects.annotations.unresolve'
+                                : 'pages.projects.annotations.resolve'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void removeAnn(a)}
+                          >
+                            {t('pages.projects.annotations.remove')}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-fg">{a.body}</div>
+                      <div className="text-[10px] text-fg-subtle" dir="ltr">
+                        {a.createdAt.slice(0, 19).replace('T', ' ')} ·{' '}
+                        {a.authorId ?? t('pages.projects.editor.systemActor')}
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </section>
+
           <section className="space-y-2 rounded border border-border bg-surface-2 p-4">
             <div className="text-sm font-medium text-fg-muted">
               {t('pages.projects.editor.history')}
@@ -496,15 +818,20 @@ export default function ProjectEditorPage(): JSX.Element {
             ) : (
               <ul className="space-y-1 text-xs text-fg-muted">
                 {state.history.slice(-6).reverse().map((h, i) => (
-                  <li key={`${h.at}-${i}`} className="border-t border-border pt-1">
-                    <span dir="ltr" className="text-fg-subtle">
-                      {h.at.slice(0, 19).replace('T', ' ')}
-                    </span>{' '}
-                    · {h.from} → {h.to}
-                    {h.actorId === null && (
-                      <span className="ms-2 text-fg-subtle">
-                        ({t('pages.projects.editor.systemActor')})
+                  <li key={`${h.at}-${i}`} className="space-y-0.5 border-t border-border pt-1">
+                    <div>
+                      <span dir="ltr" className="text-fg-subtle">
+                        {h.at.slice(0, 19).replace('T', ' ')}
+                      </span>{' '}
+                      · {h.from} → {h.to} ·{' '}
+                      <span className="text-fg">
+                        {h.actorId ?? t('pages.projects.editor.systemActor')}
                       </span>
+                    </div>
+                    {h.reason && (
+                      <div className="ps-3 text-[11px] text-fg-subtle">
+                        “{h.reason}”
+                      </div>
                     )}
                   </li>
                 ))}

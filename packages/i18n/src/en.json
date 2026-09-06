@@ -35,6 +35,7 @@
     "assets": "Assets",
     "renders": "Renders",
     "design": "Design",
+    "workflows": "Workflows",
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
@@ -124,7 +125,72 @@
         "reconstructed": "Reconstructed state"
       },
       "editor2": {
-        "noFields": "No fields in this template."
+        "noFields": "No fields in this template.",
+        "assignee": "Assignee",
+        "unassigned": "Unassigned",
+        "assignSelf": "Assign to me",
+        "unassign": "Unassign",
+        "roleHint": "Current user role",
+        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
+        "transitionReasonInline": "This transition requires a reason — enter it and retry.",
+        "transitionRoleRequired": "Your role isn't allowed — required role: {role}."
+      },
+      "annotations": {
+        "title": "Annotations",
+        "empty": "No annotations yet.",
+        "add": "Add annotation",
+        "layer": "Layer",
+        "segmentIndex": "Segment #",
+        "body": "Body",
+        "submit": "Submit",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "remove": "Remove",
+        "resolvedTag": "resolved",
+        "openTag": "open",
+        "filterAll": "All",
+        "filterOpen": "Open",
+        "filterResolved": "Resolved",
+        "hintLayerFromTemplate": "Layers read from template definition — no hard-coded list in the UI."
+      }
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "States and transitions — data rules, not hard-coded.",
+      "empty": "No workflows yet",
+      "emptyBody": "Pick a preset to start your first workflow, or build from scratch.",
+      "create": "New workflow",
+      "createTitle": "Create workflow",
+      "presets": {
+        "label": "Presets (sent via POST — no server-side seed)",
+        "individual": "Individual — writer submits, reviewer approves",
+        "smallTeam": "Small team — writer/editor/reviewer/admin",
+        "fullAgency": "Full agency — longer chain + archive"
+      },
+      "nameLabel": "Name",
+      "isDefault": "Default",
+      "delete": "Delete",
+      "confirmDelete": "Delete workflow",
+      "confirmDeleteBody": "Deletion is permanent.",
+      "editor": {
+        "backToList": "Back to list",
+        "statesTitle": "States",
+        "addState": "Add state",
+        "stateId": "ID",
+        "stateLabel": "Label",
+        "assignableTo": "Assignable to (comma-separated roles)",
+        "transitionsTitle": "Transitions",
+        "addTransition": "Add transition",
+        "transitionId": "ID",
+        "transitionLabel": "Label",
+        "from": "From",
+        "to": "To",
+        "requiredRole": "Required role",
+        "requiresReason": "Requires reason",
+        "save": "Save",
+        "saved": "Saved",
+        "schemaHintUnknownState": "Unknown state — check states above.",
+        "removeRow": "Remove row"
       }
     },
     "brandKits": {
@@ -378,6 +444,7 @@
     "TEMPLATE_SNAPSHOT_NOT_FOUND": "The template snapshot for this render isn't available.",
 
     "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
+    "PLATFORM_INSUFFICIENT_ROLE": "This platform-level operation requires the platform-owner role.",
     "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",
     "LAST_BRAND_KIT": "Can't delete the last brand kit.",
     "IMMUTABLE_FIELD": "This field can't be changed.",

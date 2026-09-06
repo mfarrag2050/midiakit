@@ -1,4 +1,5 @@
 // /v1/workflows — docs/16 §11.
+// **بعد SYNC-δ (mk-api 8b20eaf):** الأشكال المُثبَتة بـcurl حقيقي.
 
 import { request, requestPage, type Page } from '../client';
 
@@ -26,6 +27,9 @@ export interface WorkflowTransition {
 export interface WorkflowFull extends WorkflowSummary {
   readonly states: readonly WorkflowState[];
   readonly transitions: readonly WorkflowTransition[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly kind?: string;
 }
 
 export function list(opts?: {
@@ -40,4 +44,41 @@ export function list(opts?: {
 
 export function get(id: string): Promise<WorkflowFull> {
   return request<WorkflowFull>(`/v1/workflows/${encodeURIComponent(id)}`);
+}
+
+// §11.3 — إنشاء workflow بتعريف كامل. presets مبنية على العميل ثم تُرسَل.
+export function create(input: {
+  readonly name: string;
+  readonly kind?: string;
+  readonly states: readonly WorkflowState[];
+  readonly transitions: readonly WorkflowTransition[];
+}): Promise<WorkflowFull> {
+  return request<WorkflowFull>('/v1/workflows', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+// §11.4 — PATCH يمنع تعديل حقول ثابتة على workflow مستعمل
+// (409 WORKFLOW_IN_USE_IMMUTABLE_FIELD).
+export function patch(
+  id: string,
+  input: Partial<{
+    readonly name: string;
+    readonly kind: string;
+    readonly states: readonly WorkflowState[];
+    readonly transitions: readonly WorkflowTransition[];
+  }>
+): Promise<WorkflowFull> {
+  return request<WorkflowFull>(`/v1/workflows/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: input,
+  });
+}
+
+// §11.5 — 409 على الافتراضي (CANNOT_DELETE_DEFAULT) أو المستعمل (WORKFLOW_IN_USE).
+export function remove(id: string): Promise<void> {
+  return request<void>(`/v1/workflows/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
 }

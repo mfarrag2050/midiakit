@@ -18,7 +18,7 @@
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-06",
-  "mirroredFromCommit": "086e182",
+  "mirroredFromCommit": "8b20eaf",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -95,6 +95,7 @@
     "TEMPLATE_SNAPSHOT_NOT_FOUND",
 
     "INSUFFICIENT_ROLE",
+    "PLATFORM_INSUFFICIENT_ROLE",
     "BRAND_KIT_IN_USE",
     "LAST_BRAND_KIT",
     "IMMUTABLE_FIELD",

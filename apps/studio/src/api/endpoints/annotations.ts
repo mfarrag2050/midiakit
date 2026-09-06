@@ -1,11 +1,12 @@
 // /v1/projects/:id/annotations — docs/16 §12.
+// **دقّة الاستهداف (B4 · 2026-09-04):** المقطع لا الكلمة.
 
 import { request, requestPage, type Page } from '../client';
 
 export interface AnnotationTarget {
   readonly kind: 'layer';
   readonly layer: string;
-  readonly segmentIndex?: number;
+  readonly segmentIndex: number;
 }
 
 export interface Annotation {
@@ -15,7 +16,6 @@ export interface Annotation {
   readonly target: AnnotationTarget;
   readonly resolved: boolean;
   readonly createdAt: string;
-  readonly updatedAt: string;
 }
 
 export function list(

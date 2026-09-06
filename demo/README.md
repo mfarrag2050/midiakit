@@ -461,3 +461,78 @@ endpoints §7/§8/§10/§11 الآن. لقطات على «خام mk-api ينقص
   السلوك مطابق للنمط الذي أُثبت في S8 (SVG_HAS_TEXT) و S10
   (DIFF_NOT_ACKNOWLEDGED): 4xx ليس بالضرورة رسالة فشل — قد يكون
   تنبيهاً بشرطٍ يعالجه المستخدم في مكان آخر.
+
+### سير العمل + المراجعة + التعليقات (S14+S15+S16 · `[current]`)
+
+**بيئة اللقطات:** كلها على mock (ليكون العرض deterministic وقابلاً
+للتكرار)، ماعدا لقطة واحدة صريحة على mk-api الحقيقي 19040 (G-S14-3
+المطلوب صراحة في التذكرة). المرآة تُطابق شكل §11 · §12 حرفياً بعد
+SYNC-δ (mk-api 8b20eaf).
+
+**S14 قائمة سير العمل + presets:**
+- `s14-list-empty.png` — القائمة الفارغة الأولى + زرّ ذهبي «سير عمل جديد»
+  + `EmptyState` مركزي.
+- `s14-create-preset-dialog.png` — الحوار يعرض ٣ presets راديو
+  (individual · small-team · full-agency). كلٌّ يحمل شرحاً موجزاً.
+  **presets تُبنى على العميل** وتُرسَل بـPOST — لا بذر خادم-جانب
+  (تنبيه mk-api رقم ٢ للاستوديو).
+- `s14-list-populated.png` (mock) — الصف الأوّل `individual` مع
+  شارة `افتراضي` خضراء (seeded في mock)، والصف الثاني «ورشة تحرير»
+  الذي أنشأناه من preset.
+- `s14-list-populated-real.png` (**mk-api 19040**) — الرأس يعرض
+  اسم المستأجر الحقيقي `S14 Test Agency`. صفَّان بلا شارة `افتراضي`
+  (mk-api لا يبذر default — تنبيه رقم ٢).
+
+**S14 محرّر — WORKFLOW_SCHEMA_VIOLATION على الحقل:**
+- `s14-editor-loaded.png` — تعريف كامل لـworkflow «individual»:
+  أربع حالات (draft/review/approved/archived) + أربعة انتقالات مع
+  requiredRole + requiresReason.
+- **`s14-schema-violation-inline.png` — البند الحاكم للتذكرة.** بعد
+  تحرير `transitions[1].to` إلى `nonexistent-state` والحفظ، mk-api
+  يعيد 400 `WORKFLOW_SCHEMA_VIOLATION` مع `field=transitions[1].to`.
+  الواجهة **لا تعرض بانراً أحمر** بل **تُعلِّم الحقل نفسه** بحدّ
+  أحمر ورسالة صغيرة تحته: «الحالة غير موجودة — راجع الحالات أعلاه.»
+  البند رقم ٤ في التذكرة: خطأ على حقل، لا بانر عام.
+
+**S15 المراجعة — الرفض الثلاثي بثلاث رسائل:**
+- `s15-editor-transitions-available.png` — قسم سير العمل يعرض
+  انتقالاً واحداً «إرسال للمراجعة» (draft state). الأزرار **من
+  `availableTransitions`** — لا قائمة مثبَّتة في الواجهة (البند
+  الحاكم لـS15).
+- `s15-400-reason-inline.png` — بعد submit → المشروع في review،
+  الضغط على السهم بجوار «إرجاع للتحرير» بلا سبب. mk-api يعيد
+  400 `REASON_REQUIRED_FOR_THIS_TRANSITION`. **الواجهة تفتح حقل
+  السبب inline** (يُميّز بحدّ أحمر) وتعرض تحته سطراً رمادياً
+  «هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.» — **لا بانر أحمر**.
+  نفس نمط SVG_HAS_TEXT (S8) و DIFF_NOT_ACKNOWLEDGED (S10).
+- `s15-403-role-required.png` — مشروع عنوانه يحوي `[role:writer]`
+  (مُشغِّل mock للدور). Submit ينجح (writer قادر). Approve
+  (يتطلّب reviewer) يعود بـ403 `TRANSITION_ROLE_REQUIRED` مع
+  `field=reviewer`. الواجهة تعرض بانراً أحمر بعنوان
+  «دورك لا يسمح بهذا التحوّل.» + سطر إضافي **يذكر الدور المطلوب
+  بالاسم**: «دورك لا يسمح — الدور المطلوب: reviewer.» (البند رقم ٦
+  في التذكرة).
+- `s15-history-with-actor.png` — قسم التاريخ:
+  - `review → draft · 2026-09-06 12:59:08 · usr_mock`
+    مع سبب مقتبس بين علامتَي تنصيص: «العنوان يحتاج تدقيقاً — راجعه
+    ثم أعده.»
+  - `draft → review · 2026-09-06 12:59:06 · usr_mock` (بلا سبب —
+    submit لا يستلزمه).
+  فاعل + سبب + وقت لكل حدث.
+
+**S16 التعليقات — طبقة من القالب:**
+- `s16-annotation-on-layer.png` — panel التعليقات في المحرّر:
+  - `dropdown` الطبقة يعرض `title` — **مُشتقّ من
+    `template.definition.fields`** (البند الحاكم لـS16).
+  - segmentIndex = 0 (input رقم ≥ 0)
+  - textarea نصّ التعليق + زرّ «إضافة تعليق»
+  - تحته تعليق واحد أُنشئ في التدفّق: «كلمة «تدقيقاً» تحتاج تنسيقاً —
+    استعمل bold.» على `title #0`، شارة صفراء «مفتوح»، أزرار
+    «حلّ» + «حذف»، طابع زمن + `usr_mock`.
+  - أسفل filter tabs (الكل · المفتوحة · المحلولة).
+
+**تعذّر التقاطه في هذه التذكرة (سيلحق بـS19):**
+`«النظام» عند actorId=null`. mk-api الحالي لا يُصدر transitions أو
+revisions من نظام (كل شيء يمرّ عبر jwt user). البديل مكتوب في الكود
+`actorId ?? t('...systemActor')` ويعمل ضمنياً حين يظهر actor=null
+أوّل مرة (مثال متوقّع: cascade في S19-revisions).

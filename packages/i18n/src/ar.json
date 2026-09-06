@@ -35,6 +35,7 @@
     "assets": "الأصول",
     "renders": "التصديرات",
     "design": "النظام",
+    "workflows": "سير العمل",
     "user": {
       "placeholder": "الحساب",
       "signOut": "تسجيل الخروج"
@@ -124,7 +125,72 @@
         "reconstructed": "الحالة المُعاد بناؤها"
       },
       "editor2": {
-        "noFields": "لا حقول في هذا القالب."
+        "noFields": "لا حقول في هذا القالب.",
+        "assignee": "المُسنَد إليه",
+        "unassigned": "غير مُسنَد",
+        "assignSelf": "إسناد لي",
+        "unassign": "إلغاء الإسناد",
+        "roleHint": "دور المستخدم الحالي",
+        "actorHint": "مُشغِّل mock — أضف [role:writer] إلى عنوان المشروع لاختبار 403 على انتقال يتطلّب دور أعلى.",
+        "transitionReasonInline": "هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.",
+        "transitionRoleRequired": "دورك لا يسمح — الدور المطلوب: {role}."
+      },
+      "annotations": {
+        "title": "التعليقات",
+        "empty": "لا تعليقات بعد.",
+        "add": "إضافة تعليق",
+        "layer": "الطبقة",
+        "segmentIndex": "رقم المقطع",
+        "body": "نصّ التعليق",
+        "submit": "إرسال",
+        "resolve": "حلّ",
+        "unresolve": "إعادة فتح",
+        "remove": "حذف",
+        "resolvedTag": "محلول",
+        "openTag": "مفتوح",
+        "filterAll": "الكل",
+        "filterOpen": "المفتوحة",
+        "filterResolved": "المحلولة",
+        "hintLayerFromTemplate": "الطبقات مقروءة من تعريف القالب — لا قائمة مثبَّتة في الواجهة."
+      }
+    },
+    "workflows": {
+      "title": "سير العمل",
+      "subtitle": "الحالات والانتقالات — قواعد بيانات لا كود مثبَّت.",
+      "empty": "لا سير عمل بعد",
+      "emptyBody": "اختر preset لبدء أوّل workflow، أو أنشئ واحداً من الصفر.",
+      "create": "سير عمل جديد",
+      "createTitle": "إنشاء سير عمل",
+      "presets": {
+        "label": "قوالب جاهزة (تُرسَل بـPOST — لا بذر خادم)",
+        "individual": "فرد — writer يرسل، reviewer يعتمد",
+        "smallTeam": "فريق صغير — writer/editor/reviewer/admin",
+        "fullAgency": "وكالة كاملة — سلسلة أطول + أرشفة"
+      },
+      "nameLabel": "الاسم",
+      "isDefault": "افتراضي",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف سير العمل",
+      "confirmDeleteBody": "الحذف نهائي.",
+      "editor": {
+        "backToList": "عودة إلى القائمة",
+        "statesTitle": "الحالات",
+        "addState": "إضافة حالة",
+        "stateId": "المعرِّف",
+        "stateLabel": "التسمية",
+        "assignableTo": "قابل للإسناد إلى (أدوار مفصولة بفاصلة)",
+        "transitionsTitle": "الانتقالات",
+        "addTransition": "إضافة انتقال",
+        "transitionId": "المعرِّف",
+        "transitionLabel": "التسمية",
+        "from": "من",
+        "to": "إلى",
+        "requiredRole": "الدور المطلوب",
+        "requiresReason": "يستلزم سبباً",
+        "save": "حفظ",
+        "saved": "تم الحفظ",
+        "schemaHintUnknownState": "الحالة غير موجودة — راجع الحالات أعلاه.",
+        "removeRow": "حذف الصف"
       }
     },
     "brandKits": {
@@ -378,6 +444,7 @@
     "TEMPLATE_SNAPSHOT_NOT_FOUND": "لقطة القالب لهذا التصدير غير موجودة.",
 
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
+    "PLATFORM_INSUFFICIENT_ROLE": "هذه العملية على مستوى المنصّة تتطلّب دور مالك المنصّة.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",
     "LAST_BRAND_KIT": "لا يمكن حذف آخر هوية.",
     "IMMUTABLE_FIELD": "هذا الحقل غير قابل للتعديل.",

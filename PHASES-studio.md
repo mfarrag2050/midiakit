@@ -899,3 +899,113 @@ Link click.**
 3. أيّ انحراف شكل يُعلَن في PHASES-studio (لا يُصلَح من طرف studio).
 4. المرآة تبقى مطابقة عبر `pnpm check:error-code-coverage` — أيّ
    رمز جديد يستدعي pass ثلاثي (المرآة + 3 dicts).
+
+---
+
+## S14 · S15 · S16 — سير العمل + المراجعة + التعليقات ✅ (SYNC-δ)
+
+**السياق العقدي:** `docs/17` §S14/§S15/§S16 مقابل `docs/16` §11 · §12.
+mk-api على `8b20eaf` (SYNC-δ فُتحت). لا S13 (مؤجَّلة حتى A18.6)،
+ولا S17+ (محجوبة على SYNC-ε).
+
+### قرار الحماية L-63 (SYNC-δ)
+
+- المرآة: 81 → **82 رمزاً** (`8b20eaf`).
+- الرمز المضاف: `PLATFORM_INSUFFICIENT_ROLE` — منفصل عن `INSUFFICIENT_ROLE`
+  المستأجرية.
+- ثلاث dicts (`ar/mixed/en`) + المرآة صُفّت في التزام واحد.
+
+### التسليم — ثلاث ميزات كبرى
+
+**S14 — محرّر سير العمل (`/workflows`):**
+- قائمة سير العمل + `افتراضي` badge + حذف مع 409
+  (`CANNOT_DELETE_DEFAULT` / `WORKFLOW_IN_USE`) مترجَم.
+- حوار الإنشاء يعرض **٣ presets** (individual · small-team · full-agency)
+  تُبنى **على العميل** ثم تُرسَل بـPOST — لا بذر خادم (تنبيه mk-api رقم ٢).
+- محرّر لكل workflow: تحرير الحالات + الانتقالات + `requiredRole` +
+  `requiresReason`. تعديل حرّ (states/transitions) — قواعد بيانات
+  لا كود.
+- `WORKFLOW_SCHEMA_VIOLATION` يظهر **على الحقل المعنيّ** لا بانراً.
+  الواجهة تحمل detection محلياً (invalid حين stateId غير موجود) +
+  تعرض ما يعيده الخادم عبر `err.field = 'transitions[i].to'`.
+
+**S15 — المراجعة والاعتماد (في محرّر المشروع):**
+- الأزرار مأخوذة **حصراً** من `availableTransitions` — لا قائمة
+  مثبَّتة في الواجهة.
+- **الرفض الثلاثي (كلٌّ برسالة مختلفة، نمط مطلوب في التذكرة):**
+  - **409** `TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE` ⇒
+    تنبيه أصفر «الحالة تغيّرت» + استدعاء `getState` تلقائياً لتحديث
+    الأزرار.
+  - **403** `TRANSITION_ROLE_REQUIRED` ⇒ بانر أحمر يذكر **اسم
+    الدور المطلوب** (يأتي من `err.field`) — مثال ظاهر:
+    «دورك لا يسمح — الدور المطلوب: reviewer.»
+  - **400** `REASON_REQUIRED_FOR_THIS_TRANSITION` ⇒ **يفتح حقل السبب
+    inline** (يُميّز بـinvalid + رسالة تذكيرية رمادية) — **لا بانر
+    خطأ**. نفس نمط SVG_HAS_TEXT (S8) و DIFF_NOT_ACKNOWLEDGED (S10).
+- history تعرض: `from → to · timestamp · actor` + سطر السبب المُقتَبس.
+  `actorId === null` يعرض «النظام» (بديل مكتوب في الكود، غير
+  قابل للاختبار البصري حتى تظهر system-transitions في mk-api —
+  انظر «الملاحظات» أدناه).
+- إسناد الذات + إلغاء الإسناد عبر `POST /:id/assign` (§11.8).
+
+**S16 — التعليقات (في محرّر المشروع):**
+- panel كامل: layer picker (select) + segmentIndex (int ≥ 0) + body
+  (≤ 2000).
+- **الطبقات مقروءة من `template.definition.fields`** — لا قائمة
+  مثبَّتة. البند المطلوب في التذكرة صراحة.
+- عرض قائمة التعليقات مع filter (الكل · المفتوحة · المحلولة) + resolve/reopen/delete.
+- `LAYER_NOT_FOUND` + `INVALID_SEGMENT_INDEX` مُعالَجان على الحقل
+  المعنيّ (safety fallback — لا يظهران عادةً لأن dropdown يأتي من
+  القالب، لكن إن أرسل client خارجي بيانات فاسدة، الخطأ يُترجَم).
+
+### ١١ بوابة G-S14-* — كلها ✓
+
+| # | البوابة | الحالة | اللقطة/الأثر |
+|---|---|---|---|
+| G-S14-1 | typecheck أخضر | ✓ | `pnpm --filter @pf-mediakit/studio typecheck` نظيف |
+| G-S14-2 | ١٣ فحص + `pnpm test` كامل | ✓ | 283 tests · كل الفحوص pass |
+| G-S14-3 | إنشاء workflow ضدّ **19040** | ✓ | `s14-list-populated-real.png` — «ورشة تحرير (real)» + «role-test» على S14 Test Agency |
+| G-S14-4 | WORKFLOW_SCHEMA_VIOLATION على الحقل لا بانر | ✓ | `s14-schema-violation-inline.png` — `nonexistent-state` مُعلَّم أحمر + رسالة تحته |
+| G-S14-5 | أزرار من availableTransitions | ✓ | `s15-editor-transitions-available.png` — «إرسال للمراجعة» فقط في draft |
+| G-S14-6 | 403 يذكر الدور المطلوب | ✓ | `s15-403-role-required.png` — «دورك لا يسمح — الدور المطلوب: reviewer» |
+| G-S14-7 | 400 يفتح حقل السبب لا بانر | ✓ | `s15-400-reason-inline.png` — textarea محدَّد أحمر + سطر رمادي تحته |
+| G-S14-8 | history بفاعل وسبب | ✓ | `s15-history-with-actor.png` — `review → draft · usr_mock` + «العنوان يحتاج تدقيقاً…» |
+| G-S14-9 | تعليق على طبقة من القالب | ✓ | `s16-annotation-on-layer.png` — التعليق على `title #0`، الطبقة من dropdown مُشتقّة من `template.fields` |
+| G-S14-10 | المبدِّل قائم | ✓ | flip `.env.local`: mock=true للقطات S14 mock ثم mock=false للقطة real |
+| G-S14-11 | صفر ملفات خارج النطاق | ✓ | diff محصور في `packages/i18n`, `apps/studio/{app,src}`, `scripts/{mk-api-error-codes.json,cdp-*.mjs}`, `demo/studio`, `PHASES-studio.md` |
+
+### قرارات تصميم داخلية
+
+**١. `«النظام»` غير قابل للاختبار البصري في هذه التذكرة.** mk-api
+لا يُصدر revisions/transitions من طرف system-actor حتى الآن (كل
+شيء يمرّ عبر jwt user). البديل مكتوب في الواجهة (`actorId ?? t('...systemActor')`)
+ويعمل ضمنياً حين يظهر actorId=null أوّل مرّة (مثال متوقّع: cascade
+في S19).
+
+**٢. مُشغِّل mock للدور:** عنوان المشروع يحوي `[role:writer]` ⇒
+`inferActorRole` يعيد `writer`. `roleGE('writer','reviewer')` = false ⇒
+403. الحقيقي (mk-api) يستخرج الدور من jwt — لا نستطيع محاكاته من
+واجهة single-user. هذا مسار **مؤقّت لتوليد اللقطة**، لا سياسة أمن.
+
+**٣. presets مبنية عميل-جانب.** `apps/studio/app/(app)/workflows/page.tsx`
+`buildPresets()` يحمل التعريفات الثلاث. النتيجة تُرسَل بـPOST كأيّ
+workflow آخر — mk-api لا يعرف عن presets، فيبقى العقد نظيفاً.
+
+**٤. Field detection محلي + خادمي معاً.** المحرّر يُعلَم فوراً حين
+تكتب stateId غير موجود (invalid client-side) — قبل الحفظ. الخادم
+يعيد نفس الرسالة عند save إن كان الفحص فاته. طبقتان يُغلقان الحلقة
+بلا فجوة UX.
+
+### CDP flows
+
+- `scripts/cdp-s14-s15-s16.mjs` — ١٠ لقطات على mock تُغطّي كل
+  G-S14-4..9.
+- `scripts/cdp-s14-real.mjs` — لقطة واحدة على mk-api الحقيقي 19040
+  (G-S14-3 مطلوب صراحة).
+- الجدول في `scripts/README-cdp.md` مُحدَّث بالسكربتَين.
+
+### الجاهزية لـSYNC-ε (حين تُفتح — S17+S18)
+
+`renders.ts` مبنيّة أصلاً منذ S12 على شكل §8. عند نضج A18+A19 على
+mk-api، تبديل env يفتح مسار «تصدير + سجل التصديرات» بلا تعديل واجهة.
+هذه التذكرة لم تلمس مسار renders.
