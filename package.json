@@ -56,7 +56,8 @@
     "verify:renders": "pnpm --filter @pf-mediakit/api verify:renders",
     "verify:revisions": "pnpm --filter @pf-mediakit/api verify:revisions",
     "verify:plans": "pnpm --filter @pf-mediakit/api verify:plans",
-    "verify:control-plane": "pnpm --filter @pf-mediakit/api verify:control-plane"
+    "verify:control-plane": "pnpm --filter @pf-mediakit/api verify:control-plane",
+    "verify:a18-5": "pnpm --filter @pf-mediakit/api verify:a18-5"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

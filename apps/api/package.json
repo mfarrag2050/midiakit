@@ -19,7 +19,8 @@
     "verify:renders": "node --import tsx scripts/verify-renders.mjs",
     "verify:revisions": "node --import tsx scripts/verify-revisions.mjs",
     "verify:plans": "node --import tsx scripts/verify-plans.mjs",
-    "verify:control-plane": "node --import tsx scripts/verify-control-plane.mjs"
+    "verify:control-plane": "node --import tsx scripts/verify-control-plane.mjs",
+    "verify:a18-5": "node --import tsx scripts/verify-a18-5.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

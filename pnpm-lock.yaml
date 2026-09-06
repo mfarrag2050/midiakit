@@ -149,6 +149,9 @@ importers:
 
   apps/renderer:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.717.0
+        version: 3.717.0
       '@pf-mediakit/engine':
         specifier: workspace:*
         version: link:../../packages/engine
@@ -164,6 +167,22 @@ importers:
       ioredis:
         specifier: 5.4.1
         version: 5.4.1
+      pg:
+        specifier: 8.13.1
+        version: 8.13.1
+    devDependencies:
+      '@types/pg':
+        specifier: 8.11.10
+        version: 8.11.10
+      skia-canvas:
+        specifier: 3.0.8
+        version: 3.0.8
+      tsx:
+        specifier: 4.19.2
+        version: 4.19.2
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
 
   packages/db:
     dependencies:

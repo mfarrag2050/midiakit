@@ -36,12 +36,12 @@ interface BrandKitRow { id: string; config: Record<string, unknown> }
 interface TemplateRow { id: string; definition: Record<string, unknown> }
 interface RenderRow { id: string; status: string; created_at: Date }
 
-// فحص «brand بلا أصول خارجية» (MVP A18):
-// - أيّ حقل url يبدأ بـhttp أو https خارج مسار محلّي ⇒ مرفوض
-// - أيّ assetId موجود ⇒ مرفوض (يحتاج S3 fetch في worker)
-function hasExternalAssets(brand: Record<string, unknown>): boolean {
+// A18.5: التمييز الجديد (بدل الرفض الكامل من A18 MVP):
+// - assetId مسموح ⇒ العامل يفكّه إلى storage_key ويجلبه بـSDK
+// - url http(s)/mem/s3 ممنوع ⇒ يظلّ SSRF risk حتى لو من brand
+// - url فارغ أو مسار محلّي (لـCLI) مسموح
+function hasExternalUrl(brand: Record<string, unknown>): boolean {
   const flat = JSON.stringify(brand);
-  if (/"assetId"\s*:\s*"[^"]/.test(flat)) return true;
   if (/"url"\s*:\s*"https?:\/\//.test(flat)) return true;
   if (/"url"\s*:\s*"mem:\/\//.test(flat)) return true;
   if (/"url"\s*:\s*"s3:\/\//.test(flat)) return true;
@@ -99,8 +99,9 @@ const route: FastifyPluginAsync = async (fastify) => {
     if (bkr.rowCount === 0) throw NotFound();
     const brand = bkr.rows[0]!.config;
 
-    // 4. UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS
-    if (hasExternalAssets(brand)) throw UnsupportedBrandHasExternalAssets();
+    // 4. UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS — A18.5: URL خارجي فقط
+    // assetId يمرّ (العامل يفكّه). URL http/mem/s3 مرفوض (SSRF).
+    if (hasExternalUrl(brand)) throw UnsupportedBrandHasExternalAssets();
 
     const tpl = await req.dbClient!.query<TemplateRow>(
       `SELECT id, definition FROM templates WHERE id = $1 AND deleted_at IS NULL`, [proj.template_id],

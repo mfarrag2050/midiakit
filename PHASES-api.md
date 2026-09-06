@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9-A20 + A26 + A27 مبنية جميعاً.**
+> الحالة: **A9-A20 + A26 + A27 + A18.5 مبنية جميعاً.**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -183,6 +183,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | A21+ | Subscriptions · Usage · AI · Ops | ⏳ | docs/17 §3.3 (A21-A25) |
 | **A26** | طبقة الإعداد (plans + plan_overrides) | ✅ | `pnpm verify:plans` — G-P4-12، 6 طبقات + طبقة البيانات المرجعية. جدول `plans` (5 صفوف مبذورة: trial/starter/studio/agency/api) مطابق docs/16 §17 + docs/01. `tenants.plan` من CHECK إلى FK (ON DELETE RESTRICT). `tenants.plan_overrides jsonb` — مفتاح موجود يعلو، غائب يُقرأ من plans (لا دمج غامض). `getEffectiveLimits(client, tenantId)` قراءة فقط — الفرض في A21/A23. **نمط A13 مُعاد استعماله حرفياً** (ADR-012): قراءة عامة (`FOR SELECT USING true`)، كتابة `migration_user` فقط (السياسة). L-58: `app_user` = SELECT فقط. حارس `check:plan-sync` (نمط A13): يفشل عند تعديل قيمة يدوياً — يفرض الهجرة. **المقاسات ومنصّات الشعارات مؤجَّلتان** (البند 4): `default-brand.ts` مقفل + العقد لا يفرض النقل الآن. |
 | **A27** | مستوى التحكّم (control plane) | ✅ | `pnpm verify:control-plane` — G-P4-13. **قرار 1: الخيار A** — دور جديد `control_plane_user` (LOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT) يعبر RLS بسياسات صريحة على 21 جدولاً (18 tenant-scoped + plans + platform_users + platform_sessions). جدول بلا سياسة control_plane ⇒ 0 صفوف للمالك (صمت بالانحياز للأمان). حارس `check:control-plane-policies` يفرض السياسات على كل جدول. **قرار 2: الخيار A** — جدول `platform_users` منفصل + `/v1/platform/auth/login` + JWT بسرّ منفصل (`PLATFORM_JWT_SECRET`) + `platform_sessions` منفصل + `platform-auth-guard` منفصل. app_user يحمل صفر منح على platform_*. `POST /login`, `POST /logout`, `GET /tenants`, `GET /tenants/:id` (مع effectiveLimits), `PATCH /tenants/:id` (plan + planOverrides). **البند 3:** validation على planOverrides — مفتاح مجهول → 400 IMMUTABLE_FIELD، قيمة سالبة → 400 VALIDATION_FAILED. **إصلاح جانبي:** backfill grants على 18 جدولاً قديماً (fresh db:reset كان يفقدها بعد SEC-1 lockdown). |
+| **A18.5** | ربط العامل بالتخزين (real worker) | ✅ | `pnpm verify:a18-5` — G-P4-14. **العامل الحقيقي في عملية منفصلة** (`apps/renderer/src/api-worker.ts`) يستهلك جوَّاً من Redis، يفكّ assetIds من brandSnapshot → download من MinIO عبر @aws-sdk/client-s3 → FontLibrary.use بمسارات محلّية (لا fallback) → skia-canvas render PNG → PUT إلى MinIO → UPDATE renders (SET LOCAL app.tenant_id). **L-46 محقَّق:** حذف الأصل من MinIO ⇒ status=failed مع error_code=FONT_ASSET_FETCH_FAILED. UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS **ضاق** — assetId مسموح (worker يفكّه)، URL خارجي (http/https/mem/s3) مرفوض (SSRF). check-no-brand-url-fetch بصفر استثناء (SDK فقط). **البند 4:** trigger `log_revision` وسّع إلى tenants + revisions.actor_id بلا FK (dual-source: users OR platform_users). platform PATCH يُنشئ revision.actor_id=platform_user.id. |
 
 **تحذير مسجَّل (فخّ للمستقبل — L-63):**
 - `projects.name` في القاعدة و `title` في العقد §7. Mapper يوحّد على `title` في السلك. الجدول له مراجع من annotations · project_state · renders · transitions — هجرة إعادة تسمية مكلفة. لن يُصلَح، لكنه فخّ لمن يكتب استعلاماً مباشراً على الجدول.
@@ -252,6 +253,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **G-P4-11** | Revisions (6 طبقات + حالة (د): triggers على 5 جداول · restore عبر factory · STALE_UPDATE بـIf-Match · user delete → revisions.action=reassign) | ✅ passed 2026-09-06 |
 | **G-P4-12** | plans + plan_overrides (7 طبقات: وجود · سلبي (FK) · RBAC (app_user لا يكتب) · L-58 (SELECT فقط) · حاسم (GRANT وحده يحرس بلا RLS) · طبقة البيانات المرجعية (override يعلو · حذف مستعمل → RESTRICT · check:plan-sync L-46)) | ✅ passed 2026-09-06 |
 | **G-P4-13** | Control plane (6 طبقات + 7 خاصّة: platform token على tenant route → 401 · tenant token على platform → 401 · planOverrides بمفتاح مجهول → 400 · viewer PATCH → 403 · صفر منح app_user على platform_* · صفر BYPASSRLS · تعطيل سياسة → 0 صفوف · check-control-plane-policies L-46) | ✅ passed 2026-09-07 |
+| **G-P4-14** | A18.5 (رندر حقيقي في عملية منفصلة: 8 خطوات — upload font PUT حقيقي + brand assetId + POST /renders + spawn api-worker + succeeded + font log line + fetch bytes + L-46 delete asset → failed) + revision على PATCH tenants بـactor_id=platform_user | ✅ passed 2026-09-07 |
 | G-P4-9 | تدفّق المشروع نهاية-لنهاية | ⏳ |
 | G-P4-10 | تكامل i18n | ⏳ |
 
