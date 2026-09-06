@@ -38,3 +38,30 @@ export async function closePool(): Promise<void> {
     pool = null;
   }
 }
+
+// ── A27 — Platform pool (control_plane_user) ─────────────
+// اتصال منفصل لمسارات المنصّة. control_plane_user يعبر RLS بسياسات
+// صريحة (لا BYPASSRLS). لا SET LOCAL app.tenant_id (يرى الكلّ).
+let platformPool: DbPool | null = null;
+
+export function getPlatformPool(): DbPool {
+  if (!platformPool) {
+    platformPool = new Pool({
+      connectionString: config.DATABASE_URL_PLATFORM,
+      max: 5,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+    });
+    platformPool.on('error', (err) => {
+      console.error('[db-platform] pool client error:', err.message);
+    });
+  }
+  return platformPool;
+}
+
+export async function closePlatformPool(): Promise<void> {
+  if (platformPool) {
+    await platformPool.end();
+    platformPool = null;
+  }
+}

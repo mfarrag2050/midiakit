@@ -19,6 +19,18 @@ const envSchema = z
         message: 'DATABASE_URL_APP must be a postgres:// URI',
       }),
 
+    // A27 — control_plane_user connection (منفصل، صلاحياته محدَّدة بسياسات)
+    DATABASE_URL_PLATFORM: z
+      .string()
+      .url()
+      .default('postgres://control_plane_user:dev_control_plane_pass@127.0.0.1:19041/mediakit'),
+
+    // A27 — سرّ منفصل لجلسات المنصّة (لا يشترك مع SESSION_JWT_SECRET)
+    PLATFORM_JWT_SECRET: z
+      .string()
+      .min(32, 'PLATFORM_JWT_SECRET must be at least 32 characters')
+      .default('dev_platform_secret_change_in_production_min_32_bytes_placeholder'),
+
     // sr JWT — ≥32 بايت (SECRETS مقروءة كنصّ base64/utf-8، نتحقّق بالطول الخام).
     SESSION_JWT_SECRET: z
       .string()

@@ -98,3 +98,37 @@ GRANT auth_lookup TO migration_user;
 -- (يُمنح جدول-بجدول في migration). auth_lookup NOLOGIN فلا اتصال
 -- مباشر ممكن. SECURITY DEFINER يقتصر على جسم الدالة (SELECT فقط).
 GRANT USAGE, CREATE ON SCHEMA public TO auth_lookup;
+
+-- ═════════════════════════════════════════════════════════════════
+-- control_plane_user — الحدّ الثاني (A27، مستوى التحكّم).
+-- ═════════════════════════════════════════════════════════════════
+-- السياق: لوحة المالك تحتاج بالتعريف رؤية عابرة للمستأجرين.
+-- BYPASSRLS ممنوع مطلقاً (ADR-011). الحل: دور منفصل بسياسات RLS
+-- صريحة على كل جدول (`FOR ALL USING current_user='control_plane_user'`).
+-- جدول بلا سياسة control_plane ⇒ 0 صفوف للمالك — صمت بالانحياز
+-- للأمان. حارس check-control-plane-policies يفشل عند غيابها.
+--
+-- الصلاحيات (تُعلَن في migration + تُختبَر في G-P4-13):
+--   • قراءة على 18 جدولاً tenant-scoped
+--   • Column-level UPDATE على tenants(plan, plan_overrides) فقط
+--   • DML كامل على plans (إدارة الكتالوج من runtime)
+--   • DML كامل على platform_users + platform_sessions (مجاله)
+--   • صفر منح على app_user/auth_lookup فيما يخصّ platform_*
+
+CREATE ROLE control_plane_user WITH
+    LOGIN
+    PASSWORD 'dev_control_plane_pass'
+    NOSUPERUSER
+    NOBYPASSRLS
+    NOINHERIT
+    NOCREATEDB
+    NOCREATEROLE;
+
+DO $$
+DECLARE
+    dbname text := current_database();
+BEGIN
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO control_plane_user', dbname);
+END $$;
+
+GRANT USAGE ON SCHEMA public TO control_plane_user;

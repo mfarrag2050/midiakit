@@ -77,7 +77,13 @@ import rendersTemplateSnapshotRoute from './routes/renders/template-snapshot.js'
 import rendersCancelRoute from './routes/renders/cancel.js';
 import rendersDeleteRoute from './routes/renders/delete.js';
 import { makeRevisionsPlugin } from './routes/revisions/factory.js';
-import { closePool } from './db.js';
+import platformAuthGuard from './plugins/platform-auth-guard.js';
+import platformLoginRoute from './routes/platform/auth/login.js';
+import platformLogoutRoute from './routes/platform/auth/logout.js';
+import platformTenantsListRoute from './routes/platform/tenants/list.js';
+import platformTenantsGetRoute from './routes/platform/tenants/get.js';
+import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
+import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
 export async function buildServer() {
@@ -119,6 +125,7 @@ export async function buildServer() {
 
   await fastify.register(errorHandlerPlugin);
   await fastify.register(authGuardPlugin);
+  await fastify.register(platformAuthGuard);
   await fastify.register(tenantTxPlugin);
 
   // Routes
@@ -231,6 +238,20 @@ export async function buildServer() {
       resourceType: 'asset', table: 'assets',
       restorableColumns: ['metadata', 'faces', 'warnings', 'license_ack', 'ack_by', 'ack_at'],
     }), { prefix: '/assets' });
+
+    // A27 — Platform (control plane)
+    await v1.register(async (p) => {
+      await p.register(async (auth) => {
+        await auth.register(platformLoginRoute);
+        await auth.register(platformLogoutRoute);
+      }, { prefix: '/auth' });
+
+      await p.register(async (t) => {
+        await t.register(platformTenantsListRoute);
+        await t.register(platformTenantsGetRoute);
+        await t.register(platformTenantsUpdateRoute);
+      }, { prefix: '/tenants' });
+    }, { prefix: '/platform' });
   }, { prefix: '/v1' });
 
   return fastify;
@@ -243,6 +264,7 @@ async function main(): Promise<void> {
     fastify.log.info({ signal }, 'shutting down');
     await fastify.close();
     await closePool();
+    await closePlatformPool();
     await closeQueues();
     process.exit(0);
   };

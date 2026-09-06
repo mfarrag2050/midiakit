@@ -81,6 +81,8 @@ export type ErrorCode =
   | 'REVISION_NOT_FOUND'                           // §10.3 (404)
   | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)
   | 'IF_MATCH_REQUIRED'                            // §7.4 STALE_UPDATE (400 — قرار مُختار: A)
+  // Platform / Control Plane (A27)
+  | 'PLATFORM_INSUFFICIENT_ROLE'                   // 403 — منفصل عن INSUFFICIENT_ROLE للمستأجر
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'
@@ -219,5 +221,7 @@ export const TemplateSnapshotNotFound = () => new ApiError('TEMPLATE_SNAPSHOT_NO
 export const RevisionNotFound = () => new ApiError('REVISION_NOT_FOUND', 404);
 export const RestoreWouldBreakReferences = () => new ApiError('RESTORE_WOULD_BREAK_REFERENCES', 409);
 export const IfMatchRequired = () => new ApiError('IF_MATCH_REQUIRED', 400, 'If-Match');
+// Platform (A27)
+export const PlatformInsufficientRole = () => new ApiError('PLATFORM_INSUFFICIENT_ROLE', 403);
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

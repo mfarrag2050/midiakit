@@ -20,9 +20,10 @@
     "check:no-git-internals": "node scripts/check-no-git-internals.mjs",
     "check:template-sync": "pnpm --filter @pf-mediakit/db check:template-sync",
     "check:plan-sync": "pnpm --filter @pf-mediakit/db check:plan-sync",
+    "check:control-plane-policies": "pnpm --filter @pf-mediakit/db check:control-plane-policies",
     "check:response-envelope": "node scripts/check-response-envelope.mjs",
     "skill:build": "node scripts/build-skill.mjs",
-    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:template-sync && pnpm check:plan-sync && pnpm check:response-envelope && vitest run",
+    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:template-sync && pnpm check:plan-sync && pnpm check:control-plane-policies && pnpm check:response-envelope && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
@@ -54,7 +55,8 @@
     "verify:workflows": "pnpm --filter @pf-mediakit/api verify:workflows",
     "verify:renders": "pnpm --filter @pf-mediakit/api verify:renders",
     "verify:revisions": "pnpm --filter @pf-mediakit/api verify:revisions",
-    "verify:plans": "pnpm --filter @pf-mediakit/api verify:plans"
+    "verify:plans": "pnpm --filter @pf-mediakit/api verify:plans",
+    "verify:control-plane": "pnpm --filter @pf-mediakit/api verify:control-plane"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",
