@@ -227,6 +227,24 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
   PROJECT_HAS_RENDERS. المخرَج الحرفي في تقرير SYNC-γ.
   **يُطلق:** S12 · S13 على mk-studio.
 
+- **SYNC-δ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api**
+  الدليل: workflows + state + transitions + assign + annotations على
+  `127.0.0.1:19040`. كل النقاط تعيد الشكل الذي يعرّفه العقد (§11 · §12
+  · §1.5)، بما في ذلك: POST /v1/workflows → 201 (isDefault=true،
+  states=3، transitions=3)، GET /v1/workflows بغلاف §1.5، PATCH → 200،
+  DELETE على default → 409 CANNOT_DELETE_DEFAULT، DELETE على مستعمل →
+  409 WORKFLOW_IN_USE، POST /transitions submit (writer) → 200 مع
+  history+actor، writer يحاول approve → 403 TRANSITION_ROLE_REQUIRED،
+  reviewer approve بلا reason → 400 REASON_REQUIRED_FOR_THIS_TRANSITION،
+  POST /assign → 200، annotations CRUD كامل + LAYER_NOT_FOUND + 400
+  INVALID_SEGMENT_INDEX (target.segmentIndex). المخرَج الحرفي في
+  تقرير SYNC-δ. **يُطلق:** S14 · S15 · S16 على mk-studio.
+
+  **بنود للاستوديو (لا تخالف العقد):**
+    1. PATCH /projects/:id يبقى writer+ (§11 لا يعرّف editableBy لكل state)
+    2. workflows بلا بذر — الاستوديو يعرض 3 presets + POST عند الاختيار
+    3. project_state جدول قائم غير مستعمل (كل الحالة في projects)
+
 ---
 
 ## البوابات — الحالة
