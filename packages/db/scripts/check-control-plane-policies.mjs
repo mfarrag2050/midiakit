@@ -26,11 +26,12 @@ if (!DB_URL) {
 // الجداول التي **يجب** أن تحمل سياسة control_plane.
 // أي جدول tenant-scoped + الجداول العامة (plans) + جداول المنصّة نفسها.
 const EXPECTED_TABLES = [
-  // Tenant-scoped (18)
+  // Tenant-scoped (19 — أضيف checkout_sessions في A21)
   'tenants', 'users', 'sessions', 'brand_kits', 'templates',
   'assets', 'workflows', 'projects', 'project_state', 'transitions',
   'annotations', 'renders', 'revisions', 'ai_integrations',
   'subscriptions', 'usage', 'password_reset_tokens', 'invitations',
+  'checkout_sessions',
   // Reference data
   'plans',
   // Platform-scoped (2)

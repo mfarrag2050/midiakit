@@ -21,6 +21,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import {
   UserAlreadyMember, PendingInviteExists,
 } from '../../errors.js';
+import { ApiError } from '../../errors.js';
+import { getEffectiveLimits } from '../../config/effective-limits.js';
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -40,6 +42,21 @@ const route: FastifyPluginAsync = async (fastify) => {
   fastify.post('/invite', { preHandler: fastify.authenticated }, async (req, reply) => {
     requireRoleIn(req, ['owner', 'admin']);
     const parsed = bodySchema.parse(req.body);
+
+    // A21 — SEATS_EXHAUSTED: users المستأجر + الدعوات النشطة ≥ الحدّ.
+    // منطق العدّ: seat مشغول = user موجود OR دعوة نشطة لم تُستهلَك بعد.
+    const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
+    if (limits.seatsLimit !== null) {
+      const seatsInUse = await req.dbClient!.query<{ n: string }>(
+        `SELECT (
+           (SELECT count(*) FROM users) +
+           (SELECT count(*) FROM invitations WHERE accepted_at IS NULL AND expires_at > now())
+         )::bigint AS n`,
+      );
+      if (Number(seatsInUse.rows[0]!.n) >= limits.seatsLimit) {
+        throw new ApiError('SEATS_EXHAUSTED', 422);
+      }
+    }
 
     // 1. USER_ALREADY_MEMBER — email موجود في users (نفس المستأجر عبر RLS)
     const existing = await req.dbClient!.query<{ id: string }>(

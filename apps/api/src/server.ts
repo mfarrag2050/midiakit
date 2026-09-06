@@ -83,6 +83,12 @@ import platformLogoutRoute from './routes/platform/auth/logout.js';
 import platformTenantsListRoute from './routes/platform/tenants/list.js';
 import platformTenantsGetRoute from './routes/platform/tenants/get.js';
 import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
+import subscriptionGetRoute from './routes/subscription/get.js';
+import subscriptionCheckoutRoute from './routes/subscription/checkout.js';
+import subscriptionCancelRoute from './routes/subscription/cancel.js';
+import subscriptionResumeRoute from './routes/subscription/resume.js';
+import subscriptionInvoicesRoute from './routes/subscription/invoices.js';
+import webhookSubscriptionRoute from './routes/webhooks/subscription.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
@@ -121,6 +127,18 @@ export async function buildServer() {
         retryAfter: ctx.after,
       },
     }),
+  });
+
+  // A21 — رأس rawBody لكل طلب JSON (webhooks توقّع فوق البايتات الأصلية).
+  // كلفة ثابتة (سلسلة إضافية على req). يستبدل parser الافتراضي.
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+    (req as unknown as { rawBody: string }).rawBody = body as string;
+    try {
+      const json = (body as string).length > 0 ? JSON.parse(body as string) : {};
+      done(null, json);
+    } catch (err) {
+      done(err as Error, undefined);
+    }
   });
 
   await fastify.register(errorHandlerPlugin);
@@ -252,6 +270,19 @@ export async function buildServer() {
         await t.register(platformTenantsUpdateRoute);
       }, { prefix: '/tenants' });
     }, { prefix: '/platform' });
+
+    // A21 — Subscription + Webhooks
+    await v1.register(async (s) => {
+      await s.register(subscriptionGetRoute);
+      await s.register(subscriptionCheckoutRoute);
+      await s.register(subscriptionCancelRoute);
+      await s.register(subscriptionResumeRoute);
+      await s.register(subscriptionInvoicesRoute);
+    }, { prefix: '/subscription' });
+
+    await v1.register(async (w) => {
+      await w.register(webhookSubscriptionRoute);
+    }, { prefix: '/webhooks' });
   }, { prefix: '/v1' });
 
   return fastify;

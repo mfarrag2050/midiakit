@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { toFull, type DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
+import { PlanLimitReached } from '../../errors.js';
+import { getEffectiveLimits } from '../../config/effective-limits.js';
 
 const bodySchema = z.object({
   name: z.string().min(1).max(100),
@@ -23,6 +25,16 @@ const route: FastifyPluginAsync = async (fastify) => {
     requireRoleIn(req, ['owner', 'admin']);
 
     const parsed = bodySchema.parse(req.body);
+
+    // A21 — PLAN_LIMIT_REACHED: brand_kits الحالية ≥ الحدّ.
+    const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
+    if (limits.brandKitsLimit !== null) {
+      const cur = await req.dbClient!.query<{ n: string }>(
+        `SELECT count(*)::bigint AS n FROM brand_kits`,
+      );
+      if (Number(cur.rows[0]!.n) >= limits.brandKitsLimit) throw PlanLimitReached();
+    }
+
     const id = randomUUID();
 
     // config = DEFAULT_BRAND بتخصيص direction/locale، بلا id/name (أعمدة DB).

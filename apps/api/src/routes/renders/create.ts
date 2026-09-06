@@ -15,11 +15,12 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
-import { config } from '../../config.js';
 import { enqueueRender } from '../../queues/index.js';
 import {
-  NotFound, QuotaExceededRenders, UnsupportedBrandHasExternalAssets,
+  NotFound, QuotaExceededRenders, QuotaExceededVideos,
+  UnsupportedBrandHasExternalAssets,
 } from '../../errors.js';
+import { getEffectiveLimits } from '../../config/effective-limits.js';
 
 const bodySchema = z.object({
   project_id: z.string().uuid(),
@@ -84,13 +85,29 @@ const route: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // 3. QUOTA_EXCEEDED_RENDERS — حصة التوازي (فحص التطبيق L-58 قبل السقف الحقيقي)
+    // A21 — الحدّان من plan (كانا ثابتين في config).
+    const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
+
+    // 3. QUOTA_EXCEEDED_RENDERS — حصة التوازي من plan.
     const active = await req.dbClient!.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM renders
        WHERE tenant_id = $1 AND status IN ('queued', 'running')`,
       [req.auth!.tenantId],
     );
-    if ((active.rows[0]?.n ?? 0) >= config.RENDER_CONCURRENCY_LIMIT) throw QuotaExceededRenders();
+    if ((active.rows[0]?.n ?? 0) >= limits.concurrentRendersLimit) throw QuotaExceededRenders();
+
+    // 3-ب. QUOTA_EXCEEDED_VIDEOS — عدّ mp4 هذا الشهر (البطاقات لا تُحسب، §17).
+    // نطلقه فقط عند format=mp4 لتفادي عمل زائد على PNG.
+    if (body.format === 'mp4' && limits.videosPerMonthLimit !== null) {
+      const monthly = await req.dbClient!.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM renders
+         WHERE tenant_id = $1 AND format = 'mp4'
+           AND created_at >= date_trunc('month', now())
+           AND status != 'failed'`,
+        [req.auth!.tenantId],
+      );
+      if ((monthly.rows[0]?.n ?? 0) >= limits.videosPerMonthLimit) throw QuotaExceededVideos();
+    }
 
     // 2. brand_kit + template
     const bkr = await req.dbClient!.query<BrandKitRow>(
