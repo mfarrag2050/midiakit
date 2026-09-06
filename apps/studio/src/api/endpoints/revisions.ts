@@ -11,15 +11,22 @@ export type RevisionResource =
 
 export interface RevisionSummary {
   readonly id: string;
-  readonly actorId: string;
-  readonly action: 'create' | 'update' | 'delete' | 'reassign' | 'restore';
+  readonly resourceType: string;
+  readonly resourceId: string;
+  readonly actorId: string | null;
+  readonly op: 'insert' | 'update' | 'delete';
+  readonly diff: unknown;
+  readonly hasSnapshot: boolean;
   readonly createdAt: string;
 }
 
-export interface RevisionFull extends RevisionSummary {
-  readonly diff: unknown;
+export interface RevisionFull {
+  readonly id: string;
   readonly reconstructedState: unknown;
-  readonly reason: string | null;
+  readonly diff: unknown;
+  readonly snapshot: unknown;
+  readonly actorId: string | null;
+  readonly createdAt: string;
 }
 
 export function list(
@@ -28,7 +35,7 @@ export function list(
   opts?: {
     readonly cursor?: string;
     readonly limit?: number;
-    readonly filter?: { readonly actorId?: string; readonly createdAt?: string };
+    readonly filter?: { readonly actorId?: string };
   }
 ): Promise<Page<RevisionSummary>> {
   return requestPage<RevisionSummary>(
@@ -51,13 +58,14 @@ export function get(
   );
 }
 
-export function restore(
+// §10.3 — استعادة. reason ≥ 10 محارف (L-15). استجابة = المورد المُعاد.
+export function restore<T = unknown>(
   resource: RevisionResource,
   id: string,
   revId: string,
   input: { readonly reason: string }
-): Promise<{ readonly newRevisionId: string }> {
-  return request(
+): Promise<T> {
+  return request<T>(
     `/v1/${resource}/${encodeURIComponent(id)}/revisions/${encodeURIComponent(revId)}/restore`,
     { method: 'POST', body: input }
   );

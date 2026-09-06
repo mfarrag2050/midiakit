@@ -128,7 +128,7 @@ export async function request<T>(
   // Mock switch — يعمل قبل fetch كي لا تحتاج NEXT_PUBLIC_API_URL.
   // ApiError يخرج من `handleMock` كما لو من الشبكة — بلا فرق للمستدعي.
   if (isMockEnabled()) {
-    const result = await handleMock(method, path, opts.body);
+    const result = await handleMock(method, path, opts.body, opts.headers);
     if (result.status === 204) return undefined as T;
     return result.body as T;
   }

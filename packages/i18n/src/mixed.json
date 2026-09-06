@@ -46,7 +46,87 @@
       "title": "Projects",
       "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
       "empty": "No projects yet",
-      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب. يظهر هنا حين يجهز الربط بالخدمة."
+      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب.",
+      "create": "New project",
+      "createTitle": "إنشاء مشروع جديد",
+      "titleLabel": "Project title",
+      "brandKitLabel": "Brand Kit",
+      "templateLabel": "Template",
+      "localeLabel": "Content locale",
+      "delete": "Delete",
+      "confirmDelete": "تأكيد حذف المشروع",
+      "confirmDeleteBody": "الحذف نهائي. لا يمكن استعادته.",
+      "col": {
+        "title": "Title",
+        "state": "State",
+        "brandKit": "Brand Kit",
+        "template": "Template",
+        "assignee": "Assignee",
+        "updatedAt": "Updated at",
+        "actions": "Actions"
+      },
+      "filter": {
+        "label": "Filter",
+        "state": "State",
+        "all": "All"
+      },
+      "state": {
+        "draft": "Draft",
+        "review": "In review",
+        "approved": "Approved",
+        "archived": "Archived"
+      },
+      "assignee": {
+        "unassigned": "Unassigned"
+      },
+      "editor": {
+        "title": "Editor",
+        "back": "Back to projects",
+        "save": "Save",
+        "saved": "Saved",
+        "content": "Content",
+        "workflow": "Workflow",
+        "revisions": "Revisions",
+        "renders": "Renders",
+        "renderNow": "Render now",
+        "renderQueued": "Render queued...",
+        "renderRunning": "Running...",
+        "renderReady": "Output ready — open to download",
+        "renderFailed": "Render failed",
+        "transitions": "Available transitions",
+        "noTransitions": "No transitions from this state.",
+        "reasonLabel": "Transition reason (at least one line)",
+        "assignTo": "Assign to",
+        "systemActor": "النظام",
+        "history": "History",
+        "externalAssetsBlocked": "الهوية تحوي أصولاً خارجية غير مدعومة — يجب معالجتها قبل التصدير.",
+        "staleUpdate": "أُجريت تعديلات على المشروع من نافذة أخرى. يُعاد تحميل النسخة الحالية.",
+        "ifMatchRequired": "الطلب رفض بلا رأس If-Match — تحقّق من طبقة الشبكة."
+      },
+      "revisions": {
+        "title": "Revisions",
+        "empty": "No revisions yet.",
+        "col": {
+          "at": "Timestamp",
+          "actor": "Actor",
+          "op": "Op",
+          "snapshot": "Snapshot"
+        },
+        "op": {
+          "insert": "insert",
+          "update": "update",
+          "delete": "delete"
+        },
+        "view": "View",
+        "restore": "Restore",
+        "restoreTitle": "استعادة إلى هذه المراجعة",
+        "restoreReason": "سبب الاستعادة (١٠ أحرف على الأقل — L-15)",
+        "restoreConfirm": "استعادة الآن",
+        "reconstructed": "Reconstructed state"
+      },
+      "editor2": {
+        "noFields": "No fields in this template."
+      }
     },
     "brandKits": {
       "title": "Brand Kits",

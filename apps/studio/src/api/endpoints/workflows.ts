@@ -5,25 +5,27 @@ import { request, requestPage, type Page } from '../client';
 export interface WorkflowSummary {
   readonly id: string;
   readonly name: string;
-  readonly kind: 'individual' | 'small-team' | 'full-agency' | 'custom';
   readonly isDefault: boolean;
-  readonly updatedAt: string;
+}
+
+export interface WorkflowState {
+  readonly id: string;
+  readonly label: string;
+  readonly assignableTo: readonly string[];
+}
+
+export interface WorkflowTransition {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly label: string;
+  readonly requiredRole: string;
+  readonly requiresReason: boolean;
 }
 
 export interface WorkflowFull extends WorkflowSummary {
-  readonly states: readonly {
-    readonly id: string;
-    readonly name: string;
-    readonly isInitial: boolean;
-    readonly isTerminal: boolean;
-  }[];
-  readonly transitions: readonly {
-    readonly id: string;
-    readonly fromStateId: string;
-    readonly toStateId: string;
-    readonly allowedRoles: readonly string[];
-    readonly requiresReason: boolean;
-  }[];
+  readonly states: readonly WorkflowState[];
+  readonly transitions: readonly WorkflowTransition[];
 }
 
 export function list(opts?: {
@@ -38,24 +40,4 @@ export function list(opts?: {
 
 export function get(id: string): Promise<WorkflowFull> {
   return request<WorkflowFull>(`/v1/workflows/${encodeURIComponent(id)}`);
-}
-
-export function create(input: Omit<WorkflowFull, 'id' | 'updatedAt'>): Promise<WorkflowFull> {
-  return request<WorkflowFull>('/v1/workflows', {
-    method: 'POST',
-    body: input,
-  });
-}
-
-export function patch(id: string, input: unknown): Promise<WorkflowFull> {
-  return request<WorkflowFull>(`/v1/workflows/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: input,
-  });
-}
-
-export function remove(id: string): Promise<void> {
-  return request<void>(`/v1/workflows/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
 }

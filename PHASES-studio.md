@@ -776,3 +776,126 @@ too long` على استجابات Chrome-152. puppeteer-core لا يُبنى ف�
 
 **SYNC-γ لم تفتح:** S12 (Projects) محجوبة بحكم هذه التذكرة — A14
 مبنيّة لكن لم يُطلب تسليم واجهة.
+
+---
+
+## S12 · S13 — المشاريع + المحرّر + المراجعات + التصدير ✅ (على mocks — SYNC-δ لم تفتح)
+
+**السياق العقدي:** `docs/17` §S12 · §S13 مقابل `docs/16` §7 (Projects)
+· §8 (Renders) · §10 (Revisions) · §11 (Workflows/State/Transitions)
+· §12 (Concurrency + If-Match).
+
+**قناة الخادم:** mk-api لم يبنِ §7/§8/§10/§11 بعد (SYNC-δ لم تفتح).
+كل شيء هنا مبنيّ على mock يُطابق شكل العقد **حرفياً**. حين تُبنى
+هذه الـendpoints في mk-api، تبديل `NEXT_PUBLIC_API_MOCK=true` إلى
+`false` كافٍ — بلا تعديل صفحة.
+
+### قرار الحماية L-63 (SYNC-γ)
+
+- المرآة: 78 → **81 رمزاً** (`086e182`).
+- الأكواد المضافة: `REVISION_NOT_FOUND` · `RESTORE_WOULD_BREAK_REFERENCES`
+  · `IF_MATCH_REQUIRED`.
+- ثلاثتها معالَجة في القواميس الثلاث (`ar/mixed/en`) + معالَجة صريحاً
+  في مسارات UI (STALE_UPDATE + IF_MATCH_REQUIRED في محرّر المشروع،
+  RESTORE_WOULD_BREAK_REFERENCES في حوار الاستعادة).
+
+### إعلان نطاق S13 (المعاينة الحيّة) — **مؤجَّلة خارج هذه التذكرة**
+
+`docs/17` §S13 يطلب معاينة حيّة في المتصفح تستدعي `renderFrame` من
+`packages/engine`. **مؤجَّلة عمداً** ولم تدخل نطاق هذا التسليم.
+
+**السبب المكتوب (لا اجتهاد لاحق):**
+- ربط `@pf-mediakit/engine` كـruntime dep على `apps/studio` يفتح
+  بوابة جديدة: تشغيل Canvas 2D داخل React + إدارة `brand.config`
+  الحيّ + إعادة تشغيل `wrap/justify/parseAnimations` على كل تعديل
+  حقل (`RenderPlan` مبني للخادم، ليس لـinteractive re-plan).
+- G-S12-1..G-S12-11 (١١ بوابة تسليم واجهة) تسليم كامل قابل للمراجعة
+  في التزام واحد. إضافة G-S12-12 (المعاينة) في نفس الالتزام يفتح
+  ثلاث حدود (engine → studio · plan-per-keystroke · بوابة أداء)
+  ولا يحرس أياً منها.
+- G-S12-12 معلَّق بـ«إن بُنيت المعاينة» في نصّ التذكرة نفسها — أي
+  اختياريّته معلَنة عقدياً.
+
+**قرار:** S13 تُفتَح تذكرةً منفصلة (S13-preview) عند نضج قرار
+«re-plan interactive» + قياس miss-rate + بوابة أداء ≤16ms/frame.
+حتى ذلك، «التصدير الآن» في المحرّر (`POST /renders` + polling حتى
+succeeded) يقدّم دورة معاينة كاملة عبر الخادم — على مسار الإنتاج
+لا مسار محاكاة.
+
+### 12 بوابة G-S12 — كلها ✓ (على mocks)
+
+| # | البوابة | الحالة | اللقطة |
+|---|---|---|---|
+| G-S12-1 | typecheck نظيف | ✓ | (بلا لقطة) |
+| G-S12-2 | error-code-coverage 81/81 | ✓ | (بلا لقطة) |
+| G-S12-3 | قائمة مشاريع (empty + populated + filters) | ✓ | `s12-list-empty.png` · `s12-list-populated.png` |
+| G-S12-4 | حوار إنشاء (4 حقول من العقد) | ✓ | `s12-create-dialog.png` |
+| G-S12-5 | محرّر content من `template.definition.fields` (لا حقول ثابتة في الكود) | ✓ | `s12-editor-loaded.png` · `s12-editor-dirty.png` |
+| G-S12-6 | PATCH يمرّر `If-Match` — 409 STALE_UPDATE يعيد التحميل + 428 IF_MATCH_REQUIRED رسالة صريحة | ✓ | `s12-editor-saved.png` |
+| G-S12-7 | تحوّلات من `availableTransitions` — يطلب سبباً حين `requiresReason:true` | ✓ | `s12-editor-after-transition.png` · `s12-transition-reason.png` |
+| G-S12-8 | سجل مراجعات + view reconstructedState + restore بسبب ≥ 10 | ✓ | `s12-revisions-list.png` · `s12-restore-dialog.png` |
+| G-S12-9 | حاجز `UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS` مرئي بلوحة صفراء (لا Alert أحمر) | ✓ | `s12-external-blocked.png` |
+| G-S12-10 | POST /renders + polling حتى `succeeded` مع رابط للمخرج | ✓ | `s12-render-queued.png` · `s12-render-ready.png` |
+| G-S12-11 | «النظام» لـ`actorId=null` في history/revisions | ✓ | `s12-revisions-list.png` (عمود المُغيِّر) |
+| G-S12-12 | معاينة حيّة في المتصفح (renderFrame) | **مؤجَّل — S13 يُفتَح تذكرة منفصلة** | (بلا لقطة — راجع «إعلان نطاق S13» أعلاه) |
+
+### قرارات تصميم داخلية (ليست انحرافات — قصورية على mocks)
+
+**١. `mock.ts` يعيد نسخة سطحية `{...r}` من الـrender على polling.**
+السبب: `setRenderRow(r)` بنفس المرجع = `Object.is` صحيح = React يُهمِل
+re-render. الحقيقي (mk-api) يعيد كل مرة JSON مُفكَّكاً — لا يحمل
+هذا القيد. النسخة السطحية في mock تسدّ الفجوة السلوكية.
+
+**٢. Mock trigger لـ`RESTORE_WOULD_BREAK_REFERENCES`:** سبب الاستعادة
+يحوي كلمة `break` (case-insensitive). القرار: mock triggers مكتوبة
+صراحةً في `mock.ts` كي يكون كل رمز خطأ قابلاً للاختبار عبر الواجهة
+بلا تعديل خادم-جانب. نفس نمط `email=throttle@x.com → TOO_MANY_ATTEMPTS`
+من S5.
+
+**٣. Mock trigger لـ`UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS`:**
+`brand_kit_id` يحوي «external». seed أضاف هويتَين مسبقتَين
+(`bk_mock_default` + `bk_mock_external`) كي يظهرا في drop-down الإنشاء
+مباشرة.
+
+**٤. `template.definition.fields` seeded على القوالب الستة العامة.**
+كلها حقول عربية قصيرة (title/kicker/source/byline/subtitle/caption)
+كي يعرض المحرّر شيئاً ذا معنى — لا لأنها القيم النهائية (القالب
+الحقيقي في mk-api سيحمل تعريفاً أشمل).
+
+**٥. عربية عربية على الحوارات المتوسّعة في dictionaries.** أُضيف
+مفتاح `pages.projects.editor2.noFields` لسدّ نصّ عربي كان يظهر في
+JSX (`— لا حقول في هذا القالب —`). check-ui-keys لا يمرّ على مسار
+`apps/studio/app/`، لكن الانضباط L-22 يبقى مطبَّقاً — نصّ عربي
+واحد في JSX = تجاوز لا يُقبل.
+
+### الأداة CDP
+
+`scripts/cdp-s12.mjs` — يستهلك mock stack، يلتقط ١٣ لقطة تُغطّي كل
+gates G-S12-3..G-S12-11. **نقطة تعلَّم منها (تُوثَّق):** `page.goto()`
+بين مسارات Next.js = full reload = فقدان `MOCK_*` in-memory state.
+`page.click('a[href^="/projects/..."]')` = SPA navigation = الحالة
+تبقى. القاعدة العامة: **لا `page.goto()` بين مسارات SPA — استعمل
+Link click.**
+
+### bugs مكتشفة أثناء الاختبار (وأُصلحت)
+
+- **بدون `IF_MATCH_REQUIRED` في المرآة**، `pnpm test` كان سيسقط
+  فور المحاولة الأولى. L-63 كتب هذا الحرس قبل هذه التذكرة، فاختصر
+  اكتشاف الفجوة إلى ثوانٍ (المرآة ↔ mk-api ↔ dicts).
+- **React reference-equality bug في polling** (بند ١ أعلاه) — كشفه
+  اللقطة `s12-render-ready.png` التي بقيت عالقة على «قيد التنفيذ...»
+  رغم مرور 5.7 ثانية بعد إنشاء التصدير. اللقطة سلوكياً صحيحة (لا
+  خطأ في كود العميل)، لكن كشفت أن الـmock كان يعيد نفس المرجع.
+
+**تنويه:** هذه الأخطاء لا تُشكّل انحرافات مع mk-api — mk-api الحقيقي
+سيعيد كائناً جديداً لكل GET (لا يستطيع إعادة نفس المرجع بحكم
+تسلسل JSON عبر الشبكة). القيد كان قصورياً على mock فقط.
+
+### الجاهزية لـSYNC-δ (حين تُفتح)
+
+عند إتاحة §7/§8/§10/§11 في mk-api:
+1. تبديل `NEXT_PUBLIC_API_MOCK=false` في `.env.local`.
+2. تشغيل نفس CDP script على مسار حقيقي — يجب أن ينجح دون تعديل واجهة.
+3. أيّ انحراف شكل يُعلَن في PHASES-studio (لا يُصلَح من طرف studio).
+4. المرآة تبقى مطابقة عبر `pnpm check:error-code-coverage` — أيّ
+   رمز جديد يستدعي pass ثلاثي (المرآة + 3 dicts).

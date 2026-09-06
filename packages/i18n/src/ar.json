@@ -45,7 +45,87 @@
       "title": "المشاريع",
       "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
       "empty": "لا مشاريع بعد",
-      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب. يظهر هنا حين يجهز الربط بالخدمة."
+      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب.",
+      "create": "مشروع جديد",
+      "createTitle": "إنشاء مشروع جديد",
+      "titleLabel": "عنوان المشروع",
+      "brandKitLabel": "الهوية",
+      "templateLabel": "القالب",
+      "localeLabel": "لغة المحتوى",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف المشروع",
+      "confirmDeleteBody": "الحذف نهائي. لا يمكن استعادته.",
+      "col": {
+        "title": "العنوان",
+        "state": "الحالة",
+        "brandKit": "الهوية",
+        "template": "القالب",
+        "assignee": "المُسنَد إليه",
+        "updatedAt": "آخر تحديث",
+        "actions": "إجراء"
+      },
+      "filter": {
+        "label": "تصفية",
+        "state": "الحالة",
+        "all": "الكل"
+      },
+      "state": {
+        "draft": "مسودّة",
+        "review": "قيد المراجعة",
+        "approved": "معتمد",
+        "archived": "مؤرشف"
+      },
+      "assignee": {
+        "unassigned": "غير مُسنَد"
+      },
+      "editor": {
+        "title": "المحرّر",
+        "back": "عودة إلى المشاريع",
+        "save": "حفظ",
+        "saved": "تم الحفظ",
+        "content": "المحتوى",
+        "workflow": "سير العمل",
+        "revisions": "سجل المراجعات",
+        "renders": "التصديرات",
+        "renderNow": "تصدير الآن",
+        "renderQueued": "أُرسل التصدير — في الانتظار...",
+        "renderRunning": "قيد التنفيذ...",
+        "renderReady": "المخرج جاهز — افتح للتحميل",
+        "renderFailed": "فشل التصدير",
+        "transitions": "التحوّلات المتاحة",
+        "noTransitions": "لا تحوّلات من هذه الحالة.",
+        "reasonLabel": "سبب التحوّل (سطر واحد على الأقل)",
+        "assignTo": "إسناد إلى",
+        "systemActor": "النظام",
+        "history": "التاريخ",
+        "externalAssetsBlocked": "الهوية تحوي أصولاً خارجية غير مدعومة — يجب معالجتها قبل التصدير.",
+        "staleUpdate": "أُجريت تعديلات على المشروع من نافذة أخرى. يُعاد تحميل النسخة الحالية.",
+        "ifMatchRequired": "الطلب رفض بلا رأس If-Match — تحقّق من طبقة الشبكة."
+      },
+      "revisions": {
+        "title": "سجل المراجعات",
+        "empty": "لا مراجعات بعد.",
+        "col": {
+          "at": "وقت التغيير",
+          "actor": "المُغيِّر",
+          "op": "العملية",
+          "snapshot": "لقطة"
+        },
+        "op": {
+          "insert": "إنشاء",
+          "update": "تعديل",
+          "delete": "حذف"
+        },
+        "view": "عرض",
+        "restore": "استعادة",
+        "restoreTitle": "استعادة إلى هذه المراجعة",
+        "restoreReason": "سبب الاستعادة (١٠ أحرف على الأقل — L-15)",
+        "restoreConfirm": "استعادة الآن",
+        "reconstructed": "الحالة المُعاد بناؤها"
+      },
+      "editor2": {
+        "noFields": "لا حقول في هذا القالب."
+      }
     },
     "brandKits": {
       "title": "الهويات",

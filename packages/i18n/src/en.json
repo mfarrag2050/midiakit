@@ -45,7 +45,87 @@
       "title": "Projects",
       "subtitle": "Your cards, videos, and in-flight work.",
       "empty": "No projects yet",
-      "emptyBody": "Start a project from a brand kit and template. It appears here once the API is wired."
+      "emptyBody": "Start a project from a brand kit and template.",
+      "create": "New project",
+      "createTitle": "Create a new project",
+      "titleLabel": "Project title",
+      "brandKitLabel": "Brand kit",
+      "templateLabel": "Template",
+      "localeLabel": "Content locale",
+      "delete": "Delete",
+      "confirmDelete": "Delete project",
+      "confirmDeleteBody": "Deletion is permanent and cannot be undone.",
+      "col": {
+        "title": "Title",
+        "state": "State",
+        "brandKit": "Brand kit",
+        "template": "Template",
+        "assignee": "Assignee",
+        "updatedAt": "Updated at",
+        "actions": "Actions"
+      },
+      "filter": {
+        "label": "Filter",
+        "state": "State",
+        "all": "All"
+      },
+      "state": {
+        "draft": "Draft",
+        "review": "In review",
+        "approved": "Approved",
+        "archived": "Archived"
+      },
+      "assignee": {
+        "unassigned": "Unassigned"
+      },
+      "editor": {
+        "title": "Editor",
+        "back": "Back to projects",
+        "save": "Save",
+        "saved": "Saved",
+        "content": "Content",
+        "workflow": "Workflow",
+        "revisions": "Revisions",
+        "renders": "Renders",
+        "renderNow": "Render now",
+        "renderQueued": "Render queued...",
+        "renderRunning": "Running...",
+        "renderReady": "Output ready — open to download",
+        "renderFailed": "Render failed",
+        "transitions": "Available transitions",
+        "noTransitions": "No transitions from this state.",
+        "reasonLabel": "Transition reason (at least one line)",
+        "assignTo": "Assign to",
+        "systemActor": "System",
+        "history": "History",
+        "externalAssetsBlocked": "This brand kit uses unsupported external assets — resolve them before rendering.",
+        "staleUpdate": "Someone else edited this project. Reloading the current version.",
+        "ifMatchRequired": "Request was refused without an If-Match header — check the network layer."
+      },
+      "revisions": {
+        "title": "Revisions",
+        "empty": "No revisions yet.",
+        "col": {
+          "at": "Timestamp",
+          "actor": "Actor",
+          "op": "Op",
+          "snapshot": "Snapshot"
+        },
+        "op": {
+          "insert": "insert",
+          "update": "update",
+          "delete": "delete"
+        },
+        "view": "View",
+        "restore": "Restore",
+        "restoreTitle": "Restore to this revision",
+        "restoreReason": "Reason for restoring (at least 10 characters — L-15)",
+        "restoreConfirm": "Restore now",
+        "reconstructed": "Reconstructed state"
+      },
+      "editor2": {
+        "noFields": "No fields in this template."
+      }
     },
     "brandKits": {
       "title": "Brand Kits",
