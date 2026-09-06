@@ -9,7 +9,6 @@
     ".": "./src/index.ts",
     "./cli": "./src/cli.ts",
     "./queues": "./src/queues.ts",
-    "./worker": "./src/worker.ts",
     "./api-worker": "./src/api-worker.ts",
     "./validate": "./src/validate.ts",
     "./observe": "./src/observe.ts",
