@@ -25,6 +25,7 @@ import { closeQueues, getRedis } from '../src/queues/index.js';
 import { getStorage } from '../src/storage/index.js';
 import { config } from '../src/config.js';
 import { hashPassword } from '../src/auth/session.js';
+import { bumpTenantLimits } from './lib/tenant-limits.mjs';
 
 const { Pool } = pg;
 
@@ -79,6 +80,10 @@ async function cleanupAndSeed(fastify) {
   };
   const a = await signup('A');
   const b = await signup('B');
+
+  // FIX-CASCADE: A21 يفرض trial.concurrent_renders=1 + brand_kits=1
+  await bumpTenantLimits(migPool, a.tenant.id);
+  await bumpTenantLimits(migPool, b.tenant.id);
 
   // brand_kit clean (بلا external assets — يعمل مع UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS)
   const bkA = (await queryAs(a.tenant.id,
@@ -237,9 +242,12 @@ async function checkNegative(fastify, ctx) {
   } else fail(`terminal cancel: ${rCa.statusCode} ${json(rCa)?.error?.code}`);
 
   // QUOTA_EXCEEDED_RENDERS — نُنشئ 3 مهام queued ثم نحاول 4
-  // (الحدّ config.RENDER_CONCURRENCY_LIMIT = 3)
-  // نُنظّف أولاً renders في المستأجر
+  // A21 غيّر المصدر من config الثابت إلى plan. bumpTenantLimits رفع الحدّ
+  // إلى 100 لبقية الاختبار — نضبطه إلى 3 هنا مؤقّتاً لاختبار السلوك.
   await queryAs(ctx.a.tenant.id, `DELETE FROM renders WHERE tenant_id = $1`, [ctx.a.tenant.id]);
+  await queryAs(ctx.a.tenant.id,
+    `UPDATE tenants SET plan_overrides = jsonb_set(plan_overrides, '{concurrent_renders_limit}', '3') WHERE id = $1`,
+    [ctx.a.tenant.id]);
   for (let i = 0; i < 3; i++) {
     await fastify.inject({
       method: 'POST', url: '/v1/renders', headers: H(ctx.a.session.accessToken),
@@ -251,8 +259,12 @@ async function checkNegative(fastify, ctx) {
     payload: { project_id: ctx.prj, size: 'x', format: 'png' },
   });
   if (rQ.statusCode === 422 && json(rQ)?.error?.code === 'QUOTA_EXCEEDED_RENDERS') {
-    pass(`الرابع بعد 3 queued → 422 QUOTA_EXCEEDED_RENDERS (حدّ ثابت=3)`);
+    pass(`الرابع بعد 3 queued → 422 QUOTA_EXCEEDED_RENDERS (من plan_overrides=3)`);
   } else fail(`quota: ${rQ.statusCode} ${json(rQ)?.error?.code}`);
+  // نُعيد الحدّ إلى 100 لبقية الاختبار
+  await queryAs(ctx.a.tenant.id,
+    `UPDATE tenants SET plan_overrides = jsonb_set(plan_overrides, '{concurrent_renders_limit}', '100') WHERE id = $1`,
+    [ctx.a.tenant.id]);
 }
 
 // ── Layer 4 ─────────────────────────────────────────

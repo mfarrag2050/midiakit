@@ -274,6 +274,7 @@ async function main() {
     await closeQueues();
     await migPool.end();
   }
+  console.log(`\n[verify-summary] a22: ${failures} إخفاقاً`);
   process.exit(failures === 0 ? 0 : 1);
 }
 main().catch((e) => { console.error('غير متوقّع:', e); process.exit(2); });

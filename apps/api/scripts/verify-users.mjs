@@ -23,6 +23,7 @@ import pg from 'pg';
 import { buildServer } from '../src/server.js';
 import { closePool } from '../src/db.js';
 import { hashPassword } from '../src/auth/session.js';
+import { bumpTenantLimits } from './lib/tenant-limits.mjs';
 
 const { Pool } = pg;
 
@@ -57,6 +58,10 @@ async function cleanupAndSeed(fastify) {
 
   const a = await signup('A');   // owner tenant A
   const b = await signup('B');   // owner tenant B
+
+  // FIX-CASCADE: A21 يفرض trial.seats=1 ⇒ نرفع override قبل إنشاء أدوار
+  await bumpTenantLimits(migPool, a.tenant.id);
+  await bumpTenantLimits(migPool, b.tenant.id);
 
   // إضافة 5 أدوار غير-owner في مستأجر A لاختبار RBAC
   const roleUsers = {};

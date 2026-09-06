@@ -64,7 +64,8 @@
     "verify:a21": "pnpm --filter @pf-mediakit/api verify:a21",
     "verify:a22": "pnpm --filter @pf-mediakit/api verify:a22",
     "verify:a23": "pnpm --filter @pf-mediakit/api verify:a23",
-    "verify:bk-numerals": "pnpm --filter @pf-mediakit/api verify:bk-numerals"
+    "verify:bk-numerals": "pnpm --filter @pf-mediakit/api verify:bk-numerals",
+    "verify:all": "node scripts/verify-all.mjs"
   },
   "devDependencies": {
     "@pf-mediakit/engine": "workspace:*",

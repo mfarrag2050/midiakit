@@ -18,6 +18,7 @@ import pg from 'pg';
 import { buildServer } from '../src/server.js';
 import { closePool, getPool } from '../src/db.js';
 import { hashPassword } from '../src/auth/session.js';
+import { bumpTenantLimits } from './lib/tenant-limits.mjs';
 
 const { Pool } = pg;
 
@@ -63,6 +64,11 @@ async function cleanupAndSeed(fastify) {
   });
   const bodyB = json(rB);
   if (rB.statusCode !== 201) throw new Error(`signup B failed: ${rB.body}`);
+
+  // FIX-CASCADE: A21 يفرض حدود trial ⇒ نرفع overrides لكلا المستأجرين
+  // (نختبر الموارد لا الحدود — الفرض يبقى قائماً بلا تعطيل عالمي)
+  await bumpTenantLimits(migPool, bodyA.tenant.id);
+  await bumpTenantLimits(migPool, bodyB.tenant.id);
 
   // إنشاء مستخدم viewer داخل مستأجر A مباشرة عبر migration_user (invite
   // endpoint بند A10 — نتجاوز DB لتجنّب الاعتماد).
