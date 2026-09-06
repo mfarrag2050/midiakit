@@ -11,7 +11,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import rateLimit from '@fastify/rate-limit';
+import rateLimitByPlan from './plugins/rate-limit-by-plan.js';
 import { config } from './config.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import authGuardPlugin from './plugins/auth-guard.js';
@@ -115,21 +115,11 @@ export async function buildServer() {
     credentials: true,
   });
 
-  // Rate limit عام — 300/دقيقة/IP. حدود أدقّ للـauth endpoints يُطبَّقها
-  // checkLoginRateLimit في session.ts. هذا خط دفاع إضافي.
-  await fastify.register(rateLimit, {
-    global: true,
-    max: 300,
-    timeWindow: '1 minute',
-    errorResponseBuilder: (_req, ctx) => ({
-      error: {
-        code: 'TOO_MANY_ATTEMPTS',
-        message: 'TOO_MANY_ATTEMPTS',
-        field: null,
-        retryAfter: ctx.after,
-      },
-    }),
-  });
+  // A23 — rate-limit بحسب الباقة (§17). كان قبله 300/IP عام يعيد
+  // TOO_MANY_ATTEMPTS. الآن: حدّ الباقة/دقيقة/مستأجر مع IP fallback
+  // 30/دقيقة قبل المصادقة، ورمز RATE_LIMIT_EXCEEDED (§17 صريح).
+  // checkLoginRateLimit في session.ts يبقى طبقة ثانية لـ/login تحديداً.
+  await fastify.register(rateLimitByPlan);
 
   // A21 — رأس rawBody لكل طلب JSON (webhooks توقّع فوق البايتات الأصلية).
   // كلفة ثابتة (سلسلة إضافية على req). يستبدل parser الافتراضي.
