@@ -101,39 +101,56 @@ interface MockTemplate {
 }
 const MOCK_TEMPLATES = new Map<string, MockTemplate>();
 // Seed 6 global templates (نمط mk-api الحقيقي بعد seed migration).
-// حقول `definition.fields` تُشغّل محرّر المحتوى في S12.
+// حقول `definition.fields` تُشغّل محرّر المحتوى في S12. مطابق شكل
+// packages/templates TemplateFieldBase: مفتاح `key` (لا id) — كما
+// يُعيده mk-api الحقيقي بعد A13.
 interface TemplateField {
-  id: string;
-  label: string;
-  type: 'text' | 'multiline';
+  key: string;
+  label?: string;
+  type: 'text' | 'richtext' | 'multiline';
   required?: boolean;
 }
 const SEED_TEMPLATES: Array<[string, 'static' | 'video', TemplateField[]]> = [
   ['بسيط — إثبات بوابة المرحلة 2', 'static', [
-    { id: 'title', label: 'العنوان', type: 'text', required: true },
-    { id: 'source', label: 'المصدر', type: 'text' },
+    { key: 'headline', label: 'العنوان', type: 'richtext', required: true },
+    { key: 'source', label: 'المصدر', type: 'text' },
   ]],
   ['بطاقة ذات كيكر', 'static', [
-    { id: 'kicker', label: 'كيكر', type: 'text' },
-    { id: 'title', label: 'العنوان', type: 'text', required: true },
-    { id: 'source', label: 'المصدر', type: 'text' },
+    { key: 'kicker', label: 'كيكر', type: 'text' },
+    { key: 'headline', label: 'العنوان', type: 'richtext', required: true },
+    { key: 'source', label: 'المصدر', type: 'text' },
   ]],
   ['بطاقة سفلية', 'static', [
-    { id: 'title', label: 'العنوان', type: 'text', required: true },
-    { id: 'byline', label: 'الكاتب', type: 'text' },
-    { id: 'source', label: 'المصدر', type: 'text' },
+    { key: 'headline', label: 'العنوان', type: 'richtext', required: true },
+    { key: 'byline', label: 'الكاتب', type: 'text' },
+    { key: 'source', label: 'المصدر', type: 'text' },
   ]],
   ['بطاقة متمركزة', 'static', [
-    { id: 'title', label: 'العنوان', type: 'text', required: true },
-    { id: 'subtitle', label: 'العنوان الفرعي', type: 'text' },
+    { key: 'headline', label: 'العنوان', type: 'richtext', required: true },
+    { key: 'subtitle', label: 'العنوان الفرعي', type: 'text' },
   ]],
   ['بطاقة عاجل', 'static', [
-    { id: 'title', label: 'خبر عاجل', type: 'text', required: true },
+    { key: 'headline', label: 'خبر عاجل', type: 'richtext', required: true },
   ]],
   ['ريلز', 'video', [
-    { id: 'title', label: 'عنوان المقطع', type: 'text', required: true },
-    { id: 'caption', label: 'الوصف', type: 'multiline' },
+    { key: 'headline', label: 'عنوان المقطع', type: 'richtext', required: true },
+    { key: 'caption', label: 'الوصف', type: 'multiline' },
   ]],
+];
+// طبقات افتراضية بسيطة لكل قالب — تكفي لتشغيل `renderFrame` في المعاينة
+// (S13). مطابقة شكل packages/templates/data/plain.json.
+const DEFAULT_LAYERS: unknown[] = [
+  { type: 'solid', fill: 'brand.colors.surface' },
+  {
+    type: 'headline',
+    field: 'headline',
+    wrap: 'uniform',
+    align: 'right',
+    anchor: 'centerLower',
+    verticalAnchor: 0.5,
+    font: 'brand.typography.breaking',
+    justify: 'brand.typography.justify',
+  },
 ];
 SEED_TEMPLATES.forEach(([name, kind, fields], i) => {
   const id = `tpl_mock_g${i}`;
@@ -142,7 +159,7 @@ SEED_TEMPLATES.forEach(([name, kind, fields], i) => {
     scope: 'global',
     name,
     kind,
-    definition: { fields },
+    definition: { fields, layers: DEFAULT_LAYERS, sizes: ['x', 'instagram', 'feed'] },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -173,6 +190,18 @@ MOCK_BRAND_KITS.set('bk_mock_external', {
   config: {
     fonts: { primary: { family: 'Almarai', source: 'external', src: 'https://example.com/almarai.woff2' } },
     assets: { version: '2026.01', autoUpdate: false },
+  },
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
+// S13 — هوية بأرقام عربية-هندية لاختبار العزل عن DigitStyle.
+MOCK_BRAND_KITS.set('bk_mock_arabic', {
+  id: 'bk_mock_arabic',
+  name: 'هوية بأرقام عربية-هندية',
+  config: {
+    fonts: { primary: { family: 'IBM Plex Sans Arabic', source: 'builtin' } },
+    assets: { version: '2026.01', autoUpdate: false },
+    typography: { bidi: { enabled: true, numerals: 'arabic' } },
   },
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -815,8 +844,8 @@ export async function handleMock(
     }
     // تحقّق الطبقة من تعريف القالب.
     const tpl = MOCK_TEMPLATES.get(p.template_id);
-    const def = (tpl?.definition as { fields?: Array<{ id: string }> } | undefined);
-    const layers = new Set(def?.fields?.map((f) => f.id) ?? []);
+    const def = (tpl?.definition as { fields?: Array<{ key: string }> } | undefined);
+    const layers = new Set(def?.fields?.map((f) => f.key) ?? []);
     if (!layers.has(layer)) err(404, 'LAYER_NOT_FOUND', 'target.layer');
     const body = String(b.body ?? '');
     if (!body.trim()) err(400, 'VALIDATION_FAILED', 'body');

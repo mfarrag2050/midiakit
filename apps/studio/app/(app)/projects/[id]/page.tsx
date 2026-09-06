@@ -19,6 +19,7 @@ import { useLocale } from '@pf-mediakit/i18n';
 import {
   annotations as annotationsApi,
   ApiError,
+  brandKits,
   projects,
   renders,
   revisions,
@@ -32,6 +33,11 @@ import type {
   RevisionSummary,
 } from '@/src/api/endpoints/revisions';
 import type { Annotation } from '@/src/api/endpoints/annotations';
+import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
+import {
+  createDebouncedScheduler,
+  drawPreview,
+} from '@/src/preview/live';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -43,10 +49,13 @@ import type { Annotation } from '@/src/api/endpoints/annotations';
 // **S13 (المعاينة الحيّة) خارج نطاق هذه التذكرة —** انظر PHASES-studio.
 // «تصدير الآن» يستدعي POST /renders ويستطلع الحالة كل ثانية حتى ينتهي.
 
+// حقل قالب — مطابق لـpackages/templates TemplateFieldBase: مفتاح
+// «key» (لا id). الأنواع الفعلية المُرجَعة من mk-api: text · richtext ·
+// image · range · medialist — نقتصر هنا على النصّية للتعبئة.
 interface FieldDef {
-  readonly id: string;
-  readonly label: string;
-  readonly type: 'text' | 'multiline';
+  readonly key: string;
+  readonly label?: string;
+  readonly type: string;
   readonly required?: boolean;
 }
 
@@ -54,6 +63,10 @@ function extractFields(tpl: Template | null): FieldDef[] {
   if (!tpl) return [];
   const def = tpl.definition as { fields?: FieldDef[] };
   return Array.isArray(def?.fields) ? def.fields : [];
+}
+
+function isTextField(t: string): boolean {
+  return t === 'text' || t === 'richtext';
 }
 
 export default function ProjectEditorPage(): JSX.Element {
@@ -101,6 +114,16 @@ export default function ProjectEditorPage(): JSX.Element {
   const [renderBusy, setRenderBusy] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // S13 — المعاينة الحيّة. brand.config من mk-api الحقيقي (لا mock
+  // stack يخترع بالقيم — القاعدة الثالثة). scheduler = debounce 200ms
+  // + rAF. عتبة الأداء المُعلَنة: ≤50ms لرسم 1080×1080 بعد آخر ضغطة.
+  const [brandCfg, setBrandCfg] = useState<Record<string, unknown> | null>(null);
+  const [previewSize] = useState<{ w: number; h: number }>({ w: 1080, h: 1080 });
+  const [previewMs, setPreviewMs] = useState<number | null>(null);
+  const [previewWarning, setPreviewWarning] = useState<string | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previewScheduler = useRef(createDebouncedScheduler(200));
+
   // S16 — التعليقات. الطبقات مقروءة من template.definition.fields،
   // لا قائمة مثبَّتة في الواجهة.
   const [anns, setAnns] = useState<Annotation[]>([]);
@@ -121,21 +144,23 @@ export default function ProjectEditorPage(): JSX.Element {
     try {
       const p = await projects.get(id);
       setProject(p);
-      const [tt, st] = await Promise.all([
+      const [tt, st, bk] = await Promise.all([
         templates.get(p.template_id),
         projects.getState(id),
+        brandKits.get(p.brand_kit_id).catch<null>(() => null),
       ]);
       setTpl(tt);
       setState(st);
+      setBrandCfg((bk as BrandKitFull | null)?.config ?? {});
       const content = (p.content ?? {}) as Record<string, string>;
       const initial: Record<string, string> = {};
       const defs = extractFields(tt);
-      for (const f of defs) initial[f.id] = String(content[f.id] ?? '');
+      for (const f of defs) initial[f.key] = String(content[f.key] ?? '');
       setDraft(initial);
       setDirty(false);
       if (defs.length > 0 && annLayer === '') {
         const first = defs[0];
-        if (first) setAnnLayer(first.id);
+        if (first) setAnnLayer(first.key);
       }
       void refreshAnns();
     } catch (err) {
@@ -200,9 +225,33 @@ export default function ProjectEditorPage(): JSX.Element {
     void load();
     return (): void => {
       if (pollTimer.current) clearInterval(pollTimer.current);
+      previewScheduler.current.cancel();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // ── S13 preview scheduler ──
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas || !tpl || brandCfg === null) return;
+    previewScheduler.current.schedule(() => {
+      void (async (): Promise<void> => {
+        try {
+          const res = await drawPreview(canvas, {
+            template: tpl.definition,
+            brandConfig: brandCfg,
+            content: draft,
+            size: previewSize,
+          });
+          setPreviewMs(res.durationMs);
+          setPreviewWarning(res.warning ?? null);
+        } catch (err) {
+          setPreviewWarning(err instanceof Error ? err.message : 'preview-error');
+        }
+      })();
+    });
+    return (): void => previewScheduler.current.cancel();
+  }, [tpl, brandCfg, draft, previewSize]);
 
   async function doSave(): Promise<void> {
     if (!project) return;
@@ -488,41 +537,87 @@ export default function ProjectEditorPage(): JSX.Element {
               {t('pages.projects.editor2.noFields')}
             </p>
           )}
-          {fields.map((f) => (
-            <Field
-              key={f.id}
-              labelKey={f.label}
-              htmlFor={`fld-${f.id}`}
-              {...(f.required ? { required: true } : {})}
-            >
-              {f.type === 'multiline' ? (
-                <Textarea
-                  id={`fld-${f.id}`}
-                  value={draft[f.id] ?? ''}
-                  onChange={(e) => {
-                    setDraft({ ...draft, [f.id]: e.target.value });
-                    setDirty(true);
-                    setSavingNoticeKey(null);
-                  }}
-                  rows={4}
-                />
-              ) : (
-                <Input
-                  id={`fld-${f.id}`}
-                  value={draft[f.id] ?? ''}
-                  onChange={(e) => {
-                    setDraft({ ...draft, [f.id]: e.target.value });
-                    setDirty(true);
-                    setSavingNoticeKey(null);
-                  }}
-                />
-              )}
-            </Field>
-          ))}
+          {fields.map((f) => {
+            const multi = f.type === 'richtext' || f.type === 'multiline';
+            if (!isTextField(f.type) && f.type !== 'multiline') return null;
+            return (
+              <div key={f.key} className="space-y-1.5">
+                <label
+                  htmlFor={`fld-${f.key}`}
+                  className="block text-xs font-medium text-fg-muted"
+                >
+                  {f.label ?? f.key}
+                  {f.required && <span className="ms-1 text-danger">*</span>}
+                </label>
+                {multi ? (
+                  <Textarea
+                    id={`fld-${f.key}`}
+                    value={draft[f.key] ?? ''}
+                    onChange={(e) => {
+                      setDraft({ ...draft, [f.key]: e.target.value });
+                      setDirty(true);
+                      setSavingNoticeKey(null);
+                    }}
+                    rows={4}
+                  />
+                ) : (
+                  <Input
+                    id={`fld-${f.key}`}
+                    value={draft[f.key] ?? ''}
+                    onChange={(e) => {
+                      setDraft({ ...draft, [f.key]: e.target.value });
+                      setDirty(true);
+                      setSavingNoticeKey(null);
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* سير العمل + التصدير — يسار ضيّق */}
         <div className="space-y-6">
+          {/* S13 — المعاينة الحيّة */}
+          <section
+            className="space-y-2 rounded border border-border bg-surface-2 p-4"
+            data-testid="live-preview"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-fg-muted">
+                {t('pages.projects.preview.title')}
+              </div>
+              {previewMs !== null && (
+                <span
+                  dir="ltr"
+                  className="text-[10px] text-fg-subtle"
+                  data-testid="preview-ms"
+                >
+                  {previewMs.toFixed(1)}ms · {previewSize.w}×{previewSize.h}
+                </span>
+              )}
+            </div>
+            <div className="overflow-hidden rounded border border-border bg-black">
+              <canvas
+                ref={previewCanvasRef}
+                className="block w-full"
+                style={{ aspectRatio: `${previewSize.w} / ${previewSize.h}` }}
+              />
+            </div>
+            {previewWarning && (
+              <p
+                dir="ltr"
+                className="text-[11px] text-warning"
+                data-testid="preview-warning"
+              >
+                {previewWarning}
+              </p>
+            )}
+            <p className="text-[11px] text-fg-subtle">
+              {t('pages.projects.preview.hint')}
+            </p>
+          </section>
+
           <section className="space-y-3 rounded border border-border bg-surface-2 p-4">
             <div className="text-sm font-medium text-fg-muted">
               {t('pages.projects.editor.workflow')}
@@ -678,8 +773,8 @@ export default function ProjectEditorPage(): JSX.Element {
                   className="h-10 w-full rounded border border-border bg-surface-2 px-3 text-sm text-fg outline-none focus:border-accent"
                 >
                   {fields.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.id}
+                    <option key={f.key} value={f.key}>
+                      {f.key}
                     </option>
                   ))}
                 </select>

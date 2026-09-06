@@ -12,6 +12,8 @@ Chrome (Puppeteer CDP)، يمرّ بتدفّق تسليم بعينه، ويُن�
 | `cdp-s12.mjs` | S12 كامل — قائمة/إنشاء/محرّر/سير عمل/مراجعات/استعادة/تصدير/حاجز أصول خارجية | `s12-*.png` (١٣ لقطة) |
 | `cdp-s14-s15-s16.mjs` | S14 (workflow editor) + S15 (رفض ثلاثيّ + history) + S16 (annotations) — على mock | `s14-*.png` · `s15-*.png` · `s16-*.png` (١٠ لقطات) |
 | `cdp-s14-real.mjs` | G-S14-3 على mk-api الحقيقي 19040 (تسليم workflow ضدّ خادم فعلي) | `s14-list-populated-real.png` |
+| `cdp-s13.mjs` | S13 معاينة حيّة على mk-api الحقيقي 19040 — G-S13-4/5/7 + قياس أداء | `s13-preview-loaded.png` · `s13-preview-after-typing.png` |
+| `cdp-s13-mock.mjs` | S13 G-S13-6 على mock (أرقام عربية-هندية — mk-api لا يخزّن bidi.numerals=arabic؛ راجع PHASES-studio §S13 انحراف #S13-1) | `s13-preview-arabic-numerals-mock.png` |
 
 عند إضافة سكربت لتذكرة جديدة: **حدِّث هذا الجدول في التزام السكربت
 نفسه**. أداة قائمة بلا توثيق تُنسى — راجع L-54.

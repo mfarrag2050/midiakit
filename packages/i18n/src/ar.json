@@ -135,6 +135,10 @@
         "transitionReasonInline": "هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.",
         "transitionRoleRequired": "دورك لا يسمح — الدور المطلوب: {role}."
       },
+      "preview": {
+        "title": "معاينة حيّة",
+        "hint": "الأرقام تتبع brand.bidi.numerals من هوية العميل — لا DigitStyle."
+      },
       "annotations": {
         "title": "التعليقات",
         "empty": "لا تعليقات بعد.",

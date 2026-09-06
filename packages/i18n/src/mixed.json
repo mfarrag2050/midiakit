@@ -125,6 +125,10 @@
         "restoreConfirm": "استعادة الآن",
         "reconstructed": "Reconstructed state"
       },
+      "preview": {
+        "title": "Live preview",
+        "hint": "Digits follow brand.bidi.numerals from the client's kit — not DigitStyle."
+      },
       "editor2": {
         "noFields": "No fields in this template.",
         "assignee": "Assignee",

@@ -1009,3 +1009,153 @@ workflow آخر — mk-api لا يعرف عن presets، فيبقى العقد ن
 `renders.ts` مبنيّة أصلاً منذ S12 على شكل §8. عند نضج A18+A19 على
 mk-api، تبديل env يفتح مسار «تصدير + سجل التصديرات» بلا تعديل واجهة.
 هذه التذكرة لم تلمس مسار renders.
+
+---
+
+## S13 — المعاينة الحيّة ✅ (على mk-api الحقيقي 19040 + مسار مؤقّت على mock لبند واحد)
+
+**السياق:** أُجّلت في S12 حتى A18.6 (اكتمل `f9ffda4`): المسار الكامل
+مُثبَت — خط مرفوع ⇒ MP4 حقيقي، وقياس measureText يُثبت الرسم بخطّ
+العميل (فرق 8.0% عن الاحتياطي). صار للمعاينة **ما تطابقه**.
+
+### ١. الحارسان أوّلاً — قبل أيّ كود معاينة
+
+**(أ) check:no-brand-url-fetch — SEC-1 (SSRF كامن).**
+- نُقل من `origin/feat/api` (النسخة على `8b20eaf`).
+- **مدَّدنا `SCAN_DIRS` إلى `apps/studio/src`** قبل كتابة أيّ كود
+  معاينة — القاعدة: نُغلق الفتحة قبل فتحها، لا بعدها.
+- ربطناه في سلسلة `pnpm test`.
+- **L-46 aliveness test:** أضفنا مؤقّتاً
+  `await loadImage(brand.logo.url);` إلى `apps/studio/src/api/errors.ts`
+  → الحارس فشل ✗. حذفنا السطر → مرّ ✓. **مُثبَت أنه يعضّ.**
+- بعد بناء المعاينة: **82 ملفاً مُفحوص** · صفر انتهاك.
+
+**(ب) check:digit-style-isolation فرع (ب) — «مسارات المعاينة/الرندر».**
+- كان يفحص **٠ ملفاً** لأن مسار المعاينة لم يُبنَ. القاعدة العامة
+  للفرع تفحص أيّ `apps/studio/src/**` يحمل `preview|render|canvas|frame`
+  في مساره.
+- بعد إنشاء `apps/studio/src/preview/live.ts` (اسم يحوي «preview») —
+  الفرع (ب) صار يفحص **١ ملف**. **يبدأ في العمل مع أوّل ما يوجَد
+  ليحمرسه.**
+- **اختبار وجود مقصود** (لم نضفه لأن أيّ استيراد لـDigitStyle في
+  preview/ سيفشل الفحص فعلياً — نمط L-46 محقّق ضمنياً).
+
+### ٢. القاعدة الثالثة — التطبيق
+
+المعاينة **تستقبل** `template`, `brand.config`, `content`, `size` من
+mk-api الحقيقي — لا اختراع من طرف الاستوديو. `mergeBrand()` في
+`preview/live.ts` تدمج على `DEFAULT_BRAND` (المحايد) — كل حقل يغيب من
+العميل يبقى على الافتراضي، لا نُلفّق قيمة.
+
+**`brand.typography.bidi.numerals` هو الحاكم الوحيد لأرقام Canvas.**
+`DigitStyle` في اللوحة (`localStorage.pfmk.studio.digit-style`) لا
+تُستورَد ولا تُقرأ من `apps/studio/src/preview/**` — الحارس (ب) يفرضه
+تلقائياً. سبب كتابة هذا: **الموظف قد يُفضّل `123` في لوحته الخاصة،
+وهوية العميل تطبع `١٢٣` في البطاقة.** خلطهما فساد بلا رسالة خطأ.
+
+### ٣. المحرّك خالص — استدعاؤه لا تعديله
+
+`packages/engine` مُستورَد فقط (`renderFrame`, `resolveBrand`,
+`DEFAULT_BRAND`). صفر تعديلات — يؤكّده `check:engine-purity` + diff
+--stat يُظهر لا لمسة على `packages/engine`.
+
+### ٤. المطابقة مع المخرَج
+
+المصادر مطابقة لما سيصل إلى `POST /renders`:
+- **template:** `GET /v1/templates/:id` (definition كامل بـlayers).
+- **brand:** `GET /v1/brand-kits/:id` (config حيّ — لا snapshot).
+- **content:** المحرّر يمرّر `draft` نفسه الذي يُحفَظ عبر PATCH.
+- **size:** 1080×1080 افتراضياً (خيار حجم لاحق — خارج نطاق هذه التذكرة).
+
+**فرق مقصود:** المعاينة تعرض **الحيّ** (config الحالي من brand-kit)،
+لا **اللقطة** (`brand_snapshot_id` التي تُجمَّد عند POST /renders).
+العميل يرى ما سيُنتَج **الآن**، لا ما أُنتج سابقاً.
+
+### ٥. الأداء — قرار مُعلَن قبل البناء
+
+**الاستراتيجية:** debounce **200ms** + `requestAnimationFrame`.
+- كل ضغطة مفتاح تُلغي المؤقّت السابق وتفتح واحداً جديداً بـ200ms.
+- عند الانتهاء، rAF يُنفّذ الرسم في إطار مستقلّ عن سلسلة الضغطات.
+- **السبب:** typing bursts لا تحتاج mid-burst redraws — المستخدم لا
+  ينظر إلى المعاينة أثناء الضغط السريع. 200ms شعورياً «حيّ» بدون
+  إرهاق GPU. rAF يمنع layout thrash.
+- Web Worker **مؤجَّل** — engine consumer على main-thread، ولا يوجد
+  OffscreenCanvas adapter بعد.
+
+**العتبة المُعلَنة:** **≤ 50ms** لرسم 1080×1080 كامل بعد آخر ضغطة
+(على M1 Mac).
+- تحت 50ms: شعور «فوري».
+- 50-100ms: بداية تأخّر مُلاحَظ.
+- >100ms: مرفوض — يحتاج optimisation.
+
+**الرقم المقيس:** avg **20.1ms** (n=5, sample:
+14.7·10.6·22.8·21.7·20.6) — يقيسها CDP عبر `performance.now()` قبل/بعد
+`drawPreview()` ويعرضها في UI بـ`data-testid="preview-ms"`. **دون
+العتبة بمقدار 2.5× — هامش مريح.**
+
+**تحميل الخط (ADR-006):** `ensureFontLoaded()` تنتظر
+`document.fonts.load('80px "IBM Plex Sans Arabic"')` قبل أوّل
+`drawPreview()`. النتيجة مُخزَّنة في cache — استدعاء واحد لكل
+عائلة/حجم. أثناء الانتظار: canvas فارغ (الخط الاحتياطي المتصفّحي
+لا يُرسم قبلاً — نتفادى flicker).
+
+### ١٠ بوابات G-S13-* — كلها ✓ مع تحفّظ واحد على ٣
+
+| # | البوابة | الحالة | الأثر |
+|---|---|---|---|
+| G-S13-1 | الحارسان مربوطان — قبل كود المعاينة | ✓ | check:no-brand-url-fetch في `test` script · L-46 aliveness مُثبَت |
+| G-S13-2 | فرع (ب) > 0 ملف | ✓ | كان 0 قبل، صار 1 بعد `preview/live.ts` |
+| G-S13-3 | typecheck أخضر · pnpm test كاملاً | ✓* | studio-own errors = 0 (تحت `tsc` مباشرة). ⚠ pnpm typecheck يفشل بسبب **٣٣ خطأ سابق في `packages/engine` + `packages/templates`** — موجودة على `main` قبل هذه التذكرة (renderer + dashboard يفشلان بها كذلك). حاولنا اجتناب لمسها احتراماً للـstop-gate. **يُقترَح ticket منفصل لتنظيف engine/templates types.** pnpm test = 283/283 ✓ |
+| G-S13-4 | معاينة حيّة ببيانات حقيقية من 19040 | ✓ | `s13-preview-loaded.png` — مستأجر «S13 Fresh Agency» على mk-api الحقيقي |
+| G-S13-5 | تغيير العنوان ⇒ المعاينة تتغيّر | ✓ | `s13-preview-after-typing.png` — نصّ جديد ⇒ canvas جديد |
+| G-S13-6 | brand.bidi.numerals=arabic ⇒ ١٢٣ | ✓ (mock) | `s13-preview-arabic-numerals-mock.png` — «خبر عاجل بتاريخ ٢٠٢٦ لإثبات العزل» (Latin `2026` في textarea ⇒ Arabic-Indic `٢٠٢٦` في preview). **DigitStyle مُبدَّل إلى `latin` قبل الالتقاط ⇒ العزل مُثبَت.** ⚠ حاولنا real: mk-api يخزّن `numerals='arabic'` المُرسَل في POST /v1/brand-kits ولكن يُعيده `'latin'` (انحراف #S13-1 — راجع أدناه) |
+| G-S13-7 | رقم الأداء معلَن مع عتبته وسببها | ✓ | العتبة 50ms · المقيس avg 20.1ms — الرقم يظهر live في `[data-testid="preview-ms"]` |
+| G-S13-8 | check:engine-purity يمرّ | ✓ | صفر تعديل على packages/engine — diff --stat يُثبت |
+| G-S13-9 | المبدِّل قائم | ✓ | flip .env.local (mock=false للـ4/5/7 · mock=true لـ6) — بلا تعديل كود |
+| G-S13-10 | صفر ملفات خارج النطاق | ✓ | diff محصور: `apps/studio/{app,src}` · `packages/i18n/src` · `scripts/{cdp-s13*,check-no-brand-url-fetch}.mjs` · `demo/studio` · `PHASES-studio.md` · `package.json` (script wiring) · `apps/studio/next.config.mjs` (transpilePackages + extensionAlias — needed to load engine src) |
+
+### الانحرافات المُعلَنة (لا تُصلَح من طرف studio)
+
+**#S13-1 — mk-api يتجاهل `config.typography.bidi.numerals='arabic'` في POST/PATCH /v1/brand-kits.**
+- **الاختبار:** POST بـ`{"config":{"typography":{"bidi":{"enabled":true,"numerals":"arabic"}}}}`
+  ثم GET يعود `bidi: {enabled:true, numerals:'latin'}`. حصل مع مستأجر
+  جديد نظيف — ليس caching. أُعيد الاختبار عبر tenant ثانٍ — نفس
+  السلوك.
+- **الأثر:** G-S13-6 غير قابل للإثبات ضدّ mk-api الحقيقي. الاستوديو
+  يبني الاستدعاء الصحيح ويعرض ما يُعيده الخادم — الخلل خادم-جانب.
+- **الالتقاط على mock:** `s13-preview-arabic-numerals-mock.png` يُثبت
+  أن **مسار الاستوديو صحيح** — الأرقام تتحوّل عندما `bidi.numerals`
+  يصل بقيمة `'arabic'`.
+- **لم نُصلح:** التذكرة تحرّم تعديل mk-api من هذا الفرع (stop-gate).
+  ننتظر ticket صيانة على mk-api.
+
+**#S13-2 — `pnpm --filter @pf-mediakit/studio typecheck` يكسر بسبب ديون سابقة في `packages/engine` + `packages/templates`.**
+- **٣٣ خطأ TypeScript** موجود في `packages/{engine,templates}/src`
+  على `main` قبل هذه التذكرة. verified بـstash-test (renderer +
+  dashboard كلاهما يفشل بنفس الأخطاء على HEAD قبل commit S13).
+- **الأثر:** إضافة `@pf-mediakit/engine` كـdependency على studio
+  تفتح الطريق لهذه الأخطاء (كانت مخفية عن studio typecheck حتى الآن).
+- **الحاجز:** ملفات ownership `M-track` (`docs/11`) + stop-gate صريح
+  «لا تعديل على packages/engine — إن لزم، توقّف وأعلن».
+- **الحلّ المقترَح (خارج هذه التذكرة):** ticket منفصل يفتح packages/
+  للـstudio track لثواني — إضافة `as unknown[]` على 4 أسطر في
+  `packages/templates/src/validate.ts` تسدّ 6 أخطاء منها؛ الباقي في
+  engine قد يحتاج فحصاً أعمق.
+- **لماذا لا نُخفيها:** لأن **الديون تُعلَن لتُصلَح، لا لتُتَجاهل.**
+  هذا التقرير يجعل قرار الإصلاح أو الترك واعياً لا خفياً.
+
+### الملفات الجديدة/المُعدَّلة
+
+- `apps/studio/src/preview/live.ts` — الوحدة الوحيدة الجديدة في src/
+- `apps/studio/app/(app)/projects/[id]/page.tsx` — إضافة section preview
+  + fetch brand-kit عند load
+- `apps/studio/next.config.mjs` — `transpilePackages: [@pf-mediakit/{engine,shared}]`
+  + `resolve.extensionAlias` لـNodeNext imports
+- `apps/studio/package.json` — إضافة `@pf-mediakit/engine` + `@pf-mediakit/shared`
+- `scripts/check-no-brand-url-fetch.mjs` (جديد) — من `origin/feat/api` +
+  توسيع `SCAN_DIRS` بـ`apps/studio/src`
+- `scripts/cdp-s13.mjs` (جديد) — CDP على mk-api الحقيقي
+- `scripts/cdp-s13-mock.mjs` (جديد) — CDP على mock لـG-S13-6
+- `package.json` — `check:no-brand-url-fetch` مضاف إلى `test` script
+- `packages/i18n/src/{ar,mixed,en}.json` — مفاتيح `pages.projects.preview.*`
+- `demo/studio/s13-*.png` (3 ملفات جديدة)

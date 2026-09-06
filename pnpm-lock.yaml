@@ -99,9 +99,15 @@ importers:
 
   apps/studio:
     dependencies:
+      '@pf-mediakit/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
       '@pf-mediakit/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@pf-mediakit/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@pf-mediakit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
