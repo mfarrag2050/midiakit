@@ -32,6 +32,7 @@ const EXPECTED_TABLES = [
   'annotations', 'renders', 'revisions', 'ai_integrations',
   'subscriptions', 'usage', 'password_reset_tokens', 'invitations',
   'checkout_sessions',
+  // ai_integrations موجود من A2 — control_plane_all موجودة
   // Reference data
   'plans',
   // Platform-scoped (2)

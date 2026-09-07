@@ -72,6 +72,18 @@ const envSchema = z
     // الرقم 3 اختير كافتراضي «مساحة معقولة قبل A21» — small-team baseline
     // من docs/17 §17 (1/3/8/15 حسب الباقة). أَعلَن كقيمة مؤقّتة.
     RENDER_CONCURRENCY_LIMIT: z.coerce.number().int().positive().default(3),
+
+    // A24 — مفتاح تشفير مفاتيح مزوّدي AI (AES-256-GCM).
+    // **بلا default** حتى في dev — قرار المالك 2026-09-08: ضياع المفتاح
+    // يجعل كل مفاتيح العملاء غير قابلة للفكّ للأبد. صيغة صارمة:
+    //   • 64 حرفاً hex بالضبط (32 بايت خام)
+    //   • مطلوب في كل بيئة (superRefine أدناه يشدّده أكثر في production)
+    // لا rotation في هذه المرحلة — تذكرة أمن منفصلة بعد A28.
+    // انظر PHASES-api.md §A24 لبند التشغيل: أين يُخزَّن · من يملكه ·
+    // ماذا إن ضاع.
+    AI_KEY_ENCRYPTION_KEY: z
+      .string({ required_error: 'AI_KEY_ENCRYPTION_KEY is required (32 bytes = 64 hex chars). لا default حتى في dev — ضياع المفتاح يجعل مفاتيح العملاء غير قابلة للفكّ للأبد.' })
+      .regex(/^[0-9a-fA-F]{64}$/, 'AI_KEY_ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)'),
   })
   .superRefine((data, ctx) => {
     if (data.NODE_ENV === 'production') {
@@ -103,6 +115,21 @@ const envSchema = z
             });
           }
         }
+      }
+      // A24 — AI_KEY_ENCRYPTION_KEY: التحقّق الأساسي جرى في regex أعلاه.
+      // لا تحقّق إضافي في production (regex يفشل بلا مفتاح، فلا نصل هنا).
+      // نمنع فقط قيمة معروفة كـplaceholder في production.
+      const KNOWN_PLACEHOLDERS = new Set([
+        '0000000000000000000000000000000000000000000000000000000000000000',
+        '1111111111111111111111111111111111111111111111111111111111111111',
+        'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+      ]);
+      if (KNOWN_PLACEHOLDERS.has(data.AI_KEY_ENCRYPTION_KEY.toLowerCase())) {
+        ctx.addIssue({
+          path: ['AI_KEY_ENCRYPTION_KEY'],
+          code: 'custom',
+          message: 'AI_KEY_ENCRYPTION_KEY هو قيمة معروفة كplaceholder — ولّد قيمة عشوائية (openssl rand -hex 32)',
+        });
       }
     }
   });

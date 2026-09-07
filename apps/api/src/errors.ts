@@ -96,6 +96,14 @@ export type ErrorCode =
   | 'INVALID_VERSION_FORMAT'
   | 'VERSION_NOT_AVAILABLE'
   | 'DIFF_NOT_ACKNOWLEDGED'
+  // AI Integrations (§15) — A24
+  | 'INVALID_PROVIDER'                              // §15.2 (400)
+  | 'API_KEY_VALIDATION_FAILED'                     // §15.2 (400) — رفض المزوّد
+  | 'UNKNOWN_CAPABILITY'                            // §15.4 (400)
+  | 'INVALID_INPUT_FOR_CAPABILITY'                  // §15.4 (400)
+  | 'CAPABILITY_NOT_ENABLED'                        // §15.4 (403)
+  | 'PROVIDER_ERROR'                                // §15.4 (502)
+  | 'PROVIDER_TIMEOUT'                              // §15.4 (504)
   // Generic
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
@@ -223,5 +231,13 @@ export const RestoreWouldBreakReferences = () => new ApiError('RESTORE_WOULD_BRE
 export const IfMatchRequired = () => new ApiError('IF_MATCH_REQUIRED', 400, 'If-Match');
 // Platform (A27)
 export const PlatformInsufficientRole = () => new ApiError('PLATFORM_INSUFFICIENT_ROLE', 403);
+// AI Integrations (§15) — A24
+export const InvalidProvider = () => new ApiError('INVALID_PROVIDER', 400, 'provider');
+export const ApiKeyValidationFailed = (msg?: string) => new ApiError('API_KEY_VALIDATION_FAILED', 400, msg ?? 'apiKey');
+export const UnknownCapability = () => new ApiError('UNKNOWN_CAPABILITY', 400, 'capability');
+export const InvalidInputForCapability = (field?: string) => new ApiError('INVALID_INPUT_FOR_CAPABILITY', 400, field ?? 'input');
+export const CapabilityNotEnabled = () => new ApiError('CAPABILITY_NOT_ENABLED', 403);
+export const ProviderError = (msg?: string) => new ApiError('PROVIDER_ERROR', 502, msg ?? null);
+export const ProviderTimeout = () => new ApiError('PROVIDER_TIMEOUT', 504);
 // Generic
 export const ValidationFailed = (field?: string) => new ApiError('VALIDATION_FAILED', 400, field ?? null);

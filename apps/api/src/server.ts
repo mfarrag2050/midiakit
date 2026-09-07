@@ -91,6 +91,10 @@ import subscriptionInvoicesRoute from './routes/subscription/invoices.js';
 import webhookSubscriptionRoute from './routes/webhooks/subscription.js';
 import usageCurrentRoute from './routes/usage/current.js';
 import usageHistoryRoute from './routes/usage/history.js';
+import aiListRoute from './routes/ai/list.js';
+import aiCreateRoute from './routes/ai/create.js';
+import aiDeleteRoute from './routes/ai/delete.js';
+import aiInvokeRoute from './routes/ai/invoke.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
@@ -281,6 +285,16 @@ export async function buildServer() {
       await u.register(usageCurrentRoute);
       await u.register(usageHistoryRoute);
     }, { prefix: '/usage' });
+
+    // A24 — AI Integrations + Invoke (docs/16 §15)
+    await v1.register(async (ai) => {
+      await ai.register(async (integrations) => {
+        await integrations.register(aiListRoute);
+        await integrations.register(aiCreateRoute);
+        await integrations.register(aiDeleteRoute);
+      }, { prefix: '/integrations' });
+      await ai.register(aiInvokeRoute, { prefix: '/invoke' });
+    }, { prefix: '/ai' });
   }, { prefix: '/v1' });
 
   return fastify;
