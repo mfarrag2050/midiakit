@@ -26,7 +26,8 @@
     "verify:a22": "RATE_LIMIT_DISABLE=1 node --import tsx scripts/verify-a22.mjs",
     "verify:a23": "node --import tsx scripts/verify-a23.mjs",
     "verify:bk-numerals": "node --import tsx scripts/verify-bk-numerals.mjs",
-    "verify:a24": "node --import tsx scripts/verify-a24.mjs"
+    "verify:a24": "node --import tsx scripts/verify-a24.mjs",
+    "verify:a25": "node --import tsx scripts/verify-a25.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

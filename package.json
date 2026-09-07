@@ -15,6 +15,7 @@
     "check:no-paddle-outside-payments": "node scripts/check-no-paddle-outside-payments.mjs",
     "check:no-ai-provider-outside-ai": "node scripts/check-no-ai-provider-outside-ai.mjs",
     "check:brand-kit-patch-coverage": "node scripts/check-brand-kit-patch-coverage.mjs",
+    "check:observe-import-scope": "node scripts/check-observe-import-scope.mjs",
     "check:doc-paths": "node scripts/check-doc-paths.mjs",
     "check:lessons-sequence": "node scripts/check-lessons-sequence.mjs",
     "check:docker-context": "node scripts/check-docker-context.mjs",
@@ -26,7 +27,7 @@
     "check:control-plane-policies": "pnpm --filter @pf-mediakit/db check:control-plane-policies",
     "check:response-envelope": "node scripts/check-response-envelope.mjs",
     "skill:build": "node scripts/build-skill.mjs",
-    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:no-paddle-outside-payments && pnpm check:no-ai-provider-outside-ai && pnpm check:brand-kit-patch-coverage && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:template-sync && pnpm check:plan-sync && pnpm check:control-plane-policies && pnpm check:response-envelope && vitest run",
+    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:no-brand-url-fetch && pnpm check:no-paddle-outside-payments && pnpm check:no-ai-provider-outside-ai && pnpm check:brand-kit-patch-coverage && pnpm check:observe-import-scope && pnpm check:script-paths && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:template-sync && pnpm check:plan-sync && pnpm check:control-plane-policies && pnpm check:response-envelope && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
@@ -67,6 +68,7 @@
     "verify:a23": "pnpm --filter @pf-mediakit/api verify:a23",
     "verify:bk-numerals": "pnpm --filter @pf-mediakit/api verify:bk-numerals",
     "verify:a24": "pnpm --filter @pf-mediakit/api verify:a24",
+    "verify:a25": "pnpm --filter @pf-mediakit/api verify:a25",
     "verify:all": "node scripts/verify-all.mjs"
   },
   "devDependencies": {

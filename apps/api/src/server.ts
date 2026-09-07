@@ -83,6 +83,9 @@ import platformLogoutRoute from './routes/platform/auth/logout.js';
 import platformTenantsListRoute from './routes/platform/tenants/list.js';
 import platformTenantsGetRoute from './routes/platform/tenants/get.js';
 import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
+import platformOpsQueuesRoute from './routes/platform/ops/queues.js';
+import platformOpsSubscriptionsRoute from './routes/platform/ops/subscriptions.js';
+import platformOpsUsageRoute from './routes/platform/ops/usage.js';
 import subscriptionGetRoute from './routes/subscription/get.js';
 import subscriptionCheckoutRoute from './routes/subscription/checkout.js';
 import subscriptionCancelRoute from './routes/subscription/cancel.js';
@@ -265,6 +268,13 @@ export async function buildServer() {
         await t.register(platformTenantsGetRoute);
         await t.register(platformTenantsUpdateRoute);
       }, { prefix: '/tenants' });
+
+      // A25 — لوحة التشغيل (قراءة فقط، خلف platform-auth-guard)
+      await p.register(async (o) => {
+        await o.register(platformOpsQueuesRoute);
+        await o.register(platformOpsSubscriptionsRoute);
+        await o.register(platformOpsUsageRoute);
+      }, { prefix: '/ops' });
     }, { prefix: '/platform' });
 
     // A21 — Subscription + Webhooks
