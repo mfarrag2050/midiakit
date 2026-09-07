@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-06 · **HEAD:** `79c299b` (`main`)
+> **تاريخ التوليد:** 2026-09-07 · **HEAD:** `b6005c5` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -58,22 +58,22 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `74fd3e9` | 136 |
-| `feat/studio` | `6d3cab0` | 120 |
+| `feat/api` | `6b88718` | 146 |
+| `feat/studio` | `eebaff6` | 125 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `74fd3e9` | 136 |
-| `origin/feat/studio` | `6d3cab0` | 120 |
+| `origin/feat/api` | `6b88718` | 146 |
+| `origin/feat/studio` | `eebaff6` | 125 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (16):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (34):** `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:assets` · `verify:auth` · `verify:brand-kits` · `verify:control-plane` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/studio (21):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **feat/api (46):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/studio (22):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
-- **mk-api (feat/api):** آخر مبنيّ ✅ = `A27` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S12` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A27` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-δ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-ε · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-ζ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-η · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-θ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S17` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
@@ -85,11 +85,15 @@ description: |
 ### قوائم المرحلة 4 — من main (`docs/17-phase4-plan.md`)
 
 - **A-list (30):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28` · `A18.5` · `A18.6`
-- **S-list (22):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22`
+- **S-list (29):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22` · `S23` · `S24` · `S25` · `S26` · `S27` · `S28` · `S29`
 - **SYNC (8):** `SYNC-γ` · `SYNC-α` · `SYNC-β` · `SYNC-δ` · `SYNC-ε` · `SYNC-ζ` · `SYNC-η` · `SYNC-θ`
 
 ### نقاط النهاية المبنيّة — عبر الفروع (`git ls-tree origin/feat/api apps/api/src/routes/`)
 
+- `apps/api/src/routes/ai/create.ts`
+- `apps/api/src/routes/ai/delete.ts`
+- `apps/api/src/routes/ai/invoke.ts`
+- `apps/api/src/routes/ai/list.ts`
 - `apps/api/src/routes/assets/delete.ts`
 - `apps/api/src/routes/assets/detect-faces.ts`
 - `apps/api/src/routes/assets/finalize.ts`
@@ -117,6 +121,9 @@ description: |
 - `apps/api/src/routes/health.ts`
 - `apps/api/src/routes/platform/auth/login.ts`
 - `apps/api/src/routes/platform/auth/logout.ts`
+- `apps/api/src/routes/platform/ops/queues.ts`
+- `apps/api/src/routes/platform/ops/subscriptions.ts`
+- `apps/api/src/routes/platform/ops/usage.ts`
 - `apps/api/src/routes/platform/tenants/get.ts`
 - `apps/api/src/routes/platform/tenants/list.ts`
 - `apps/api/src/routes/platform/tenants/update.ts`
@@ -143,6 +150,11 @@ description: |
 - `apps/api/src/routes/renders/shared/mapper.ts`
 - `apps/api/src/routes/renders/template-snapshot.ts`
 - `apps/api/src/routes/revisions/factory.ts`
+- `apps/api/src/routes/subscription/cancel.ts`
+- `apps/api/src/routes/subscription/checkout.ts`
+- `apps/api/src/routes/subscription/get.ts`
+- `apps/api/src/routes/subscription/invoices.ts`
+- `apps/api/src/routes/subscription/resume.ts`
 - `apps/api/src/routes/templates/create.ts`
 - `apps/api/src/routes/templates/delete.ts`
 - `apps/api/src/routes/templates/get.ts`
@@ -151,11 +163,14 @@ description: |
 - `apps/api/src/routes/templates/update.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
+- `apps/api/src/routes/usage/current.ts`
+- `apps/api/src/routes/usage/history.ts`
 - `apps/api/src/routes/users/delete.ts`
 - `apps/api/src/routes/users/get.ts`
 - `apps/api/src/routes/users/invite.ts`
 - `apps/api/src/routes/users/list.ts`
 - `apps/api/src/routes/users/update.ts`
+- `apps/api/src/routes/webhooks/subscription.ts`
 - `apps/api/src/routes/workflows/create.ts`
 - `apps/api/src/routes/workflows/delete.ts`
 - `apps/api/src/routes/workflows/get.ts`
