@@ -287,6 +287,80 @@ GCP Secret Manager)، بلا نسخ في مستودع الكود ولا في CI/
     2. workflows بلا بذر — الاستوديو يعرض 3 presets + POST عند الاختيار
     3. project_state جدول قائم غير مستعمل (كل الحالة في projects)
 
+- **SYNC-ε · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api**
+  الدليل: POST /v1/renders → 202 مع {id, status:'queued', queuedAt, estimatedStartAt,
+  brand_snapshot_id, template_snapshot_id}. GET list بغلاف §1.5. GET :id → object.
+  GET :id/output على queued → 404 OUTPUT_NOT_READY. POST :id/cancel على queued →
+  **202 مع {id, status:'canceled'}** (**انحراف عن العقد: نُعيد 202 لا 204** — الـبنية
+  حالياً تُبقي الصفّ للسجل). POST /cancel ثانية → 409 RENDER_ALREADY_TERMINAL. حدّ
+  متزامن مضغوط إلى 1 + رنداران متزامنان → الثاني 422 QUOTA_EXCEEDED_RENDERS.
+  المخرَج الحرفي في `/tmp/sync-all-out.md` §SYNC-ε. **يُطلق:** S17 · S18 على mk-studio.
+
+  **بنود للاستوديو:**
+    1. الرندر المتزامن يُقرأ من الباقة (لا رقم ثابت) — GET /v1/subscription يعطيه في quotas.renders
+    2. POST /cancel يُرجع 202 وليس 204 — إن كنت تعتمد على "لا محتوى" اقرأ status من الاستجابة
+    3. estimatedStartAt = queuedAt + 5s حالياً (تقدير خشن، سيُصبح ديناميكياً لاحقاً)
+
+- **SYNC-ζ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api**
+  الدليل: GET /v1/projects/:id/revisions → §1.5 (data · nextCursor · hasMore). كل
+  revision يحمل: id, resourceType, resourceId, actorId, **op** (create/update/delete),
+  diff:null (لا يُحسب حالياً)، hasSnapshot:true, createdAt. GET :revId → object فيه
+  **reconstructedState** + snapshot + actorId. POST /restore بسبب صحيح → 200 مع
+  الصفّ المُستعاد كاملاً. POST /restore بسبب <10 → 400 REASON_TOO_SHORT (field='reason').
+  **actorId=null موجود فعلياً** على revisions من trigger عند signup (tenant.create ·
+  user.create · tenant.update من A18.5 trigger) — الاستوديو يعرضه كـ«النظام». المخرَج
+  الحرفي في `/tmp/sync-all-out.md` §SYNC-ζ. **يُطلق:** S19 على mk-studio.
+
+  **انحرافات اسمية عن العقد §10 (لا تخالف الشكل):**
+    1. `op` بدل `action` — نقيس عملية DB (insert/update/delete)
+    2. `createdAt` بدل `snapshotAt` — يطابق سمانتيك DB
+    3. `reconstructedState` بدل `state` — يجنّب لبس workflow-state
+    4. `diff:null` — الديف غير محسوب، النقر على revision يعطي reconstructedState كامل
+
+  **بنود للاستوديو:**
+    1. actorId=null ⇒ «النظام» (عرض بصريّ خاصّ — أيقونة/نصّ محايد)
+    2. hasSnapshot=true دائماً حالياً (الحقل جاهز للـfuture حين diff-only revisions)
+
+- **SYNC-η · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api**
+  الدليل: GET /v1/subscription → {plan, status, currentPeriodEnd, seats:{used,limit},
+  quotas:{brandKits, videos, renders}, cancelAtPeriodEnd} (يطابق §13.1). GET /v1/usage/current
+  → {periodStart, periodEnd, counts:{rendersTotal, videos, videosSeconds, storageBytes},
+  **limits (إضافة)** , byBrandKit:[]}. GET /v1/usage/history بغلاف §1.5. POST /subscription/
+  checkout → {checkoutUrl, expiresAt}. POST /subscription/cancel بسبب <10 → 400
+  REASON_TOO_SHORT. brand_kits عند حدّ 1 + POST ثانٍ → 422 PLAN_LIMIT_REACHED. المخرَج
+  الحرفي في `/tmp/sync-all-out.md` §SYNC-η. **يُطلق:** S20 على mk-studio.
+
+  **انحرافات مُعلَنة عن العقد §14.1:**
+    1. `counts.videos` مضاف (عدد فيديو منفصل عن videosSeconds — البند 1 من §17 مفروض هكذا)
+    2. `limits` object إضافي — يوفّر على الاستوديو GET ثانٍ لـsubscription
+
+  **بنود للاستوديو:**
+    1. currentPeriodEnd=null ⇒ حساب يدوي (بلا اشتراك Paddle) — العرض «فترة تقويمية»
+    2. seats.limit=null ⇒ غير محدود (لا «0»)
+    3. videos.limit='unlimited' كنصّ (agency/api) أو رقم — التعامل بمقارنة النوع
+
+- **SYNC-θ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api**
+  الدليل: GET /v1/ai/integrations → {data:[...]}. POST → 201 مع {provider, apiKeyRef,
+  enabled, capabilities, configuredAt, configuredBy} — **apiKey لا يظهر في الاستجابة
+  ولا في السجلّ** (grep على المفتاح التجريبي بعد الاستدعاء: صفر تسريب). GET بعد
+  الإضافة يعيد نفس الشكل بلا apiKey. POST /invoke/headline-suggestions → 200 مع
+  {output, provider:'gemini', tokensIn, tokensOut, durationMs}. قدرة مجهولة → 400
+  UNKNOWN_CAPABILITY (field='capability'). مستأجر بلا تكامل + invoke → 403
+  CAPABILITY_NOT_ENABLED. PROVIDER_ERROR/TIMEOUT مُختبران في verify:a24 (يحتاجان
+  AI_FAKE_FORCE عند إقلاع الخادم — subprocess في verify script). المخرَج الحرفي
+  في `/tmp/sync-all-out.md` §SYNC-θ. **يُطلق:** S21 · S22 على mk-studio.
+
+  **انحراف مُعلَن عن §1.5:**
+    1. GET /integrations يعيد `{data:[]}` بدل `{data, nextCursor, hasMore}` —
+       المزوّدون ≤6، pagination غير لازم. مطابق §15.1 الحرفي.
+
+  **بنود للاستوديو — إلزامية:**
+    1. **المفاتيح لا تُعاد أبداً.** الواجهة تعرض apiKeyRef (`kref_...`) فقط
+    2. **لا حدّ للذكاء.** العدّ قائم في usage.ai_tokens_in/out، لا فرض بعد
+    3. **PROVIDER_ERROR (502) و PROVIDER_TIMEOUT (504)** حالتان يعرضهما الاستوديو
+       صراحةً — رسائل مختلفة عن أخطاء المستأجر (المفتاح خاطئ ≠ المزوّد ساقط)
+    4. tokensIn/tokensOut/durationMs يُعرَضان في «آخر استدعاء» — شفافية للمستخدم
+
 ---
 
 ## البوابات — الحالة
