@@ -28,6 +28,7 @@ import tenantPatchRoute from './routes/tenant/patch.js';
 import usersListRoute from './routes/users/list.js';
 import usersGetRoute from './routes/users/get.js';
 import usersInviteRoute from './routes/users/invite.js';
+import usersAcceptInviteRoute from './routes/users/accept-invite.js';
 import usersUpdateRoute from './routes/users/update.js';
 import usersDeleteRoute from './routes/users/delete.js';
 import brandKitsListRoute from './routes/brand-kits/list.js';
@@ -178,6 +179,7 @@ export async function buildServer() {
       await u.register(usersListRoute);
       await u.register(usersGetRoute);
       await u.register(usersInviteRoute);
+      await u.register(usersAcceptInviteRoute);   // DEBT-1 §1
       await u.register(usersUpdateRoute);
       await u.register(usersDeleteRoute);
     }, { prefix: '/users' });

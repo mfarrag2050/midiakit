@@ -91,6 +91,9 @@ const APP_USER_EXPECTED_GRANTS = {
   // A26: plans — بيانات مرجعية عامة، SELECT فقط لـapp_user
   //           (الكتابة migration_user حصراً عبر السياسة)
   plans:                 'SELECT',
+  // DEBT-1 §3: license_acks — سجلّ إقرار ترخيص append-only.
+  // INSERT + SELECT فقط — لا UPDATE ولا DELETE (المُقرّ لا يستطيع تزوير إقراره).
+  license_acks:          'INSERT,SELECT',
   // pgmigrations: بلا منح (SEC-1 fix) — لا يظهر
 };
 

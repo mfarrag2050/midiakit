@@ -71,6 +71,16 @@ const route: FastifyPluginAsync = async (fastify) => {
        RETURNING id, tenant_id, name, config, created_at, updated_at`,
       [id, nextConfig],
     );
+
+    // DEBT-1 §3: سجلّ append-only للإقرار (دليل مسؤولية قانونية).
+    // العلم في config يبقى للقراءة السريعة، السجلّ هو الدليل. GRANT
+    // على license_acks = INSERT+SELECT فقط، ولا يمكن تحرير الصفّ لاحقاً.
+    await req.dbClient!.query(
+      `INSERT INTO license_acks(tenant_id, brand_kit_id, kind, subject, ack_by, ip_address, notes)
+       VALUES ($1, $2, 'font', $3, $4, $5::inet, $6)`,
+      [req.auth!.tenantId, id, family, body.acknowledgedBy, req.ip ?? null, body.notes ?? null],
+    );
+
     return { fonts: { primary: (upd.rows[0]!.config as { fonts: { primary: unknown } }).fonts.primary } };
   });
 };

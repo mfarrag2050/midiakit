@@ -26,6 +26,9 @@ export type ErrorCode =
   // Users (§4)
   | 'USER_ALREADY_MEMBER'
   | 'PENDING_INVITE_EXISTS'
+  | 'INVITATION_NOT_FOUND'                                     // DEBT-1 §1 (404)
+  | 'INVITATION_EXPIRED'                                       // DEBT-1 §1 (410)
+  | 'INVITATION_ALREADY_ACCEPTED'                              // DEBT-1 §1 (410)
   | 'SEATS_EXHAUSTED'              // معلَن في §4.3، غير مُنفَّذ حتى A21
   | 'LAST_OWNER'
   | 'REASON_TOO_SHORT'

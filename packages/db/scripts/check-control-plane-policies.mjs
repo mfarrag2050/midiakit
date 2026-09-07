@@ -34,6 +34,7 @@ const EXPECTED_TABLES = [
   'checkout_sessions',
   // ai_integrations موجود من A2 — control_plane_all موجودة
   'plan_revisions',                    // A28 — تدقيق تحرير plans
+  'license_acks',                      // DEBT-1 §3 — سجلّ إقرار ترخيص append-only
   // Reference data
   'plans',
   // Platform-scoped (2)

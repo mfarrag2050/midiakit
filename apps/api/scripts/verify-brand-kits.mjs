@@ -329,13 +329,34 @@ async function checkMergePatchSemantics(fastify, ctx) {
   const cfgAfterDelete = json(patch1)?.config;
   const logoAfterDelete = cfgAfterDelete?.logo;
 
-  // 8a.i: المفتاح غير موجود (لا size = null)
-  if (logoAfterDelete && !('size' in logoAfterDelete)) {
-    pass('8a-i: PATCH {logo:{size:null}} يحذف size من config (لا يعيّنه null)');
-  } else if (logoAfterDelete && logoAfterDelete.size === null) {
-    fail('8a-i: size = null بدل الحذف — يخالف RFC 7396 §1');
+  // 8a.i (DEBT-1 §2 · 2026-09-07): بعد إصلاح 8b، الاستجابة تحمل fill-in من
+  // DEFAULT_BRAND — DB يفقد المفتاح لكن `toFull` يعيده. الاختبار انقسم:
+  //   • DB (SQL مباشر): size محذوف من config.jsonb → يُثبت null-delete
+  //   • API (استجابة): size = 63 (من DEFAULT_BRAND، ليس null) → يُثبت fill-in
+  // كلاهما صحيح دلالياً: docs/03 «مفتاح غائب يُستبدل من DEFAULT».
+  const cDb = await migPool.connect();
+  let dbHasSize, dbSizeVal;
+  try {
+    await cDb.query('BEGIN');
+    await cDb.query('SELECT app_set_tenant($1::uuid)', [ctx.a.tenantId]);
+    const r = await cDb.query(
+      `SELECT config->'logo' ? 'size' AS has_size, config->'logo'->'size' AS size_val
+       FROM brand_kits WHERE id = $1`, [kitId]);
+    dbHasSize = r.rows[0]?.has_size;
+    dbSizeVal = r.rows[0]?.size_val;
+    await cDb.query('COMMIT');
+  } finally { cDb.release(); }
+  if (dbHasSize === false) {
+    pass('8a-i-DB: PATCH {logo:{size:null}} يحذف size من config jsonb (RFC 7396 §1 على DB)');
   } else {
-    fail(`8a-i: config.logo unexpected shape: ${JSON.stringify(logoAfterDelete)}`);
+    fail(`8a-i-DB: config.logo['size'] لا يزال موجوداً: has_size=${dbHasSize} val=${dbSizeVal}`);
+  }
+  if (logoAfterDelete && logoAfterDelete.size === 63) {
+    pass('8a-i-API: الاستجابة تحمل logo.size=63 من DEFAULT_BRAND (fill-in عند القراءة، DEBT-1 §2)');
+  } else if (logoAfterDelete && logoAfterDelete.size === null) {
+    fail('8a-i-API: size=null بدل fill-in من DEFAULT — يخالف docs/03');
+  } else {
+    fail(`8a-i-API: config.logo.size = ${logoAfterDelete?.size} (متوقّع 63)`);
   }
 
   // 8a.ii: بقية مفاتيح logo (margin, position…) لم تتأثّر

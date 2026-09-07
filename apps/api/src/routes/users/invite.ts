@@ -23,6 +23,8 @@ import {
 } from '../../errors.js';
 import { ApiError } from '../../errors.js';
 import { getEffectiveLimits } from '../../config/effective-limits.js';
+import { getEmailer } from '../../emailer.js';
+import { config } from '../../config.js';
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -95,12 +97,23 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     const inv = inserted.rows[0]!;
 
-    // بند مؤجَّل A11 (قرار #3): لا يُرسَل بريد حتى تُبنى نقطة القبول
-    // (POST /v1/users/accept-invite). البريد يُفعَّل في نفس التذكرة
-    // التي تبنيها. السبب البنيوي: بريد يحمل رابطاً لا يعمل يُشوّش
-    // المدعوّ، والاعتماد على «تذكّر إيقاف الإرسال قبل النشر» انضباط
-    // لا بنية. `tokenPlain` مُنشأ داخل الطلب ولا يُطبَع.
-    void tokenPlain;
+    // DEBT-1 §1 (2026-09-07): نقطة القبول بُنيَت
+    // (POST /v1/users/accept-invite) — نُفعّل الإرسال. في dev بلا SMTP
+    // ⇒ DevConsoleEmailer يطبع الرابط + الرمز في السجلّ (config.ts يُلزم
+    // production بـSMTP، فلا رابط في سجلّ إنتاجي). tokenPlain ليس في
+    // رسالة الاستجابة — يُمرَّر عبر البريد وحده.
+    const acceptUrl = `${config.CORS_ORIGIN}/accept-invite?token=${tokenPlain}`;
+    try {
+      await getEmailer(config).send({
+        to: parsed.email,
+        subject: `دعوة للانضمام إلى فريقك على mk-studio`,
+        body: `تلقّيتَ دعوة للانضمام بدور "${parsed.role}".\n\nاقبل الدعوة:\n${acceptUrl}\n\nالرابط صالح 7 أيام.`,
+      });
+    } catch (err) {
+      // إن فشل الإرسال، الدعوة موجودة في DB لكن المدعوّ لن يعرف. نُسجّل
+      // ولا نفشل الاستجابة (المدعو يستطيع إعادة إرسال يدوياً لاحقاً).
+      req.log.warn({ err, email: parsed.email }, 'invite email failed');
+    }
 
     reply.status(201).send({
       id: inv.id,

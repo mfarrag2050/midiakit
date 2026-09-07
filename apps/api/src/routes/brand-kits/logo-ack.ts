@@ -75,6 +75,14 @@ const route: FastifyPluginAsync = async (fastify) => {
          RETURNING id, tenant_id, name, config, created_at, updated_at`,
         [id, nextConfig],
       );
+
+      // DEBT-1 §3: سجلّ append-only للإقرار (نمط font-ack).
+      await req.dbClient!.query(
+        `INSERT INTO license_acks(tenant_id, brand_kit_id, kind, subject, ack_by, ip_address)
+         VALUES ($1, $2, 'logo', $3, $4, $5::inet)`,
+        [req.auth!.tenantId, id, platform, body.acknowledgedBy, req.ip ?? null],
+      );
+
       const updatedAttr = (upd.rows[0]!.config as { attribution: { logoAcks: Record<string, unknown> } }).attribution;
       return { platform, logoAck: updatedAttr.logoAcks[platform] };
     },
