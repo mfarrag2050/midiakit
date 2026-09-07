@@ -26,7 +26,7 @@ const GATES = [
   'tenant-isolation', 'auth', 'brand-kits', 'tenant', 'users',
   'assets', 'templates', 'projects', 'workflows', 'renders',
   'revisions', 'plans', 'control-plane', 'a18-5', 'a18-6',
-  'a21', 'a22', 'a23', 'bk-numerals', 'a24', 'a25', 'a28', 'debt1',
+  'a21', 'a22', 'a23', 'bk-numerals', 'a24', 'a25', 'a28', 'debt1', 'limits1',
 ];
 
 function run(cmd, args, opts = {}) {

@@ -28,6 +28,9 @@ export const QUEUE_DEPTH_THRESHOLD = 10;
 export const WORKER_STUCK_MS = 5 * 60 * 1000;
 export const REPEAT_WINDOW_SEC = 15 * 60; // 15 دقيقة قبل إعادة إطلاق نفس التنبيه
 
+/** حدّ المساحة المؤقتة لكل مهمة (LIMITS-1 §3 · docs/08). */
+export const TEMP_SPACE_LIMIT_BYTES = 25 * 1024 * 1024 * 1024; // 25 GB
+
 // ── نوع الحدث ────────────────────────────────────────
 
 export type AlertCode =
@@ -35,6 +38,7 @@ export type AlertCode =
   | 'disk-high'
   | 'queue-deep'
   | 'worker-stuck'
+  | 'temp-space-per-job'          // LIMITS-1 §3: مساحة مؤقتة > 25GB لمهمة واحدة
   | 'system-maintenance';
 
 export type AlertSeverity = 'info' | 'warn' | 'crit';

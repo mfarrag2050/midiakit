@@ -16,6 +16,8 @@
  *      ↳ TEMPLATES lookup + renderVideo → local outPath (no S3, no DB)
  */
 import os from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { Worker, UnrecoverableError, type Job, type WorkerOptions } from 'bullmq';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import pg from 'pg';
@@ -29,6 +31,9 @@ import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
 import type { RenderJobInput } from './validate.js';
+import { TEMP_SPACE_LIMIT_BYTES } from './alerts.js';
+
+const execFileAsync = promisify(execFile);
 
 const { Pool } = pg;
 
@@ -265,6 +270,55 @@ async function processCliJob(job: Job<RenderJobInput>): Promise<void> {
   });
 }
 
+// ── مراقب المساحة المؤقتة (LIMITS-1 §3) ───────────
+/**
+ * يقيس حجم tmpdir الجذر كل 30 ثانية أثناء المهمة الطويلة. إن تجاوز
+ * TEMP_SPACE_LIMIT_BYTES (25GB)، يرفع علماً — الحلقة الرئيسية تفحصه
+ * وترمي TempSpaceExceededError، finally ينظّف tmpDir الخاص بالمهمة.
+ *
+ * يُطبَّق فقط لطوابير `edit` و `batch` (المتوقّعة تلمس القرص فعلياً).
+ * urgent/normal يعملون بأنابيب FFmpeg بلا ملفات مؤقتة كبيرة (ADR-008).
+ */
+export class TempSpaceExceededError extends Error {
+  constructor(usedBytes: number) {
+    super(`[temp-space] مساحة مؤقتة ${(usedBytes / (1024**3)).toFixed(1)}GB تجاوزت الحدّ ${(TEMP_SPACE_LIMIT_BYTES / (1024**3))}GB`);
+    this.name = 'TempSpaceExceededError';
+  }
+}
+
+async function measureTmpDirBytes(path: string): Promise<number> {
+  try {
+    // du -sk: KiB, نضربها × 1024
+    const { stdout } = await execFileAsync('du', ['-sk', path], { timeout: 5000 });
+    const kib = Number(stdout.split(/\s+/)[0] ?? 0);
+    return kib * 1024;
+  } catch { return 0; }
+}
+
+/**
+ * يُشغّل monitor بشكل غير متزامن بجانب المهمة الطويلة. يرمي إن تجاوز
+ * TEMP_SPACE_LIMIT_BYTES. Promise.race مع doJob() — أيّهما ينتهي أوّلاً
+ * ينهي الآخر عبر AbortSignal.
+ */
+async function withTempSpaceMonitor<T>(
+  doJob: () => Promise<T>, tmpDirRoot: string,
+): Promise<T> {
+  const abort = new AbortController();
+  const monitor = (async () => {
+    while (!abort.signal.aborted) {
+      const used = await measureTmpDirBytes(tmpDirRoot);
+      if (used > TEMP_SPACE_LIMIT_BYTES) throw new TempSpaceExceededError(used);
+      await new Promise((r) => setTimeout(r, 30_000));
+      if (abort.signal.aborted) return;
+    }
+  })();
+  try {
+    return await Promise.race([doJob(), monitor as Promise<T>]);
+  } finally {
+    abort.abort();
+  }
+}
+
 // ── معالج مُوحَّد مع fair-share + timeout ──────────
 async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number): Promise<void> {
   const tenantId = (job.data as { tenantId?: string }).tenantId;
@@ -281,7 +335,12 @@ async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number): Pro
       if (isApiJob(job.data)) await processApiJob(job as Job<ApiRenderJobPayload>);
       else await processCliJob(job as Job<RenderJobInput>);
     };
-    await withTimeout(doJob(), cfg.timeoutMs, `${cfg.name}#${job.id}`);
+    // LIMITS-1: temp-space monitor مفعَّل لـedit و batch (المتوقّعة تلمس القرص فعلياً).
+    // urgent/normal يعملون بأنابيب FFmpeg (ADR-008) — بلا ملفات مؤقتة كبيرة.
+    const wrapped = (cfg.name === 'edit' || cfg.name === 'batch')
+      ? () => withTempSpaceMonitor(doJob, tmpdir())
+      : doJob;
+    await withTimeout(wrapped(), cfg.timeoutMs, `${cfg.name}#${job.id}`);
   } finally { await conn.decr(key); }
 }
 

@@ -29,7 +29,8 @@
     "verify:a24": "node --import tsx scripts/verify-a24.mjs",
     "verify:a25": "node --import tsx scripts/verify-a25.mjs",
     "verify:a28": "node --import tsx scripts/verify-a28.mjs",
-    "verify:debt1": "node --import tsx scripts/verify-debt1.mjs"
+    "verify:debt1": "node --import tsx scripts/verify-debt1.mjs",
+    "verify:limits1": "node --import tsx scripts/verify-limits1.mjs"
   },
   "dependencies": {
     "@fastify/cors": "10.0.1",

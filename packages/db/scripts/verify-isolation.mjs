@@ -86,6 +86,8 @@ const APP_USER_EXPECTED_GRANTS = {
   usage:                 'DELETE,INSERT,SELECT,UPDATE',
   password_reset_tokens: 'DELETE,INSERT,SELECT,UPDATE',
   invitations:           'DELETE,INSERT,SELECT,UPDATE',
+  // A21: checkout_sessions — Idempotency-Key storage للـcheckout (Paddle wrapper)
+  checkout_sessions:     'DELETE,INSERT,SELECT,UPDATE',
   // جدول واحد بـINSERT فقط
   login_attempts:        'INSERT',
   // A26: plans — بيانات مرجعية عامة، SELECT فقط لـapp_user
@@ -244,8 +246,8 @@ async function resetAndSeed(migrationPool) {
       );
 
       await client.query(
-        `INSERT INTO ai_integrations(tenant_id, provider, api_key_ref)
-         VALUES ($1, 'openai', 'ref-' || $2)`,
+        `INSERT INTO ai_integrations(tenant_id, provider, api_key_ref, api_key_encrypted)
+         VALUES ($1, 'openai', 'ref-' || $2, '\\x00'::bytea)`,
         [tenantId, suffix],
       );
 
@@ -350,8 +352,8 @@ const NEG_INSERT_STRATEGIES = {
     ),
   ai_integrations: (c, foreign) =>
     c.query(
-      `INSERT INTO ai_integrations(tenant_id, provider, api_key_ref)
-       VALUES ($1, 'anthropic', 'ref-x')`,
+      `INSERT INTO ai_integrations(tenant_id, provider, api_key_ref, api_key_encrypted)
+       VALUES ($1, 'anthropic', 'ref-x', '\\x00'::bytea)`,
       [foreign],
     ),
   subscriptions: (c, foreign) =>

@@ -159,7 +159,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9-A20 + A26 + A27 + A18.5 + A18.6 + A21-A25 + A28 + DEBT-1 مبنية جميعاً. verify:all بصفر إخفاق كاملاً (23/23).**
+> الحالة: **A9-A20 + A26 + A27 + A18.5 + A18.6 + A21-A25 + A28 + DEBT-1 + LIMITS-1 مبنية جميعاً. verify:all بصفر إخفاق كاملاً (24/24).**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -180,6 +180,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A18** | Renders (8 endpoints) | ✅ | `pnpm verify:renders` — G-P4-10، 7 طبقات. brand_snapshot + template_snapshot يُلتقطان ذرّياً عند POST — تعديل brand_kit بعدها لا يمسّ اللقطة (اختبار Layer 7-هـ). RENDER_CONCURRENCY_LIMIT ثابت=3 (A21 يحلّه من plan). Idempotency-Key مدعوم. cancel + delete صحيحان. **MVP التخزين:** UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS يرفض brand فيها assetId أو URL خارجي (S3/HTTP) — worker يعمل مع brand مضمّنة فقط. حلّ SDK كامل في renderer بند مؤجَّل. |
 | **A19** | Queue integration (BullMQ) | ✅ | G-P4-10 Layer 7. `apps/api/src/queues/` توأمة لـ`apps/renderer/src/queues.ts` — نفس أسماء الطوابير (render-urgent/normal/edit/batch) + prefix pf-mediakit + Fair-share priority (`count(waiting same tenant) × 10 + 1`). POST /renders يُدخل job في render-normal (أو render-urgent) بشحنة كاملة (renderId + snapshots + content). Layer 7 يُثبت end-to-end: POST → Redis (7 مفاتيح) → worker inline → MinIO PUT → GET /output signed URL → fetch حقيقي بايتات PNG صحيحة. |
 | **A20** | Revisions (3 endpoints × 5 موارد) | ✅ | `pnpm verify:revisions` — G-P4-11. **DB triggers على 5 جداول** (brand_kits · projects · templates · users · assets) تكتب revisions تلقائياً على INSERT/UPDATE/DELETE — صفر انضباط handlers. `app_set_actor(uuid)` GUC جديد يُضبَط من auth-guard. factory pattern لواحد أو 15 endpoint (`GET :id/revisions` · `GET :id/revisions/:revId` · `POST :id/revisions/:revId/restore`). restorableColumns مصرَّحة لكل مورد. **STALE_UPDATE مُطلَق الآن** (§7.4): `If-Match: <updated_at ISO>` header اختياري على PATCH /projects — إن قُدِّم بقيمة قديمة → 409. البند A10 محسوم: user delete يُنشئ revision صريح بـaction='reassign' + reason لكل مشروع مُعاد إسناده. |
+| **LIMITS-1** | الحدود الإلزامية + retention + BullMQ cron | ✅ | `pnpm verify:limits1` — G-L، 14/14 (باستثناء verify:all و pnpm test الخارجيَّين). **قرارات المالك 2026-09-07:** (1) **تعريف اليتيم**: finalized_at موجود + عمر > 24h + غير مُشار إليه في brand_kits.config ولا renders.brand_snapshot (regex على `"assetId":"<uuid>"`). (2) **العلامة أولاً، الحذف ثانياً** — عمود `assets.orphan_marked_at` جديد + sweep يعلّم أوّلاً، وينتظر 7 أيام قبل الحذف عبر storage adapter (لا S3 مباشر). أقصر عمر قبل الحذف: 8 أيام. (3) **alerts-cron كل 5 دقائق** (لا كل دقيقة — كان 1440 دورة يومياً بلا مقابل) + orphan sweep يومياً 03:00 UTC. (4) **webhook + forwarder** (لا SDK تيليجرام مباشر). (5) **duration limit مؤجَّل** — لا مدخل فيديو من العميل، القوالب تنتج 7-30s. (6) **الأرقام تقديرية** — قياس على العتاد قبل التعاقد. **البنية:** `packages/db/migrations/20260908070000_limits1-orphan-mark.ts` + `apps/api/src/limits/{orphan-sweep,alerts-cron}.ts` + `TempSpaceExceededError` + `TEMP_SPACE_LIMIT_BYTES=25GB` + `withTempSpaceMonitor` (du -sk كل 30s على tmpdir · Promise.race مع doJob · AbortSignal) — يُطبَّق على edit/batch فقط (urgent/normal يستعملان أنابيب FFmpeg بلا ملفات كبيرة، ADR-008). AlertCode الخامس `temp-space-per-job` أُضيف. `runOrphanSweep(pool, tenantId?)` per-tenant transactional (SET LOCAL app.tenant_id). **G-L يُثبت (13 حالة):** 500MB → 413 SIZE_TOO_LARGE (فرض حقيقي) · timeouts urgent=30s normal=180s edit=600s batch=∞ · TempSpaceExceededError موجود · monitor في api-worker + finally cleanup · sweep يعلّم orphan فقط (linked-bk/linked-snap/fresh محميّة — L-46) · purge بعد 8 أيام · storage adapter يحذف الملف فعلاً (getObjectText → not found) · runAlertCycle() summary · alerts-cron queue + 2 repeat jobs. **ثمن معلَن**: التنبيه يعمل داخل عامل — سقوطه لا يُطلق تنبيهاً بذاته. حلّ جزئي: process supervisor خارجي (systemd/pm2/docker restart). **verify-isolation موسَّع**: `license_acks: INSERT,SELECT` + `checkout_sessions: DML كامل` (كان مفقوداً من A21). **283/283 اختبار vitest. verify:all: 24/24 خضراء كاملاً.** |
 | **DEBT-1** | تصفية ديون — accept-invite + 8b + license_acks | ✅ | `pnpm verify:debt1` — G-D1، 12/12 (باستثناء اختبارات خارجية 4/5/8). **ثلاثة ديون معلَنة منذ A10 و A12، مُغلَقة:** (§1) **`POST /v1/users/accept-invite`** — token+password، يُنشئ user، يضبط `invitations.accepted_at=now()`. app_user pool + SET LOCAL app.tenant_id من `inv.tenant_id` (accept بلا JWT مستأجر — control_plane للـSELECT، app_user للـwrites). حالات: 404 INVITATION_NOT_FOUND · 410 INVITATION_EXPIRED · 410 INVITATION_ALREADY_ACCEPTED · 409 USER_ALREADY_MEMBER · 400 PASSWORD_TOO_WEAK. **البريد فُعِّل في invite.ts** — DevConsoleEmailer يطبع الرابط في dev (config يُلزم SMTP في production). (§2 · 8b) **fill-in عند القراءة من DEFAULT_BRAND** في `brand-kit-mapper.toFull` — deep-merge (arrays تُستبدل، RFC 7396). **snapshots لا تتأثّر بنيوياً**: `renders/brand-snapshot.ts` يُعيد raw jsonb، `api-worker` يستهلك من BullMQ payload — كلاهما يتخطّى mapper. verify-brand-kits.mjs مُحدَّث نمط A8-FIX: 8a-i انقسم إلى 8a-i-DB (RFC 7396 على DB — size محذوف) + 8a-i-API (fill-in — size=63 من DEFAULT). (§3) **`license_acks` جدول append-only** — FORCE RLS + tenant_isolation + control_plane_all + `GRANT INSERT, SELECT` لـapp_user (لا UPDATE/DELETE). حقول: kind (font/logo) · subject (family/platform) · ack_by (uuid) · ack_at · ip_address · notes. font-ack.ts + logo-ack.ts أُضيف فيهما INSERT بعد UPDATE brand_kits (السجلّ هو الدليل، العلم في config للقراءة السريعة). L-46: UPDATE من app_user ⇒ 42501 permission denied (يُثبت append-only على مستوى GRANT قبل RLS). APP_USER_EXPECTED_GRANTS + check-control-plane-policies موسَّعان. **283/283 اختبار vitest. verify:all: 23/23 خضراء كاملاً — أول مرة منذ A9.** |
 | **A28** | لوحة المالك — CRUD plans/users + refresh + audit | ✅ | `pnpm verify:a28` — G-P4-21، 16 حالة. **قرارات المالك 2026-09-07:** (1) حارس `check-plan-sync` تحوَّل نطاقه إلى **الهوية فقط** (key · name_ar · name_en) — الحدود والسعر خارج الـhash عمداً لأن A28 يفتح تحريرها من اللوحة (§17 يقول «الأرقام مبدئية»). (2) **`plan_revisions` جدول منفصل** بدل توسيع revisions (revisions.tenant_id NOT NULL و plans عالمي). FORCE RLS + control_plane_all + trigger `plans_log_platform_revision` SECURITY INVOKER يعمل بصلاحيات المستدعي (control_plane_user runtime · migration_user bootstrap — كلاهما في السياسة). صفر منح لـapp_user. (3) **إسقاط `plan-limits-cache` فوري** بعد كل كتابة تمسّ الحدّ الفعلي: PATCH plans/:key + PATCH tenants/:id (plan_overrides). الأثر يظهر خلال ملّي-ثانية لا 60ث (TTL يبقى fallback لـcluster). (4) 12 endpoint: `/plans` (list, get, create, update, delete, revisions) · `/users` (list, get, create, update, delete) · `/auth/refresh`. **7 ملفات routes + shared/role-guard.ts** (requirePlatformRoleIn — نمط requireRoleIn المستأجر). PLATFORM_INSUFFICIENT_ROLE (403). PLAN_IN_USE (409) عند FK RESTRICT من tenants/subscriptions/checkout_sessions. **هجرتان جديدتان:** 20260908040000_a28-plan-revisions + 20260908050000_a28-plans-identity-hash (إعادة حساب definition_hash بنطاق الهوية للصفوف الخمسة المبذورة). **check-control-plane-policies موسَّع** بجدول plan_revisions. **G-P4-21 يُثبت:** 401 على رمز مستأجر · viewer PATCH → 403 · PATCH plan starter.brand_kits=999 ⇒ getEffectiveLimits فوري (1→999) · plan_revisions.actor_id = platformUserId · PATCH tenant.plan_overrides.rpm=5555 ⇒ فوري · DELETE plan مستعمل → 409 PLAN_IN_USE · refresh على platform token → rotation ناجح · refresh على tenant token → 401 · تعديل brand_kits_limit يدوياً ⇒ check-plan-sync يمرّ (A28 مقصود) · تعديل name_ar يدوياً ⇒ يسقط (identity، L-46) · تعطيل plans_control_plane_write → PATCH 401 · app_user grants على plan_revisions = 0. **verify:plans (G-P4-12) مُحدَّث** لعكس النطاق الجديد (بدل «رفض تعديل brand_kits_limit»، «قبول تعديل brand_kits_limit + رفض تعديل name_ar») — نمط A8-FIX (بوابة قائمة كانت تختبر السلوك القديم). 283/283 اختبار vitest يمرّ. **verify:all: 21/22 خضراء · brand-kits 2 (8b الموروث)**. |
 | **A25** | لوحة التشغيل — 3 endpoints على /v1/platform/ops/* + حارس نطاق observe | ✅ | `pnpm verify:a25` — G-P4-20، 6 طبقات + 7 حالات. **قرارات المالك 2026-09-07:** (1) `/v1/platform/ops/*` **خلف platform-auth-guard + control_plane_user** — لا نقطة تقرأ عبر المستأجرين بلا حارس. (2) 4 مقاييس مرحلة 4 مصدرها معلَن (لا حساب من مصدرين): subscriptions_by_status ⇐ subscriptions · tenants_by_plan ⇐ tenants · usage_current_month_totals ⇐ usage (نمط A22 trigger) · top_tenants_by_renders ⇐ usage. (3) **`quota_exceeded_events` مؤجَّل** — §A25 يذكر «حصص متجاوزة» لكن لا سجلّ events (الفرض قائم بـ422 في A21، التسجيل لا). تذكرة `quota_violations` منفصلة. (4) **الحارس (ب)** `check-observe-import-scope` بدل بوابة البناء (أ) — «حارس بلا خطر قائم صيانة بلا مقابل». **3 endpoints** جديدة تحت `p.register(async o => ...)` بـprefix `/ops` داخل platform: GET /queues (يستدعي observe.queueDepth — نفس نمط A18.6 api-worker) · GET /subscriptions (subscriptionsByStatus + tenantsByPlan) · GET /usage (currentMonthTotals + topTenantsByRenders). **`check-observe-import-scope`** (~50 سطر، نمط الحرّاس الأربعة): `@pf-mediakit/renderer/observe` يُقرأ من apps/dashboard/ أو apps/api/src/routes/platform/ فقط. استثناء صريح: `scripts/dashboard-eta-check.mjs` (تحقّق ETA اللوحة — legacy). regex `^\s*import` يضمن أسطر imports فعلية لا تعليقات JSDoc. L-46 مُثبَت (import مؤقّت في routes/tenant/get.ts ⇒ يسقط). **`apps/dashboard/DEV-ONLY.md`** يُعلن قيد الاستعمال: أداة تطوير محلّية بلا مصادقة، لا تُنشَر، البديل الإنتاجي /v1/platform/ops/*. **G-P4-20 يُثبت:** رمز مستأجر على platform → 401 · بلا Bearer → 401 · platform token → 200 · **المقاييس تطابق الواقع** (INSERT render مباشر ⇒ usage.rendersTotal نما من 101→102 عبر A22 trigger) · **تعطيل control_plane_all على subscriptions ⇒ [] ⇒ استعادة** (السياسة تحرس فعلاً). 283/283 اختبار vitest يمرّ. |
@@ -227,6 +228,48 @@ GCP Secret Manager)، بلا نسخ في مستودع الكود ولا في CI/
 - إقلاع بمفتاح ليس 64 hex ⇒ فشل مبكّر
 - إقلاع في production بـplaceholder معروف (`000...`, `111...`, `deadbeef...`)
   ⇒ فشل مبكّر
+
+---
+
+## §LIMITS-1 — بنود تشغيلية إلزامية
+
+**1. الأرقام تقديرية · قياس على العتاد الفعلي شرط قبل أي التزام تعاقدي**
+
+docs/08 §المراقبة صريح: «قياس إلزامي قبل تثبيت أي رقم في العقد: زمن فكّ
+ترميز مقطع 20 ثانية على العتاد الفعلي. هذا الرقم يحدّد كل ما بعده».
+الحدود الخمسة الحالية (30s/180s/600s/25GB/500MB) **تقديرية** — مطابقة
+لـdocs/08 لكن غير مُقاسة. **يجب** قياس زمن فكّ الترميز + استهلاك التبديل
++ سرعة القرص قبل أول عقد. لا يُبنى القياس في LIMITS-1 — يحتاج مقطعاً
+حقيقياً + عتاد الإنتاج.
+
+**2. حدّ المدّة (90s/180s للفيديو المُدخَل) مؤجَّل**
+
+docs/08 يقول «90 ثانية للفيديو البسيط · 3 دقائق لمشاريع التحرير».
+هذا حدّ على **مقطع يرفعه العميل**، وذلك لا يوجد حتى تُبنى واجهة الخط
+الزمني (S24+ في mk-studio). القوالب الحالية تُنتج فيديو 7-30 ثانية،
+والحدّ غير قابل للتجاوز عملياً. **الحارس يُبنى مع المدخل لا قبله**
+(L-46: حارس لا يُختبَر ببلوغه ليس حارساً).
+
+**3. التنبيه يعمل داخل العامل — ثمن معلَن**
+
+alerts-cron يُطلَق من worker BullMQ في نفس عملية api-worker (أو منفصلة —
+يمكن إطلاقه بـstartAlertsCron في bootstrap مستقل). **إن سقط العامل، لا
+يُنبَّه سقوطه شيء.** الحلّ الجزئي: process supervisor خارجي (systemd/pm2/
+docker restart policy) خارج mk-api. تُوثَّق كمنشأة تشغيل بعد النشر.
+
+**4. تصحيح docs/08 §المراقبة — قناة تيليجرام**
+
+الصياغة الحالية: «تنبيه تيليجرام عند: ...».
+الصياغة المقترَحة للتصحيح (mediakit تكتبها لا mk-api):
+> «التنبيه يخرج من mk-api كـwebhook JSON عام. القناة (تيليجرام أو غيرها)
+> وسيط تشغيلي خارج المنتج.»
+
+**5. STORAGE_DRIVER=memory في verify-limits1**
+
+verify:limits1 يفرض `STORAGE_DRIVER=memory` في `process.env` قبل import
+لاختبار adapter deletion بلا الحاجة إلى MinIO. الاختبار بنيوي — يُثبت أن
+sweep يستدعي adapter.delete وأن الملف يختفي بعد الحذف. اختبار عبء
+حقيقي على MinIO/S3 يُبنى في CI منفصل عند الحاجة.
 
 ---
 
