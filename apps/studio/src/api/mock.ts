@@ -346,6 +346,67 @@ interface MockRender {
   queuedAt: string;
 }
 const MOCK_RENDERS = new Map<string, MockRender>();
+// S17 seed — عيّنة رندر «قيد التنفيذ» تُتيح التقاط لقطة الطابور + إلغاء
+// دون الاعتماد على تدفّق «افتح مشروع ⇒ تصدير ⇒ انتظر». الرندر يبقى
+// في `running` طالماً لم يُطلب GET :id (لا trigger زمني هنا).
+{
+  const now = new Date();
+  const later = new Date(now.getTime() + 5 * 60 * 1000); // بعيداً في المستقبل
+  MOCK_RENDERS.set('rnd_seed_q', {
+    id: 'rnd_seed_q',
+    project_id: 'prj_seed',
+    status: 'queued',
+    size: 'feed',
+    format: 'png',
+    output_url: null,
+    duration_ms: null,
+    brand_snapshot_id: 'bks_seed_q',
+    template_snapshot_id: 'tks_seed_q',
+    createdAt: now.toISOString(),
+    startedAt: null,
+    completedAt: null,
+    queuedAt: later.toISOString(), // مستقبلاً ⇒ يبقى queued
+  });
+}
+
+// ── §13 Subscription + §14 Usage — mock stores ───────────
+// حدود ثابتة كما لو كنّا على باقة `starter`. quotas.videos.limit تحوّل
+// إلى 'unlimited' إن أُريد تجريب مسار PLAN_LIMIT.
+interface MockSubscription {
+  plan: string;
+  status: string;
+  currentPeriodEnd: string;
+  seats: { used: number; limit: number };
+  quotas: {
+    brandKits: { used: number; limit: number };
+    videos: { used: number; limit: number };
+    renders: { used: number; limit: number };
+  };
+  cancelAtPeriodEnd: boolean;
+}
+const MOCK_SUB: MockSubscription = {
+  plan: 'starter',
+  status: 'active',
+  currentPeriodEnd: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+  seats: { used: 3, limit: 5 },
+  quotas: {
+    brandKits: { used: 2, limit: 10 },
+    videos: { used: 8, limit: 50 },
+    renders: { used: 42, limit: 500 },
+  },
+  cancelAtPeriodEnd: false,
+};
+
+// ── §15 AI integrations — mock store ─────────────────────
+interface MockAiIntegration {
+  provider: string;
+  apiKeyRef: string;
+  enabled: boolean;
+  capabilities: string[];
+  configuredAt: string;
+  configuredBy: string;
+}
+const MOCK_AI_INT = new Map<string, MockAiIntegration>();
 
 function projShape(p: MockProject, full: boolean): Record<string, unknown> {
   const base: Record<string, unknown> = {
@@ -928,6 +989,38 @@ export async function handleMock(
     });
   }
 
+  // §8.8 POST /v1/renders/:id/cancel — **202** مع {id, status:'canceled'}
+  // (انحراف #S17-1 المعلَن — العقد يقول 204).
+  const rndCancel = /^POST \/v1\/renders\/([^/]+)\/cancel$/.exec(key);
+  if (rndCancel) {
+    const id = rndCancel[1] ?? '';
+    const r = MOCK_RENDERS.get(id);
+    if (!r) err(404, 'NOT_FOUND');
+    if (r.status === 'cancelled' || r.status === 'succeeded' || r.status === 'failed') {
+      err(409, 'RENDER_ALREADY_TERMINAL');
+    }
+    r.status = 'cancelled';
+    return ok(202, { id: r.id, status: 'cancelled' });
+  }
+
+  // §8.5 GET /v1/renders/:id/brand-snapshot — لقطة الهوية عند الرندر.
+  const rndSnap = /^GET \/v1\/renders\/([^/]+)\/brand-snapshot$/.exec(key);
+  if (rndSnap) {
+    const id = rndSnap[1] ?? '';
+    if (!MOCK_RENDERS.has(id)) err(404, 'NOT_FOUND');
+    // نستعمل bk_mock_default كلقطة (mock مبسّط).
+    return ok(200, { config: MOCK_BRAND_KITS.get('bk_mock_default')?.config ?? {} });
+  }
+
+  // §15 POST /v1/ai/integrations/:provider (DELETE)
+  const aiDel = /^DELETE \/v1\/ai\/integrations\/([^/]+)$/.exec(key);
+  if (aiDel) {
+    const p = aiDel[1] ?? '';
+    if (!MOCK_AI_INT.has(p)) err(404, 'NOT_FOUND');
+    MOCK_AI_INT.delete(p);
+    return ok(204);
+  }
+
   switch (key) {
     case 'POST /v1/auth/signup': {
       const email = String(b.email ?? '');
@@ -1206,6 +1299,141 @@ export async function handleMock(
         queuedAt: rec.queuedAt,
         brand_snapshot_id: rec.brand_snapshot_id,
         template_snapshot_id: rec.template_snapshot_id,
+      });
+    }
+
+    // ── §8.2 GET /v1/renders (قائمة) ──────────────────────
+    case 'GET /v1/renders': {
+      const rows = [...MOCK_RENDERS.values()].sort((a, z) =>
+        z.createdAt > a.createdAt ? 1 : -1
+      );
+      return ok(200, { data: rows.map((r) => ({ ...r })), nextCursor: null, hasMore: false });
+    }
+
+    // ── §13 GET /v1/subscription ──────────────────────────
+    case 'GET /v1/subscription': {
+      return ok(200, { ...MOCK_SUB });
+    }
+    // §13.2 POST /v1/subscription/checkout
+    case 'POST /v1/subscription/checkout': {
+      const plan = String(b.plan ?? '');
+      if (!plan) err(400, 'VALIDATION_FAILED', 'plan');
+      return ok(200, {
+        checkoutUrl: `mock://checkout/${plan}?ts=${Date.now()}`,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      });
+    }
+    case 'POST /v1/subscription/cancel': {
+      const reason = String(b.reason ?? '');
+      if (reason.trim().length < 10) err(400, 'REASON_TOO_SHORT', 'reason');
+      MOCK_SUB.cancelAtPeriodEnd = true;
+      return ok(200, { ...MOCK_SUB });
+    }
+    case 'POST /v1/subscription/resume': {
+      MOCK_SUB.cancelAtPeriodEnd = false;
+      return ok(200, { ...MOCK_SUB });
+    }
+
+    // ── §14 GET /v1/usage/current ─────────────────────────
+    case 'GET /v1/usage/current': {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return ok(200, {
+        periodStart: start.toISOString(),
+        periodEnd: end.toISOString(),
+        counts: {
+          rendersTotal: MOCK_SUB.quotas.renders.used,
+          videos: MOCK_SUB.quotas.videos.used,
+          videosSeconds: MOCK_SUB.quotas.videos.used * 12,
+          storageBytes: 42_000_000,
+          aiTokensIn: 12_400,
+          aiTokensOut: 3_180,
+        },
+        limits: {
+          rendersTotal: MOCK_SUB.quotas.renders.limit,
+          videos: MOCK_SUB.quotas.videos.limit,
+          videosSeconds: 'unlimited',
+          storageBytes: 5_000_000_000,
+        },
+        byBrandKit: [...MOCK_BRAND_KITS.values()].map((k) => ({
+          brandKitId: k.id,
+          rendersTotal: 3,
+        })),
+      });
+    }
+    case 'GET /v1/usage/history': {
+      return ok(200, { data: [], nextCursor: null, hasMore: false });
+    }
+
+    // ── §15 GET /v1/ai/integrations — بلا nextCursor/hasMore (انحراف #S17-2) ──
+    case 'GET /v1/ai/integrations': {
+      return ok(200, {
+        data: [...MOCK_AI_INT.values()].map((it) => ({ ...it })),
+      });
+    }
+    // §15 POST /v1/ai/integrations — apiKey يُقبَل ولا يُعاد
+    case 'POST /v1/ai/integrations': {
+      const provider = String(b.provider ?? '');
+      const apiKey = String(b.apiKey ?? '');
+      const KNOWN = ['openai', 'anthropic', 'google', 'cohere', 'mistral'];
+      if (!KNOWN.includes(provider)) err(400, 'INVALID_PROVIDER', 'provider');
+      if (!apiKey) err(400, 'VALIDATION_FAILED', 'apiKey');
+      // مُشغِّل: apiKey يبدأ بـ`bad-` ⇒ 422 API_KEY_VALIDATION_FAILED.
+      if (apiKey.startsWith('bad-')) err(422, 'API_KEY_VALIDATION_FAILED', 'apiKey');
+      const capabilitiesByProvider: Record<string, string[]> = {
+        openai: ['text.completion', 'headline.suggest', 'image.tag'],
+        anthropic: ['text.completion', 'headline.suggest', 'summary.write'],
+        google: ['text.completion', 'image.tag'],
+        cohere: ['text.completion'],
+        mistral: ['text.completion'],
+      };
+      const it: MockAiIntegration = {
+        provider,
+        apiKeyRef: `kref_${provider}_${Math.random().toString(36).slice(2, 10)}`,
+        enabled: true,
+        capabilities: (b.capabilities as string[] | undefined) ?? capabilitiesByProvider[provider] ?? [],
+        configuredAt: new Date().toISOString(),
+        configuredBy: 'usr_mock',
+      };
+      MOCK_AI_INT.set(provider, it);
+      return ok(201, { ...it });
+    }
+    // §15 POST /v1/ai/invoke — capability في body
+    case 'POST /v1/ai/invoke': {
+      const capability = String(b.capability ?? '');
+      const KNOWN_CAPS = [
+        'text.completion',
+        'headline.suggest',
+        'summary.write',
+        'image.tag',
+      ];
+      if (!KNOWN_CAPS.includes(capability)) err(400, 'UNKNOWN_CAPABILITY', 'capability');
+      // نبحث عن أوّل تكامل مُفعَّل يقدّم القدرة.
+      const provider = [...MOCK_AI_INT.values()].find(
+        (it) => it.enabled && it.capabilities.includes(capability)
+      );
+      if (!provider) err(403, 'CAPABILITY_NOT_ENABLED');
+      // مُشغِّلات فشل المزوّد — يُقرأ input.text/input.body:
+      const bin = (b.input as { text?: string; body?: string } | undefined) ?? {};
+      const text = String(bin.text ?? bin.body ?? '');
+      if (text.toLowerCase().includes('trigger-timeout')) err(504, 'PROVIDER_TIMEOUT');
+      if (text.toLowerCase().includes('trigger-provider-error')) err(502, 'PROVIDER_ERROR');
+      // ردّ mock بسيط — نُعيد سلسلة مبنية على القدرة.
+      const output =
+        capability === 'headline.suggest'
+          ? { suggestions: ['عنوان مقترح 1 — بديل قصير', 'عنوان مقترح 2 — بديل توضيحي'] }
+          : capability === 'summary.write'
+          ? { summary: text.slice(0, 120) + '…' }
+          : capability === 'image.tag'
+          ? { tags: ['portrait', 'daytime', 'outdoor'] }
+          : { completion: `mock-completion(${text.slice(0, 60)})` };
+      return ok(200, {
+        output,
+        provider: provider.provider,
+        tokensIn: Math.min(120, Math.floor(text.length / 3) + 10),
+        tokensOut: 42,
+        durationMs: 320,
       });
     }
 

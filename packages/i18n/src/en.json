@@ -36,6 +36,8 @@
     "renders": "Renders",
     "design": "Design",
     "workflows": "Workflows",
+    "aiSettings": "AI",
+    "billing": "Billing",
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
@@ -313,7 +315,103 @@
       "title": "Renders",
       "subtitle": "PNG and MP4 history per project, with the brand snapshot used.",
       "empty": "No renders yet",
-      "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8)."
+      "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8).",
+      "col": {
+        "id": "ID",
+        "project": "Project",
+        "status": "Status",
+        "format": "Format",
+        "size": "Size",
+        "created": "Started",
+        "duration": "Duration",
+        "actions": "Actions"
+      },
+      "status": {
+        "queued": "queued",
+        "running": "running",
+        "succeeded": "succeeded",
+        "failed": "failed",
+        "cancelled": "cancelled",
+        "cancelling": "cancelling"
+      },
+      "download": "Download",
+      "cancel": "Cancel",
+      "cancelling": "…",
+      "cancelledBadge": "cancelled",
+      "queueNote": "Status and position appear above — polled every second until terminal state.",
+      "position": "position {n}",
+      "brandSnapshot": "Brand snapshot used",
+      "brandSnapshotHint": "Frozen at POST — not affected by later brand edits.",
+      "quotaExceeded": "Render quota exhausted on this plan — upgrade from the Billing page."
+    },
+    "billing": {
+      "title": "Billing",
+      "subtitle": "Current plan, quotas, and live usage.",
+      "planLabel": "Plan",
+      "statusLabel": "Status",
+      "renewsAt": "Renews at",
+      "cancelsAt": "Cancels at",
+      "seats": "Seats",
+      "quotas": "Quotas",
+      "quota": {
+        "brandKits": "Brand kits",
+        "videos": "Videos",
+        "renders": "Renders"
+      },
+      "usageWindow": "Usage window",
+      "counts": "Counters",
+      "count": {
+        "rendersTotal": "Renders",
+        "videos": "Videos",
+        "videosSeconds": "Video seconds",
+        "storageBytes": "Storage (bytes)",
+        "aiTokens": "AI tokens (in+out)"
+      },
+      "byBrandKit": "Per brand kit",
+      "aiHint": "AI is counted but not capped on this plan — the number is a signal, not a limit bar.",
+      "upgrade": "Upgrade",
+      "cancelPlan": "Cancel renewal",
+      "resumePlan": "Resume renewal",
+      "cancelReason": "Cancellation reason (≥ 10 chars)",
+      "cancelConfirm": "Confirm cancellation",
+      "unlimited": "unlimited"
+    },
+    "ai": {
+      "title": "AI",
+      "subtitle": "Provider keys and their capabilities — the key is sent once, never shown.",
+      "empty": "No integrations yet",
+      "emptyBody": "Add a provider key to enable capabilities in the editor.",
+      "add": "Add integration",
+      "addTitle": "Add AI integration",
+      "col": {
+        "provider": "Provider",
+        "keyRef": "Key ref",
+        "enabled": "Enabled",
+        "capabilities": "Capabilities",
+        "since": "Since",
+        "by": "By",
+        "actions": "Actions"
+      },
+      "provider": "Provider",
+      "apiKey": "API key (sent once, not stored)",
+      "apiKeyHint": "The server never returns the key. The UI wipes it from memory after submit.",
+      "submit": "Add",
+      "delete": "Delete",
+      "confirmDelete": "Delete integration",
+      "confirmDeleteBody": "Capabilities served by this provider will be disabled.",
+      "capabilityInvokeTitle": "Invoke capability",
+      "capability": "Capability",
+      "invokeInput": "Input",
+      "invoke": "Invoke",
+      "invoking": "…",
+      "output": "Output",
+      "counters": "Measured",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "durationMs": "Duration (ms)",
+      "providerNotResponding": "The provider didn't respond — retry.",
+      "providerTimeout": "The provider timed out — retry.",
+      "retry": "Retry"
     }
   },
   "auth": {
@@ -460,6 +558,14 @@
     "INVALID_VERSION_FORMAT": "Version format is invalid.",
     "VERSION_NOT_AVAILABLE": "Requested version isn't available.",
     "DIFF_NOT_ACKNOWLEDGED": "Version bump requires acknowledging the diff first.",
+
+    "INVALID_PROVIDER": "Unknown AI provider.",
+    "API_KEY_VALIDATION_FAILED": "Provider rejected the API key — check it.",
+    "UNKNOWN_CAPABILITY": "Requested AI capability doesn't exist.",
+    "INVALID_INPUT_FOR_CAPABILITY": "Input is invalid for this capability.",
+    "CAPABILITY_NOT_ENABLED": "Capability isn't enabled — add an integration that provides it.",
+    "PROVIDER_ERROR": "The provider didn't respond correctly — retry.",
+    "PROVIDER_TIMEOUT": "The provider timed out — retry.",
 
     "UNAUTHORIZED": "Authentication required.",
     "FORBIDDEN": "Access denied.",

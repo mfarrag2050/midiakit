@@ -17,8 +17,8 @@
     "emits them isn't implemented until A21) are marked below."
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
-  "mirroredAt": "2026-09-06",
-  "mirroredFromCommit": "8b20eaf",
+  "mirroredAt": "2026-09-07",
+  "mirroredFromCommit": "f427470",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -82,6 +82,14 @@
     "REVISION_NOT_FOUND",
     "RESTORE_WOULD_BREAK_REFERENCES",
     "IF_MATCH_REQUIRED",
+
+    "INVALID_PROVIDER",
+    "API_KEY_VALIDATION_FAILED",
+    "UNKNOWN_CAPABILITY",
+    "INVALID_INPUT_FOR_CAPABILITY",
+    "CAPABILITY_NOT_ENABLED",
+    "PROVIDER_ERROR",
+    "PROVIDER_TIMEOUT",
 
     "RENDER_NOT_ALLOWED_IN_CURRENT_STATE",
     "QUOTA_EXCEEDED_VIDEOS",

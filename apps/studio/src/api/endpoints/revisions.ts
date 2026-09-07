@@ -20,8 +20,13 @@ export interface RevisionSummary {
   readonly createdAt: string;
 }
 
+// **الشكل الحاكم (بعد A20):** RevisionFull يحمل حقول العقد §10.2 كلها.
+// diff = null دائماً في هذه المرحلة (غير محسوب — راجع PHASES-studio §S17).
 export interface RevisionFull {
   readonly id: string;
+  readonly resourceType: string;
+  readonly resourceId: string;
+  readonly op: 'insert' | 'update' | 'delete';
   readonly reconstructedState: unknown;
   readonly diff: unknown;
   readonly snapshot: unknown;

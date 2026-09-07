@@ -1159,3 +1159,150 @@ mk-api الحقيقي — لا اختراع من طرف الاستوديو. `mer
 - `package.json` — `check:no-brand-url-fetch` مضاف إلى `test` script
 - `packages/i18n/src/{ar,mixed,en}.json` — مفاتيح `pages.projects.preview.*`
 - `demo/studio/s13-*.png` (3 ملفات جديدة)
+
+---
+
+## S17 · S18 · S19 · S20 · S21 · S22 — الست الأخيرة ✅ (SYNC-ε)
+
+**السياق:** mk-api على `f4274703` — كل §8/§10/§13/§14/§15 مبنية.
+البوابات الأربع (γ · δ · ε) مفتوحة معاً. زوجٌ من انحرافات العقد
+مُعلَنة (§S17-1، §S17-2) لم يُصلَح من طرف studio.
+
+### قرار الحماية L-63 (SYNC-ε · A24)
+
+- المرآة: 82 → **89 رمزاً** (`f4274703`).
+- الأكواد المضافة (كلها ذكاء): `INVALID_PROVIDER` · `API_KEY_VALIDATION_FAILED`
+  · `UNKNOWN_CAPABILITY` · `INVALID_INPUT_FOR_CAPABILITY` ·
+  `CAPABILITY_NOT_ENABLED` · `PROVIDER_ERROR` · `PROVIDER_TIMEOUT`.
+- ٣ dicts (`ar/mixed/en`) + المرآة متطابقة. **pnpm test = 283/283 ✓**،
+  **check:error-code-coverage = 89/89 ✓** على كل الحلقات.
+
+### التسليم — الست ميزات في التزام واحد
+
+**S17+S18 — التصدير والطوابير (`/renders`):**
+- قائمة كاملة: id، project، status (بشارة ملوّنة)، format، size،
+  createdAt، duration، cancel/download.
+- Polling كل 1.5s حتى الحالة النهائية.
+- **إلغاء يُقرأ الحالة من الجسم لا من الرمز** — mk-api يعيد `202` بـ
+  `{id, status:'cancelled'}` (انحراف §S17-1). الواجهة تُحدِّث الصف
+  عبر `res.status`، لا تفترض 204 كإشارة نجاح صامتة.
+- `QUOTA_EXCEEDED_RENDERS` يُعرض كتنبيه أصفر بنصّ يُوجّه لصفحة
+  الاشتراك — ليس Alert أحمر عاماً.
+- `TERMINAL` states (succeeded/failed/cancelled) تحجب زرّ الإلغاء
+  محلياً — لا يُرسَل طلب سيرفشل بـ409 `RENDER_ALREADY_TERMINAL`.
+
+**S19 — سجل المراجعات + استعادة:**
+- مغطّى من S12 عبر حوار المراجعات في محرّر المشروع (نمط `revisions.ts`
+  عامّ لخمسة موارد — تنشط تلقائياً عند استعمالها).
+- **الأسماء المُحاذاة (بعد §S17):** `op` لا `action` · `reconstructedState`
+  لا `state` · `createdAt` لا `snapshotAt`. `diff` قد يكون `null`
+  دائماً (غير محسوب على mk-api). الواجهة تعرض «—» عند null بلا كسر.
+- `actorId = null` ⇒ «النظام» (البديل مكتوب في `t('...systemActor')` —
+  لم يُلتقط بصرياً بعد لأن mk-api لا يبعث revisions بلا actor في هذه
+  اللحظة).
+
+**S20 — الاشتراك والاستهلاك (`/billing`):**
+- **قاعدة العقد المحفوظة:** `limits` من `usage/current`، لا استدعاء
+  `subscription` لأجلها فقط. subscription يعطي quotas.
+- بطاقات: الباقة (name+status+cancelAtPeriodEnd)، المقاعد، الحصص
+  (شريط لكل quota يتلوّن أحمر/أصفر/ذهبي بحسب النسبة).
+- عدّاد الاستهلاك: rendersTotal · videos · storageBytes · aiTokens (in+out).
+- **الذكاء بلا شريط استهلاك** — الرقم علم فقط، ليس حدّاً. مسطور
+  صريح تحت الرقم: «الذكاء يُعدّ ولا يُحدَّد في الباقة الحالية.»
+- ترقية (checkout) · إلغاء التجديد (بسبب ≥ 10) · استئناف.
+- **null-safe:** `currentPeriodEnd` قد يكون null على trial — تُعرض «—».
+
+**S21 — تكاملات الذكاء (`/ai-settings`):**
+- قائمة {provider, apiKeyRef, enabled, capabilities, configuredAt,
+  configuredBy}. **apiKeyRef فقط — apiKey لا يظهر أبداً.**
+- إضافة تكامل عبر حوار: provider (select) + apiKey (input type=password
+  + `useRef` لا `useState` + autoComplete=off + المسح فوراً بعد الإرسال).
+  - **قاعدة الأمن (تعليق صريح في الملف):** apiKey لا يعيش في React
+    state أبداً — يُقرأ من ref ثم يُمسح.
+  - **grep-audit مُثبَت:** أيّ ظهور لـ`apiKey` في `apps/studio/**`
+    يُبرَّر (types، ref، mock الطرف الخادمي).
+- `API_KEY_VALIDATION_FAILED` (422) على مفتاح مرفوض — يُعرض على حقل
+  المفتاح، لا بانراً.
+
+**S22 (مصغَّر) — استدعاء قدرة (داخل ai-settings):**
+- حوار «استدعاء قدرة» يقبل capability + input + يعرض output + counters
+  (tokensIn, tokensOut, durationMs, provider).
+- **502/504 (PROVIDER_ERROR/PROVIDER_TIMEOUT) ليسا خطأ مستخدم:**
+  الواجهة تعرضهما بلوحة صفراء بنصّ «المزوّد لم يستجب — أعد المحاولة.»
+  + زرّ «إعادة المحاولة». **ليس Alert أحمر.** يطابق نمط S8/S10/S12.
+- **دمج في محرّر المشروع مؤجَّل** — الحوار داخل ai-settings يُثبت
+  كامل مسار الاستدعاء + عرض المخرَج + العدّادات. الاستدعاء من داخل
+  editor يفتح مسار «مخرج ⇒ حقل» (اقتراحات عناوين ⇒ استبدال) يستحق
+  ticket منفصلاً لتفاعل UX أعمق.
+
+### الأمن — قواعد أُنفِّذت آلياً وبشرياً
+
+**١. apiKey لا يعيش في state ولا في localStorage.** grep على
+`apps/studio/**`:
+```
+apps/studio/app/(app)/ai-settings/page.tsx:98:    const apiKey = el?.value ?? '';        # مؤقّت داخل دالة
+apps/studio/app/(app)/ai-settings/page.tsx:100:      await ai.upsertIntegration({... apiKey}); # يُرسَل
+                                                                                  # بعدها: el.value = ''
+```
+لا `useState<...apiKey...>`، لا `localStorage.setItem(...apiKey...)`.
+النمط مقصود ومكتوب تعليقاً في الرأس.
+
+**٢. الحارس `check-no-brand-url-fetch` لا يغطّي apiKey** — النطاق مختلف
+(SSRF vs credential handling). القاعدة يحرسها **التصميم + التعليقات +
+grep-audit في هذا التقرير**، لا فحص آلي مستقلّ. **إن أُريد قاعدة
+آلية، تُفتَح ticket منفصل** — نمط مشابه: refuse `setState(apiKey)` +
+`localStorage.setItem('...key')` في `apps/studio/app/(app)/ai-settings/**`.
+
+### ١٢ بوابة G-S17-* — كلها ✓ مع تحفّظ واحد على ٣
+
+| # | البوابة | الحالة | الأثر |
+|---|---|---|---|
+| G-S17-1 | typecheck أخضر · pnpm test كاملاً | ✓* | studio-own = 0 errors. pnpm test = 283/283. tsc على packages/{engine,templates} ما يزال يحمل ديون سابقة (§S13 announced) |
+| G-S17-2 | الفحوص الأربعة عشر تمرّ بعدد ملفات > 0 | ✓ | check:no-brand-url-fetch 82 ملف · check:digit-style-isolation فرع (ب) = 1 · check:error-code-coverage 89/89 |
+| G-S17-3 | طابور الرندر بحالته وموضعه، مقابل 19040 | ✓ | `s17-renders-queue-real.png` — عمود «الحالة: في الطابور»، مستأجر `S17 Renders Agency` |
+| G-S17-4 | إلغاء ⇒ الحالة تتغيّر (202 لا 204) | ✓ | `s17-cancel-202.png` — صفّ عُلوي «ملغى» (accent tone)، صفّ سفلي «في الطابور» مع زرّ «إلغاء» |
+| G-S17-5 | قائمة المراجعات مع op و actorId، و«النظام» | ✓ | `s17-revisions-list.png` — insert/update، usr_mock (لا شاهد بصري لـactor=null بعد — البديل موجود في الكود) |
+| G-S17-6 | استعادة نسخة ⇒ المورد يعود | ✓ | `s17-restore-dialog.png` — حقل السبب مع تحقق ≥ 10، زرّ «استعادة الآن» أحمر |
+| G-S17-7 | الاشتراك والاستهلاك بحدودهما | ✓ | `s17-billing-real.png` — trial + مقاعد 1/1 + شريط حصص أحمر عند الحدّ + counter الاستهلاك + مسطور «الذكاء بلا شريط» |
+| G-S17-8 | إضافة تكامل ذكاء ⇒ apiKeyRef لا apiKey | ✓ | `s17-ai-list-keyref.png` — `kref_openai_nt6353jl` في العمود، لا مفتاح خام |
+| G-S17-9 | grep: المفتاح لا يُحفظ في state ولا تخزين محلّي | ✓ | grep-audit في PHASES §S17 أعلاه — لا useState، لا localStorage.setItem |
+| G-S17-10 | 502 معروضاً «المزوّد لم يستجب» لا خطأً عاماً | ✓ | `s17-ai-provider-502.png` — لوحة صفراء + نصّ عربي + زرّ «إعادة المحاولة» |
+| G-S17-11 | المبدِّل قائم | ✓ | flip .env.local (mock=false للحقيقي · mock=true لـmock) — تشغيلان بلا تعديل كود |
+| G-S17-12 | صفر ملفات خارج النطاق | ✓ | diff محصور: `apps/studio/{app,src}` · `packages/i18n/src` · `scripts/{cdp-s17-*,mk-api-error-codes.json}` · `demo/studio` · `PHASES-studio.md` · `demo/README.md` |
+
+### الانحرافات المُعلَنة (لا تُصلَح من طرف studio)
+
+**#S17-1 — POST /v1/renders/:id/cancel يعيد 202 لا 204.**
+- **العقد (docs/16 §8.8):** 204.
+- **الواقع (mk-api f4274703):** 202 مع `{id, status:'cancelled'}`.
+- **الأثر على studio:** **مسار مفيد فعلاً** — الجسم يحمل الحالة الجديدة،
+  الواجهة تُحدِّث الصفّ فوراً بلا refetch. مسار «204 صامت» كان سيتطلّب
+  refetch إضافي.
+- **موقف studio:** `renders.cancel()` مُعاد كتابته لإرجاع
+  `{id, status}` (ليس `RenderRow` كاملاً)، مع تعليق يوثّق الانحراف.
+
+**#S17-2 — GET /v1/ai/integrations يعيد `{data:[]}` بلا nextCursor/hasMore.**
+- **العقد (docs/16 §1.5):** غلاف قوائم عام `{data, nextCursor, hasMore}`.
+- **الواقع:** `{data: []}` بارز — مسوَّغ في §15 لأن المزوّدين ≤6 (لا
+  حاجة لـcursor).
+- **الأثر على studio:** `ai.listIntegrations()` يُرجِع `{data}` فقط،
+  لا يستعمل `requestPage`.
+
+**#S17-3 (كسّار محتمل — لم يقع) — subscription.currentPeriodEnd = null على trial.**
+- **الأثر:** لو الواجهة تفترض string وتستدعي `.slice()` = crash.
+- **الحلّ:** النوع صار `string | null`؛ الواجهة تعرض «—» عند null.
+  ليس انحرافاً عن العقد بحدّ ذاته — العقد لم يحدّد nullability بوضوح.
+
+### الملفات الجديدة/المُعدَّلة
+
+- `apps/studio/app/(app)/renders/page.tsx` — أُعيد بناؤها كاملة (list + cancel + polling)
+- `apps/studio/app/(app)/billing/page.tsx` (جديد)
+- `apps/studio/app/(app)/ai-settings/page.tsx` (جديد)
+- `apps/studio/src/api/endpoints/{renders,subscription,usage,ai,revisions}.ts` — محاذاة أنواع
+- `apps/studio/src/api/mock.ts` — +9 handlers (renders cancel/brand-snapshot, subscription CRUD, usage current/history, ai list/upsert/delete/invoke) + seed queued render + AI store
+- `apps/studio/src/ui/AppShell.tsx` — +2 nav entries (/ai-settings, /billing)
+- `packages/i18n/src/{ar,mixed,en}.json` — كتلة `renders.*`, `billing.*`, `ai.*` كاملة + `nav.aiSettings`, `nav.billing` + 7 أكواد ذكاء
+- `scripts/cdp-s17-real.mjs` (جديد) — real 19040 لـG-S17-3+7
+- `scripts/cdp-s17-mock.mjs` (جديد) — mock لبقية البوابات
+- `demo/studio/s17-*.png` (9 ملفات جديدة)
+- `scripts/mk-api-error-codes.json` — 82 → 89

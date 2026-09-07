@@ -36,6 +36,8 @@
     "renders": "التصديرات",
     "design": "النظام",
     "workflows": "سير العمل",
+    "aiSettings": "الذكاء",
+    "billing": "الاشتراك",
     "user": {
       "placeholder": "الحساب",
       "signOut": "تسجيل الخروج"
@@ -313,7 +315,103 @@
       "title": "التصديرات",
       "subtitle": "سجل PNG وMP4 لكل مشروع، مع لقطة الهوية وقت الإنتاج.",
       "empty": "لا تصديرات بعد",
-      "emptyBody": "كل تصدير يحفظ لقطة الهوية المستعملة (docs/16 §8)."
+      "emptyBody": "كل تصدير يحفظ لقطة الهوية المستعملة (docs/16 §8).",
+      "col": {
+        "id": "المعرِّف",
+        "project": "المشروع",
+        "status": "الحالة",
+        "format": "الصيغة",
+        "size": "الحجم",
+        "created": "بدأ",
+        "duration": "المدّة",
+        "actions": "إجراء"
+      },
+      "status": {
+        "queued": "في الطابور",
+        "running": "قيد التنفيذ",
+        "succeeded": "منجز",
+        "failed": "فشل",
+        "cancelled": "ملغى",
+        "cancelling": "قيد الإلغاء"
+      },
+      "download": "تحميل",
+      "cancel": "إلغاء",
+      "cancelling": "…",
+      "cancelledBadge": "أُلغي",
+      "queueNote": "الحالة والموضع تظهر أعلى — نستطلع كل ثانية حتى الحالة النهائية.",
+      "position": "موضع {n}",
+      "brandSnapshot": "لقطة الهوية المستعملة",
+      "brandSnapshotHint": "لقطة مُجمَّدة عند POST — لا تتأثّر بتعديل الهوية بعدها.",
+      "quotaExceeded": "استُنفدت حصّة التصديرات في هذه الباقة — رقّها من صفحة الاشتراك."
+    },
+    "billing": {
+      "title": "الاشتراك",
+      "subtitle": "الباقة الحالية وحصصها والاستهلاك القائم.",
+      "planLabel": "الباقة",
+      "statusLabel": "الحالة",
+      "renewsAt": "التجديد",
+      "cancelsAt": "الإلغاء المُقرَّر",
+      "seats": "المقاعد",
+      "quotas": "الحصص",
+      "quota": {
+        "brandKits": "الهويات",
+        "videos": "الفيديوهات",
+        "renders": "التصديرات"
+      },
+      "usageWindow": "نافذة الاستهلاك",
+      "counts": "العدّاد",
+      "count": {
+        "rendersTotal": "التصديرات",
+        "videos": "الفيديوهات",
+        "videosSeconds": "ثواني الفيديو",
+        "storageBytes": "التخزين (بايت)",
+        "aiTokens": "رموز الذكاء (in+out)"
+      },
+      "byBrandKit": "استهلاك حسب الهوية",
+      "aiHint": "الذكاء يُعدّ ولا يُحدَّد في الباقة الحالية — الرقم علم، ليس شريط استهلاك.",
+      "upgrade": "ترقية",
+      "cancelPlan": "إلغاء التجديد",
+      "resumePlan": "استئناف التجديد",
+      "cancelReason": "سبب الإلغاء (١٠ أحرف على الأقل)",
+      "cancelConfirm": "تأكيد إلغاء التجديد",
+      "unlimited": "بلا حدّ"
+    },
+    "ai": {
+      "title": "الذكاء",
+      "subtitle": "مفاتيح المزوّدين وقدراتها — المفتاح يُرسَل مرة ولا يُعرَض.",
+      "empty": "لا تكاملات بعد",
+      "emptyBody": "أضف مفتاح مزوّد لتفعيل القدرات في المحرّر.",
+      "add": "إضافة تكامل",
+      "addTitle": "إضافة تكامل ذكاء",
+      "col": {
+        "provider": "المزوّد",
+        "keyRef": "مرجع المفتاح",
+        "enabled": "مُفعَّل",
+        "capabilities": "القدرات",
+        "since": "منذ",
+        "by": "بواسطة",
+        "actions": "إجراء"
+      },
+      "provider": "المزوّد",
+      "apiKey": "المفتاح (يُرسَل مرة، لا يُخزَّن)",
+      "apiKeyHint": "الخادم لا يعيد المفتاح أبداً. الواجهة تمسحه من الذاكرة بعد الإرسال.",
+      "submit": "إضافة",
+      "delete": "حذف",
+      "confirmDelete": "حذف التكامل",
+      "confirmDeleteBody": "القدرات التي يوفّرها هذا المزوّد ستُعطَّل.",
+      "capabilityInvokeTitle": "استدعاء قدرة",
+      "capability": "القدرة",
+      "invokeInput": "المدخل",
+      "invoke": "استدعاء",
+      "invoking": "…",
+      "output": "المخرج",
+      "counters": "المُقيَس",
+      "tokensIn": "رموز داخلة",
+      "tokensOut": "رموز خارجة",
+      "durationMs": "المدّة (ms)",
+      "providerNotResponding": "المزوّد لم يستجب — أعد المحاولة.",
+      "providerTimeout": "المزوّد تأخّر — أعد المحاولة.",
+      "retry": "إعادة المحاولة"
     }
   },
   "auth": {
@@ -460,6 +558,14 @@
     "INVALID_VERSION_FORMAT": "صيغة الإصدار غير صحيحة.",
     "VERSION_NOT_AVAILABLE": "الإصدار المطلوب غير متاح.",
     "DIFF_NOT_ACKNOWLEDGED": "الترقية تحتاج إقراراً بالفرق أولاً.",
+
+    "INVALID_PROVIDER": "مزوّد ذكاء غير معروف.",
+    "API_KEY_VALIDATION_FAILED": "مفتاح المزوّد رُفض عند التحقّق — راجعه.",
+    "UNKNOWN_CAPABILITY": "قدرة الذكاء المطلوبة غير موجودة.",
+    "INVALID_INPUT_FOR_CAPABILITY": "المدخل غير صالح لهذه القدرة.",
+    "CAPABILITY_NOT_ENABLED": "القدرة غير مُفعَّلة — أضف تكاملاً يوفّرها.",
+    "PROVIDER_ERROR": "المزوّد لم يستجب استجابةً صحيحة — أعد المحاولة.",
+    "PROVIDER_TIMEOUT": "المزوّد تأخّر — أعد المحاولة.",
 
     "UNAUTHORIZED": "مصادقة مطلوبة.",
     "FORBIDDEN": "دخول مرفوض.",

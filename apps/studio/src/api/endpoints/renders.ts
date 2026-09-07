@@ -85,7 +85,10 @@ export function getTemplateSnapshot(id: string): Promise<{ readonly definition: 
   return request(`/v1/renders/${encodeURIComponent(id)}/template-snapshot`);
 }
 
-export function cancel(id: string): Promise<RenderRow> {
+// **انحراف #S17-1 (معلَن):** POST /:id/cancel يعيد **202** مع
+// `{id, status:'cancelled'}` (العقد يقول 204). الواجهة تقرأ الحالة
+// من الجسم — نمط «الاستجابة تحمل الحقيقة».
+export function cancel(id: string): Promise<{ readonly id: string; readonly status: RenderStatus }> {
   return request(`/v1/renders/${encodeURIComponent(id)}/cancel`, {
     method: 'POST',
   });
