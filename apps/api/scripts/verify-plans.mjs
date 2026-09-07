@@ -220,24 +220,38 @@ async function checkReferenceDataLayer(fastify, ctx) {
     else fail(`FK del: ${err.code}`);
   }
 
-  // (د) حارس التزامن يسقط عند تعديل صفّ يدوياً
-  await migPool.query(
-    `UPDATE plans SET brand_kits_limit = 999 WHERE key = 'trial'`,
-  );
-  let syncFailed = false;
+  // (د) A28 (2026-09-07): check-plan-sync تحوَّل نطاقه ليحرس الهوية
+  // فقط (key · name_ar · name_en). تعديل الحدود والسعر خارج الحارس عمداً
+  // — A28 يفتح PATCH /platform/plans/:key من اللوحة. الاختبار يعكس
+  // السلوك الجديد على مسارين:
+  //   • تعديل brand_kits_limit يدوياً ⇒ يمرّ (سلوك A28 مقصود)
+  //   • تعديل name_ar يدوياً ⇒ يسقط (identity محروسة، L-46)
+  await migPool.query(`UPDATE plans SET brand_kits_limit = 999 WHERE key = 'trial'`);
+  let limitEditFailed = false;
   try {
     execSync('pnpm --filter @pf-mediakit/db check:plan-sync', {
       cwd: join(__dirname, '../../..'),
       env: { ...process.env, DATABASE_URL: MIGRATION_URL },
       stdio: 'pipe',
     });
-  } catch { syncFailed = true; }
-  // استعادة القيمة قبل الفشل
-  await migPool.query(
-    `UPDATE plans SET brand_kits_limit = 1 WHERE key = 'trial'`,
-  );
-  if (syncFailed) pass(`(د) check:plan-sync يسقط عند تعديل قيمة يدوياً (L-46 محقَّق)`);
-  else fail(`sync guard didn't fail on manual edit`);
+  } catch { limitEditFailed = true; }
+  await migPool.query(`UPDATE plans SET brand_kits_limit = 1 WHERE key = 'trial'`);
+  if (!limitEditFailed) pass(`(د-1) A28: تعديل brand_kits_limit يدوياً ⇒ check-plan-sync يمرّ (سلوك مقصود)`);
+  else fail(`A28 regression: تعديل brand_kits_limit أوقع check-plan-sync`);
+
+  const originalNameAr = 'تجريبي';
+  await migPool.query(`UPDATE plans SET name_ar = 'اختبار مؤقّت للهوية' WHERE key = 'trial'`);
+  let identityEditFailed = false;
+  try {
+    execSync('pnpm --filter @pf-mediakit/db check:plan-sync', {
+      cwd: join(__dirname, '../../..'),
+      env: { ...process.env, DATABASE_URL: MIGRATION_URL },
+      stdio: 'pipe',
+    });
+  } catch { identityEditFailed = true; }
+  await migPool.query(`UPDATE plans SET name_ar = $1 WHERE key = 'trial'`, [originalNameAr]);
+  if (identityEditFailed) pass(`(د-2) A28: تعديل name_ar يدوياً ⇒ check-plan-sync يسقط (identity محروسة، L-46)`);
+  else fail(`identity edit didn't trigger sync guard`);
 }
 
 async function main() {

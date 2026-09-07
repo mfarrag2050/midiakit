@@ -76,6 +76,12 @@ const route: FastifyPluginAsync = async (fastify) => {
       params,
     );
     const row = upd.rows[0]!;
+
+    // A28: إسقاط ذاكرة plan-limits-cache للمستأجر — الأثر فوري في
+    // getEffectiveLimits (نظير PATCH plans، قرار المالك 2026-09-07 §3).
+    const { clearPlanLimitsCache } = await import('../../../plugins/plan-limits-cache.js');
+    clearPlanLimitsCache(id);
+
     return {
       id: row.id, plan: row.plan, planOverrides: row.plan_overrides,
       updatedAt: row.updated_at.toISOString(),

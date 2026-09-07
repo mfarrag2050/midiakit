@@ -86,6 +86,18 @@ import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
 import platformOpsQueuesRoute from './routes/platform/ops/queues.js';
 import platformOpsSubscriptionsRoute from './routes/platform/ops/subscriptions.js';
 import platformOpsUsageRoute from './routes/platform/ops/usage.js';
+import platformPlansListRoute from './routes/platform/plans/list.js';
+import platformPlansGetRoute from './routes/platform/plans/get.js';
+import platformPlansCreateRoute from './routes/platform/plans/create.js';
+import platformPlansUpdateRoute from './routes/platform/plans/update.js';
+import platformPlansDeleteRoute from './routes/platform/plans/delete.js';
+import platformPlansRevisionsRoute from './routes/platform/plans/revisions.js';
+import platformUsersListRoute from './routes/platform/users/list.js';
+import platformUsersGetRoute from './routes/platform/users/get.js';
+import platformUsersCreateRoute from './routes/platform/users/create.js';
+import platformUsersUpdateRoute from './routes/platform/users/update.js';
+import platformUsersDeleteRoute from './routes/platform/users/delete.js';
+import platformAuthRefreshRoute from './routes/platform/auth/refresh.js';
 import subscriptionGetRoute from './routes/subscription/get.js';
 import subscriptionCheckoutRoute from './routes/subscription/checkout.js';
 import subscriptionCancelRoute from './routes/subscription/cancel.js';
@@ -261,7 +273,27 @@ export async function buildServer() {
       await p.register(async (auth) => {
         await auth.register(platformLoginRoute);
         await auth.register(platformLogoutRoute);
+        await auth.register(platformAuthRefreshRoute);  // A28
       }, { prefix: '/auth' });
+
+      // A28 — Plans CRUD + audit
+      await p.register(async (pl) => {
+        await pl.register(platformPlansListRoute);
+        await pl.register(platformPlansCreateRoute);
+        await pl.register(platformPlansGetRoute);
+        await pl.register(platformPlansUpdateRoute);
+        await pl.register(platformPlansDeleteRoute);
+        await pl.register(platformPlansRevisionsRoute);
+      }, { prefix: '/plans' });
+
+      // A28 — Platform Users CRUD
+      await p.register(async (u) => {
+        await u.register(platformUsersListRoute);
+        await u.register(platformUsersCreateRoute);
+        await u.register(platformUsersGetRoute);
+        await u.register(platformUsersUpdateRoute);
+        await u.register(platformUsersDeleteRoute);
+      }, { prefix: '/users' });
 
       await p.register(async (t) => {
         await t.register(platformTenantsListRoute);

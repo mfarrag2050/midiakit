@@ -83,6 +83,8 @@ export type ErrorCode =
   | 'IF_MATCH_REQUIRED'                            // §7.4 STALE_UPDATE (400 — قرار مُختار: A)
   // Platform / Control Plane (A27)
   | 'PLATFORM_INSUFFICIENT_ROLE'                   // 403 — منفصل عن INSUFFICIENT_ROLE للمستأجر
+  // Platform Plans (A28)
+  | 'PLAN_IN_USE'                                  // 409 — DELETE plan مستعمل من tenants/subscriptions
   // Brand Kits (§5)
   | 'INSUFFICIENT_ROLE'
   | 'BRAND_KIT_IN_USE'

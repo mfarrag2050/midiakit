@@ -58,20 +58,16 @@ const errors = [];
 let checked = 0;
 
 for (const row of rows) {
+  // A28: seedShape يحمل الهوية فقط. الحدود والسعر خارج الحارس (انظر
+  // رأس الملف لمبرِّرها).
   const seedShape = {
     key: row.key,
     name_ar: row.name_ar,
     name_en: row.name_en,
-    price_usd_cents: row.price_usd_cents,
-    brand_kits_limit: row.brand_kits_limit,
-    seats_limit: row.seats_limit,
-    videos_per_month_limit: row.videos_per_month_limit,
-    requests_per_minute_limit: row.requests_per_minute_limit,
-    concurrent_renders_limit: row.concurrent_renders_limit,
   };
   const currentHash = canonicalHash(seedShape);
   if (currentHash !== row.definition_hash) {
-    errors.push(`  ✗ plans[${row.key}]: قيمة صفّ تختلف عن definition_hash المُسجَّل`);
+    errors.push(`  ✗ plans[${row.key}]: الهوية تختلف عن definition_hash المُسجَّل`);
     errors.push(`      current=${currentHash.slice(0, 12)}… stored=${row.definition_hash.slice(0, 12)}…`);
   }
   checked++;
