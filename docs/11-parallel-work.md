@@ -10,16 +10,39 @@
 
 ---
 
-## المسارات
+## المسارات (محدَّث 2026-09-07)
 
 | المسار | الفرع | المجلد | الملفات المملوكة |
 |---|---|---|---|
-| **M — الرئيسي** | `main` | `~/MediaKit/pf-mediakit` | `packages/engine` · `packages/templates` · `PHASES.md` |
-| **D — اللوحات** | `feat/dashboards` | `~/MediaKit/pf-mediakit-dash` | `apps/dashboard` · طبقة قراءة في `apps/renderer` |
-| **T — الخط الزمني** | `feat/timeline-editor` | `~/MediaKit/pf-mediakit-tl` | `packages/engine/src/timeline/` · `apps/studio/timeline` |
-| **P — المنصة** | `feat/platform` | `~/MediaKit/pf-mediakit-api` | `apps/api` · `infra/` · المخطط |
+| **M — mediakit** (مسار دائم — التوثيق والسكيل والحزمة) | `main` | `~/MediaKit/pf-mediakit` | `docs/*` · `PHASES.md` · `CLAUDE.md` · `LESSONS.md` · `M1/M2` · `docs/SKILL-mediakit.md` · `docs/BUNDLE.md` وسكربتات توليدهما · `packages/engine` · `packages/shared` · `packages/templates` · `snapshots*/` |
+| **S — الاستوديو** | `feat/studio` | `~/MediaKit/pf-mediakit-studio` | `apps/studio` · `packages/ui` · `packages/i18n` · `demo/studio` |
+| **P — البنية (mk-api)** | `feat/api` | `~/MediaKit/pf-mediakit-api` | `apps/api` · `infra/` · `packages/db` · migrations |
+| **D — اللوحات** | `feat/dashboards` | `~/MediaKit/pf-mediakit-dash` | `apps/dashboard` · طبقة قراءة في `apps/renderer` (لم يُفتح حالياً) |
+| **mkaudit — التحرّي** | worktree بـ`git checkout --detach` | `~/MediaKit/pf-mediakit-audit` | **لا يملك ملفاً** — قراءة فقط. يكتب تقاريره **خارج المستودع** (`~/mk-audit-*.md`) |
 
-**P مؤجَّل** حتى تُحسم قرارات المصادقة والاشتراكات.
+**M — mediakit: مسار دائم للتوثيق وتوليد السكيل والحزمة. لا يُحسب
+في قيد الثلاثة، ولا يُغلق. وأي مهمة توثيقية تصل إلى مسار بناء
+تُحوَّل إليه قبل الرد (السطر 2853).**
+
+**تمييز حاسم (2026-09-07):** M **غير محسوب حين يعمل توثيقاً**
+(`docs/*` · `PHASES.md` · `LESSONS.md` · `CLAUDE.md` · `M1/M2`
+· `SKILL` · `BUNDLE`). وحين يمسّ `packages/*` أو `snapshots*/`
+— أيّ كود منتَج يحتاج مراجعة عميقة — **يُحسب مسار بناء**، فلا
+تعمل ثلاث جلسات بناء معاً. **الملكية تبقى؛ المحسوبية تتبع نوع
+العمل لا الفرع.**
+
+**P (`feat/api`): فُتح 2026-09-04، واكتمل 2026-09-07** (A1..A28
+مبنيّة، بوابتان `A18.5` و `A18.6` جارية بحسب الترتيب في
+`docs/17 §3.3.α`). لم يعد مؤجَّلاً.
+
+**T (الخط الزمني): مسار لم يُفتح ولا يُفتح.** قرار المالك
+2026-09-02 نقل واجهة الخط الزمني إلى المرحلة 4، تُبنى داخل مسار
+**S** ضمن مساحة عمل المشروع (لا مسار منفصل). محرّك الخط الزمني
+(المراحل أ–هـ في `docs/10`) بُني في `main` ضمن 3.7.
+
+**mkaudit: قراءة فقط، لا يُحسب مساراً كاتباً.** يعمل بـ`git
+checkout --detach` لا يبني فرعاً؛ مخرَجاته `~/mk-audit-<date>.md`
+تُقرأ ثم تُقفل. راجع الميثاق في memory.
 
 ## متى تُفتح شاشة موازية (2026-09-03)
 
@@ -29,13 +52,13 @@
 
 | الجواب | القرار |
 |---|---|
-| **لا** — كلها في `docs/`، `LESSONS.md`، `PHASES.md`، `M1/M2`، `CLAUDE.md`، تدقيق أرقام، مراجعة قانونية… | **فرع مستقل + شاشة tmux موازية.** لا تستهلك سعة `main` |
-| **نعم** — تلمس `packages/engine` أو `packages/templates` أو أيّ ملف كود يُبنى | `main` أو الفرع المخصّص لها |
+| **لا** — كلها في `docs/`، `LESSONS.md`، `PHASES.md`، `M1/M2`، `CLAUDE.md`، تدقيق أرقام، مراجعة قانونية… | **تُحوَّل إلى mediakit (M) قبل الرد** — هو المسار الدائم للتوثيق. لا تستهلك سعة مسار بناء |
+| **نعم** — تلمس `apps/api` أو `apps/studio` أو أيّ ملف كود يُبنى | مسار البناء المخصّص (`P` أو `S`) |
 | **مختلطة** — بعضها كود بعضها توثيق | افصل الجزءين عند البدء لا في النهاية |
 
 **القاعدة:** القرار **يُتخذ عند إنشاء المهمة**، لا بعد أن تستهلك ساعات
 من مسار البناء. حين تصل رسالة توثيقية والوعي فيها «هذا لن يمسّ الكود»،
-افتح فرعاً موازياً قبل الرد.
+**حوّلها إلى mediakit قبل الرد**.
 
 **الشاهد التاريخي (docs/LESSONS.md §L-40):** تدقيق M1 استهلك سبع دورات
 في `main` بينما كان بند التفريغ ينتظر. كان يمكن أن يجري على فرع
@@ -71,28 +94,33 @@ PHASES.md · CLAUDE.md · docs/LESSONS.md
 
 **السبب:** هذه أدق كود في المشروع، وتعارض دمج فيها يكلّف أكثر مما يوفّره التوازي.
 
-### استثناء الخط الزمني
+### استثناء الخط الزمني — الظرف تغيّر (2026-09-07)
 
-مسار **T** يحتاج `render-plan.ts` و`brand-kit.ts`. الحل: يكتب **ملفات جديدة** ويطلب من `main` تعديلاً واحداً في نهاية المسار لربطها.
+**قرار المالك 2026-09-02:** واجهة الخط الزمني تُبنى في مسار
+**S** (`feat/studio`) لا في **T**، لأنها تعيش داخل مساحة عمل
+المشروع (المكوّن الأثقل في `docs/17` سطر 69) — بناؤها منفصلة
+يعني بناءها مرتين، وبناؤها فوق ملف يملكه S بمسار آخر يعارض
+ملكية الملف.
 
-```
-timeline/plan-extension.ts   ← جديد، يمتد لا يعدّل
-shared/src/timeline-types.ts ← جديد
-```
+**محرّك الخط الزمني** (المراحل أ–هـ في `docs/10`: `drawTimelineAt`
+· `buildTimelinePlan` · `templateToTimeline` · `buildAudioGraph`)
+بُني في `main` ضمن المرحلة 3.7 وأُنجز 2026-09-02.
+
+**مسار T لم يُفتح ولا يُفتح.** الجدول أعلاه يذكره تاريخياً
+فقط.
 
 ---
 
-## الإعداد
+## الإعداد (محدَّث 2026-09-07)
 
-**[الميني]** مرة واحدة:
+**[الميني]** worktrees الحاليّة:
 
 ```bash
-cd ~/MediaKit/pf-mediakit
-
-git worktree add ../pf-mediakit-dash -b feat/dashboards
-git worktree add ../pf-mediakit-tl   -b feat/timeline-editor
-
 git worktree list
+# /Users/mdervis/MediaKit/pf-mediakit          <hash> [main]           ← mediakit (M)
+# /Users/mdervis/MediaKit/pf-mediakit-api      <hash> [feat/api]       ← mk-api (P)
+# /Users/mdervis/MediaKit/pf-mediakit-studio   <hash> [feat/studio]    ← mk-studio (S)
+# /Users/mdervis/MediaKit/pf-mediakit-audit    <hash> (detached HEAD)  ← mkaudit (قراءة)
 ```
 
 `worktree` يعطي مجلدات مستقلة بفروع مختلفة، تشترك في تاريخ Git واحد — بلا استنساخ مكرر.
@@ -100,16 +128,18 @@ git worktree list
 ### جلسات tmux
 
 ```bash
-tmux new -d -s mk-main  -c ~/MediaKit/pf-mediakit
-tmux new -d -s mk-dash  -c ~/MediaKit/pf-mediakit-dash
-tmux new -d -s mk-tl    -c ~/MediaKit/pf-mediakit-tl
+tmux new -d -s mediakit   -c ~/MediaKit/pf-mediakit
+tmux new -d -s mk-api     -c ~/MediaKit/pf-mediakit-api
+tmux new -d -s mk-studio  -c ~/MediaKit/pf-mediakit-studio
+tmux new -d -s mkaudit    -c ~/MediaKit/pf-mediakit-audit
 ```
 
 اختصارات في `~/.zshrc`:
 ```bash
-alias mkm='tmux a -t mk-main -d 2>/dev/null || tmux new -s mk-main -c ~/MediaKit/pf-mediakit'
-alias mkd='tmux a -t mk-dash -d 2>/dev/null || tmux new -s mk-dash -c ~/MediaKit/pf-mediakit-dash'
-alias mkt='tmux a -t mk-tl -d 2>/dev/null || tmux new -s mk-tl -c ~/MediaKit/pf-mediakit-tl'
+alias mk='tmux a -t mediakit -d 2>/dev/null || tmux new -s mediakit -c ~/MediaKit/pf-mediakit'
+alias mkapi='tmux a -t mk-api -d 2>/dev/null || tmux new -s mk-api -c ~/MediaKit/pf-mediakit-api'
+alias mkst='tmux a -t mk-studio -d 2>/dev/null || tmux new -s mk-studio -c ~/MediaKit/pf-mediakit-studio'
+alias mkau='tmux a -t mkaudit -d 2>/dev/null || tmux new -s mkaudit -c ~/MediaKit/pf-mediakit-audit'
 ```
 
 ### تحقق قبل كل جلسة عمل
@@ -124,16 +154,18 @@ tmux display-message -p '#S' && pwd && git branch --show-current
 
 ## التوثيق
 
-`PHASES.md` يملكه `main` وحده. كل مسار فرعي يكتب في ملفه:
+`PHASES.md` يملكه **M (mediakit)** وحده. كل مسار بناء يكتب في
+ملفه:
 
 ```
-PHASES-dashboards.md
-PHASES-timeline.md
+PHASES-api.md      ← feat/api
+PHASES-studio.md   ← feat/studio
 ```
 
-يُدمج محتواها في `PHASES.md` عند اندماج الفرع، بواسطة جلسة `main`.
+يُقرأ محتوى هذين الملفين عبر `git show origin/feat/*` من مسار
+M عند بناء `docs/BUNDLE.md` — لا حاجة لدمج يدوي.
 
-**`LESSONS.md` يملكه `main`.** الدروس من المسارات الفرعية تُبلَّغ في تقرير الجلسة، وتُكتب في `main`.
+**`LESSONS.md` يملكه M.** الدروس من مسارات البناء تُبلَّغ في تقرير الجلسة، وتُكتب في `main`.
 
 ---
 
@@ -165,12 +197,12 @@ git rebase origin/main
 ```
 أنت على فرع <NAME> في مجلد <PATH>، ضمن عمل متوازي.
 
-اقرأ: CLAUDE.md · docs/11-parallel-work.md · PHASES-<NAME>.md
+اقرأ: CLAUDE.md · docs/11-parallel-work.md · PHASES-<api|studio>.md
 
 ممنوع تعديل الملفات المقفلة على main (القائمة في docs/11).
 إن احتجت تعديل أحدها — توقّف وأخبرني، لا تعدّله.
 
-اكتب حالتك في PHASES-<NAME>.md لا في PHASES.md.
+اكتب حالتك في PHASES-<api|studio>.md لا في PHASES.md.
 الدروس أبلغها في تقريرك، لا تكتبها في LESSONS.md.
 
 تحقّق من فرعك قبل أي commit: git branch --show-current
@@ -180,8 +212,23 @@ git rebase origin/main
 
 ## العزل عن منهاج — يبقى سارياً
 
-المسارات الثلاثة كلها ضمن نفس قواعد `CLAUDE.md`:
-- منافذ 19000–19099 حصراً. **وزّعها:** main 19000–19029 · dash 19030–19059 · tl 19060–19089
+كل المسارات ضمن قواعد `CLAUDE.md`:
+- منافذ 19000–19099 حصراً. **التوزيع الفعلي (تحقَّق بـ`lsof -nP
+  -iTCP -sTCP:LISTEN | grep 190` — لا تكتب من الذاكرة):**
+
+  | النطاق | المسار | المستعمل فعلاً (2026-09-07) |
+  |---|---|---|
+  | 19000–19019 | **M (mediakit)** — أدوات محلية عابرة | لا مستمع |
+  | 19020–19029 | **D (اللوحات)** — عند فتحه | لا مستمع (لم يُفتح) |
+  | 19030–19039 | **احتياطي** — لمسار قادم | لا مستمع |
+  | 19040–19049 | **P (mk-api)** | `19041` PG dev · `19042` PG test · `19043` MinIO S3 API (:9000) · `19044` MinIO console (:9001) |
+  | 19050–19059 | **S (mk-studio)** | `19050` Next.js dev |
+  | 19060–19099 | **احتياطي** — يبقى فارغاً | لا مستمع |
+
+  **التصحيح البنيوي:** التوزيع القديم (main 19000–19029 · dash
+  19030–19059 · tl 19060–19089) خُولف في الواقع — mk-api و
+  mk-studio يشغّلان 19040–19050 داخل نطاق كان مخصَّصاً لـdash،
+  فأيّ فتح لـdash لاحقاً كان سيتعارض معهما.
 - Redis على قاعدة 3 ببادئة `pf-mediakit` — مشتركة بين المسارات، لا تعارض
 - ممنوع أي `prune` أو لمس `~/Minhaj` و`~/PrimeMind`
 - لا Colima في المسارات الفرعية
@@ -193,8 +240,8 @@ git rebase origin/main
 | المؤشر | الإجراء |
 |---|---|
 | تعارض دمج في ملف مقفل | أوقف المسار الفرعي، أصلح في `main` |
-| مراجعتك تتأخر أكثر من يوم | أغلق مساراً |
-| ثلاثة مسارات وأنت وحدك | أغلق الثالث — المراجعة هي القيد |
+| مراجعتك تتأخر أكثر من يوم | أغلق مسار بناء |
+| **ثلاثة مسارات بناء وأنت وحدك** | أغلق الثالث — المراجعة هي القيد. **M (mediakit) لا يُحسب** — دائم، مراجعته دقائق لا ساعة |
 | اللقطات الذهبية تنكسر في فرع | أوقف كل شيء، شخّص أولاً |
 
 ---
@@ -226,17 +273,40 @@ git rebase origin/main
 
 ### مؤشرات التوقف عن التوازي
 
-- مراجعتك تأخرت أكثر من يوم عن أيّ مسار
+- مراجعتك تأخرت أكثر من يوم عن أيّ **مسار بناء**
 - تعارض دمج في ملف مقفل
 - اللقطات الذهبية انكسرت في فرع
 - شعرت أنك تقرأ الملخصات بدل التقارير
 
+**شاهد تاريخي على المؤشر الأخير (2026-09-07):**
+
+تحقّق فعلاً — Opus قرأ `PHASES.md` المولَّد في السكيل وحسبه
+الملف الأصلي · وقبل «إخفاق واحد» في `verify:brand-kits` أربع
+مرات بلا طلب العدد الفعلي (وكان 30) · وأعلن انتهاء المشروع من
+عدّ المراحل المُنجَزة، بينما `docs/09` و `docs/12` يحملان بنوداً
+غير مبنيّة · وواجهة الخط الزمني منقولة بقرار المالك منذ
+2026-09-02 وغائبة عن `docs/17` حتى 2026-09-07.
+
+**العلاج البنيوي (لا ذمّة فردية):** `docs/BUNDLE.md` جُبِر حزمة
+حيّة من `docs/*` + `PHASES.md` + `PHASES-api.md` +
+`PHASES-studio.md`، تُرفَع مع السكيل معاً. المؤشّر يبقى قائماً:
+إذا وجدت نفسك تقرأ الملخّص بدل الحزمة، **قف**.
+
 ---
 
-## الترتيب المقترح
+## الترتيب الفعلي (2026-09-07)
 
-**الآن:** `main` + `dash`. اختبر النموذج على المسار الأخف.
+**الحالة اليوم:** ثلاثة مسارات مفتوحة —
+- **M (mediakit):** دائم، لا يُحسب في القيد.
+- **P (mk-api):** مفتوح 2026-09-04 · اكتمل 2026-09-07 (A1..A28)
+  · A18.5 · A18.6 جارية بحسب `docs/17 §3.3.α`.
+- **S (mk-studio):** مفتوح · S1..S22 مبنيّة · S23..S29 مُضافة
+  (سدّ فجوة PHASES ↔ docs/17 · واجهة الخط الزمني + اختيار
+  المقاس) · S30..S33 مُضافة (شرط تسليم العميل الأول).
 
-**بعد استقرار dash:** أضف `tl`.
+**قيد التوازي:** مسارا بناء (`P` + `S`) نشطان. **لا فتح مسار
+بناء ثالث** حتى استقرار واحد منهما. `D` و `T` لم يُفتحا (T لا
+يُفتح، انظر §استثناء الخط الزمني).
 
-**`platform` مؤجَّل** — يحتاج قرارات معمارية غير محسومة (مزوّد المصادقة، الاشتراكات، عزل قواعد البيانات). بناؤه متوازياً يعني اتخاذ تلك القرارات بلا نقاش.
+**mkaudit** يعمل بحسب الحاجة، لا يُحسب — قراءة فقط، مخرَجاته
+خارج المستودع.

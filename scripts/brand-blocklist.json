@@ -17,7 +17,7 @@
     { "term": "AA Media Kit",  "reason": "اسم الأداة الأصلية — نفس السبب" }
   ],
   "$expansionNote": "أضف مؤسسات أخرى هنا بأمر صريح من صاحب المشروع — لا تجتهد. أمثلة محتملة (لم تُقرَّر): 'الجزيرة'/'aljazeera' (يظهر حالياً في RSS pipeline كمعرِّف مصدر، ليس نص اختبار).",
-  "$skillPathsNote": "docs/SKILL-mediakit.md · scripts/build-skill.mjs — وثائق داخلية تذكر أصل المشروع تاريخياً. القاعدة السابعة تمنع أصول أناضول في المنتج (خط · شعار · لون · قالب)، لا ذكر المصدر في توثيق لا يُشحن ولا يراه عميل. نفس صنف PHASES.md و CLAUDE.md و LESSONS.md المستثناة قبلها.",
+  "$skillPathsNote": "docs/SKILL-mediakit.md · docs/BUNDLE.md · scripts/build-skill.mjs — وثائق داخلية تذكر أصل المشروع تاريخياً. القاعدة السابعة تمنع أصول أناضول في المنتج (خط · شعار · لون · قالب)، لا ذكر المصدر في توثيق لا يُشحن ولا يراه عميل. BUNDLE هو تجميع docs/ + PHASES.md — يرث الاستثناء بالإحاطة. نفس صنف PHASES.md و CLAUDE.md و LESSONS.md المستثناة قبلها.",
   "excludeGlobs": [
     "reference/**",
     "node_modules/**",
@@ -34,6 +34,7 @@
     "docs/INVENTORY.md",
     "docs/LESSONS.md",
     "docs/SKILL-mediakit.md",
+    "docs/BUNDLE.md",
     "scripts/build-skill.mjs",
     "fixtures/audio/**",
     "services/*/out/**",
