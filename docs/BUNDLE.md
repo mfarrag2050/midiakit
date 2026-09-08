@@ -8,10 +8,10 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-07
-> **HEAD (main):** `176ff4c`
-> **HEAD (origin/feat/api):** `755ba7e`
-> **HEAD (origin/feat/studio):** `eebaff6`
+> **تاريخ التوليد:** 2026-09-08
+> **HEAD (main):** `4b11ab6`
+> **HEAD (origin/feat/api):** `99d46d0`
+> **HEAD (origin/feat/studio):** `909551b`
 
 ## الفهرس
 
@@ -27,22 +27,22 @@
 | `docs/08-operations.md` | 231 | `8e645af79060` | local |
 | `docs/09-launch-spec.md` | 244 | `a1bd66727e59` | local |
 | `docs/10-timeline-editor.md` | 284 | `a0afd4081935` | local |
-| `docs/11-parallel-work.md` | 313 | `f14f2e826093` | local |
+| `docs/11-parallel-work.md` | 315 | `e7c02ff8c0de` | local |
 | `docs/12-feature-scan.md` | 249 | `d05e58d7213a` | local |
 | `docs/13-asset-lifecycle.md` | 228 | `a4ab67f4da3e` | local |
 | `docs/14-revisions.md` | 154 | `ae6833dc8fa1` | local |
 | `docs/15-editorial-workflow.md` | 233 | `8f603cd51e03` | local |
 | `docs/16-api-contract.md` | 1702 | `560b518765bd` | local |
-| `docs/17-phase4-plan.md` | 1035 | `d0110f29a4f4` | local |
+| `docs/17-phase4-plan.md` | 1120 | `2ff47d5bd093` | local |
 | `docs/INVENTORY.md` | 174 | `52330c4e5048` | local |
-| `docs/LESSONS.md` | 2245 | `7061bffdf37b` | local |
+| `docs/LESSONS.md` | 2271 | `ae63316d5435` | local |
 | `docs/M1-marketing-assets.md` | 445 | `372cafb6219e` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 361 | `75efb68ddba7` | local |
+| `docs/SKILL-mediakit.md` | 363 | `d780b3316f1b` | local |
 | `PHASES.md` | 1395 | `b60d8302907c` | local (main) |
-| `PHASES-api.md` | 587 | `ab657c936b34` | git show origin/feat/api |
-| `PHASES-studio.md` | 1309 | `cfe70ad590ee` | git show origin/feat/studio |
+| `PHASES-api.md` | 667 | `21882584c491` | git show origin/feat/api |
+| `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
 
 ---
 
@@ -3036,11 +3036,13 @@ git rebase origin/main
   | النطاق | المسار | المستعمل فعلاً (2026-09-07) |
   |---|---|---|
   | 19000–19019 | **M (mediakit)** — أدوات محلية عابرة | لا مستمع |
-  | 19020–19029 | **D (اللوحات)** — عند فتحه | لا مستمع (لم يُفتح) |
-  | 19030–19039 | **احتياطي** — لمسار قادم | لا مستمع |
+  | 19020–19029 | **احتياطي** — لمسار قادم | لا مستمع |
+  | 19030–19039 | **D (اللوحات — أداة تطوير محلّية)** — `apps/dashboard` على `127.0.0.1` (راجع `DEV-ONLY.md`) | `19030` Next.js dev |
   | 19040–19049 | **P (mk-api)** | `19041` PG dev · `19042` PG test · `19043` MinIO S3 API (:9000) · `19044` MinIO console (:9001) |
   | 19050–19059 | **S (mk-studio)** | `19050` Next.js dev |
-  | 19060–19099 | **احتياطي** — يبقى فارغاً | لا مستمع |
+  | 19060–19079 | **احتياطي** — يبقى فارغاً | لا مستمع |
+  | 19080–19082 | **خدمات معزولة (Python)** — بلا مسار ملكية، تُستهلَك عبر Next server routes | `19080` diacritizer · `19081` transcriber · `19082` face-detector |
+  | 19083–19099 | **احتياطي لخدمات معزولة** | لا مستمع |
 
   **التصحيح البنيوي:** التوزيع القديم (main 19000–19029 · dash
   19030–19059 · tl 19060–19089) خُولف في الواقع — mk-api و
@@ -6226,11 +6228,35 @@ A14 (Workflows) وضع `state` و `assignee_id` و `workflow_id` في
 صياغة**. البند الأخير (اختيار المقاس والصيغة) اكتُشف في تحرّي
 V3-C.
 
-- **S23. مساحة عمل المشروع (Project Workspace):** محرّر +
-  معاينة + تصدير في شاشة واحدة. `docs/17` سطر 69 يعدّ خمسة
-  مكوّنات (محرّر محتوى + معاينة + خط زمني + تحرير كابشن +
-  تعليقات)، **وبُني منها ثلاثة متفرّقة** — S23 يوحّدها في شاشة
-  المشروع.
+- **S23. مساحة عمل المشروع (Project Workspace) — مبنيّة**
+  (`090e0e6` على `feat/studio` · 2026-09-07). سُدَّت الفجوة
+  بأثر رجعي هنا:
+
+  المصادر: `docs/09 §المخرجات · §التحرير · §التشكيل` و
+  `docs/04 §المحتوى · §content.locale · §_word_` و
+  `docs/05 §الواجهة العامة`.
+
+  المُبنيّ فعلاً:
+  - **شاشة واحدة** تجمع الحقول والمعاينة والتصدير (توحيد ما
+    كان متفرّقاً في `docs/17` سطر 69: محرّر محتوى + معاينة +
+    خط زمني + تحرير كابشن + تعليقات).
+  - **اختيار المقاس والصيغة** من الأربعة (X · إنستغرام · Feed
+    · ريلز) — يعالج فجوة V3-C (S29 السابق ذكرها).
+  - **تدفّق التشكيل الستّ خطوات** (بحسب `docs/09 §التشكيل`).
+  - **لوحة الحركات الثماني وزرّ «أزل التشكيل»**.
+  - **حفظ النصّ المشكَّل** بعد قرار العميل.
+  - **مبدّل `content.locale`** — ثلاث لغات مستقلّة (L-49).
+  - **الأنكور `_word_`** (`docs/04 §_word_`).
+  - **الوسيط:** التشكيل يمرّ عبر `apps/studio/app/api/diacritize`
+    (Next server route) → `127.0.0.1:19080` — لا اتصال مباشر من
+    المتصفح. السبب: الخدمات بلا CORS. راجع §4.16 قاعدة الوسيط.
+  - **الفشل:** `ECONNREFUSED` من الخدمة ⇒ `SERVICE_UNAVAILABLE`
+    + **لوحة صفراء** + **الزرّ يبقى مفعَّلاً** (الخدمة غير
+    مشغَّلة ليست خطأ نظام؛ الفشل عابر والمحاولة تُعاد).
+
+  **الفجوة الأصلية:** S23 بُنيت على feat/studio بلا سطر في
+  `docs/17` — نفس النمط الذي أخفى واجهة الخط الزمني خمسة أيام
+  (§قاعدة السدّ في الرأس). هذا التصحيح يُدخلها بأثر رجعي.
 - **S24. مسارات مكدّسة عمودياً** — media/text/audio مرئية
   بمقاييس زمنية متطابقة، درج ألوان لكل نوع.
 - **S25. مقبض تشغيل (playhead)** — يتحرك مع التشغيل، قابل
@@ -6295,8 +6321,39 @@ V3-C.
 **من `docs/12:244` (وُعد بها للمرحلة 4):**
 - **P5.1. النماذج القابلة للمشاركة** (`docs/12 §6` · Q17 في
   `docs/16:1651`).
-- **P5.2. محرّر القصّ الذكي**.
-- **P5.3. واجهة التفريغ**.
+- **P5.2. محرّر القصّ الذكي** — **الخدمة `services/face-detector`
+  مبنيّة بدرجة (MTCNN)؛ تصحيح تصنيف 2026-09-07: الناقص واجهة
+  الاستوديو لا الخدمة**. الدرجة الفعلية تُكتب بعد جرد mk-studio
+  (تذكرة S23-B).
+- **P5.3. واجهة التفريغ** — **الخدمة `services/transcriber`
+  مبنيّة بدرجة (Whisper)؛ تصحيح تصنيف 2026-09-07: الناقص واجهة
+  الاستوديو لا الخدمة**. الدرجة الفعلية تُكتب بعد جرد mk-studio.
+
+**تصحيح تصنيف عام (2026-09-07):** `services/diacritizer` و
+`services/face-detector` و `services/transcriber` **مبنيّة
+بدرجات**. تصنيفها «غير مبنيّة» في تخطيط سابق كان **خطأ تصنيف
+لا خطأ بناء** — بناءً على غيابها من `docs/17` وحده. ما ينقص
+هو **واجهاتها في `apps/studio`**. الدرجة الفعلية لكلٍّ تُكتب
+بعد جرد mk-studio.
+
+**جدول جرد الخدمات (تصحيح 2026-09-07):**
+
+| الخدمة | المنفذ | النموذج/الرخصة | حالة الواجهة |
+|---|---|---|---|
+| `diacritizer` | `19080` | `arabic-diacritizer` (MIT) | **مبنيّة في S23** — عبر `/api/diacritize` proxy |
+| `transcriber` | `19081` | `faster-whisper` (MIT) | **بلا واجهة** — مطلوبة لكابشن الفيديو |
+| `face-detector` | `19082` | `mtcnn + PIL` | **بلا واجهة** — استهلاك خادم-جانب عبر `smart-crop.ts` |
+
+**قاعدتان تحكمان تكامل الخدمات مع الاستوديو (2026-09-07):**
+
+- **(أ) قاعدة الوسيط:** كل خدمة تحتاج واجهة ⇒ **Next server
+  route (proxy) لا اتصال مباشر من المتصفح**. السبب: الخدمات
+  بلا CORS. S23 تستعمله فعلاً (`/api/diacritize` ⇒ `19080`).
+
+- **(ب) قاعدة الفشل:** `ECONNREFUSED` من الخدمة ⇒
+  `SERVICE_UNAVAILABLE` + **لوحة صفراء** + **الزرّ يبقى
+  مفعَّلاً**. الخدمة غير مشغَّلة **ليست خطأ نظام** — الفشل
+  عابر والمحاولة تُعاد.
 
 **من `docs/07 §قدرات عالية القيمة (بعد الخندق)`:**
 - **P5.4. التوليد من مصدر بيانات** (رابط خبر أو RSS ← بطاقة
@@ -6340,6 +6397,7 @@ S يستطيع البدء بـmock، لكن الاختبار الحقيقي وا
 | S20 | A21 + A22 | `/v1/subscription/*` + `/v1/usage/*` |
 | S21 | A24 (integrations part) | `/v1/ai/integrations` |
 | S22 | A24 (invoke part) | `POST /v1/ai/invoke/:capability` |
+| S23 | S12 + S13 (لا A جديد) | `apps/studio/app/api/diacritize` → `127.0.0.1:19080` (proxy Next server route) |
 
 **نقاط التزامن الحاكمة (Sync Points):**
 
@@ -6529,6 +6587,35 @@ DOCS-BUNDLE)، تُراجَع المنطقة المُملاة في `docs/SKILL-m
    واحد أم تجميع؟** والقاعدة تمنع حساب مقياس من مصدرَين (A22).
 2. استهلاك الذاكرة والمعالج لكل مهمة **غير مقيس اليوم** ولا
    يُستنتَج — يحتاج قياساً داخل العامل نفسه.
+
+### 6.ز قرار المالك 2026-09-07 — لوحة التشغيل للإصدار الأول
+
+**القرار:** `apps/dashboard` **أداة تطوير محلّية للإصدار
+الأول**. والمنتَج هو `/v1/platform/ops/*` المحروس بـ
+`platform-auth-guard` (A25).
+
+**السبب:** `docs/09 §ما يُسقط` — العملاء الثلاثة الأوائل
+بحسابات يدوية، والإدارة من الميني لا من الإنترنت.
+
+**ازدواج مسجَّل (لا يُحلّ الآن):** سطحان للتشغيل قائمان معاً —
+
+- **`apps/dashboard/ops`** — عمق كامل بحسب `docs/08` · صفر
+  مصادقة · يقرأ `observe` في نفس عملية Next ويفتح Redis
+  مباشرةً.
+- **`/v1/platform/ops/*`** — أربعة إجماليات · مستوى تحكّم كامل
+  عبر `platform-auth-guard`.
+
+**متى يُحسم:** حين يصير للمنصّة أكثر من مشغّل، أو حين تُطلب
+اللوحة **من خارج الميني**. عندها ينتقل العمق إلى
+`/v1/platform/ops/*` وتصير اللوحة مستهلِكاً (`fetch` لا استيراد).
+
+**بناءان متوازيان (تاريخ مسجَّل):**
+
+- `apps/dashboard` بُنيت على `main` (`55c2647` · `bf7e045`).
+- بُنيت أيضاً على `feat/api` تحت A25 (`6b88718`).
+- الحارس `DEV-ONLY.md` كان على `feat/api` وحده، ونُقل إلى
+  `feat/dashboards` في D1 (`c15433a`). **راجع L-68 —** الحارس
+  يعيش قرب الكود لا في الفرع الذي أنشأه.
 
 ---
 
@@ -9173,6 +9260,32 @@ feat/api و feat/studio»**. بعد سبع رسائل، حين كشف التدق
 تطبيقه) · L-53 (التقرير ليس دليلاً على ما يعلنه — تحقيق
 `mk-api` أنتج تفسيراً بلا سبب فعلي).
 
+## L-68 — الحارس يعيش قرب الكود لا في الفرع الذي أنشأه
+
+**القاعدة:** حين يُبنى قيد بنيوي على فرع، ويكون الكود الذي
+يحرسه على فرع آخر، يبقى القيد **إعلاناً بلا قارئ**. **النقل
+جزء من إنجاز البوابة لا خطوة تالية.**
+
+**الشاهد (2026-09-07):** `DEV-ONLY.md` بُني في A25 على
+`feat/api`، و `apps/dashboard` مبنيّ على `main`. فمن فتح `main`
+لم يرَ الإعلان — ومنهم جلسة `D (feat/dashboards)` حين افتُتحت،
+ومن يمرّ على المجلد. **اكتُشف بجرد لا بعطل**، ونُقل في D1
+(`c15433a`) بعد خمسة أيام.
+
+**كيف يُطبَّق:**
+
+- **قبل إعلان بوابة تُنشئ حارساً (README · DEV-ONLY · CHECK ·
+  ADR):** حدّد الفروع التي فيها الكود الذي يحرسه الحارس. إن كان
+  الكود على أكثر من فرع (أو مالفرع الذي يعمل عليه الآن غير
+  فرع الحارس)، **النقل جزء من إنجاز البوابة**، لا خطوة تالية.
+- **الشاهد المضاد:** لو أنّ حارس L-68 نفسه بقي في هذا الملف
+  وحده بينما يعمل على فرع بناء، لكان درساً بلا حارس. يُقرأ
+  عبر `docs/BUNDLE.md` من كل فرع.
+
+**قرار مرتبط:** L-54 (القاعدة بلا فرض تُنسى بصمت) — وهنا الفرض
+مبنيّ لكنّه في موضع لا يُقرأ · L-63 (السكيل يُكتب من الملفات لا
+من الذاكرة) — لأن المؤلّف افترض أن الجميع سيرى ما يراه هو.
+
 قبل بدء مهمة جوهرية:
 1. اقرأ هذا الملف كاملاً — تحت 6 دقائق.
 2. اسأل: أيّ درس مرشّح للتكرار في هذه المهمة؟ (L-01 عند نقل من الأصل، L-02 عند كتابة عتبة، L-03 عند تغيير بصري، L-04 عند حدود نظام، L-05 عند إضافة رقم، L-06 عند تحدّي مواصفة، L-07 عند حلقة إطارات/زمن، L-08 عند قاعدة نحوية، L-09 عند بناء تحسين، L-10 عند بوابة تفترض ثمناً، L-11 عند «نسبة غير مصنّفة» غير مفسَّرة، L-12 عند إضافة مكوّن غير-JS، L-14 عند تصميم دالة على مجموعة، L-15 عند تغيير قرار معماري متأخر، L-16 عند بناء بوابة كمّية لمخرج بصري، L-17 قبل إعلان نجاح بوابة تُنتج صورة/فيديو، L-18 عند حساب صيغة زمن على نظام متوازٍ، L-19 عند تعداد BullMQ 5، L-20 عند بناء Next.js app جديد يستهلك workspace ESM، L-21 عند تصميم «حالة نظام»، L-22 عند رسائل API متعددة اللغات، L-23 عند مركّب رقمي في RTL، L-24 عند تصميم قاعدة i18n للخلط، L-25 بعد أي عمل لغوي/بصري، L-26 قبل تخطيط مرحلة كبيرة أو منتج جديد، L-27 قبل تثبيت أي تصنيف «مؤجَّل/مرفوض» ودورياً على المسبق منها، L-28 عند اقتراح أيّ أصل يمثّل علامة تجارية — فَحص رخصتَين لا واحدة، L-29 عند إضافة مصدر خارجي — صمّم تجميد إصدار قبل الحاجة، L-30 عند تصميم منتج B2B — اسأل «مستخدم واحد أم فريق؟»، L-31 عند بدء مواصفة — اسأل «كيف يعمل العمل يومياً؟» لا «ما الميزات المطلوبة؟»، L-32 قبل أيّ فعل بعد تعليمة توقّف — لا تجتهد، توسّع النطاق لا تضيّقه، L-33 عند تناقض التوجيه مع فحص أجريتَه — اعرض التناقض واطلب تأكيداً لا ترجّح، L-34 قبل كتابة أيّ رقم في مادة تسويقية — لكل رقم مصدر قياس، وإلا حُذف، L-35 عند اختلاف رقمَين — شغّل القياس وأرسل الناتج، لا تشرح الفرق سردياً، L-36 عند قياس أثر ميزة انتقائية — قسّم إلى «تدخّلت/لم تتدخّل» وقس على الأولى، L-40 عند استلام مهمة جديدة — إن لم تلمس packages/ ⇒ فرع مستقل، L-41 عند تعارض مقياسين — افحص ما يقيسه كل واحد + استعن باللقطة البصرية، L-42 قبل تشغيل قياس دقة — طابق العيّنة لحالة الاستخدام الفعلية، لا للسهلة الوصول، L-46 قبل كتابة اختبار ثبات — اكتب اختبار وجود أولاً، وإلا حرست فراغاً، L-47 قبل الاعتماد على قيد نصّي مطلق — ابنِ بوابة آلية تفحصه، لأن التلوث يعود من نصوص الاختبار لا من الكود، L-48 قبل الإحالة من وثيقة إلى مسار — تأكّد أنه ليس في مجلد مؤقّت؛ المخرج الذي يُعرض لا يعيش في out/، L-49 قبل أيّ افتراض عن «لغة العميل» — ميّز بين لغة الواجهة ولغة الرسائل ولغة المحتوى، وحدَها الثالثة تُحدّد سلوك المحرك، L-50 قبل أيّ حساب تخطيطي يعتمد على measureText — تحقّق من combining marks (تشكيل عربي)؛ عند وجودها، القياس البكسلي هو الوحيد الموثوق، L-51 عند نفي كل الفرضيات المطروحة — لا تتوقّف، اقرأ المخرج الخام؛ الفرضية الصحيحة قد تكون خامسة لم تُذكر، L-52 عند تصحيح المالك لاسم مكوّن — ابحث قبل الافتراض؛ التصحيح لا يُثبت الوجود، فقط القصد، L-53 عند إعلان إنجاز مركّب — تحقّق من كل بند بمسار ملف أو أمر؛ الفجوة في تسلسل مرقَّم مؤشر مجاني على عمل غير منجَز، L-54 بعد كل قاعدة تشغيلية — ابنِ سكربتاً يفشل عند مخالفتها وإلا فهي توصية، L-55 المخرج المعروض يعيش في demo/ لا out/ · فحص آلي يمنع الإحالة من وثيقة إلى مؤقت، L-56 التسجيل فور الإقرار لا بعد اكتمال المهمة — الدرس المؤجَّل يضيع، L-57 git log + git status + git push في تقرير الإنجاز قبل إعلان الإتمام، L-58 الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق، L-59 سجل التدقيق يُكتب من trigger لا من app_user، L-60 تقرير الإنجاز يفتتح بـgit log · الخطة تفتتح بنفي التنفيذ — العنوان وحده لا يُصدَّق، L-61 RLS: سياستان منفصلتان USING و WITH CHECK — الأولى وحدها تُخفي بدل أن تمنع، L-62 UNIQUE مع عمود nullable ليس قيداً — أضف UNIQUE INDEX WHERE ... IS NULL، L-63 قسم «أين نحن» يُصاغ من tail LESSONS.md + ls scripts/ + git log · لا من ذاكرة المحادثة — التوصيف يخرج من الفحص، L-64 عند تعارض تعليمة متأخرة مع قيد سابق من نفس المالك — توقّف واعرض التعارض؛ الإلغاء الضمني ليس إلغاءً، L-65 قبل إعلان بوابة — صنّف الاختبار (وجود / ثبات / سلبي) واسأل ما نطاق المدخلات؛ اختبار الحالة النموذجية دليل ثبات لا وجود، L-66 عند تعارض كود ووثيقة — صنّف المصادر إلى مقرِّر ومنفِّذ؛ الأدنى المخالف انحراف يُصحَّح لا خلاف يُحسم، L-67 قبل محاكاة عطل يمسّ حالة مشتركة — .git ملك جلسات أخرى؛ عدّل السكربت لا المراجع، والحارس check-no-git-internals يمنع الكتابة على .git الداخلية).
@@ -9868,7 +9981,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-07 · **HEAD:** `176ff4c` (`main`)
+> **تاريخ التوليد:** 2026-09-08 · **HEAD:** `4b11ab6` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -9899,27 +10012,29 @@ description: |
 | الفرع | HEAD | عدد الالتزامات |
 |---|---|---|
 | `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `755ba7e` | 148 |
-| `feat/studio` | `eebaff6` | 125 |
+| `feat/api` | `99d46d0` | 150 |
+| `feat/dashboards` | `c15433a` | 110 |
+| `feat/studio` | `909551b` | 128 |
 | `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `755ba7e` | 148 |
-| `origin/feat/studio` | `eebaff6` | 125 |
+| `origin/feat/api` | `99d46d0` | 150 |
+| `origin/feat/dashboards` | `c15433a` | 110 |
+| `origin/feat/studio` | `909551b` | 128 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (17):** `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (48):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (50):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (22):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
 - **mk-api (feat/api):** آخر مبنيّ ✅ = `A28` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-δ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-ε · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-ζ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-η · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-θ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S17` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S23` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-67
-- **العدد الفريد:** 62 · **الإدخالات:** 62
+- **المدى:** L-1 → L-68
+- **العدد الفريد:** 63 · **الإدخالات:** 63
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -11764,7 +11879,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 > في ثلاثة أطراف بلا أن يفتح أحدهم الملف.
 > التاريخ المدفوع لا يُعاد كتابته. **كل إشارة من هنا فصاعداً تستعمل
 > ترقيم `docs/17` وحده.**
-> الحالة: **A9-A20 + A26 + A27 + A18.5 + A18.6 + A21-A25 + A28 + DEBT-1 مبنية جميعاً. verify:all بصفر إخفاق كاملاً (23/23).**
+> الحالة: **A9-A20 + A26 + A27 + A18.5 + A18.6 + A21-A25 + A28 + DEBT-1 + LIMITS-1 مبنية جميعاً. verify:all بصفر إخفاق كاملاً (24/24).**
 >
 > **الترتيب التالي (محسوم 2026-09-05):**
 > جواب تحرّي A9-V أثبت أن `config` في A12 يحمل `url` نصّياً حرّاً (صفر
@@ -11785,6 +11900,7 @@ SECURITY DEFINER ثغرة محتملة في الحاجز؛ نضبطها بحدّ
 | **A18** | Renders (8 endpoints) | ✅ | `pnpm verify:renders` — G-P4-10، 7 طبقات. brand_snapshot + template_snapshot يُلتقطان ذرّياً عند POST — تعديل brand_kit بعدها لا يمسّ اللقطة (اختبار Layer 7-هـ). RENDER_CONCURRENCY_LIMIT ثابت=3 (A21 يحلّه من plan). Idempotency-Key مدعوم. cancel + delete صحيحان. **MVP التخزين:** UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS يرفض brand فيها assetId أو URL خارجي (S3/HTTP) — worker يعمل مع brand مضمّنة فقط. حلّ SDK كامل في renderer بند مؤجَّل. |
 | **A19** | Queue integration (BullMQ) | ✅ | G-P4-10 Layer 7. `apps/api/src/queues/` توأمة لـ`apps/renderer/src/queues.ts` — نفس أسماء الطوابير (render-urgent/normal/edit/batch) + prefix pf-mediakit + Fair-share priority (`count(waiting same tenant) × 10 + 1`). POST /renders يُدخل job في render-normal (أو render-urgent) بشحنة كاملة (renderId + snapshots + content). Layer 7 يُثبت end-to-end: POST → Redis (7 مفاتيح) → worker inline → MinIO PUT → GET /output signed URL → fetch حقيقي بايتات PNG صحيحة. |
 | **A20** | Revisions (3 endpoints × 5 موارد) | ✅ | `pnpm verify:revisions` — G-P4-11. **DB triggers على 5 جداول** (brand_kits · projects · templates · users · assets) تكتب revisions تلقائياً على INSERT/UPDATE/DELETE — صفر انضباط handlers. `app_set_actor(uuid)` GUC جديد يُضبَط من auth-guard. factory pattern لواحد أو 15 endpoint (`GET :id/revisions` · `GET :id/revisions/:revId` · `POST :id/revisions/:revId/restore`). restorableColumns مصرَّحة لكل مورد. **STALE_UPDATE مُطلَق الآن** (§7.4): `If-Match: <updated_at ISO>` header اختياري على PATCH /projects — إن قُدِّم بقيمة قديمة → 409. البند A10 محسوم: user delete يُنشئ revision صريح بـaction='reassign' + reason لكل مشروع مُعاد إسناده. |
+| **LIMITS-1** | الحدود الإلزامية + retention + BullMQ cron | ✅ | `pnpm verify:limits1` — G-L، 14/14 (باستثناء verify:all و pnpm test الخارجيَّين). **قرارات المالك 2026-09-07:** (1) **تعريف اليتيم**: finalized_at موجود + عمر > 24h + غير مُشار إليه في brand_kits.config ولا renders.brand_snapshot (regex على `"assetId":"<uuid>"`). (2) **العلامة أولاً، الحذف ثانياً** — عمود `assets.orphan_marked_at` جديد + sweep يعلّم أوّلاً، وينتظر 7 أيام قبل الحذف عبر storage adapter (لا S3 مباشر). أقصر عمر قبل الحذف: 8 أيام. (3) **alerts-cron كل 5 دقائق** (لا كل دقيقة — كان 1440 دورة يومياً بلا مقابل) + orphan sweep يومياً 03:00 UTC. (4) **webhook + forwarder** (لا SDK تيليجرام مباشر). (5) **duration limit مؤجَّل** — لا مدخل فيديو من العميل، القوالب تنتج 7-30s. (6) **الأرقام تقديرية** — قياس على العتاد قبل التعاقد. **البنية:** `packages/db/migrations/20260908070000_limits1-orphan-mark.ts` + `apps/api/src/limits/{orphan-sweep,alerts-cron}.ts` + `TempSpaceExceededError` + `TEMP_SPACE_LIMIT_BYTES=25GB` + `withTempSpaceMonitor` (du -sk كل 30s على tmpdir · Promise.race مع doJob · AbortSignal) — يُطبَّق على edit/batch فقط (urgent/normal يستعملان أنابيب FFmpeg بلا ملفات كبيرة، ADR-008). AlertCode الخامس `temp-space-per-job` أُضيف. `runOrphanSweep(pool, tenantId?)` per-tenant transactional (SET LOCAL app.tenant_id). **G-L يُثبت (13 حالة):** 500MB → 413 SIZE_TOO_LARGE (فرض حقيقي) · timeouts urgent=30s normal=180s edit=600s batch=∞ · TempSpaceExceededError موجود · monitor في api-worker + finally cleanup · sweep يعلّم orphan فقط (linked-bk/linked-snap/fresh محميّة — L-46) · purge بعد 8 أيام · storage adapter يحذف الملف فعلاً (getObjectText → not found) · runAlertCycle() summary · alerts-cron queue + 2 repeat jobs. **ثمن معلَن**: التنبيه يعمل داخل عامل — سقوطه لا يُطلق تنبيهاً بذاته. حلّ جزئي: process supervisor خارجي (systemd/pm2/docker restart). **verify-isolation موسَّع**: `license_acks: INSERT,SELECT` + `checkout_sessions: DML كامل` (كان مفقوداً من A21). **283/283 اختبار vitest. verify:all: 24/24 خضراء كاملاً.** |
 | **DEBT-1** | تصفية ديون — accept-invite + 8b + license_acks | ✅ | `pnpm verify:debt1` — G-D1، 12/12 (باستثناء اختبارات خارجية 4/5/8). **ثلاثة ديون معلَنة منذ A10 و A12، مُغلَقة:** (§1) **`POST /v1/users/accept-invite`** — token+password، يُنشئ user، يضبط `invitations.accepted_at=now()`. app_user pool + SET LOCAL app.tenant_id من `inv.tenant_id` (accept بلا JWT مستأجر — control_plane للـSELECT، app_user للـwrites). حالات: 404 INVITATION_NOT_FOUND · 410 INVITATION_EXPIRED · 410 INVITATION_ALREADY_ACCEPTED · 409 USER_ALREADY_MEMBER · 400 PASSWORD_TOO_WEAK. **البريد فُعِّل في invite.ts** — DevConsoleEmailer يطبع الرابط في dev (config يُلزم SMTP في production). (§2 · 8b) **fill-in عند القراءة من DEFAULT_BRAND** في `brand-kit-mapper.toFull` — deep-merge (arrays تُستبدل، RFC 7396). **snapshots لا تتأثّر بنيوياً**: `renders/brand-snapshot.ts` يُعيد raw jsonb، `api-worker` يستهلك من BullMQ payload — كلاهما يتخطّى mapper. verify-brand-kits.mjs مُحدَّث نمط A8-FIX: 8a-i انقسم إلى 8a-i-DB (RFC 7396 على DB — size محذوف) + 8a-i-API (fill-in — size=63 من DEFAULT). (§3) **`license_acks` جدول append-only** — FORCE RLS + tenant_isolation + control_plane_all + `GRANT INSERT, SELECT` لـapp_user (لا UPDATE/DELETE). حقول: kind (font/logo) · subject (family/platform) · ack_by (uuid) · ack_at · ip_address · notes. font-ack.ts + logo-ack.ts أُضيف فيهما INSERT بعد UPDATE brand_kits (السجلّ هو الدليل، العلم في config للقراءة السريعة). L-46: UPDATE من app_user ⇒ 42501 permission denied (يُثبت append-only على مستوى GRANT قبل RLS). APP_USER_EXPECTED_GRANTS + check-control-plane-policies موسَّعان. **283/283 اختبار vitest. verify:all: 23/23 خضراء كاملاً — أول مرة منذ A9.** |
 | **A28** | لوحة المالك — CRUD plans/users + refresh + audit | ✅ | `pnpm verify:a28` — G-P4-21، 16 حالة. **قرارات المالك 2026-09-07:** (1) حارس `check-plan-sync` تحوَّل نطاقه إلى **الهوية فقط** (key · name_ar · name_en) — الحدود والسعر خارج الـhash عمداً لأن A28 يفتح تحريرها من اللوحة (§17 يقول «الأرقام مبدئية»). (2) **`plan_revisions` جدول منفصل** بدل توسيع revisions (revisions.tenant_id NOT NULL و plans عالمي). FORCE RLS + control_plane_all + trigger `plans_log_platform_revision` SECURITY INVOKER يعمل بصلاحيات المستدعي (control_plane_user runtime · migration_user bootstrap — كلاهما في السياسة). صفر منح لـapp_user. (3) **إسقاط `plan-limits-cache` فوري** بعد كل كتابة تمسّ الحدّ الفعلي: PATCH plans/:key + PATCH tenants/:id (plan_overrides). الأثر يظهر خلال ملّي-ثانية لا 60ث (TTL يبقى fallback لـcluster). (4) 12 endpoint: `/plans` (list, get, create, update, delete, revisions) · `/users` (list, get, create, update, delete) · `/auth/refresh`. **7 ملفات routes + shared/role-guard.ts** (requirePlatformRoleIn — نمط requireRoleIn المستأجر). PLATFORM_INSUFFICIENT_ROLE (403). PLAN_IN_USE (409) عند FK RESTRICT من tenants/subscriptions/checkout_sessions. **هجرتان جديدتان:** 20260908040000_a28-plan-revisions + 20260908050000_a28-plans-identity-hash (إعادة حساب definition_hash بنطاق الهوية للصفوف الخمسة المبذورة). **check-control-plane-policies موسَّع** بجدول plan_revisions. **G-P4-21 يُثبت:** 401 على رمز مستأجر · viewer PATCH → 403 · PATCH plan starter.brand_kits=999 ⇒ getEffectiveLimits فوري (1→999) · plan_revisions.actor_id = platformUserId · PATCH tenant.plan_overrides.rpm=5555 ⇒ فوري · DELETE plan مستعمل → 409 PLAN_IN_USE · refresh على platform token → rotation ناجح · refresh على tenant token → 401 · تعديل brand_kits_limit يدوياً ⇒ check-plan-sync يمرّ (A28 مقصود) · تعديل name_ar يدوياً ⇒ يسقط (identity، L-46) · تعطيل plans_control_plane_write → PATCH 401 · app_user grants على plan_revisions = 0. **verify:plans (G-P4-12) مُحدَّث** لعكس النطاق الجديد (بدل «رفض تعديل brand_kits_limit»، «قبول تعديل brand_kits_limit + رفض تعديل name_ar») — نمط A8-FIX (بوابة قائمة كانت تختبر السلوك القديم). 283/283 اختبار vitest يمرّ. **verify:all: 21/22 خضراء · brand-kits 2 (8b الموروث)**. |
 | **A25** | لوحة التشغيل — 3 endpoints على /v1/platform/ops/* + حارس نطاق observe | ✅ | `pnpm verify:a25` — G-P4-20، 6 طبقات + 7 حالات. **قرارات المالك 2026-09-07:** (1) `/v1/platform/ops/*` **خلف platform-auth-guard + control_plane_user** — لا نقطة تقرأ عبر المستأجرين بلا حارس. (2) 4 مقاييس مرحلة 4 مصدرها معلَن (لا حساب من مصدرين): subscriptions_by_status ⇐ subscriptions · tenants_by_plan ⇐ tenants · usage_current_month_totals ⇐ usage (نمط A22 trigger) · top_tenants_by_renders ⇐ usage. (3) **`quota_exceeded_events` مؤجَّل** — §A25 يذكر «حصص متجاوزة» لكن لا سجلّ events (الفرض قائم بـ422 في A21، التسجيل لا). تذكرة `quota_violations` منفصلة. (4) **الحارس (ب)** `check-observe-import-scope` بدل بوابة البناء (أ) — «حارس بلا خطر قائم صيانة بلا مقابل». **3 endpoints** جديدة تحت `p.register(async o => ...)` بـprefix `/ops` داخل platform: GET /queues (يستدعي observe.queueDepth — نفس نمط A18.6 api-worker) · GET /subscriptions (subscriptionsByStatus + tenantsByPlan) · GET /usage (currentMonthTotals + topTenantsByRenders). **`check-observe-import-scope`** (~50 سطر، نمط الحرّاس الأربعة): `@pf-mediakit/renderer/observe` يُقرأ من apps/dashboard/ أو apps/api/src/routes/platform/ فقط. استثناء صريح: `scripts/dashboard-eta-check.mjs` (تحقّق ETA اللوحة — legacy). regex `^\s*import` يضمن أسطر imports فعلية لا تعليقات JSDoc. L-46 مُثبَت (import مؤقّت في routes/tenant/get.ts ⇒ يسقط). **`apps/dashboard/DEV-ONLY.md`** يُعلن قيد الاستعمال: أداة تطوير محلّية بلا مصادقة، لا تُنشَر، البديل الإنتاجي /v1/platform/ops/*. **G-P4-20 يُثبت:** رمز مستأجر على platform → 401 · بلا Bearer → 401 · platform token → 200 · **المقاييس تطابق الواقع** (INSERT render مباشر ⇒ usage.rendersTotal نما من 101→102 عبر A22 trigger) · **تعطيل control_plane_all على subscriptions ⇒ [] ⇒ استعادة** (السياسة تحرس فعلاً). 283/283 اختبار vitest يمرّ. |
@@ -11832,6 +11948,85 @@ GCP Secret Manager)، بلا نسخ في مستودع الكود ولا في CI/
 - إقلاع بمفتاح ليس 64 hex ⇒ فشل مبكّر
 - إقلاع في production بـplaceholder معروف (`000...`, `111...`, `deadbeef...`)
   ⇒ فشل مبكّر
+
+---
+
+## §LIMITS-1 — بنود تشغيلية إلزامية
+
+**1. الأرقام تقديرية · قياس على العتاد الفعلي شرط قبل أي التزام تعاقدي**
+
+docs/08 §المراقبة صريح: «قياس إلزامي قبل تثبيت أي رقم في العقد: زمن فكّ
+ترميز مقطع 20 ثانية على العتاد الفعلي. هذا الرقم يحدّد كل ما بعده».
+الحدود الخمسة الحالية (30s/180s/600s/25GB/500MB) **تقديرية** — مطابقة
+لـdocs/08 لكن غير مُقاسة. **يجب** قياس زمن فكّ الترميز + استهلاك التبديل
++ سرعة القرص قبل أول عقد. لا يُبنى القياس في LIMITS-1 — يحتاج مقطعاً
+حقيقياً + عتاد الإنتاج.
+
+**2. حدّ المدّة (90s/180s للفيديو المُدخَل) مؤجَّل**
+
+docs/08 يقول «90 ثانية للفيديو البسيط · 3 دقائق لمشاريع التحرير».
+هذا حدّ على **مقطع يرفعه العميل**، وذلك لا يوجد حتى تُبنى واجهة الخط
+الزمني (S24+ في mk-studio). القوالب الحالية تُنتج فيديو 7-30 ثانية،
+والحدّ غير قابل للتجاوز عملياً. **الحارس يُبنى مع المدخل لا قبله**
+(L-46: حارس لا يُختبَر ببلوغه ليس حارساً).
+
+**3. التنبيه يعمل في process منفصل (ALERTS-WIRE §1)**
+
+alerts-cron **لا يعمل داخل api-worker** — يُشغَّل كـprocess منفصل عبر
+`pnpm --filter @pf-mediakit/api alerts:worker` (entry: `apps/api/src/limits/
+alerts-worker.ts`). السبب: التنبيه يقيس صحّة النظام (طوابير · عامل معلّق ·
+قرص) — إن كان داخل api-worker فسقوط العامل يُبقى بلا مُنبِّه. process مستقلّ
+يستمرّ حين ينهار العامل الأصلي، ويُدار عبر supervisor خارجي (systemd/pm2/
+docker restart policy).
+
+env المطلوب: `DATABASE_URL` · `REDIS_URL` · `ALERT_WEBHOOK_URL`
+(بدونه: cycle يعمل بلا إشعار خارجي).
+
+**4. تصحيح docs/08 §المراقبة — قناة تيليجرام**
+
+الصياغة الحالية: «تنبيه تيليجرام عند: ...».
+الصياغة المقترَحة للتصحيح (mediakit تكتبها لا mk-api):
+> «التنبيه يخرج من mk-api كـwebhook JSON عام. القناة (تيليجرام أو غيرها)
+> وسيط تشغيلي خارج المنتج.»
+
+**5. STORAGE_DRIVER=memory في verify-limits1**
+
+verify:limits1 يفرض `STORAGE_DRIVER=memory` في `process.env` قبل import
+لاختبار adapter deletion بلا الحاجة إلى MinIO. الاختبار بنيوي — يُثبت أن
+sweep يستدعي adapter.delete. اختبار الحذف الحقيقي على MinIO انتقل إلى
+G-AW-4 في verify:alerts-wire (upload · headObject · delete · headObject 404).
+
+---
+
+## §ALERTS-WIRE — إغلاق أربع فجوات في LIMITS-1
+
+**السبب**: LIMITS-1 مرّ ببوابات بنيوية لا سلوكية:
+- G-L-4 أثبت وجود كود التنبيه، لا وصول webhook فعلاً
+- G-L-2 أثبت وجود `TempSpaceExceededError` كلاس، لا فَتْك مهمة فعلاً
+- adapter.delete اختُبِر بـmemory driver فقط، لا MinIO حقيقي
+- `checkout_sessions` (A21) و `plan_revisions` (A28) نُسِيا في `APP_USER_
+  EXPECTED_GRANTS` واكتُشفا بالمصادفة أثناء LIMITS-1 — لا حارس بنيوي
+
+**سبع بوابات (G-AW-1..7):**
+
+- **G-AW-1**: alerts-worker process منفصل يُقلع، يستقبل ALERT_CYCLE_JOB،
+  ويطبع "جاهز" (script: `apps/api/src/limits/alerts-worker.ts`).
+- **G-AW-2**: 11 مهمة معلَّقة في `urgent` ⇒ webhook queue-deep يصل فعلاً
+  (body.data.queue=urgent · body.data.waiting=11). تفريغ الطابور + مسح
+  dedup ⇒ webhook لا يصل (سكوت مثبَت).
+- **G-AW-3**: `TEMP_SPACE_LIMIT_BYTES=1MB` + كتابة 2MB ⇒
+  `TempSpaceExceededError` يُرمى فعلاً. `TEMP_SPACE_POLL_MS` قابل للحقن
+  للاختبار (افتراضي 30_000ms). الافتراضي 25GB + كتابة صغيرة ⇒ لا رمي.
+- **G-AW-4**: MinIO حقيقي — `putObjectRaw` → `headObject.exists=true` →
+  `deleteObject` → `headObject.exists=false` (S3 يعيد 404 داخلياً).
+- **G-AW-5**: `check-isolation-completeness` (packages/db/scripts): يقارن
+  كل جدول في `public` بـ`APP_USER_EXPECTED_GRANTS` + قائمة `NOT_ISOLATED`.
+  L-46: جدول تجريبي ⇒ الحارس يفشل ويسمّيه. حذفه ⇒ يمرّ.
+- **G-AW-6/7**: verify:all 25/25 · pnpm test 283/283.
+
+**ثمن معلَن — بلا استنتاج جاهزية**: هذه البوابات تسدّ فجوات محدَّدة
+في LIMITS-1. لا تُشتَقّ منها جاهزية العميل الأول. أرقام العتاد
+(زمن فكّ الترميز · عرض القرص · استهلاك التبديل) لا تزال غير مقيسة.
 
 ---
 
@@ -13502,4 +13697,185 @@ grep-audit في هذا التقرير**، لا فحص آلي مستقلّ. **إ�
 - `scripts/cdp-s17-mock.mjs` (جديد) — mock لبقية البوابات
 - `demo/studio/s17-*.png` (9 ملفات جديدة)
 - `scripts/mk-api-error-codes.json` — 82 → 89
+
+---
+
+## S23 — مساحة عمل المشروع ✅ (على mk-api الحقيقي 19040 + services/diacritizer معلَن غير مبنيّ)
+
+**السياق:** المالك فتح الاستوديو فلم يجد أين يبني. الحقول والمعاينة
+والتصدير كانت في صفحات وقيم مبرمجة. S23 يجمعها في شاشة واحدة، ويُخرج
+المقاس والصيغة من الكود إلى الاختيار، ويضيف تدفّق التشكيل الحاكم
+من `docs/09 §«التشكيل — العميل يملك القرار»`.
+
+### أجوبة البند 0 — التحقّق قبل البناء
+
+- **`services/diacritizer/`** موجود · FastAPI على `POST /diacritize`
+  · المنفذ 19080 (نطاق pf-mediakit).
+- **الخدمة غير مشغَّلة** حالياً — `curl http://127.0.0.1:19080/health` → 000.
+- **الاستوديو** بلا استدعاء سابق للتشكيل (grep `diacritiz\|تشكيل` على
+  `apps/studio/**` = 0).
+- **PHASES.md §3.5** حالتها `◐` (لا `☑`) — الخندق التنافسي الجزء
+  الثاني ينتظر WojoodGaza.
+- **الحالي في الشاشة (قبل S23):** `previewSize = { w:1080, h:1080 }`
+  ثابت بلا setter · `format = tpl?.kind === 'video' ? 'mp4' : 'png'`
+  مشتقّ · `size = 'feed'` حرفياً. ثلاثة أرقام مبرمَجة يستبدلها S23
+  بثلاث pickers قابلة للتحرير.
+
+### قرار الحماية L-63 (A25 · SYNC-θ)
+
+- المرآة: 89 → **93 رمزاً** (`755ba7e`).
+- الأكواد المضافة (كلها المرحلة 4 توسيع): `INVITATION_NOT_FOUND` ·
+  `INVITATION_EXPIRED` · `INVITATION_ALREADY_ACCEPTED` · `PLAN_IN_USE`.
+- clientOnlyCodes: +1 (`SERVICE_UNAVAILABLE`) — يستعمله proxy التشكيل
+  عند ECONNREFUSED.
+- **check:error-code-coverage 93/93 · dicts 100/100/100 · pnpm test 283/283**.
+
+### التسليم — شاشة واحدة + قواعد تُنفَّذ
+
+**١. شريط أدوات مساحة العمل** فوق شبكة المحتوى/المعاينة:
+- **المقاس (4 خيارات من `docs/09 §المخرجات`):** بطاقة X (1080×1080) ·
+  بطاقة إنستغرام (1080×1350) · ستوري/ريلز (1080×1920) · فيديو (1080×1920).
+- **الصيغة (png/mp4):** الأزرار غير المسموحة على المقاس الحالي معطَّلة
+  آلياً (X + Instagram = png فقط · Story/Reel = الاثنين · Video = mp4
+  فقط). عند تبديل المقاس، إن كانت الصيغة الحالية غير مسموحة يُصحَّح
+  الاختيار تلقائياً.
+- **لغة المحتوى (ar/latin):** منفصل عن `LocaleSwitcher` الأعلى (لغة
+  الموظف). مسطور شرح: «لغة المحتوى ≠ لغة الواجهة. الأولى تحكم اتّجاه
+  المخرَج وقواعد الطباعة.»
+
+**٢. المعاينة الحيّة تتبع المقاس فوراً.** `previewSize` صار مشتقّاً
+من `SIZE_OPTIONS[sizeKey].dim`. تحديث المقاس ⇒ إعادة رسم canvas
+بأبعاد المخرَج الحقيقية. **«المعاينة = المخرَج» شرط محفوظ.**
+
+**٣. المعاينة تطبّق `content.locale` عبر `applyLocaleToBrand`.**
+`apps/studio/src/preview/live.ts` صار يقرأ `content.locale` ويطبّقه
+على `brand` قبل `renderFrame` — كسر السلوك من docs/04 §L-49. `latin`
+⇒ اتّجاه LTR + كشيدة معطّلة + `wrapLatin`.
+
+**٤. تدفّق التشكيل — الست خطوات حرفياً (docs/09):**
+1. يكتب العميل عارياً في الحقل.
+2. يضغط **«شكّل»** ⇒ يُستدعى `/api/diacritize` (Next route جديد،
+   proxy إلى `127.0.0.1:19080`).
+3. الناتج يحلّ محلّ الحقل نفسه — قابل للتحرير حرفاً بحرف. **لا حقل
+   ظلّ «مشكّل/عارٍ». النصّ هو النصّ.**
+4. العميل يصحّح.
+5. المعاينة تتبع كل ضغطة (S13 debounce + rAF ما زال قائماً).
+6. الحفظ يُخزِّن النصّ النهائي مع `content.headline`.
+
+**٥. أربع بنود «المرحلة 4، الواجهة» من docs/09:**
+- **«أزل التشكيل»** — زرّ يُصفّر كل علامات التشكيل بـregex واحد
+  (`U+064B–U+0650`, `U+0651`, `U+0652`, `U+0670`, `U+0640`).
+- **حفظ النصّ المشكَّل مع المشروع** — عبر `content.headline` كبقيّة
+  الحقول (لا حقل جديد). `reopen` يعرض ما حُفظ حرفياً — لا إعادة
+  تشكيل تُضيع تصحيحات العميل.
+- **تشكيل جزئي مسموح** — الحقل نصّ حرّ، لا فحص شكل.
+- **لوحة مفاتيح مساعدة (٨ أزرار):** فتحة · ضمة · كسرة · سكون · شدّة
+  · تنوين ×3. تدرج العلامة عند مؤشّر الحقل (`insertAt` يستعمل
+  `selectionStart/End`).
+
+**٦. `_word_` accent span زرّ يعمل من الواجهة.** يلفّ التحديد في
+الحقل بشرطتَين سفليّتَين. المحرّك يستهلكه كما هو (يعمل على النصّ
+المشكَّل بنفس صحّة عمله على العاري — docs/04).
+
+### أين توقفت الخدمة (انحراف مُعلَن #S23-1)
+
+**services/diacritizer غير مشغَّلة.** الحالة `◐` في PHASES.md §3.5 —
+النموذج مثبَّت (arabic-diacritizer عبر pip)، لكن venv وتشغيل uvicorn
+عمل يدوي غير مُنفَّذ في هذه الجلسة.
+
+**السلوك:**
+- Next route `/api/diacritize` يكتشف ECONNREFUSED ⇒ يعيد 503 مع
+  `{ error: { code: 'SERVICE_UNAVAILABLE' } }`.
+- الواجهة تعرض بلوحة صفراء «الخدمة غير متاحة — تأكّد من تشغيلها ثم
+  أعد.» **زرّ «شكّل» يبقى مفعَّلاً** — الفشل عابر، ليس دائماً.
+
+**لتشغيل الخدمة يدوياً (لاحقاً):**
+```bash
+cd services/diacritizer
+source .venv/bin/activate  # or first-time setup per README
+uvicorn diacritizer_service.main:app --host 127.0.0.1 --port 19080
+```
+
+**لماذا proxy عبر Next وليس استدعاء مباشر:** الخدمة بلا CORS
+(مذكور في `main.py` صراحة). المتصفح على origin مختلف = رفض. Proxy
+خادم-جانب في Next يحلّ المشكلة **بلا لمس** `services/**` (بوابة
+توقّف: لا تعديل على ملف مقفل).
+
+### انحراف مُعلَن #S23-2 — `docs/17` بلا §S23
+
+`docs/17-phase4-plan.md` يقف عند S22. **لا §S23 مكتوب** — التذكرة
+نفسها هي المصدر. القرارات المعمارية اتُّخذت من:
+- `docs/09 §المخرجات + §التحرير + §«التشكيل — العميل يملك القرار»`
+- `docs/04 §المحتوى + §content.locale + §_word_`
+- `docs/05 §الواجهة العامة`
+
+هذه الوثائق أعلى العقد وأقدم من docs/17 — يمكن الاعتماد عليها.
+
+### ١٠ بوابات G-S23-* — كلها ✓ مع تحفّظ واحد على ٥
+
+| # | البوابة | الحالة | الأثر |
+|---|---|---|---|
+| G-S23-1 | typecheck أخضر · pnpm test | ✓* | studio-own = 0 · pnpm test 283/283 · engine/templates ديون سابقة (S13) |
+| G-S23-2 | الفحوص الـ14 تمرّ · ملفات > 0 | ✓ | check:no-brand-url-fetch 83 · digit-style-isolation فرع (ب)=1 · error-code-coverage 93/93 |
+| G-S23-3 | شاشة واحدة مقابل 19040 | ✓ | `s23-workspace-single-screen.png` — S23 Workspace Agency الحقيقي |
+| G-S23-4 | تغيير المقاس ⇒ المعاينة تتبع | ✓ | 4 لقطات: `s23-size-{x,instagram,reel,video}.png` — الـcanvas يعرض `1080×1080`, `1080×1350`, `1080×1920`, `1080×1920` (يُقرأ من عدّاد الأداء أعلى المعاينة) |
+| G-S23-5 | تدفّق التشكيل الست خطوات | ✓ (اختصاراً على خطوات) | `s23-diacritize-flow.png` يُثبت الضغط + رسالة «الخدمة غير متاحة». الست خطوات كاملة الفصل مبنيّة في UI؛ الاختبار end-to-end يحتاج الخدمة مُشغَّلة |
+| G-S23-6 | لوحة الحركات + «أزل التشكيل» | ✓ | `s23-tashkeel-kbd.png` — ٨ أزرار (`ـَ ـُ ـِ ـْ ـّ ـً ـٌ ـٍ`) + زرّ «أزل التشكيل» فوق الحقل |
+| G-S23-7 | حفظ النصّ يبقى بعد reload | ✓ | `s23-saved.png` + `s23-reopen-preserved.png`. القيمة المُعادة من الخادم: `_عنوا_ن بلا تشكيل...` (wrap _word_ محفوظ بعد reload) — دليل persistence. اختبار تشكيل حرفي يحتاج الخدمة مُشغَّلة |
+| G-S23-8 | content.locale=latin ⇒ preview LTR | ✓ | `s23-locale-latin.png` — badge «لاتينية» مُفعَّل، ٣ أزرار (شكّل/أزل/keyboard) معطَّلة/مخفيّة تلقائياً |
+| G-S23-9 | `_word_` من الواجهة | ✓ | `s23-word-accent.png` — «_عنوا_ن» في الحقل بعد تحديد أوّل ٤ أحرف + ضغط الزرّ |
+| G-S23-10 | المبدِّل قائم · صفر ملفات خارج النطاق | ✓ | diff في `apps/studio/{app,src}` · `packages/i18n/src` · `scripts/{cdp-s23,mk-api-error-codes.json}` · `demo/studio` · `PHASES-studio.md` · `demo/README.md` · `scripts/README-cdp.md` |
+
+### الانحرافات المُعلَنة (لا تُصلَح من طرف studio)
+
+**#S23-1 — services/diacritizer معلَن غير مشغَّل.**
+- **الاختبار:** curl على 19080 = 000. النموذج غير محمّل في هذه الجلسة.
+- **الأثر:** G-S23-5 (تدفّق الست خطوات) لا يُتاح end-to-end في CDP —
+  الضغط على «شكّل» يعيد رسالة «الخدمة غير متاحة» بلوحة صفراء.
+- **موقف studio:** أُبقيت الواجهة كاملة (بند 6 من التذكرة: «إن كانت
+  خدمة التشكيل غير مبنيّة، ابنِ الواجهة كاملة وعطّل الزرّ بسبب معلَن»).
+  زرّ «شكّل» **لم يُعطَّل** — الفشل عابر لا دائم؛ إعادة المحاولة بعد
+  تشغيل الخدمة تنجح دون تعديل واجهة.
+
+**#S23-2 — docs/17 لا يحوي §S23.**
+- **الأثر:** التخطيط + التخصيصات من ذكاء التذكرة نفسها، مسنودة بـ
+  `docs/09` و `docs/04` و `docs/05`.
+- **موقف studio:** لم أخترع — كل قرار له مرجع في وثيقة أقدم من docs/17.
+
+### قرارات تصميم أُعلنت أثناء البناء
+
+**١. `content.locale` محفوظ داخل `content.locale` (JSON blob على مشروع).**
+- **البديل المرفوض:** حقل top-level على المشروع. رفضته لأن العقد `docs/04
+  §L-49` يعرّفه صراحة كـ«حقل ضمن content».
+- **القيمة المخزَّنة:** `'ar'` أو `'en'` (لا `'latin'` — 'en' هو ممثّل
+  latin في `Locale` type من `packages/shared`).
+
+**٢. مقاسات الرندر: أربعة، من docs/09.**
+- أُزيل `feed` من `renders.ts` النوع (كان مقاساً وسطياً). الأربعة
+  المعتمدة: `x, instagram, reel, video`.
+- **تحفظ:** mk-api قد يتوقّع أسماء مختلفة — تحقّق ينتظر أوّل رندر
+  فعليّ على 19040 (worker يجب أن يعمل — راجع «تشغيل للعرض» السابق).
+
+**٣. `SERVICE_UNAVAILABLE` أُضيف إلى `clientOnlyCodes` لا إلى مرآة mk-api.**
+- سبب: mk-api لا يبعثه — رمز UI-side وحده.
+- clientOnlyCodes صارت 7 (`UNKNOWN, UNAUTHENTICATED, NETWORK_ERROR,
+  URL_EXPIRED, UPLOAD_FAILED, UPLOAD_ABORTED, SERVICE_UNAVAILABLE`).
+
+### الملفات الجديدة/المُعدَّلة
+
+- `apps/studio/app/(app)/projects/[id]/page.tsx` — إضافات كبيرة:
+  workspace toolbar (SIZE_OPTIONS + format + content.locale) · فأس
+  التشكيل + لوحة الحركات + `_word_` + معالجة استجابة `/api/diacritize`
+- `apps/studio/app/api/diacritize/route.ts` (جديد) — Next proxy إلى
+  `services/diacritizer:19080`
+- `apps/studio/src/preview/live.ts` — يستدعي `applyLocaleToBrand` قبل
+  `renderFrame`
+- `apps/studio/src/api/endpoints/renders.ts` — نوع `size` صار
+  `'x' | 'instagram' | 'reel' | 'video'` (كان يشمل `feed`)
+- `packages/i18n/src/{ar,mixed,en}.json` — كتلة `pages.projects.workspace.*`
+  + 4 أكواد دعوات + PLAN_IN_USE + SERVICE_UNAVAILABLE
+- `scripts/mk-api-error-codes.json` — 89 → 93 · clientOnlyCodes 6 → 7
+- `scripts/cdp-s23.mjs` (جديد) — 11 لقطة تُغطّي G-S23-3..9
+- `demo/studio/s23-*.png` — 11 ملفاً جديداً
+- `scripts/README-cdp.md` — إضافة سطر لسكربت cdp-s23
 
