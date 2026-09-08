@@ -100,9 +100,9 @@ async function main() {
     // G-L-2: TempSpaceExceededError موجود + كلاس + قيمة الحدّ
     console.log('\n▶ G-L-2 — 25GB مؤقتة/مهمة: كلاس الخطأ + الحدّ');
     const { TempSpaceExceededError } = await import('@pf-mediakit/renderer/api-worker');
-    const testErr = new TempSpaceExceededError(30 * 1024 ** 3);
+    const testErr = new TempSpaceExceededError(30 * 1024 ** 3, 25 * 1024 ** 3);
     TempSpaceExceededError && testErr.name === 'TempSpaceExceededError' && TEMP_SPACE_LIMIT_BYTES === 25 * 1024 ** 3
-      ? pass(`TempSpaceExceededError موجود · TEMP_SPACE_LIMIT_BYTES=${TEMP_SPACE_LIMIT_BYTES / (1024**3)}GB · monitor في api-worker يطلقه على edit/batch`)
+      ? pass(`TempSpaceExceededError موجود · افتراضي=${TEMP_SPACE_LIMIT_BYTES / (1024**3)}GB · قابل للحقن عبر env`)
       : fail(`temp-space class: ${testErr.name} · limit=${TEMP_SPACE_LIMIT_BYTES}`);
     // ملاحظة: اختبار «مهمة تُقتل فعلاً بتجاوز 25GB» يحتاج توليد 25GB tmpDir
     // في dev — مكلف على القرص. الاختبار البنيوي (كلاس + monitor موجود

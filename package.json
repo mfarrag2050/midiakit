@@ -72,6 +72,7 @@
     "verify:a28": "pnpm --filter @pf-mediakit/api verify:a28",
     "verify:debt1": "pnpm --filter @pf-mediakit/api verify:debt1",
     "verify:limits1": "pnpm --filter @pf-mediakit/api verify:limits1",
+    "verify:alerts-wire": "pnpm --filter @pf-mediakit/api verify:alerts-wire",
     "verify:all": "node scripts/verify-all.mjs"
   },
   "devDependencies": {

@@ -250,12 +250,17 @@ docs/08 يقول «90 ثانية للفيديو البسيط · 3 دقائق ل�
 والحدّ غير قابل للتجاوز عملياً. **الحارس يُبنى مع المدخل لا قبله**
 (L-46: حارس لا يُختبَر ببلوغه ليس حارساً).
 
-**3. التنبيه يعمل داخل العامل — ثمن معلَن**
+**3. التنبيه يعمل في process منفصل (ALERTS-WIRE §1)**
 
-alerts-cron يُطلَق من worker BullMQ في نفس عملية api-worker (أو منفصلة —
-يمكن إطلاقه بـstartAlertsCron في bootstrap مستقل). **إن سقط العامل، لا
-يُنبَّه سقوطه شيء.** الحلّ الجزئي: process supervisor خارجي (systemd/pm2/
-docker restart policy) خارج mk-api. تُوثَّق كمنشأة تشغيل بعد النشر.
+alerts-cron **لا يعمل داخل api-worker** — يُشغَّل كـprocess منفصل عبر
+`pnpm --filter @pf-mediakit/api alerts:worker` (entry: `apps/api/src/limits/
+alerts-worker.ts`). السبب: التنبيه يقيس صحّة النظام (طوابير · عامل معلّق ·
+قرص) — إن كان داخل api-worker فسقوط العامل يُبقى بلا مُنبِّه. process مستقلّ
+يستمرّ حين ينهار العامل الأصلي، ويُدار عبر supervisor خارجي (systemd/pm2/
+docker restart policy).
+
+env المطلوب: `DATABASE_URL` · `REDIS_URL` · `ALERT_WEBHOOK_URL`
+(بدونه: cycle يعمل بلا إشعار خارجي).
 
 **4. تصحيح docs/08 §المراقبة — قناة تيليجرام**
 
@@ -268,8 +273,40 @@ docker restart policy) خارج mk-api. تُوثَّق كمنشأة تشغيل �
 
 verify:limits1 يفرض `STORAGE_DRIVER=memory` في `process.env` قبل import
 لاختبار adapter deletion بلا الحاجة إلى MinIO. الاختبار بنيوي — يُثبت أن
-sweep يستدعي adapter.delete وأن الملف يختفي بعد الحذف. اختبار عبء
-حقيقي على MinIO/S3 يُبنى في CI منفصل عند الحاجة.
+sweep يستدعي adapter.delete. اختبار الحذف الحقيقي على MinIO انتقل إلى
+G-AW-4 في verify:alerts-wire (upload · headObject · delete · headObject 404).
+
+---
+
+## §ALERTS-WIRE — إغلاق أربع فجوات في LIMITS-1
+
+**السبب**: LIMITS-1 مرّ ببوابات بنيوية لا سلوكية:
+- G-L-4 أثبت وجود كود التنبيه، لا وصول webhook فعلاً
+- G-L-2 أثبت وجود `TempSpaceExceededError` كلاس، لا فَتْك مهمة فعلاً
+- adapter.delete اختُبِر بـmemory driver فقط، لا MinIO حقيقي
+- `checkout_sessions` (A21) و `plan_revisions` (A28) نُسِيا في `APP_USER_
+  EXPECTED_GRANTS` واكتُشفا بالمصادفة أثناء LIMITS-1 — لا حارس بنيوي
+
+**سبع بوابات (G-AW-1..7):**
+
+- **G-AW-1**: alerts-worker process منفصل يُقلع، يستقبل ALERT_CYCLE_JOB،
+  ويطبع "جاهز" (script: `apps/api/src/limits/alerts-worker.ts`).
+- **G-AW-2**: 11 مهمة معلَّقة في `urgent` ⇒ webhook queue-deep يصل فعلاً
+  (body.data.queue=urgent · body.data.waiting=11). تفريغ الطابور + مسح
+  dedup ⇒ webhook لا يصل (سكوت مثبَت).
+- **G-AW-3**: `TEMP_SPACE_LIMIT_BYTES=1MB` + كتابة 2MB ⇒
+  `TempSpaceExceededError` يُرمى فعلاً. `TEMP_SPACE_POLL_MS` قابل للحقن
+  للاختبار (افتراضي 30_000ms). الافتراضي 25GB + كتابة صغيرة ⇒ لا رمي.
+- **G-AW-4**: MinIO حقيقي — `putObjectRaw` → `headObject.exists=true` →
+  `deleteObject` → `headObject.exists=false` (S3 يعيد 404 داخلياً).
+- **G-AW-5**: `check-isolation-completeness` (packages/db/scripts): يقارن
+  كل جدول في `public` بـ`APP_USER_EXPECTED_GRANTS` + قائمة `NOT_ISOLATED`.
+  L-46: جدول تجريبي ⇒ الحارس يفشل ويسمّيه. حذفه ⇒ يمرّ.
+- **G-AW-6/7**: verify:all 25/25 · pnpm test 283/283.
+
+**ثمن معلَن — بلا استنتاج جاهزية**: هذه البوابات تسدّ فجوات محدَّدة
+في LIMITS-1. لا تُشتَقّ منها جاهزية العميل الأول. أرقام العتاد
+(زمن فكّ الترميز · عرض القرص · استهلاك التبديل) لا تزال غير مقيسة.
 
 ---
 

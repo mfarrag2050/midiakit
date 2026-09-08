@@ -31,7 +31,7 @@ import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
 import type { RenderJobInput } from './validate.js';
-import { TEMP_SPACE_LIMIT_BYTES } from './alerts.js';
+import { getTempSpaceLimitBytes } from './alerts.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -272,16 +272,20 @@ async function processCliJob(job: Job<RenderJobInput>): Promise<void> {
 
 // ── مراقب المساحة المؤقتة (LIMITS-1 §3) ───────────
 /**
- * يقيس حجم tmpdir الجذر كل 30 ثانية أثناء المهمة الطويلة. إن تجاوز
- * TEMP_SPACE_LIMIT_BYTES (25GB)، يرفع علماً — الحلقة الرئيسية تفحصه
- * وترمي TempSpaceExceededError، finally ينظّف tmpDir الخاص بالمهمة.
+ * يقيس حجم tmpdir الجذر دورياً أثناء المهمة الطويلة. إن تجاوز الحدّ
+ * (يُقرأ من `getTempSpaceLimitBytes()` — env `TEMP_SPACE_LIMIT_BYTES` مع
+ * افتراضي 25GB)، يرفع علماً — الحلقة الرئيسية تفحصه وترمي
+ * TempSpaceExceededError، finally ينظّف tmpDir الخاص بالمهمة.
+ *
+ * فترة القياس افتراضياً 30s، تُقرأ من env `TEMP_SPACE_POLL_MS`
+ * (ALERTS-WIRE §2: الاختبار يستعمل 200ms + حدّ 1MB لإثبات السلوك).
  *
  * يُطبَّق فقط لطوابير `edit` و `batch` (المتوقّعة تلمس القرص فعلياً).
  * urgent/normal يعملون بأنابيب FFmpeg بلا ملفات مؤقتة كبيرة (ADR-008).
  */
 export class TempSpaceExceededError extends Error {
-  constructor(usedBytes: number) {
-    super(`[temp-space] مساحة مؤقتة ${(usedBytes / (1024**3)).toFixed(1)}GB تجاوزت الحدّ ${(TEMP_SPACE_LIMIT_BYTES / (1024**3))}GB`);
+  constructor(usedBytes: number, limit: number) {
+    super(`[temp-space] مساحة مؤقتة ${usedBytes} بايت تجاوزت الحدّ ${limit} بايت`);
     this.name = 'TempSpaceExceededError';
   }
 }
@@ -297,18 +301,20 @@ async function measureTmpDirBytes(path: string): Promise<number> {
 
 /**
  * يُشغّل monitor بشكل غير متزامن بجانب المهمة الطويلة. يرمي إن تجاوز
- * TEMP_SPACE_LIMIT_BYTES. Promise.race مع doJob() — أيّهما ينتهي أوّلاً
- * ينهي الآخر عبر AbortSignal.
+ * الحدّ. Promise.race مع doJob() — أيّهما ينتهي أوّلاً ينهي الآخر عبر
+ * AbortSignal.
  */
 async function withTempSpaceMonitor<T>(
   doJob: () => Promise<T>, tmpDirRoot: string,
 ): Promise<T> {
   const abort = new AbortController();
+  const limit = getTempSpaceLimitBytes();
+  const pollMs = Number(process.env['TEMP_SPACE_POLL_MS'] ?? 30_000);
   const monitor = (async () => {
     while (!abort.signal.aborted) {
       const used = await measureTmpDirBytes(tmpDirRoot);
-      if (used > TEMP_SPACE_LIMIT_BYTES) throw new TempSpaceExceededError(used);
-      await new Promise((r) => setTimeout(r, 30_000));
+      if (used > limit) throw new TempSpaceExceededError(used, limit);
+      await new Promise((r) => setTimeout(r, pollMs));
       if (abort.signal.aborted) return;
     }
   })();
@@ -392,3 +398,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 // Legacy exports for dev scripts (was startWorkers in worker.ts)
 export const startWorkers = startApiWorker;
 export { computePerTenantCap, tenantKey };
+
+/**
+ * تُصدَّر لغرض الاختبار السلوكي (ALERTS-WIRE §2 G-AW-3):
+ * حقن حدّ صغير عبر `TEMP_SPACE_LIMIT_BYTES` env + `TEMP_SPACE_POLL_MS` env
+ * ⇒ مهمة تكتب > الحدّ تُقتل. لا استعمال إنتاجي مباشر — استعمله عبر
+ * withTempSpaceMonitor في processJob.
+ */
+export { withTempSpaceMonitor };
