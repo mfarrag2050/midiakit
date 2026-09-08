@@ -16,6 +16,7 @@ Chrome (Puppeteer CDP)، يمرّ بتدفّق تسليم بعينه، ويُن�
 | `cdp-s13-mock.mjs` | S13 G-S13-6 على mock (أرقام عربية-هندية — mk-api لا يخزّن bidi.numerals=arabic؛ راجع PHASES-studio §S13 انحراف #S13-1) | `s13-preview-arabic-numerals-mock.png` |
 | `cdp-s17-real.mjs` | S17 G-S17-3 (renders queue) + G-S17-7 (billing + usage) على mk-api الحقيقي 19040 | `s17-renders-queue-real.png` · `s17-billing-real.png` |
 | `cdp-s17-mock.mjs` | S17 G-S17-4/5/6/8/10 (cancel-202، revisions، AI integrations، 502) على mock | `s17-cancel-202.png` · `s17-revisions-list.png` · `s17-restore-dialog.png` · `s17-ai-empty.png` · `s17-ai-add-dialog.png` · `s17-ai-list-keyref.png` · `s17-ai-provider-502.png` |
+| `cdp-s23.mjs` | S23 مساحة العمل — workspace شاشة واحدة · ٤ مقاسات · لوحة تشكيل · `_word_` · content.locale · persistence — على mk-api الحقيقي | `s23-workspace-single-screen.png` · `s23-size-*.png` (٤) · `s23-tashkeel-kbd.png` · `s23-word-accent.png` · `s23-diacritize-flow.png` · `s23-locale-latin.png` · `s23-saved.png` · `s23-reopen-preserved.png` |
 
 عند إضافة سكربت لتذكرة جديدة: **حدِّث هذا الجدول في التزام السكربت
 نفسه**. أداة قائمة بلا توثيق تُنسى — راجع L-54.

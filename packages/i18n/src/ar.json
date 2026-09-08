@@ -141,6 +141,35 @@
         "title": "معاينة حيّة",
         "hint": "الأرقام تتبع brand.bidi.numerals من هوية العميل — لا DigitStyle."
       },
+      "workspace": {
+        "sizeLabel": "المقاس",
+        "formatLabel": "الصيغة",
+        "contentLocaleLabel": "لغة المحتوى",
+        "contentLocaleHint": "لغة المحتوى ≠ لغة الواجهة. الأولى تحكم اتّجاه المخرَج وقواعد الطباعة.",
+        "contentLocale": {
+          "ar": "العربية",
+          "latin": "لاتينية"
+        },
+        "size": {
+          "x": "بطاقة X",
+          "instagram": "بطاقة إنستغرام",
+          "reel": "ستوري / ريلز",
+          "video": "فيديو"
+        },
+        "diacritize": "شكّل",
+        "stripTashkeel": "أزل التشكيل",
+        "tashkeelKbd": "مساعد الحركات",
+        "tashkeel": {
+          "fatha": "فتحة",
+          "damma": "ضمة",
+          "kasra": "كسرة",
+          "sukun": "سكون",
+          "shadda": "شدّة",
+          "tanwinFatha": "تنوين فتح",
+          "tanwinDamma": "تنوين ضم",
+          "tanwinKasra": "تنوين كسر"
+        }
+      },
       "annotations": {
         "title": "التعليقات",
         "empty": "لا تعليقات بعد.",
@@ -470,6 +499,7 @@
     "URL_EXPIRED": "انتهت صلاحية رابط الرفع — إعادة المحاولة ستطلب رابطاً جديداً.",
     "UPLOAD_FAILED": "فشل الرفع — أعد المحاولة.",
     "UPLOAD_ABORTED": "أُلغي الرفع.",
+    "SERVICE_UNAVAILABLE": "الخدمة غير متاحة — تأكّد من تشغيلها ثم أعد.",
 
     "INVALID_CREDENTIALS": "بريد أو كلمة سر خاطئة.",
     "ACCOUNT_DISABLED": "الحساب متوقّف — راسل الدعم.",
@@ -566,6 +596,11 @@
     "CAPABILITY_NOT_ENABLED": "القدرة غير مُفعَّلة — أضف تكاملاً يوفّرها.",
     "PROVIDER_ERROR": "المزوّد لم يستجب استجابةً صحيحة — أعد المحاولة.",
     "PROVIDER_TIMEOUT": "المزوّد تأخّر — أعد المحاولة.",
+
+    "INVITATION_NOT_FOUND": "الدعوة غير موجودة أو أُلغيت.",
+    "INVITATION_EXPIRED": "الدعوة انتهت صلاحيّتها.",
+    "INVITATION_ALREADY_ACCEPTED": "الدعوة قُبلت مسبقاً.",
+    "PLAN_IN_USE": "الباقة مستعمَلة — لا يمكن حذفها.",
 
     "UNAUTHORIZED": "مصادقة مطلوبة.",
     "FORBIDDEN": "دخول مرفوض.",

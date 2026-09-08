@@ -37,7 +37,9 @@ export interface RenderRow {
 export function create(
   input: {
     readonly project_id: string;
-    readonly size: 'x' | 'instagram' | 'feed' | 'reel';
+    // docs/09 §المخرجات: أربعة مقاسات معتمَدة. `video` = 1080×1920 مخصّص
+    // للفيديو (نفس أبعاد reel لكن `format='mp4'` حصراً).
+    readonly size: 'x' | 'instagram' | 'reel' | 'video';
     readonly format: 'png' | 'mp4';
     readonly priority?: 'urgent' | 'normal';
   },

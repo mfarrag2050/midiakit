@@ -130,6 +130,35 @@
         "title": "Live preview",
         "hint": "Digits follow brand.bidi.numerals from the client's kit — not DigitStyle."
       },
+      "workspace": {
+        "sizeLabel": "Size",
+        "formatLabel": "Format",
+        "contentLocaleLabel": "Content locale",
+        "contentLocaleHint": "Content locale ≠ UI locale. The former drives output direction and typography rules.",
+        "contentLocale": {
+          "ar": "Arabic",
+          "latin": "Latin"
+        },
+        "size": {
+          "x": "X card",
+          "instagram": "Instagram card",
+          "reel": "Story / Reel",
+          "video": "Video"
+        },
+        "diacritize": "Diacritize",
+        "stripTashkeel": "Strip tashkeel",
+        "tashkeelKbd": "Tashkeel aid",
+        "tashkeel": {
+          "fatha": "fatha",
+          "damma": "damma",
+          "kasra": "kasra",
+          "sukun": "sukun",
+          "shadda": "shadda",
+          "tanwinFatha": "tanwin fatha",
+          "tanwinDamma": "tanwin damma",
+          "tanwinKasra": "tanwin kasra"
+        }
+      },
       "editor2": {
         "noFields": "No fields in this template.",
         "assignee": "Assignee",
@@ -470,6 +499,7 @@
     "URL_EXPIRED": "Upload URL expired — retry will request a fresh one.",
     "UPLOAD_FAILED": "Upload failed — try again.",
     "UPLOAD_ABORTED": "Upload cancelled.",
+    "SERVICE_UNAVAILABLE": "Service unavailable — make sure it's running and retry.",
 
     "INVALID_CREDENTIALS": "Wrong email or password.",
     "ACCOUNT_DISABLED": "Account is disabled — contact support.",
@@ -566,6 +596,11 @@
     "CAPABILITY_NOT_ENABLED": "Capability isn't enabled — add an integration that provides it.",
     "PROVIDER_ERROR": "The provider didn't respond correctly — retry.",
     "PROVIDER_TIMEOUT": "The provider timed out — retry.",
+
+    "INVITATION_NOT_FOUND": "Invitation not found or cancelled.",
+    "INVITATION_EXPIRED": "Invitation has expired.",
+    "INVITATION_ALREADY_ACCEPTED": "Invitation already accepted.",
+    "PLAN_IN_USE": "Plan is in use — cannot delete.",
 
     "UNAUTHORIZED": "Authentication required.",
     "FORBIDDEN": "Access denied.",

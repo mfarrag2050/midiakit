@@ -18,7 +18,7 @@
   ],
   "source": "apps/api/src/errors.ts @ origin/feat/api",
   "mirroredAt": "2026-09-07",
-  "mirroredFromCommit": "f427470",
+  "mirroredFromCommit": "755ba7e",
   "codes": [
     "INVALID_CREDENTIALS",
     "ACCOUNT_DISABLED",
@@ -91,6 +91,11 @@
     "PROVIDER_ERROR",
     "PROVIDER_TIMEOUT",
 
+    "INVITATION_NOT_FOUND",
+    "INVITATION_EXPIRED",
+    "INVITATION_ALREADY_ACCEPTED",
+    "PLAN_IN_USE",
+
     "RENDER_NOT_ALLOWED_IN_CURRENT_STATE",
     "QUOTA_EXCEEDED_VIDEOS",
     "QUOTA_EXCEEDED_RENDERS",
@@ -134,7 +139,8 @@
       "NETWORK_ERROR",
       "URL_EXPIRED",
       "UPLOAD_FAILED",
-      "UPLOAD_ABORTED"
+      "UPLOAD_ABORTED",
+      "SERVICE_UNAVAILABLE"
     ]
   }
 }

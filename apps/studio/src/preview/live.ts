@@ -13,8 +13,8 @@
 // **مسار SSRF:** `check:no-brand-url-fetch` يحرس هذا الملف — أيّ
 // تحميل شبكي لحقل url داخل الهوية = فشل بناء. راجع scripts/check-no-brand-url-fetch.mjs.
 
-import { renderFrame, resolveBrand } from '@pf-mediakit/engine';
-import type { BrandKit } from '@pf-mediakit/shared';
+import { applyLocaleToBrand, renderFrame, resolveBrand } from '@pf-mediakit/engine';
+import type { BrandKit, Locale } from '@pf-mediakit/shared';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 
 export interface PreviewInput {
@@ -79,7 +79,12 @@ export async function drawPreview(
 ): Promise<PreviewResult> {
   const started = performance.now();
 
-  const brand = mergeBrand(input.brandConfig);
+  const brandBase = mergeBrand(input.brandConfig);
+  // content.locale (L-49) يقود سلوك المحرّك: اتجاه، كشيدة، كسر دلالي،
+  // خط. `applyLocaleToBrand` يبدّل brand مرة واحدة قبل الرندر — الطبقات
+  // تقرأ من brand المُعدَّل.
+  const contentLocale = ((input.content as { locale?: Locale }).locale ?? 'ar') as Locale;
+  const brand = applyLocaleToBrand(brandBase, contentLocale);
   const template = input.template as Parameters<typeof renderFrame>[0]['template'];
 
   // انتظار تحميل الخط قبل أي measureText داخل المحرك.

@@ -69,6 +69,36 @@ function isTextField(t: string): boolean {
   return t === 'text' || t === 'richtext';
 }
 
+// ── S23: مقاسات المخرَج من docs/09 §المخرجات ──────────────
+type SizeKey = 'x' | 'instagram' | 'reel' | 'video';
+interface SizeOption {
+  readonly labelKey: string;
+  readonly dim: { readonly w: number; readonly h: number };
+  /** الصِيغ المسموحة لهذا المقاس. */
+  readonly formats: readonly ('png' | 'mp4')[];
+}
+const SIZE_OPTIONS: Record<SizeKey, SizeOption> = {
+  x: { labelKey: 'pages.projects.workspace.size.x', dim: { w: 1080, h: 1080 }, formats: ['png'] },
+  instagram: { labelKey: 'pages.projects.workspace.size.instagram', dim: { w: 1080, h: 1350 }, formats: ['png'] },
+  reel: { labelKey: 'pages.projects.workspace.size.reel', dim: { w: 1080, h: 1920 }, formats: ['png', 'mp4'] },
+  video: { labelKey: 'pages.projects.workspace.size.video', dim: { w: 1080, h: 1920 }, formats: ['mp4'] },
+};
+
+// ── S23: مساعد التشكيل — ٨ حركات ─────────────────────────
+const TASHKEEL: readonly { readonly char: string; readonly labelKey: string }[] = [
+  { char: 'َ', labelKey: 'pages.projects.workspace.tashkeel.fatha' },      // fatha
+  { char: 'ُ', labelKey: 'pages.projects.workspace.tashkeel.damma' },      // damma
+  { char: 'ِ', labelKey: 'pages.projects.workspace.tashkeel.kasra' },      // kasra
+  { char: 'ْ', labelKey: 'pages.projects.workspace.tashkeel.sukun' },      // sukun
+  { char: 'ّ', labelKey: 'pages.projects.workspace.tashkeel.shadda' },     // shadda
+  { char: 'ً', labelKey: 'pages.projects.workspace.tashkeel.tanwinFatha' },// tanwin fatha
+  { char: 'ٌ', labelKey: 'pages.projects.workspace.tashkeel.tanwinDamma' },// tanwin damma
+  { char: 'ٍ', labelKey: 'pages.projects.workspace.tashkeel.tanwinKasra' },// tanwin kasra
+];
+// regex واحد يجرّد كل علامات التشكيل + الشدة + التنوين + السكون (U+064B–U+065F)
+// + الكشيدة (U+0640). يُستعمل لـ«أزل التشكيل».
+const TASHKEEL_STRIP_RE = /[ً-ٰٟۖ-ۭـ]/g;
+
 export default function ProjectEditorPage(): JSX.Element {
   const { t } = useLocale();
   const params = useParams<{ id: string }>();
@@ -118,11 +148,27 @@ export default function ProjectEditorPage(): JSX.Element {
   // stack يخترع بالقيم — القاعدة الثالثة). scheduler = debounce 200ms
   // + rAF. عتبة الأداء المُعلَنة: ≤50ms لرسم 1080×1080 بعد آخر ضغطة.
   const [brandCfg, setBrandCfg] = useState<Record<string, unknown> | null>(null);
-  const [previewSize] = useState<{ w: number; h: number }>({ w: 1080, h: 1080 });
+  // S23 — أربعة مقاسات من docs/09 §المخرجات. المعاينة تتبع الاختيار.
+  // الصيغة مقيَّدة بنوع القالب (video ⇒ mp4 حصراً) والمقاس (ستوري/ريلز
+  // يقبل الاثنين).
+  const [sizeKey, setSizeKey] = useState<SizeKey>('x');
+  const [formatChoice, setFormatChoice] = useState<'png' | 'mp4'>('png');
+  const previewSize = SIZE_OPTIONS[sizeKey].dim;
   const [previewMs, setPreviewMs] = useState<number | null>(null);
   const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const previewScheduler = useRef(createDebouncedScheduler(200));
+
+  // S23 — content.locale منفصل عن LocaleSwitcher. يقود سلوك المحرّك:
+  // اتجاه، كشيدة، كسر دلالي. الافتراضي 'ar'.
+  const [contentLocale, setContentLocale] = useState<'ar' | 'latin'>('ar');
+
+  // S23 — التشكيل: زرّ «شكّل» يستدعي /api/diacritize (proxy إلى
+  // services/diacritizer:19080). النتيجة تظهر في الحقل نفسه — العميل
+  // يحرّرها حرفاً بحرف قبل الحفظ. لا حقل ظلّ «مشكّل/عارٍ» — النص هو النص.
+  const [diacritizeBusy, setDiacritizeBusy] = useState<string | null>(null);
+  const [diacritizeErrorKey, setDiacritizeErrorKey] = useState<string | null>(null);
+  const headlineRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
 
   // S16 — التعليقات. الطبقات مقروءة من template.definition.fields،
   // لا قائمة مثبَّتة في الواجهة.
@@ -152,12 +198,20 @@ export default function ProjectEditorPage(): JSX.Element {
       setTpl(tt);
       setState(st);
       setBrandCfg((bk as BrandKitFull | null)?.config ?? {});
-      const content = (p.content ?? {}) as Record<string, string>;
+      const content = (p.content ?? {}) as Record<string, unknown>;
       const initial: Record<string, string> = {};
       const defs = extractFields(tt);
       for (const f of defs) initial[f.key] = String(content[f.key] ?? '');
       setDraft(initial);
       setDirty(false);
+      // S23 — content.locale مقروء من المشروع نفسه (L-49). الافتراضي 'ar'.
+      const savedLocale = content.locale === 'latin' ? 'latin' : 'ar';
+      setContentLocale(savedLocale);
+      // اقتراح صيغة صحيحة عند اختلاف نوع القالب:
+      if (tt.kind === 'video' && !SIZE_OPTIONS[sizeKey].formats.includes('mp4')) {
+        setSizeKey('video');
+        setFormatChoice('mp4');
+      }
       if (defs.length > 0 && annLayer === '') {
         const first = defs[0];
         if (first) setAnnLayer(first.key);
@@ -230,7 +284,7 @@ export default function ProjectEditorPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ── S13 preview scheduler ──
+  // ── S13 preview scheduler ── (S23: يقرأ الآن contentLocale + previewSize)
   useEffect(() => {
     const canvas = previewCanvasRef.current;
     if (!canvas || !tpl || brandCfg === null) return;
@@ -240,7 +294,8 @@ export default function ProjectEditorPage(): JSX.Element {
           const res = await drawPreview(canvas, {
             template: tpl.definition,
             brandConfig: brandCfg,
-            content: draft,
+            // نُمرِّر content.locale داخل content — preview.merge يقرأه ويطبّق applyLocaleToBrand.
+            content: { ...draft, locale: contentLocale === 'latin' ? 'en' : 'ar' },
             size: previewSize,
           });
           setPreviewMs(res.durationMs);
@@ -251,7 +306,7 @@ export default function ProjectEditorPage(): JSX.Element {
       })();
     });
     return (): void => previewScheduler.current.cancel();
-  }, [tpl, brandCfg, draft, previewSize]);
+  }, [tpl, brandCfg, draft, previewSize, contentLocale]);
 
   async function doSave(): Promise<void> {
     if (!project) return;
@@ -261,7 +316,8 @@ export default function ProjectEditorPage(): JSX.Element {
     try {
       const updated = await projects.patch(
         project.id,
-        { content: draft },
+        // S23 — content.locale محفوظ ضمن content.
+        { content: { ...draft, locale: contentLocale === 'latin' ? 'en' : 'ar' } },
         project.updatedAt
       );
       setProject(updated);
@@ -361,8 +417,9 @@ export default function ProjectEditorPage(): JSX.Element {
     try {
       const created = await renders.create({
         project_id: project.id,
-        format: tpl?.kind === 'video' ? 'mp4' : 'png',
-        size: 'feed',
+        // S23: كلاهما من اختيار المستخدم — لا مبرمَج.
+        format: formatChoice,
+        size: sizeKey,
       });
       setRenderId(created.id);
       // polling كل ثانية حتى الحالة النهائية (mock ينتقل بعد ~2.5s).
@@ -426,6 +483,91 @@ export default function ProjectEditorPage(): JSX.Element {
     } catch (err) {
       setRestoreErrorKey(err instanceof ApiError ? err.messageKey : 'errors.UNKNOWN');
     }
+  }
+
+  // ── S23: التشكيل ──
+  // النموذج اقتراح لا سلطة (docs/09). الناتج يحلّ محلّ الحقل نفسه —
+  // العميل يحرّره حرفاً بحرف قبل الحفظ. لا حقل ظلّ.
+  async function doDiacritize(fieldKey: string): Promise<void> {
+    const current = draft[fieldKey] ?? '';
+    if (!current.trim()) return;
+    setDiacritizeBusy(fieldKey);
+    setDiacritizeErrorKey(null);
+    try {
+      const res = await fetch('/api/diacritize', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: current }),
+      });
+      const body = (await res.json()) as { text?: string; error?: { code?: string } };
+      if (!res.ok || !body.text) {
+        const code = body.error?.code ?? 'PROVIDER_ERROR';
+        setDiacritizeErrorKey(`errors.${code}`);
+        return;
+      }
+      setDraft({ ...draft, [fieldKey]: body.text });
+      setDirty(true);
+      setSavingNoticeKey(null);
+    } catch {
+      setDiacritizeErrorKey('errors.SERVICE_UNAVAILABLE');
+    } finally {
+      setDiacritizeBusy(null);
+    }
+  }
+
+  function stripTashkeel(fieldKey: string): void {
+    const current = draft[fieldKey] ?? '';
+    setDraft({ ...draft, [fieldKey]: current.replace(TASHKEEL_STRIP_RE, '') });
+    setDirty(true);
+    setSavingNoticeKey(null);
+  }
+
+  // إدراج علامة عند مؤشّر — يعمل على أي حقل نصّي متعدّد الأسطر أو
+  // سطر واحد ما دام مركّزاً. نستعمل document.activeElement فقط داخل هذه
+  // الشاشة (Textarea/Input تنتمي إليها).
+  function insertAt(fieldKey: string, ch: string): void {
+    const el = document.getElementById(`fld-${fieldKey}`) as
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | null;
+    if (!el) return;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(end);
+    const next = before + ch + after;
+    setDraft({ ...draft, [fieldKey]: next });
+    setDirty(true);
+    setSavingNoticeKey(null);
+    // نعيد المؤشّر بعد إدراج العلامة
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + ch.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
+  // _word_ يلفّ التحديد بعلامتَي شرطة سفلية — accent span.
+  function wrapAccent(fieldKey: string): void {
+    const el = document.getElementById(`fld-${fieldKey}`) as
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | null;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start === end) return;
+    const before = el.value.slice(0, start);
+    const sel = el.value.slice(start, end);
+    const after = el.value.slice(end);
+    const next = before + '_' + sel + '_' + after;
+    setDraft({ ...draft, [fieldKey]: next });
+    setDirty(true);
+    setSavingNoticeKey(null);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, end + 2);
+    });
   }
 
   const revColumns: readonly Column<RevisionSummary>[] = [
@@ -526,6 +668,97 @@ export default function ProjectEditorPage(): JSX.Element {
       {savingNoticeKey && <Alert kind="info" titleKey={savingNoticeKey} />}
       {savingErrorKey && <Alert kind="danger" titleKey={savingErrorKey} />}
 
+      {/* S23 — شريط أدوات مساحة العمل: مقاس · صيغة · لغة المحتوى */}
+      <section
+        className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-2 p-3 text-xs"
+        data-testid="workspace-toolbar"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-fg-subtle">
+            {t('pages.projects.workspace.sizeLabel')}:
+          </span>
+          {(Object.keys(SIZE_OPTIONS) as SizeKey[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => {
+                setSizeKey(k);
+                // إن كان format الحالي غير مسموح في المقاس الجديد، صحّحه.
+                const allowed = SIZE_OPTIONS[k].formats;
+                if (!allowed.includes(formatChoice)) {
+                  const first = allowed[0];
+                  if (first) setFormatChoice(first);
+                }
+              }}
+              className={
+                'rounded border px-2 py-1 ' +
+                (k === sizeKey
+                  ? 'border-accent bg-accent/15 text-accent'
+                  : 'border-border bg-surface text-fg-muted hover:text-fg')
+              }
+              data-testid={`size-${k}`}
+            >
+              {t(SIZE_OPTIONS[k].labelKey)}
+              <span dir="ltr" className="ms-2 text-[10px] text-fg-subtle">
+                {SIZE_OPTIONS[k].dim.w}×{SIZE_OPTIONS[k].dim.h}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-fg-subtle">
+            {t('pages.projects.workspace.formatLabel')}:
+          </span>
+          {(['png', 'mp4'] as const).map((f) => {
+            const allowed = SIZE_OPTIONS[sizeKey].formats.includes(f);
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => allowed && setFormatChoice(f)}
+                disabled={!allowed}
+                className={
+                  'rounded border px-2 py-1 disabled:opacity-40 ' +
+                  (f === formatChoice
+                    ? 'border-accent bg-accent/15 text-accent'
+                    : 'border-border bg-surface text-fg-muted hover:text-fg')
+                }
+                data-testid={`format-${f}`}
+              >
+                {f}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-fg-subtle">
+            {t('pages.projects.workspace.contentLocaleLabel')}:
+          </span>
+          {(['ar', 'latin'] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => {
+                setContentLocale(l);
+                setDirty(true);
+              }}
+              className={
+                'rounded border px-2 py-1 ' +
+                (l === contentLocale
+                  ? 'border-accent bg-accent/15 text-accent'
+                  : 'border-border bg-surface text-fg-muted hover:text-fg')
+              }
+              data-testid={`content-locale-${l}`}
+            >
+              {t(`pages.projects.workspace.contentLocale.${l}`)}
+            </button>
+          ))}
+          <span className="text-[10px] text-fg-subtle">
+            {t('pages.projects.workspace.contentLocaleHint')}
+          </span>
+        </div>
+      </section>
+
       <div className="grid gap-6 md:grid-cols-3">
         {/* المحتوى — يمين عريض */}
         <div className="space-y-4 md:col-span-2">
@@ -541,14 +774,42 @@ export default function ProjectEditorPage(): JSX.Element {
             const multi = f.type === 'richtext' || f.type === 'multiline';
             if (!isTextField(f.type) && f.type !== 'multiline') return null;
             return (
-              <div key={f.key} className="space-y-1.5">
-                <label
-                  htmlFor={`fld-${f.key}`}
-                  className="block text-xs font-medium text-fg-muted"
-                >
-                  {f.label ?? f.key}
-                  {f.required && <span className="ms-1 text-danger">*</span>}
-                </label>
+              <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor={`fld-${f.key}`}
+                    className="block text-xs font-medium text-fg-muted"
+                  >
+                    {f.label ?? f.key}
+                    {f.required && <span className="ms-1 text-danger">*</span>}
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void doDiacritize(f.key)}
+                      loading={diacritizeBusy === f.key}
+                      disabled={
+                        diacritizeBusy === f.key ||
+                        !(draft[f.key] ?? '').trim() ||
+                        contentLocale === 'latin'
+                      }
+                    >
+                      {t('pages.projects.workspace.diacritize')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => stripTashkeel(f.key)}
+                      disabled={contentLocale === 'latin'}
+                    >
+                      {t('pages.projects.workspace.stripTashkeel')}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => wrapAccent(f.key)}>
+                      _word_
+                    </Button>
+                  </div>
+                </div>
                 {multi ? (
                   <Textarea
                     id={`fld-${f.key}`}
@@ -571,9 +832,36 @@ export default function ProjectEditorPage(): JSX.Element {
                     }}
                   />
                 )}
+                {contentLocale === 'ar' && (
+                  <div
+                    className="flex flex-wrap items-center gap-1 pt-1"
+                    data-testid={`tashkeel-kbd-${f.key}`}
+                  >
+                    <span className="text-[10px] text-fg-subtle">
+                      {t('pages.projects.workspace.tashkeelKbd')}:
+                    </span>
+                    {TASHKEEL.map((k) => (
+                      <button
+                        key={k.char}
+                        type="button"
+                        onClick={() => insertAt(f.key, k.char)}
+                        title={t(k.labelKey)}
+                        className="rounded border border-border bg-surface px-2 py-0.5 text-sm text-fg hover:border-accent"
+                      >
+                        ـ{k.char}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {diacritizeErrorKey && (
+            <div className="rounded border border-warning bg-warning/10 p-3 text-sm">
+              <p className="font-medium text-fg">{t(diacritizeErrorKey)}</p>
+            </div>
+          )}
         </div>
 
         {/* سير العمل + التصدير — يسار ضيّق */}
