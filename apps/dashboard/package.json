@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 19030 -H 127.0.0.1",
-    "build": "next build",
+    "build": "if [ \"$DEV_ONLY_BUILD\" != \"1\" ]; then echo 'DEV-ONLY: apps/dashboard is a dev tool (see apps/dashboard/DEV-ONLY.md). Set DEV_ONLY_BUILD=1 to build locally.' >&2; exit 1; fi; next build",
     "start": "next start -p 19030 -H 127.0.0.1",
     "typecheck": "tsc --noEmit"
   },
