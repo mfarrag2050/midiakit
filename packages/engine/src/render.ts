@@ -100,6 +100,16 @@ export interface RenderFrameArgs {
    * الجزء (ب) — لقب+اسم، اسم مكان مركّب، كيان مؤسسي. الافتراضي: أساسي.
    */
   readonly lexicon?: Lexicon;
+  /**
+   * تلميح تشخيصيّ اختياريّ — يُستدعى كلّما استُدعي `prepareHeadline`.
+   * الغرض الوحيد: بوّابة `verify:render-video-all-templates` تفحص أنّ
+   * الاستدعاء صفر داخل حلقة الإطار (كل شيء يُقرأ من الخطة). لا يُخزَّن،
+   * لا حالة على مستوى الوحدة (حفاظاً على `check:engine-purity`). الإنتاج
+   * لا يُمرّره؛ الغياب = tree-shakable (استدعاء بلا معنى).
+   *
+   * أُضيف في WIRE-1-CLOSE (2026-09-09) — إغلاق ش٣(ب) بالخيار (ii).
+   */
+  readonly onHeadlinePrepared?: () => void;
 }
 
 // ── حالة التخطيط بين الطبقات ─────────────────────────
@@ -651,6 +661,7 @@ export function prepareHeadline(
   args: RenderFrameArgs,
   state: RenderState
 ): PreparedHeadline | null {
+  args.onHeadlinePrepared?.();
   const layout = computeHeadlineLayout(layer, args);
   if (!layout) return null;
 

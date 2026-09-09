@@ -93,6 +93,12 @@ export interface DrawTimelineAtArgs {
   readonly plan?: TimelinePlan;
   /** الزمن بالثواني — 0 هو أول إطار. */
   readonly t: number;
+  /**
+   * تلميح تشخيصيّ اختياريّ — يُمرَّر إلى `rfArgs` فيستدعيه `prepareHeadline`.
+   * تستعمله بوّابة `verify:render-video-all-templates` لتأكيد أنّ الاستدعاء
+   * صفر داخل حلقة الإطار (WIRE-1-CLOSE ش٣(ب)). الإنتاج لا يُمرّره.
+   */
+  readonly onHeadlinePrepared?: () => void;
 }
 
 // ── معلَمات مؤثّرات معروفة ──────────────────────────
@@ -214,6 +220,7 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
   const rfArgs: RenderFrameArgs = {
     ctx, size, template, brand, content,
     ...(assets && { assets }),
+    ...(args.onHeadlinePrepared && { onHeadlinePrepared: args.onHeadlinePrepared }),
   };
 
   const active = resolveAt(timeline, t);
