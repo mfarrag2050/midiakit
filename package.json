@@ -37,6 +37,7 @@
     "verify:multilang": "node --import tsx scripts/verify-multilang-gate.mjs",
     "verify:tashkil-collision": "node --import tsx scripts/verify-tashkil-collision.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
+    "verify:plan-all-templates": "node --import tsx scripts/verify-plan-all-templates.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
   "devDependencies": {
