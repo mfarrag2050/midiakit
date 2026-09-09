@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `fd09ec2` (`main`)
+> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `41a1a40` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -57,14 +57,14 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 115 | 1 |
-| `feat/api` | `2f3d6e5` | 54 | 18 | 152 |
-| `feat/dashboards` | `376077c` | 0 | 4 | 112 |
-| `feat/studio` | `665117f` | 33 | 5 | 144 |
-| `origin/aa-internal` | `ee178ca` | 0 | 115 | 1 |
-| `origin/feat/api` | `2f3d6e5` | 54 | 18 | 152 |
-| `origin/feat/dashboards` | `376077c` | 0 | 4 | 112 |
-| `origin/feat/studio` | `665117f` | 33 | 5 | 144 |
+| `aa-internal` | `ee178ca` | 0 | 116 | 1 |
+| `feat/api` | `2f3d6e5` | 54 | 19 | 152 |
+| `feat/dashboards` | `376077c` | 0 | 5 | 112 |
+| `feat/studio` | `665117f` | 33 | 6 | 144 |
+| `origin/aa-internal` | `ee178ca` | 0 | 116 | 1 |
+| `origin/feat/api` | `2f3d6e5` | 54 | 19 | 152 |
+| `origin/feat/dashboards` | `376077c` | 0 | 5 | 112 |
+| `origin/feat/studio` | `665117f` | 33 | 6 | 144 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 

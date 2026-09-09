@@ -22,6 +22,8 @@ import { performance } from 'node:perf_hooks';
 import { renderVideo } from '@pf-mediakit/renderer';
 import { TEMPLATES } from '@pf-mediakit/templates';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
+import { buildRenderPlan, templateToTimeline, resolveBrand } from '@pf-mediakit/engine';
+import { Canvas } from 'skia-canvas';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -47,18 +49,27 @@ console.log('▶ verify-render-video-all-templates');
 console.log(`  ${Object.keys(TEMPLATES).length} قالب · fps=${FPS} · حدّ الزمن ${TIME_THRESHOLD_MS}ms · مخرَج مؤقّت في ${OUT_DIR}`);
 console.log();
 
+// نحسب عدد الإطارات لكل قالب من templateToTimeline قبل الرندر —
+// حقيقيّاً لا تقديريّاً (WIRE-1-CLOSE ش٣ج).
+function computeFrameCount(template) {
+  const brand = resolveBrand(DEFAULT_BRAND);
+  const canvas = new Canvas(1080, 1080);
+  const ctx = canvas.getContext('2d');
+  const plan = buildRenderPlan({
+    ctx, size: { w: 1080, h: 1080 }, template, brand, content: CONTENT, fps: FPS,
+  });
+  const headlineLineCount = plan.headline?.linesJustified.length ?? 1;
+  const timeline = templateToTimeline({
+    template, brand: DEFAULT_BRAND, content: CONTENT, headlineLineCount, fps: FPS,
+  });
+  return Math.ceil(timeline.duration * FPS);
+}
+
 const results = [];
 for (const [name, template] of Object.entries(TEMPLATES)) {
   const outPath = join(OUT_DIR, `${name}.mp4`);
+  const frames = computeFrameCount(template);
 
-  // العدّاد يُغذَّى من prepareHeadline عبر onHeadlinePrepared.
-  // buildRenderPlan يستدعيها مرة قبل الحلقة — لا نعدّه (نعدّ ما داخل
-  // drawTimelineAt وحده). لتحقيق ذلك: العدّاد يُصفَّر بعد
-  // buildRenderPlan داخلي، بلا سيطرة. البديل: نطرح 1 من الإجمالي.
-  //
-  // في التنفيذ الحالي: renderVideo يستدعي buildRenderPlan (بلا
-  // onHeadlinePrepared لأنّه لا يُمرَّر إلى buildRenderPlan)، ثم يمرّر
-  // onHeadlinePrepared إلى drawTimelineAt فقط. فالعدّاد = 0 يعني in-loop = 0.
   let counter = 0;
   const t0 = performance.now();
   try {
@@ -77,14 +88,12 @@ for (const [name, template] of Object.entries(TEMPLATES)) {
     const countOK = inLoop === 0;
     const status = timeOK && countOK ? 'OK' : (!countOK ? 'IN_LOOP' : 'SLOW');
     const mark = status === 'OK' ? '✓' : '✗';
-    // نحسب عدد الإطارات المطبوع تقريباً من المدّة الطبيعية للقالب — لا
-    // نعرفها هنا مباشرةً، فنطبع «≈» كتقدير عام.
-    console.log(`  ${mark} ${name}: ms=${ms.toFixed(0)} · in-loop=${inLoop} · ${status}`);
-    results.push({ name, status, ms, inLoop });
+    console.log(`  ${mark} ${name}: frames=${frames} · ms=${ms.toFixed(0)} · in-loop=${inLoop} · ${status}`);
+    results.push({ name, status, ms, inLoop, frames });
   } catch (err) {
     const ms = performance.now() - t0;
-    console.log(`  ✗ ${name}: ms=${ms.toFixed(0)} · in-loop=${counter} · فشل: ${err.message.slice(0, 100)}`);
-    results.push({ name, status: 'FAIL', ms, inLoop: counter, error: err.message });
+    console.log(`  ✗ ${name}: frames=${frames} · ms=${ms.toFixed(0)} · in-loop=${counter} · فشل: ${err.message.slice(0, 100)}`);
+    results.push({ name, status: 'FAIL', ms, inLoop: counter, frames, error: err.message });
   }
 }
 
