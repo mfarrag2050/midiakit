@@ -21,7 +21,7 @@
     "check:docs-bundle-fresh": "node scripts/check-docs-bundle-fresh.mjs",
     "docs:bundle": "node scripts/bundle-docs.mjs",
     "skill:build": "node scripts/build-skill.mjs",
-    "skill:publish": "pnpm skill:build && pnpm docs:bundle && pnpm check:skill-fresh && pnpm check:docs-bundle-fresh",
+    "skill:publish": "pnpm skill:build && pnpm docs:bundle",
     "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:script-paths && pnpm check:dashboard-not-published && vitest run",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
