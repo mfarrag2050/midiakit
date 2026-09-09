@@ -1,21 +1,22 @@
-// render-plan — يحضّر تخطيط العنوان (بلا موضع) مرة قبل حلقة الإطار.
+// render-plan — يحضّر PreparedHeadline مرة قبل حلقة الإطار.
 //
 // **العلّة (L-07):** wrapOptimal + justifyLine يعطيان نفس النتيجة لكل
 // إطار (العنوان لا يتغيّر عبر الزمن). حسابها 730ms/إطار في السابق =
 // 99.5% من زمن الرندر. الخطة تنقلها خارج الحلقة، الأثر ~99% تخفيض.
 //
-// **العقد بعد KICKER-2 (2026-09-09):** الخطة تحمل **تخطيطاً بلا سياق
-// طبقات** — تعرف تخطيط النصّ (wrap · justify · lineHeight · fontSize)
-// لا موضعه (baselines · bounds). الموضع مشتقّ من الأنكور الذي قد يحتاج
-// state طبقات أخرى (kicker لـ`below-kicker`)، فيبقى داخل renderFrame
-// الذي يملك ترتيب الطبقات.
+// **العقد بعد WIRE-1-FIX (2026-09-09 · ينقض جزءاً من KICKER-2):**
+// نُحاول `prepareHeadline` بحالة scratch فارغة أوّلاً — النجاح يعطي
+// خطة كاملة ببـ `bounds` (كل القوالب عدا card_kicker). الفشل بسبب
+// `below-kicker` بلا `kicker` في state → ننزل إلى `computeHeadlineLayout`
+// (خطة بلا bounds لـcard_kicker وحده).
 //
-// **العطب التاريخي المُصلَح (KICKER-1 تشخيصاً · KICKER-2 حلاًّ):**
-// النسخة السابقة استدعت `prepareHeadline` بـscratchState فارغة، فكان
-// `computeHeadlineAnchorY` يرمي على أيّ قالب فيه `anchor=below-kicker`
-// (card_kicker) — عطلٌ ينفجر في مسار MP4 الإنتاجي (apps/renderer).
-// الحلّ: `computeHeadlineLayout` من render.ts بدلاً من `prepareHeadline`
-// — يفعل خطوات 1-8 (المستقلّة عن state) ويُرجع `PreparedHeadlineLayout`.
+// **لماذا هذا النقض:** KICKER-2 حاول جعل الخطة «تخطيطاً بلا موضع»
+// دائماً — كسر `state.headline = plan.headline.bounds` في
+// draw-timeline-at.ts:212، فرَمى badges above/below-headline في
+// breaking + reel. النوع الواحد بحقول اختيارية يصلح الحالتين. راجع L-69.
+//
+// **قاعدة صارمة على الاستثناء:** نلتقط استثناء `below-kicker` وحده —
+// أيّ استثناء آخر يُعاد رميه (خطأ برمجي حقيقي، لا حالة متوقّعة).
 //
 // **بعد حذف @legacy timeline (2026-09-02):** timelineOf و parseAnimations
 // انتقلا إلى `timeline-v2/template-adapter.ts` كجزء من `templateToTimeline`.
@@ -31,9 +32,11 @@ import type { BrandKit } from '@pf-mediakit/shared';
 import type { Layer, Template } from '@pf-mediakit/templates';
 
 import {
+  prepareHeadline,
   computeHeadlineLayout,
-  type PreparedHeadlineLayout,
+  type PreparedHeadline,
   type RenderFrameArgs,
+  type RenderState,
   type RenderAssets,
 } from './render.js';
 import type {
@@ -47,12 +50,12 @@ import type { CanvasSize } from './layers/image.js';
 
 export interface RenderPlan {
   /**
-   * تخطيط العنوان إن كان في القالب — بلا موضع. الحقول المشتقّة من
-   * الأنكور (`firstBaseline` · `lastBaseline` · `bounds`) **غير موجودة
-   * هنا بنيوياً** — تُحسب في renderFrame بعد رسم الطبقات التي يعتمد
-   * عليها الأنكور (مثلاً kicker لـ`below-kicker`).
+   * PreparedHeadline إن كان في القالب طبقة headline. حقول الموضع
+   * (`firstBaseline` · `lastBaseline` · `bounds`) موجودة لكل القوالب
+   * عدا card_kicker (`below-kicker` يحتاج state.kicker غير المتوفّر هنا).
+   * consumers الذين يعتمدون على `bounds` يفحصون وجودها.
    */
-  readonly headline?: PreparedHeadlineLayout;
+  readonly headline?: PreparedHeadline;
   /**
    * عدد الأسطر — يستعمله `templateToTimeline` لحساب توقيت
    * `after: "headline"` في الحركات.
@@ -84,13 +87,19 @@ export interface BuildRenderPlanArgs {
 
 // ── الواجهة العامة ─────────────────────────────────────
 
+/** رسالة `computeHeadlineAnchorY` عند غياب `state.kicker` لـ`below-kicker`. */
+const BELOW_KICKER_MARKER = 'anchor=below-kicker';
+
 /**
- * يبني RenderPlan من مدخلات القالب/الهوية/المحتوى. يستدعي
- * `computeHeadlineLayout` (مرة واحدة) — يعطي wrap + justify + fontSize +
- * lineHeight بلا انتظار state طبقات (KICKER-2).
+ * يبني RenderPlan من مدخلات القالب/الهوية/المحتوى.
  *
- * يُنَفَّذ **مرة واحدة قبل حلقة الإطار** — كل هذه القيم لا تعتمد على `t`
- * ولا على ترتيب الطبقات.
+ * **الاستراتيجية (WIRE-1-FIX):** نُحاول `prepareHeadline` بحالة scratch
+ * فارغة أوّلاً — النجاح يعطي `PreparedHeadline` كامل ببـ `bounds` (يستعمله
+ * `draw-timeline-at.ts:212` لملء `state.headline` قبل حلقة الطبقات).
+ * الفشل بسبب `below-kicker` بلا `kicker` → ننزل إلى `computeHeadlineLayout`
+ * (خطة بلا bounds لـcard_kicker وحده).
+ *
+ * أيّ استثناء آخر — يُعاد رميه، لأنّه ليس حالة متوقّعة.
  */
 export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
   const { ctx, size, template, brand, content, assets, lexicon } = args;
@@ -99,7 +108,7 @@ export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
     (l): l is Extract<Layer, { type: 'headline' }> => l.type === 'headline'
   );
 
-  let headlineLayout: PreparedHeadlineLayout | undefined;
+  let headlinePrep: PreparedHeadline | undefined;
   if (headlineLayer) {
     const rfArgs: RenderFrameArgs = {
       ctx,
@@ -110,13 +119,26 @@ export function buildRenderPlan(args: BuildRenderPlanArgs): RenderPlan {
       ...(assets && { assets }),
       ...(lexicon && { lexicon }),
     };
-    const raw = computeHeadlineLayout(headlineLayer, rfArgs);
-    if (raw) headlineLayout = raw;
+
+    try {
+      const scratchState: RenderState = {};
+      const full = prepareHeadline(headlineLayer, rfArgs, scratchState);
+      if (full) headlinePrep = full;
+    } catch (err) {
+      // نلتقط استثناء `below-kicker` وحده (card_kicker). أيّ خطأ آخر
+      // يُعاد رميه.
+      if (err instanceof Error && err.message.includes(BELOW_KICKER_MARKER)) {
+        const layoutOnly = computeHeadlineLayout(headlineLayer, rfArgs);
+        if (layoutOnly) headlinePrep = layoutOnly;
+      } else {
+        throw err;
+      }
+    }
   }
 
-  const headlineLineCount = headlineLayout?.linesJustified.length ?? 0;
+  const headlineLineCount = headlinePrep?.linesJustified.length ?? 0;
 
-  return headlineLayout
-    ? { headline: headlineLayout, headlineLineCount }
+  return headlinePrep
+    ? { headline: headlinePrep, headlineLineCount }
     : { headlineLineCount };
 }

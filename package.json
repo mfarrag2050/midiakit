@@ -22,7 +22,7 @@
     "docs:bundle": "node scripts/bundle-docs.mjs",
     "skill:build": "node scripts/build-skill.mjs",
     "skill:publish": "pnpm skill:build && pnpm docs:bundle",
-    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:script-paths && pnpm check:dashboard-not-published && vitest run",
+    "test": "pnpm check:engine-purity && pnpm check:no-brand-leak && pnpm check:doc-paths && pnpm check:lessons-sequence && pnpm check:docker-context && pnpm check:no-git-internals && pnpm check:script-paths && pnpm check:dashboard-not-published && vitest run && pnpm verify:render-video-all-templates",
     "test:watch": "vitest",
     "preview": "node --import tsx scripts/preview.mjs",
     "preview:attribution": "node --import tsx scripts/preview-attribution.mjs",
@@ -38,6 +38,7 @@
     "verify:tashkil-collision": "node --import tsx scripts/verify-tashkil-collision.mjs",
     "verify:snapshot": "node scripts/verify-snapshot.mjs",
     "verify:plan-all-templates": "node --import tsx scripts/verify-plan-all-templates.mjs",
+    "verify:render-video-all-templates": "node --import tsx scripts/verify-render-video-all-templates.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts"
   },
   "devDependencies": {

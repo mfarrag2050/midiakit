@@ -18,7 +18,6 @@ export {
   type RenderAssets,
   type RenderState,
   type PreparedHeadline,
-  type PreparedHeadlineLayout,
   type HeadlineBounds,
   type KickerBounds,
   type AccentSpanBounds,

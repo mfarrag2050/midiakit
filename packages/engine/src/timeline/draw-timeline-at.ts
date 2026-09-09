@@ -439,11 +439,40 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
   }
 }
 
-/** طبقة قالب عادية — يُستدعى executeLayer داخل save/restore الحاضن. */
+/**
+ * طبقة قالب عادية — يُستدعى `executeLayer` داخل save/restore الحاضن.
+ *
+ * **استثناء headline (WIRE-1 · 2026-09-09):** للقالب بلا حركة على العنوان
+ * (`plain` · `reel` · card_*)، `templateToTimeline` يُنشئ `template-layer`
+ * لطبقة headline بدل `template-headline`. النسخة السابقة استدعت
+ * `executeLayer` → `runHeadline` → `prepareHeadline` (wrap + justify +
+ * measure) **لكل إطار** — 225 مرّة لفيديو 7.5s. الفروق المقاسة:
+ * reel = 162ms/إطار مقابل breaking = 0.53ms/إطار (الأخير يستعمل
+ * template-headline الذي يستهلك ectx.headlinePrep من الخطة).
+ *
+ * الإصلاح: طبقة headline بـ`ectx.headlinePrep` متاح ⇒ نستهلك الخطة
+ * مباشرةً (كما يفعل `applyTemplateHeadline` بلا حركة). state.headline
+ * تُملأ من `prep.bounds` كما يفعل `runHeadline`. الفاحص
+ * `verify:render-video-all-templates` يضمن `prepareHeadline in-loop = 0`
+ * لكل القوالب.
+ */
 function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): void {
   if (ectx.props.opacity <= 0) return;
   const layer = ectx.template.layers[effect.layerIndex];
   if (!layer) return;
+
+  // الاستهلاك من الخطة لطبقة headline إن كان `ectx.headlinePrep` متاحاً.
+  // متاح دائماً بعد WIRE-1-FIX لكل القوالب — عدا card_kicker (لا bounds).
+  if (layer.type === 'headline' && ectx.headlinePrep) {
+    const prep = ectx.headlinePrep;
+    const { ctx, brand, state } = ectx;
+    for (let i = 0; i < prep.linesJustified.length; i++) {
+      drawHeadlineLine(ctx, brand, prep, i);
+    }
+    if (prep.bounds) state.headline = prep.bounds;
+    return;
+  }
+
   executeLayer(layer, ectx.rfArgs, ectx.state);
 }
 

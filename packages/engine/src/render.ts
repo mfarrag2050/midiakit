@@ -490,37 +490,41 @@ export function computeBreakPenalties(
  * `FontLibrary.use`، فالقياس نفسه بغضّ النظر عن الـcanvas.
  */
 /**
- * **PreparedHeadlineLayout — تخطيط بلا موضع** (KICKER-2 · 2026-09-09).
+ * **PreparedHeadline** — تخطيط + موضع اختياري (WIRE-1-FIX · 2026-09-09).
  *
- * تحمل حقول التخطيط المستقلّة عن ترتيب الطبقات: `fontSize` · `linesJustified`
- * · `chosenBoxW` · `lineHeight` · `rightX` · `centerX` · `align` ·
- * `accentSpans`. تُحسب من tokens + عرض القماش + config الخط والتبرير —
- * **لا تعتمد على `state`**.
+ * الحقول الأساسية (`fontSize` · `linesJustified` · `chosenBoxW` ·
+ * `lineHeight` · `rightX` · `centerX` · `align` · `accentSpans`) **دائماً
+ * موجودة** — تُحسب من tokens + عرض القماش + config الخط والتبرير، لا
+ * تعتمد على `state`.
  *
- * الحقول المشتقّة من الأنكور (`firstBaseline` · `lastBaseline` · `bounds`)
- * **غير موجودة هنا** — تحتاج `state.kicker` (لقالب `below-kicker`) الذي
- * يُملأ فقط داخل `renderFrame` بترتيب الطبقات. الفرق **بنيوي في النوع**
- * لا `optional` بقيمة افتراضية: لا صفر، لا افتراض.
+ * الحقول المشتقّة من الأنكور (`firstBaseline` · `lastBaseline` · `bounds`
+ * · `measure`) **اختيارية**:
+ *   - موجودة حين يُحسب الأنكور بلا حاجة إلى state (كل القوالب عدا
+ *     `below-kicker`)، أي: كل بناء عبر `prepareHeadline` بحالة تحوي
+ *     `kicker` أو بأنكور مستقلّ.
+ *   - **غائبة** حين تكون الخطة قد بُنيت بحالة scratch فارغة لقالب
+ *     `below-kicker` (فقط card_kicker اليوم) — يُستعمل `computeHeadlineLayout`.
  *
- * يُستهلَك من `buildRenderPlan` (خارج سياق الرسم) — فيصلح لكل القوالب،
- * بما فيها `card_kicker`، الذي كان يُفشِل النسخة السابقة (throw داخل
- * `computeHeadlineAnchorY`).
+ * **قرار مُراجَع (WIRE-1-FIX ينقض جزءاً من KICKER-2):** قرار KICKER-2
+ * كان فصل النوع إلى `PreparedHeadlineLayout` (بلا anchor) و
+ * `PreparedHeadline` (مع anchor). الفصل كسر `state.headline` pre-population
+ * في `draw-timeline-at.ts:212` (لأن `PreparedHeadlineLayout.bounds`
+ * غير موجود بنيوياً)، فرَمى badges above/below-headline في breaking + reel.
+ * الحلّ: عودة إلى نوع واحد بحقول اختيارية — يبقى النقاء الدلالي لغير
+ * card_kicker، ويكشف runtime لعقد card_kicker غياب bounds. راجع L-69.
  */
-export interface PreparedHeadlineLayout {
+export interface PreparedHeadline {
   readonly fontSize: number;
   readonly lineHeight: number;
   readonly chosenBoxW: number;
   readonly rightX: number;
   readonly centerX: number;
+  readonly firstBaseline?: number;
+  readonly lastBaseline?: number;
   readonly linesJustified: readonly (readonly Token[])[];
   readonly align: HeadlineLayer['align'];
+  readonly bounds?: HeadlineBounds;
   readonly accentSpans: readonly AccentSpanBounds[];
-}
-
-export interface PreparedHeadline extends PreparedHeadlineLayout {
-  readonly firstBaseline: number;
-  readonly lastBaseline: number;
-  readonly bounds: HeadlineBounds;
   readonly measure?: Measurer;
 }
 
@@ -532,7 +536,7 @@ export interface PreparedHeadline extends PreparedHeadlineLayout {
 export function computeHeadlineLayout(
   layer: HeadlineLayer,
   args: RenderFrameArgs
-): PreparedHeadlineLayout | null {
+): PreparedHeadline | null {
   const { brand, ctx, size, content } = args;
   const text = content[layer.field];
   if (typeof text !== 'string' || text.length === 0) return null;

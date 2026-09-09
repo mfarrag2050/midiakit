@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `60e8ddc` (`main`)
+> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `6a544b8` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -57,18 +57,18 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 113 | 1 |
-| `feat/api` | `2f3d6e5` | 54 | 16 | 152 |
-| `feat/dashboards` | `376077c` | 0 | 2 | 112 |
-| `feat/studio` | `665117f` | 33 | 3 | 144 |
-| `origin/aa-internal` | `ee178ca` | 0 | 113 | 1 |
-| `origin/feat/api` | `2f3d6e5` | 54 | 16 | 152 |
-| `origin/feat/dashboards` | `376077c` | 0 | 2 | 112 |
-| `origin/feat/studio` | `665117f` | 33 | 3 | 144 |
+| `aa-internal` | `ee178ca` | 0 | 114 | 1 |
+| `feat/api` | `2f3d6e5` | 54 | 17 | 152 |
+| `feat/dashboards` | `376077c` | 0 | 3 | 112 |
+| `feat/studio` | `665117f` | 33 | 4 | 144 |
+| `origin/aa-internal` | `ee178ca` | 0 | 114 | 1 |
+| `origin/feat/api` | `2f3d6e5` | 54 | 17 | 152 |
+| `origin/feat/dashboards` | `376077c` | 0 | 3 | 112 |
+| `origin/feat/studio` | `665117f` | 33 | 4 | 144 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (19):** `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **main (20):** `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:render-video-all-templates` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 - **feat/api (50):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (23):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
@@ -79,8 +79,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-68
-- **العدد الفريد:** 63 · **الإدخالات:** 63
+- **المدى:** L-1 → L-69
+- **العدد الفريد:** 64 · **الإدخالات:** 64
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
