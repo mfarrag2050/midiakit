@@ -55,20 +55,93 @@ function mergeBrand(config: unknown): BrandKit {
 }
 
 // —— font loading (ADR-006) ———————————————————————————————
-// نطلب تحميل عائلة الخط الأساسية بحجم مرجعي واحد. `document.fonts.load`
-// يعيد promise يحلّ عند اكتمال الملف. لا `measureText` قبله.
-const loadedFontsCache = new Set<string>();
+// **FONT-1:** الاستدعاء السابق كان `document.fonts.load(...)` وحده،
+// ولا `@font-face` مسجَّل في أيّ مكان من الاستوديو — فتُحلّ الوعود
+// فوراً بمصفوفة فارغة والمحرك يقيس بخطّ احتياطي بلا صوت. الآن نسجّل
+// الخط برمجياً عبر FontFace API قبل الرندر، ونفشل بصوت إن غاب مصدر.
 
-export async function ensureFontLoaded(family: string, sizePx = 80): Promise<void> {
-  const key = `${sizePx}px "${family}"`;
-  if (loadedFontsCache.has(key)) return;
+const registeredFontKeys = new Set<string>();
+
+/** يترجم رابط الخط النسبي في brand.fonts.primary.weights[*].url
+ * (مثل "assets/fonts/Almarai-Regular.ttf") إلى مسار قابل للتحميل
+ * في المتصفح (/api/fonts/<basename>). في الإنتاج يجب أن يأتي رابط
+ * مطلق من mk-api ⇒ نُبقيه كما هو. */
+function toBrowserUrl(rawUrl: string): string {
+  if (/^https?:\/\//i.test(rawUrl) || rawUrl.startsWith('/')) return rawUrl;
+  const basename = rawUrl.split('/').pop() ?? rawUrl;
+  return `/api/fonts/${basename}`;
+}
+
+/** الخطوط المدمَجة في المستودع — للاستعمال حين تحمل الهوية الافتراضية
+ * `url` فارغاً (DEFAULT_BRAND في packages/shared) أو تُشير إلى `source:
+ * 'builtin'` بلا مسار. المفتاح: عائلة الخط. القيمة: خريطة weight ⇢ ملف
+ * TTF المسموح في /api/fonts/[name] whitelist. */
+const BUILTIN_FONT_FILES: Record<string, Record<'light' | 'regular' | 'bold', string>> = {
+  'IBM Plex Sans Arabic': {
+    light: 'IBMPlexSansArabic-Light.ttf',
+    regular: 'IBMPlexSansArabic-Regular.ttf',
+    bold: 'IBMPlexSansArabic-Bold.ttf',
+  },
+  Almarai: {
+    light: 'Almarai-Light.ttf',
+    regular: 'Almarai-Regular.ttf',
+    bold: 'Almarai-Bold.ttf',
+  },
+};
+
+interface FontPrimary {
+  readonly family: string;
+  readonly weights?: Record<string, { url?: string; value?: number } | undefined>;
+}
+
+export async function ensureFontLoaded(primary: FontPrimary): Promise<void> {
   if (typeof document === 'undefined') return; // SSR — نتخطّى
-  try {
-    await document.fonts.load(key);
-    loadedFontsCache.add(key);
-  } catch {
-    // فشل التحميل — نتابع دون كسر، الخط الافتراضي المتصفّحي يعمل.
+  const family = primary.family;
+  const weights = primary.weights;
+  if (!weights || Object.keys(weights).length === 0) {
+    throw new Error(`font-load-config-missing: brand "${family}" has no weights — cannot register FontFace`);
   }
+
+  const builtin = BUILTIN_FONT_FILES[family];
+  const tasks: Promise<void>[] = [];
+  let cachedAllRequested = true;
+
+  for (const [weightKey, w] of Object.entries(weights)) {
+    const value = w?.value ?? { light: 300, regular: 400, bold: 700 }[weightKey] ?? 400;
+    const key = `${family}/${value}`;
+    if (registeredFontKeys.has(key)) continue;
+    cachedAllRequested = false;
+
+    // اختيار المصدر: url من الهوية إن كانت لديه، وإلا خريطة builtin.
+    let resolvedUrl: string | undefined = w?.url && w.url.trim() !== '' ? w.url : undefined;
+    if (!resolvedUrl && builtin) {
+      const wk = weightKey as 'light' | 'regular' | 'bold';
+      if (builtin[wk]) resolvedUrl = `assets/fonts/${builtin[wk]}`;
+    }
+    if (!resolvedUrl) continue; // لا مصدر ولا builtin ⇒ نتخطّى هذا الوزن
+
+    const src = `url(${toBrowserUrl(resolvedUrl)}) format('truetype')`;
+    const face = new FontFace(family, src, { weight: String(value), style: 'normal', display: 'block' });
+    tasks.push(
+      face.load().then((loaded) => {
+        document.fonts.add(loaded);
+        registeredFontKeys.add(key);
+      })
+    );
+  }
+
+  // كل الأوزان المطلوبة موجودة في cache ⇒ نجاح صامت (مقصود، لا الصمت
+  // الذي حاربه FONT-1 — هذا cache hit مشروع، الفشل الأصلي كان بلا cache).
+  if (cachedAllRequested && tasks.length === 0) return;
+
+  if (tasks.length === 0) {
+    throw new Error(
+      `font-load-no-source: brand "${family}" has weights but no url and no builtin mapping — ` +
+      `add urls to brand.fonts.primary.weights.*.url or register the family in BUILTIN_FONT_FILES`
+    );
+  }
+  // نفشل بصوت إن فشل أيّ وزن — L-17 (الصمت هو العطب).
+  await Promise.all(tasks);
 }
 
 /** يرسم إطاراً واحداً على canvas وقت الطلب. عزل عن هوية المستخدم
@@ -87,8 +160,17 @@ export async function drawPreview(
   const brand = applyLocaleToBrand(brandBase, contentLocale);
   const template = input.template as Parameters<typeof renderFrame>[0]['template'];
 
-  // انتظار تحميل الخط قبل أي measureText داخل المحرك.
-  await ensureFontLoaded(brand.fonts.primary.family, 80);
+  // FONT-1: تسجيل خطوط الهوية وتحميلها فعلياً قبل أيّ measureText داخل
+  // المحرك. الاستدعاء السابق `ensureFontLoaded(family, 80)` كان يمرّ
+  // صامتاً — الآن يفشل بصوت إن غاب url. الخطأ يُبلَّغ في الـwarning.
+  try {
+    await ensureFontLoaded(brand.fonts.primary);
+  } catch (err) {
+    return {
+      durationMs: performance.now() - started,
+      warning: err instanceof Error ? err.message : 'font-load-error',
+    };
+  }
 
   canvas.width = input.size.w;
   canvas.height = input.size.h;
