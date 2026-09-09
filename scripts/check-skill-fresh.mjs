@@ -31,11 +31,22 @@ function extractGenerated(content, sourceLabel) {
   return content.slice(s + BEGIN.length, e).trim();
 }
 
-// نُهمل سطر «تاريخ التوليد · HEAD» في المقارنة — ميتا لا مصدر.
+// نُهمل ما يتغيَّر مع كلّ commit على main بلا دلالة على تقادم:
+//   • سطر «تاريخ التوليد · HEAD» (ميتا).
+//   • صفوف جدول الفروع (`| \`branch\` | \`hash\` | ahead | behind | total |`)
+//     — «خلف main» و «الإجمالي» تتغيَّر مع كلّ commit على main نفسه
+//     (self-reference). تحرّك فرع فعلي يُلتقَط عبر تغيّر PHASES-*.md
+//     في محتوى BUNDLE + قائمة endpoints المولَّدة في السكيل (تُبنى من
+//     git ls-tree origin/feat/api).
+const BRANCH_ROW_RE = /^\|\s+`[^`]+`\s+\|\s+`[a-f0-9]+`\s+\|/;
+
 function stripVolatileMeta(text) {
   return text
     .split('\n')
-    .filter((line) => !line.startsWith('> **تاريخ التوليد:**'))
+    .filter((line) => (
+      !line.startsWith('> **تاريخ التوليد:**') &&
+      !BRANCH_ROW_RE.test(line)
+    ))
     .join('\n')
     .trim();
 }
