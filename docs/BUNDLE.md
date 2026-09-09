@@ -8,10 +8,10 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-08
-> **HEAD (main):** `4b11ab6`
+> **تاريخ التوليد:** 2026-09-09
+> **HEAD (main):** `736a6d8`
 > **HEAD (origin/feat/api):** `99d46d0`
-> **HEAD (origin/feat/studio):** `909551b`
+> **HEAD (origin/feat/studio):** `07d7274`
 
 ## الفهرس
 
@@ -39,8 +39,8 @@
 | `docs/M1-marketing-assets.md` | 445 | `372cafb6219e` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 363 | `d780b3316f1b` | local |
-| `PHASES.md` | 1395 | `b60d8302907c` | local (main) |
+| `docs/SKILL-mediakit.md` | 363 | `ebe381f84b3c` | local |
+| `PHASES.md` | 1484 | `5793749b75b3` | local (main) |
 | `PHASES-api.md` | 667 | `21882584c491` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
 
@@ -9981,7 +9981,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-08 · **HEAD:** `4b11ab6` (`main`)
+> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `736a6d8` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10014,17 +10014,17 @@ description: |
 | `aa-internal` | `ee178ca` | 1 |
 | `feat/api` | `99d46d0` | 150 |
 | `feat/dashboards` | `c15433a` | 110 |
-| `feat/studio` | `909551b` | 128 |
+| `feat/studio` | `07d7274` | 139 |
 | `origin/aa-internal` | `ee178ca` | 1 |
 | `origin/feat/api` | `99d46d0` | 150 |
 | `origin/feat/dashboards` | `c15433a` | 110 |
-| `origin/feat/studio` | `909551b` | 128 |
+| `origin/feat/studio` | `07d7274` | 139 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (17):** `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 - **feat/api (50):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/studio (22):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **feat/studio (23):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
@@ -10405,6 +10405,95 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 
 **172 اختبار vitest أخضر** (11 جديد لـtemplates: يحمّل ويتحقّق ويرفض المدخلات المعطوبة).
 **الحالة العامة:** كود المنتج بدأ. الأداة القديمة `reference/aa-media-kit.html` تعمل مستقلة عن المحرك الجديد.
+
+---
+
+## الحالة عند 2026-09-08 — تسجيل قبل انتقال المحادثة
+
+> **الغرض:** المحادثة مع Opus تنتقل إلى جلسة جديدة. المستودع
+> يحمل ما بُني، والسكيل والحزمة يحملان ما قُرّر — لكنّ حالة
+> الجلسات والتذاكر المعلّقة لا موضع لها في ملف. هذا القسم
+> يُنشأ من الجلسة الحالية ويُقرأ من الجلسة التالية.
+
+### آخر التزام لكل فرع (من `git for-each-ref` لحظة الكتابة)
+
+| الفرع | HEAD |
+|---|---|
+| `main` | `736a6d8` |
+| `feat/api` | `99d46d0` |
+| `feat/studio` | `07d7274` — **تقدَّم عمّا في التذكرة (`909551b`)** — `07d7274` هو `Merge origin/main into feat/studio`، أي الجلسة أنهت الدمج بعد إرسال التذكرة. |
+| `feat/dashboards` | `c15433a` |
+| `aa-internal` | `ee178ca` |
+
+### التذاكر المعلّقة
+
+**mk-api — MEASURE-1:** قياس فكّ الترميز على العتاد
+(`docs/08 §المراقبة`: «قياس إلزامي قبل تثبيت أي رقم في العقد»).
+**أُرسلت ولم يصل تقريرها.**
+
+**mk-studio — الدمج:** `909551b` كان revert لـ`56fd42e` (تعديل
+`docs/17` على فرع بناء — خرق ملكية M). ثم توقّفت الجلسة عند
+تعارضين في دمج `main`. **القرار أُرسل:**
+- **`package.json`:** ضمّ الجانبين — سلسلة `test` تجمع فحوص
+  المستودع وفحوص الاستوديو معاً. `skill-fresh` و
+  `docs-bundle-fresh` يبقيان **خارج** `test` (قرار `ea0a35e`).
+- **`scripts/check-script-paths.mjs`:** **نسخة `main` تفوز**
+  (189 سطراً، تفحص `pnpm --filter <pkg> <script>` — وهي التي
+  كشفت أن `check:template-sync` لم يعمل من A13 إلى A26).
+
+**الحالة الفعلية (`07d7274` = merge commit):** الدمج تمّ. رأس
+الفرع الآن يجمع تاريخ `main` مع عمل feat/studio. **يُتحقَّق من
+النتيجة الفعلية للدمج قبل أي عمل عليه** — لم يصلني تقرير عمّا
+اختير في التعارضين على العتاد.
+
+**mk-dash:** فارغة بعد D1 (`c15433a`).
+**mediakit:** فارغة بعد `736a6d8`.
+
+### ما ينتظر المالك
+
+- **الست خانات في `docs/09 §القبول قبل التسليم`** — تحتاج
+  جهازَيه (iPhone وأندرويد)، لا جلسة.
+- **مجموعة القياس الموسومة لبوابتَي 3.5** (WojoodGaza) —
+  يصنعها.
+- **قرار نشر القاعدة** — يحسم شكل بند النسخ الاحتياطي في
+  `docs/09 §جاهز للبيع` البند 11.
+- **القدرات الخمس في `docs/07 §قدرات عالية القيمة`** — أيّها
+  يُجدوَل؟
+- **الثلاثة من `docs/12`:** النماذج القابلة للمشاركة · القصّ
+  الذكي · واجهة التفريغ.
+- **محرّر القوالب** — مُسقَط في `docs/09`، ويُراجَع بعد الإصدار
+  الأول (قرار المالك 2026-09-07).
+
+### الجاهزية — من `docs/09 §جاهز للبيع` (11 بنداً)
+
+| # | البند | الحالة |
+|---|---|---|
+| 1 | لا خط تجاري ولا أصل أناضول | ✅ |
+| 2 | ثلاث هويات ⇒ ثلاثة مخرجات | ✅ |
+| 3 | MP4 على iPhone وأندرويد ورفع لإنستغرام | ❌ |
+| 4 | المعاينة = المخرَج بكسلياً | ❌ |
+| 5 | BiDi صحيح | ✅ |
+| 6 | طوابير + حصة عادلة + حدود | ✅ |
+| 7 | لوحة عميل: الطابور والزمن المتوقّع | ✅ |
+| 8 | لوحة تشغيل + تنبيهات | ◐ — التنبيهات تعمل، اللوحة أداة تطوير محلّية (قرار 2026-09-07) |
+| 9 | استمارة + عقد + إقرار ترخيص | ◐ — الإقرار سجلّ ملحق فقط، والورقيّان على المالك |
+| 10 | عيّنة حيّة بهوية العميل الأول | ❌ |
+| 11 | نسخة احتياطية واستعادة مُختبرة | ❌ |
+
+**§القبول قبل التسليم:** **صفر من ست خانات.**
+
+### ما بُني وما لم يُجدوَل
+
+- **مسار A:** 30/30 · 74 نقطة نهاية · 25 بوابة · `verify:all`
+  بصفر إخفاق.
+- **مسار S:** 22/22 + S23 (مساحة العمل).
+- **نقاط التزامن:** 8/8 مفتوحة.
+
+**المتبقّي مجدوَلاً:**
+- **S24–S29** واجهة الخط الزمني + اختيار المقاس (سُدَّت الفجوة
+  في `docs/17 §4.14`).
+- **S30–S33** بنود `docs/09` غير المبنيّة (`docs/17 §4.15`).
+- **P5.1–P5.8** المرحلة اللاحقة (`docs/17 §4.16`).
 
 ---
 
