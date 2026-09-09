@@ -8,7 +8,7 @@
     "node": "20.18.1"
   },
   "scripts": {
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "node scripts/typecheck-all.mjs",
     "check:engine-purity": "node scripts/check-engine-purity.mjs",
     "check:no-brand-leak": "node scripts/check-no-brand-leak.mjs",
     "check:doc-paths": "node scripts/check-doc-paths.mjs",
