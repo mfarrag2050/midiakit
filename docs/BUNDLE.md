@@ -8,8 +8,8 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-09
-> **HEAD (main):** `516680c`
+> **تاريخ التوليد:** 2026-09-10
+> **HEAD (main):** `ab11626`
 > **HEAD (origin/feat/api):** `2f3d6e5`
 > **HEAD (origin/feat/studio):** `665117f`
 
@@ -39,7 +39,7 @@
 | `docs/M1-marketing-assets.md` | 445 | `372cafb6219e` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 363 | `ec6eb8c961a2` | local |
+| `docs/SKILL-mediakit.md` | 363 | `b0f1a4edbe9c` | local |
 | `PHASES.md` | 1484 | `5793749b75b3` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
@@ -10075,7 +10075,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-09 · **HEAD:** `516680c` (`main`)
+> **تاريخ التوليد:** 2026-09-10 · **HEAD:** `ab11626` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10105,18 +10105,18 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 117 | 1 |
-| `feat/api` | `2f3d6e5` | 54 | 20 | 152 |
-| `feat/dashboards` | `376077c` | 0 | 6 | 112 |
-| `feat/studio` | `665117f` | 33 | 7 | 144 |
-| `origin/aa-internal` | `ee178ca` | 0 | 117 | 1 |
-| `origin/feat/api` | `2f3d6e5` | 54 | 20 | 152 |
-| `origin/feat/dashboards` | `376077c` | 0 | 6 | 112 |
-| `origin/feat/studio` | `665117f` | 33 | 7 | 144 |
+| `aa-internal` | `ee178ca` | 0 | 173 | 1 |
+| `feat/api` | `2f3d6e5` | 0 | 22 | 152 |
+| `feat/dashboards` | `376077c` | 0 | 62 | 112 |
+| `feat/studio` | `665117f` | 33 | 63 | 144 |
+| `origin/aa-internal` | `ee178ca` | 0 | 173 | 1 |
+| `origin/feat/api` | `2f3d6e5` | 0 | 22 | 152 |
+| `origin/feat/dashboards` | `376077c` | 0 | 62 | 112 |
+| `origin/feat/studio` | `665117f` | 33 | 63 | 144 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (20):** `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:render-video-all-templates` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **main (54):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/api (50):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (23):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
@@ -10246,7 +10246,7 @@ description: |
 
 ### محتويات المستودع — من main (`ls`)
 
-- **`packages/`:** `engine` · `shared` · `templates` · `tts`
+- **`packages/`:** `db` · `engine` · `shared` · `templates` · `tts`
 - **`demo/`:** 15 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
