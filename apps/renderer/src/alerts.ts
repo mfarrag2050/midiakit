@@ -28,6 +28,22 @@ export const QUEUE_DEPTH_THRESHOLD = 10;
 export const WORKER_STUCK_MS = 5 * 60 * 1000;
 export const REPEAT_WINDOW_SEC = 15 * 60; // 15 دقيقة قبل إعادة إطلاق نفس التنبيه
 
+/**
+ * حدّ المساحة المؤقتة لكل مهمة (LIMITS-1 §3 · docs/08).
+ * قابل للحقن عبر `TEMP_SPACE_LIMIT_BYTES` env — للاختبار (ALERTS-WIRE §2:
+ * حدّ 1MB في الاختبار يُثبت السلوك بلا توليد 25GB). الإنتاج يستعمل
+ * الافتراضي 25GB.
+ */
+export const DEFAULT_TEMP_SPACE_LIMIT_BYTES = 25 * 1024 * 1024 * 1024; // 25 GB
+export function getTempSpaceLimitBytes(): number {
+  const env = process.env['TEMP_SPACE_LIMIT_BYTES'];
+  if (!env) return DEFAULT_TEMP_SPACE_LIMIT_BYTES;
+  const n = Number(env);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_TEMP_SPACE_LIMIT_BYTES;
+}
+/** @deprecated استعمل getTempSpaceLimitBytes() — يقرأ env override */
+export const TEMP_SPACE_LIMIT_BYTES = DEFAULT_TEMP_SPACE_LIMIT_BYTES;
+
 // ── نوع الحدث ────────────────────────────────────────
 
 export type AlertCode =
@@ -35,6 +51,7 @@ export type AlertCode =
   | 'disk-high'
   | 'queue-deep'
   | 'worker-stuck'
+  | 'temp-space-per-job'          // LIMITS-1 §3: مساحة مؤقتة > 25GB لمهمة واحدة
   | 'system-maintenance';
 
 export type AlertSeverity = 'info' | 'warn' | 'crit';

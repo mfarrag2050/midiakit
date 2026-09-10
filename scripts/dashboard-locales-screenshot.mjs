@@ -18,7 +18,7 @@ import {
   BULLMQ_PREFIX,
   closeQueues,
 } from '@pf-mediakit/renderer/queues';
-import { startWorkers } from '@pf-mediakit/renderer/worker';
+import { startWorkers } from '@pf-mediakit/renderer/api-worker';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
