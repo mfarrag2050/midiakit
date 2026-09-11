@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# bin/mk-ci — يشغّل السلسلة داخل حاوية Linux (وصفة 90-LINUX-REFERENCE).
+#
+# **السبب:** ثلاثة حرّاس بصريّة (verify:snapshot · verify:plan-values ·
+# verify:breaking-video) مرجعها مُوَلَّد داخل Linux — فرق ~2px في
+# `measureText` بين macOS و Linux يكسر بايت-مطابقة (PLATFORM-2).
+# على macOS: الحرّاس تفشل بصوت وتوجّهك هنا.
+#
+# **الاستعمال:**
+#   ./bin/mk-ci              — يشغّل pnpm test كاملاً داخل الحاوية
+#   ./bin/mk-ci --regen-refs — لاحقاً: يعيد توليد المرجع (بعد قرار مالك)
+#
+# **قيد صارم:** لا يخلط سياق docker-mediakit — الحاوية منفصلة، لا تلمس
+# Postgres/MinIO المشغَّلة عبر infra/docker-compose.yml. تسمية `pf-mediakit-ci`.
+#
+# **النظافة:** الحاوية `--rm` — تُحذف بعد الانتهاء. node_modules في
+# docker volume `pf-mediakit-ci-node-modules` لتسريع التشغيلات اللاحقة.
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+IMAGE="node:20.18.1-bookworm-slim"
+VOLUME="pf-mediakit-ci-node-modules"
+CONTAINER_NAME="pf-mediakit-ci"
+
+if [[ "${1:-}" == "--regen-refs" ]]; then
+  echo "[mk-ci] --regen-refs غير مُنفَّذ بعد — راجع scripts/generate-plan-golden.mjs يدوياً."
+  echo "        سيُضاف عند أوّل حاجة توليد بعد قرار مالك بتحسين مرجع."
+  exit 1
+fi
+
+echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (${IMAGE})"
+echo "[mk-ci] الحاوية: --rm · اسم ${CONTAINER_NAME} · volume ${VOLUME} لـnode_modules"
+echo ""
+
+exec docker run --rm \
+  --name "${CONTAINER_NAME}" \
+  --platform linux/arm64 \
+  -v "${ROOT}:/work" \
+  -v "${VOLUME}:/work/node_modules" \
+  -w /work \
+  "${IMAGE}" \
+  bash -c '
+    set -e
+    echo "[mk-ci · حاوية] apt install …"
+    apt-get update -qq > /dev/null 2>&1
+    apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+    corepack enable > /dev/null 2>&1
+    corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+    echo "[mk-ci · حاوية] pnpm install --frozen-lockfile …"
+    pnpm install --frozen-lockfile 2>&1 | tail -3
+    echo "[mk-ci · حاوية] pnpm test …"
+    pnpm test
+  '

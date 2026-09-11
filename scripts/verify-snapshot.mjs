@@ -2,11 +2,24 @@
 // محفوظة في `snapshots/` و `snapshots-semantic/`. يحمي من تغيّر أنبوب
 // الرندر عرَضاً.
 //
+// **تقسيم البوابات (GATE-2LAYER · 2026-09-11):** هذا الحارس يفحص مخرَج
+// `preview.mjs` الذي **لا يمرّر `assets.images`** — تُرسَم الخلفية
+// البديلة (fallback: solid/gradient) لا صورة حقيقيّة. **مسار الصورة
+// يحرسه `verify:image-fixture` وحده** (يمرّر fixture PNG عبر assets).
+// لا يفترض أحد أنّ اللقطات هنا تُغطّي مسار الصورة.
+//
 // **الاستخدام:** `pnpm verify:snapshot`
 //   يشغّل preview مرتين لكل هوية (semantic=off ثم semantic=on)، ثم
 //   يقارن كل ملف في `out/nosemantic/` مع `snapshots/`، وكل ملف في
 //   `out/semantic/` مع `snapshots-semantic/`. المجموع: 24 مقارنة
 //   (6 قوالب × 2 هويتين × 2 وضعَي دلالي).
+//
+// **المرجع Linux فقط** (GATE-2LAYER · 2026-09-11 · PLATFORM-2):
+//   `measureText.actualBoundingBoxAscent/Descent` يعطي فرقاً ~2px بين
+//   macOS (75.0) و Linux (73.0). المرجع مُوَلَّد داخل حاوية
+//   `node:20.18.1-bookworm-slim` (arm64 + amd64 يتطابقان — PLATFORM-3).
+//   على macOS: **يفشل بصوت واضح** يوجّه لسكربت `./bin/mk-ci` الذي يشغّل
+//   السلسلة داخل الحاوية. لا SKIP، لا tolerance.
 //
 // **المرجعان:**
 //   • `snapshots/` = enabled=false — التوافق الخلفي (قبل الجزء ب-2).
@@ -15,9 +28,10 @@
 // **متى يفشل:**
 //   • renderFrame أنتج شيئاً مختلفاً عن اللقطة (رسم جديد، خلل فادح).
 //   • تغيّر خفي في skia-canvas أو دالة طبقة أو الهوية.
+//   • تشغيل على غير Linux (المنصّة لا تطابق مرجع).
 //
-// **متى يُحدَّث المرجع:** بعد قرار مالك واضح بتحسين المخرج — تُنسَخ
-// المخرجات من `out/<subdir>/` إلى المجلد المرجعي المقابل، ويوثَّق السبب
+// **متى يُحدَّث المرجع:** بعد قرار مالك واضح بتحسين المخرج — تُوَلَّد
+// داخل الحاوية عبر `./bin/mk-ci --regen-refs` (لاحقاً)، وتُوثَّق السبب
 // في PHASES.md.
 
 import { readFile } from 'node:fs/promises';
@@ -25,6 +39,23 @@ import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// ── فحص المنصّة أوّلاً — قبل أيّ عمل (GATE-2LAYER §٤ · 2026-09-11) ──
+if (process.platform !== 'linux') {
+  console.error('');
+  console.error(`✗ verify-snapshot: هذا المرجع لينكس حصراً.`);
+  console.error(`  المنصّة الحاليّة: ${process.platform} · المطلوبة: linux`);
+  console.error(``);
+  console.error(`  السبب: skia-canvas على macOS يعطي actualBoundingBox`);
+  console.error(`  مختلف ~2px عن Linux (PLATFORM-2 · مقيس). الاعتماد على`);
+  console.error(`  مرجع macOS يُنتج بوابة حمراء صادقاً على CI Linux.`);
+  console.error(``);
+  console.error(`  الحل: شغّل السلسلة داخل حاوية Linux:`);
+  console.error(`    ./bin/mk-ci`);
+  console.error(``);
+  console.error(`  (يقرأ نفس الوصفة التي يستعملها CI — راجع 90-LINUX-REFERENCE.)`);
+  process.exit(1);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');

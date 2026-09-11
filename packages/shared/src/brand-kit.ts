@@ -44,6 +44,39 @@ export interface FontCaps {
   readonly diacriticsSafe: boolean;
 }
 
+/**
+ * متريكات رأس الخطّ — مصدر واحد للطرفَين (BASELINE-A · 2026-09-11 · L-73).
+ *
+ * **العلّة:** `ctx.measureText.actualBoundingBoxAscent/Descent` يعطي قيماً
+ * مختلفة بين Chrome (em-box) و skia (glyph-bbox) — 20-PREVIEW-GAP قاس 11
+ * قيمة Δlh فريدة على 30 حالة. الحلّ: نقيس رأس الخطّ **مرّة** بأداة سطر
+ * أوامر (`scripts/measure-font-metrics.mjs`)، نُخزِّن الأعداد هنا، والمحرك
+ * يقرأها كأعداد لا يستدعي شيئاً. الطرفان يبنيان الخطّة من نفس المصدر ⇒
+ * المطابقة خاصّية بنيويّة.
+ *
+ * **المصدر:** OS/2 typo metrics (sTypoAscender / sTypoDescender) أو hhea
+ * كاحتياطي. `unitsPerEm` من `head.unitsPerEm` للتحويل إلى بكسل:
+ *   pixelHeight = (ascent + descent) × fs / unitsPerEm
+ *
+ * **قاعدة صارمة:** لا تُقرأ من ملفّ خطّ وقت التشغيل — القياس يُنفَّذ
+ * مرّة عند رفع الخطّ (اليوم يدوياً عبر `pnpm measure-font`، لاحقاً في
+ * `POST /brand-kits` — راجع تذكرة `FONT-METRICS-UPLOAD` المقترَحة).
+ *
+ * **موضع الحقل — `FontWeight` لا `FontFamily`** (AMEND-55 · 2026-09-11):
+ * بعض الخطوط تختلف متريكاتها بحسب الوزن (وإن كانت خطوطنا الحاليّة —
+ * IBM Plex + Almarai — لا تختلف). الحقل على مستوى الوزن يقبل الاختلاف
+ * إن ظهر، والوحدة على العائلة تفقد المرونة. `mkau` قاست: الأوزان
+ * الثلاثة متطابقة القيَم — راجع `claude/reports/55-BASELINE-A.md §١٢·٣`.
+ */
+export interface FontMetrics {
+  /** OS/2.sTypoAscender أو hhea.ascender (وحدات em). */
+  readonly ascent: number;
+  /** موجب — |OS/2.sTypoDescender| أو |hhea.descender| (وحدات em). */
+  readonly descent: number;
+  /** head.unitsPerEm — عادةً 1000 (TTF) أو 2048 (OpenType). */
+  readonly unitsPerEm: number;
+}
+
 export interface FontWeight {
   /**
    * `assetId` — معرّف الأصل في مكتبتنا (docs/16 §9). قرار #1 في A11
@@ -61,6 +94,25 @@ export interface FontWeight {
   readonly assetId?: string;
   readonly url: string;
   readonly value: number;
+  /**
+   * متريكات رأس الخطّ — **اختياريّ في النوع، حاضر دائماً في وقت التشغيل**
+   * (AMEND-55 · 2026-09-11 · L-73). السبب المقيس: `brand_kits.config`
+   * حقل `jsonb` بلا `CHECK`، والحدّ الوحيد الذي يرفض مفاتيح غير معلَنة
+   * يعمل على المستوى الأعلى فقط. حقل **مطلوب** سيرمي على أوّل هويّة
+   * قائمة في القاعدة (نوع يبلّغ أماناً بلا أن يؤمّن — L-71).
+   *
+   * **الحضور وقت التشغيل مضمون بـ:**
+   *  1. `DEFAULT_BRAND` يحمل قيماً واقعيّة لكل وزن.
+   *  2. `fillIn(cfg, DEFAULT_BRAND)` في `apps/api/src/shared/brand-kit-mapper.ts`
+   *     يملؤها لأيّ هويّة تُقرأ عبر `toFull()`.
+   *  3. إن بلغ الرسم وهي غائبة رغم ذلك: **يسقط بصوت** برسالة تسمّي
+   *     الهويّة والعائلة (`packages/engine/src/render.ts` §runHeadline).
+   *     غياب هنا خللٌ في التركيب، لا حالة تُعالَج بالصمت.
+   *
+   * **لا ارتداد إلى measureText — قطعاً.** ذلك هو صنف L-71 نفسه داخل
+   * علاج L-71 (راجع AMEND-55 §٢).
+   */
+  readonly metrics?: FontMetrics;
 }
 
 export interface FontFamily {
@@ -72,6 +124,8 @@ export interface FontFamily {
     readonly regular: FontWeight;
     readonly bold: FontWeight;
   };
+  // FontMetrics نُقلت إلى FontWeight (AMEND-55 · 2026-09-11) — بعض
+  // الخطوط تُغيِّر متريكاتها بحسب الوزن. راجع تعليق FontMetrics.
 }
 
 export interface BrandFonts {

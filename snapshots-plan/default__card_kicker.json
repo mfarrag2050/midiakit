@@ -1,0 +1,85 @@
+{
+  "headline": {
+    "fontSize": 84,
+    "lineHeight": 119,
+    "chosenBoxW": 893,
+    "rightX": 986.5,
+    "centerX": 540,
+    "linesJustified": [
+      [
+        {
+          "text": "مصدر",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "مطّلع",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "يكشف:",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "بروكسل",
+          "bold": false,
+          "accent": false
+        }
+      ],
+      [
+        {
+          "text": "تـــدعو",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "إلى",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "وقف",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "فــوري",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "لإطــلاق",
+          "bold": false,
+          "accent": false
+        }
+      ],
+      [
+        {
+          "text": "النار",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "وتفتح",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "ممرّاً",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "إنسانياً",
+          "bold": false,
+          "accent": false
+        }
+      ]
+    ],
+    "align": "center",
+    "accentSpans": []
+  },
+  "headlineLineCount": 3
+}

@@ -60,11 +60,16 @@ try {
     stdio: ['ignore', 'pipe', 'ignore'],
   }).trim();
 } catch (err) {
-  console.error(`[check-docker-context] ✗ فشل استدعاء \`docker context show\`.`);
-  console.error(`   السبب المحتمل: Docker غير مثبَّت أو غير متاح في PATH.`);
-  console.error(`   المستودع يحمل infra/docker-compose.yml ⇒ Docker مطلوب.`);
-  console.error(`   الحلّ: ثبّت Docker (أو Colima) وأعد المحاولة.`);
-  process.exit(1);
+  // Docker binary غير متاح — حالة مكتشَفة (CI · حاوية · محلّ لا يعرف docker).
+  // لسنا في وضع «bypass اختياريّ» (L-71) — هذا فحص وجود binary. إن أراد
+  // المطوّر تشغيل `pnpm db:up` وغيرها من أوامر Docker، سيفشل ذلك مباشرةً
+  // برسالة docker-not-found طبيعيّة. لا ضمانة إخفاء هنا.
+  //
+  // GATE-2LAYER · 2026-09-11: هذا يسمح بتشغيل `pnpm test` داخل حاوية Linux
+  // (`./bin/mk-ci`) بلا حاجة لـdocker-in-docker.
+  console.log(`[check-docker-context] ✓ Docker غير مثبَّت — لا فحص (CI أو حاوية أو dev بلا docker).`);
+  console.log(`   ملاحظة: أوامر Docker (db:up · db:reset · إلخ) ستفشل مباشرةً حين تُستدعى.`);
+  process.exit(0);
 }
 
 if (current === EXPECTED) {
