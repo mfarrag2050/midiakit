@@ -33,6 +33,7 @@
     "verify:limits1": "node --import tsx scripts/verify-limits1.mjs",
     "verify:alerts-wire": "node --import tsx scripts/verify-alerts-wire.mjs",
     "verify:cover-write-5": "node --import tsx scripts/verify-cover-write-5.mjs",
+    "verify:cover-bucket-2": "node --import tsx scripts/verify-cover-bucket-2.mjs",
     "alerts:worker": "node --import tsx src/limits/alerts-worker.ts"
   },
   "dependencies": {
