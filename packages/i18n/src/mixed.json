@@ -162,7 +162,8 @@
         "imageChoose": "اختر image",
         "imageChange": "Change",
         "imageRemove": "Remove",
-        "imageSelected": "صورة selected"
+        "imageSelected": "صورة selected",
+        "fieldUnsupported": "نوع حقل unsupported في this version"
       },
       "editor2": {
         "noFields": "No fields in this template.",

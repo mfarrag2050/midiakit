@@ -834,7 +834,23 @@ export default function ProjectEditorPage(): JSX.Element {
                 </div>
               );
             }
-            if (!isTextField(f.type) && f.type !== 'multiline') return null;
+            if (!isTextField(f.type) && f.type !== 'multiline') {
+              // PNG-EXPORT §3: لا تُسقط الحقول الأخرى صامتاً. أعرض تحذيراً
+              // مرئياً كي لا يعتقد المستخدم أنّ القالب مكتمل. `medialist`
+              // في reel مثلاً required=true — المستخدم يجب أن يعرف أنّه
+              // لن يقدر على تعبئته في هذه النسخة.
+              return (
+                <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
+                  <label className="block text-xs font-medium text-fg-muted">
+                    {f.label ?? f.key}
+                    {f.required && <span className="ms-1 text-danger">*</span>}
+                  </label>
+                  <div className="rounded border border-warning bg-warning/10 p-3 text-xs">
+                    {t('pages.projects.workspace.fieldUnsupported')} — <span className="font-mono">{f.type}</span>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
                 <div className="flex items-center justify-between">

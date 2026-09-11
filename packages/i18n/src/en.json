@@ -161,7 +161,8 @@
         "imageChoose": "Choose image",
         "imageChange": "Change",
         "imageRemove": "Remove",
-        "imageSelected": "Image selected"
+        "imageSelected": "Image selected",
+        "fieldUnsupported": "Unsupported field type in this version"
       },
       "editor2": {
         "noFields": "No fields in this template.",

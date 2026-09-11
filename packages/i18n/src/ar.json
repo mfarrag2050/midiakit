@@ -172,7 +172,8 @@
         "imageChoose": "اختر صورة",
         "imageChange": "تبديل",
         "imageRemove": "إزالة",
-        "imageSelected": "صورة مُختارة"
+        "imageSelected": "صورة مُختارة",
+        "fieldUnsupported": "نوع حقل غير مدعوم في هذه النسخة"
       },
       "annotations": {
         "title": "التعليقات",

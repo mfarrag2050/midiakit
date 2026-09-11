@@ -265,7 +265,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     // assetId ولا يجد قيداً في DB. لا fallback صامت.
     const imageAssets = await resolveImageAssetsOrThrow(tenantId, templateSnapshot, content, tmpDir);
 
-    // 5. Render — MP4 via renderVideo (+ FFmpeg) OR PNG via canvas
+    // 5. Render — MP4 via renderVideo (+ FFmpeg) OR PNG via renderFrame (still)
     const outPath = join(tmpDir, `output.${format}`);
     if (format === 'mp4') {
       await renderVideo({
@@ -273,17 +273,25 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
         ...(imageAssets && { assets: imageAssets }),
       });
     } else {
+      // PNG-EXPORT: مرّ بالمحرك بنفس assets — لا شكل ثانٍ للأصول، لا stub.
+      // renderFrame يستعمل template.card (البطاقة الثابتة)؛ يفشل بصوت إن غاب
+      // (القالب بلا card branch لا يمكن رسمه كصورة ثابتة).
+      const { renderFrame } = await import('@pf-mediakit/engine');
+      if (!(template as { card?: unknown }).card) {
+        throw new Error(`PNG_UNSUPPORTED_TEMPLATE: template ${(template as { id?: string }).id} has no card branch`);
+      }
       const canvas = new Canvas(dims.w, dims.h);
       const ctx = canvas.getContext('2d');
-      const brandC = brand as { colors?: { surface?: string } };
-      ctx.fillStyle = brandC.colors?.surface ?? '#111';
-      ctx.fillRect(0, 0, dims.w, dims.h);
-      if (loadedFonts.length > 0) ctx.font = `bold 80px "${loadedFonts[0]!.family}"`;
-      else ctx.font = 'bold 80px sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(content['headline'] ?? 'اختبار'), dims.w / 2, dims.h / 2);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderFrame({
+        ctx: ctx as any,
+        size: dims,
+        template,
+        brand,
+        content,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(imageAssets && { assets: imageAssets as any }),
+      });
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 
