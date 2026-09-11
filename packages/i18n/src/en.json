@@ -622,6 +622,7 @@
     "STORAGE_QUOTA_EXCEEDED": "Storage quota exhausted — delete assets or upgrade your plan.",
     "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
     "INVALID_FONT_FILE": "Font file is invalid.",
+    "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
     "INVALID_FILTER_FIELD": "Unknown filter field.",

@@ -622,6 +622,7 @@
     "STORAGE_QUOTA_EXCEEDED": "استنفدت مساحة التخزين — احذف أصولاً أو رقّ باقتك.",
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
+    "INVALID_FONT_METRICS": "الخطّ المرفوع لم تُقَس أبعاده — لن يُرسَم بشكل صحيح. شغّل `pnpm measure-font <مسار-الملفّ.ttf>` ثمّ أعِد الرفع.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
