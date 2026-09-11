@@ -237,7 +237,7 @@ function runImage(
     return false;
   }
   const crop = args.assets?.imageCrops?.[key];
-  drawImage(args.ctx, args.size, image, crop ? { crop } : {});
+  drawImage(args.ctx, args.size, args.brand, { image, ...(crop ? { crop } : {}) });
   return true;
 }
 
