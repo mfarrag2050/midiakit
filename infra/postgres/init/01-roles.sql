@@ -13,23 +13,37 @@
 -- كلمات السر التالية للتطوير على المضيف المحلي فقط (127.0.0.1). الإنتاج
 -- يستعمل أسراراً منفصلة من مدير أسرار خارج compose.
 
-CREATE ROLE migration_user WITH
-    LOGIN
-    PASSWORD 'dev_migration_pass'
-    NOSUPERUSER
-    NOBYPASSRLS
-    NOINHERIT
-    NOCREATEDB
-    NOCREATEROLE;
+-- إعادة التشغيل آمنة (100-DB-BOOTSTRAP): كل CREATE ROLE مغلَّف بـDO block
+-- يفحص pg_roles أوّلاً. الملفّ يُشغَّل مرّة عند تهيئة الحاوية (docker init)
+-- ومرّة عند `pnpm db:bootstrap` — لا يكسر قاعدةً مُهيَّأة.
 
-CREATE ROLE app_user WITH
-    LOGIN
-    PASSWORD 'dev_app_pass'
-    NOSUPERUSER
-    NOBYPASSRLS
-    NOINHERIT
-    NOCREATEDB
-    NOCREATEROLE;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'migration_user') THEN
+    CREATE ROLE migration_user WITH
+        LOGIN
+        PASSWORD 'dev_migration_pass'
+        NOSUPERUSER
+        NOBYPASSRLS
+        NOINHERIT
+        NOCREATEDB
+        NOCREATEROLE;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
+    CREATE ROLE app_user WITH
+        LOGIN
+        PASSWORD 'dev_app_pass'
+        NOSUPERUSER
+        NOBYPASSRLS
+        NOINHERIT
+        NOCREATEDB
+        NOCREATEROLE;
+  END IF;
+END $$;
 
 -- منح صلاحيات على قاعدة البيانات الحالية (mediakit أو mediakit_test).
 DO $$
@@ -83,13 +97,18 @@ ALTER ROLE postgres NOBYPASSRLS;
 -- migration_user NOINHERIT فلا يرث صلاحيات auth_lookup تلقائياً —
 -- الفائدة الوحيدة: إمكانية ALTER OWNER في migration.
 
-CREATE ROLE auth_lookup WITH
-    NOLOGIN
-    NOSUPERUSER
-    NOBYPASSRLS
-    NOINHERIT
-    NOCREATEDB
-    NOCREATEROLE;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'auth_lookup') THEN
+    CREATE ROLE auth_lookup WITH
+        NOLOGIN
+        NOSUPERUSER
+        NOBYPASSRLS
+        NOINHERIT
+        NOCREATEDB
+        NOCREATEROLE;
+  END IF;
+END $$;
 
 GRANT auth_lookup TO migration_user;
 
@@ -115,14 +134,19 @@ GRANT USAGE, CREATE ON SCHEMA public TO auth_lookup;
 --   • DML كامل على platform_users + platform_sessions (مجاله)
 --   • صفر منح على app_user/auth_lookup فيما يخصّ platform_*
 
-CREATE ROLE control_plane_user WITH
-    LOGIN
-    PASSWORD 'dev_control_plane_pass'
-    NOSUPERUSER
-    NOBYPASSRLS
-    NOINHERIT
-    NOCREATEDB
-    NOCREATEROLE;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'control_plane_user') THEN
+    CREATE ROLE control_plane_user WITH
+        LOGIN
+        PASSWORD 'dev_control_plane_pass'
+        NOSUPERUSER
+        NOBYPASSRLS
+        NOINHERIT
+        NOCREATEDB
+        NOCREATEROLE;
+  END IF;
+END $$;
 
 DO $$
 DECLARE

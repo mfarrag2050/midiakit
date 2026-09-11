@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "bootstrap": "node --import tsx scripts/bootstrap.ts",
+    "bootstrap:test": "node --import tsx scripts/bootstrap.ts --test",
     "migrate:up": "node --import tsx scripts/migrate.ts up",
     "migrate:up:test": "node --import tsx scripts/migrate.ts up --test",
     "migrate:down": "node --import tsx scripts/migrate.ts down",
