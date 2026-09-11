@@ -1,38 +1,26 @@
-# .github/workflows/ci.yml — سلسلة CI الرئيسيّة (20-CI-BUILD).
+# .github/workflows/ci.yml — سلسلة CI الرئيسيّة (31 بوابة + 3 mkau).
 #
-# **الغاية:** تشغيل `pnpm test` كاملةً — 28 بوابة (`check:*` + `vitest run`
-# + `verify:*`) — على Linux، مع الأدوات والخدمات التي تحتاجها كلّ بوابة
-# فعلاً. كلّ استثناء أو تخطٍّ **يُعلَن** ولا يُخفى.
+# **عقد mkci §9 (GATE-2LAYER · 2026-09-11 · b4ce12e):**
+# «CI يشغّل السلسلة داخل الحاوية بلا شروط env — لا SKIP، لا tolerance.»
+# المرجع Linux فقط، مُوَلَّد داخل `node:20.18.1-bookworm-slim`.
+# CI هنا يستعمل نفس الحاوية → بايتات مطابقة لـ`bin/mk-ci` محلّيّاً.
 #
-# **المعمار: ubuntu-latest (x86_64).** الأسباب:
-#   1. **قرب من الإنتاج:** VPS مستهدَف x86_64 (docs/08). CI مطابق للمنصّة
-#      يعطي أعلى ثقة في أنّ ما يمرّ في CI يمرّ في الإنتاج.
-#   2. **حصص GitHub:** ubuntu-latest في الحصّة المجّانيّة القياسيّة؛
-#      arm64 عليه قيود مختلفة على المستودعات الخاصّة.
-#   3. **PLATFORM-3 (mkau):** `measureText` بت-بت متطابق بين linux/arm64
-#      و linux/amd64 — فمرجع snapshot لينكس واحد يخدم أيّ خيار linux.
-#      الفرق الحقيقيّ مع macOS فقط (PLATFORM-2 — انزياح ~2px عموديّ).
-#   4. **الأثر على اللقطات:** `verify:breaking-video` يقرأ
-#      `snapshots-video/breaking-linux.md5` (§3 من 20-CI-BUILD) — مُوَلَّد
-#      على Debian 12 linux/amd64. أيّ فرع لينكس يمرّ به.
+# **verify:snapshot · verify:plan-values · verify:breaking-video** تفحص
+# `process.platform === 'linux'` وتفشل إن ≠ linux. الحاوية = Debian
+# bookworm = linux → تمرّ.
 #
-# **الأسرار:** كل قيمة عبر `secrets.*` — لا قيمة مكتوبة في الملفّ.
-#   • `secrets.CI_DATABASE_URL` — إن غاب، الوظيفة تعتمد على URL البناء
-#     الافتراضيّ للخدمة postgres (127.0.0.1:5432 داخل الشبكة الافتراضيّة).
+# **check:docker-context (GATE-2LAYER)**: mk أضاف branch جديداً — عند
+# غياب docker binary (حاوية · CI · dev بلا docker)، الفحص يخرج ✓ مع
+# رسالة صريحة. لا حاجة لتصفية من الحلقة بعد الآن.
 #
-# **الاستثناء المُعلَن — `check:docker-context` (Option B من §4 · شُدِّد
-# 2026-09-11):** الحارس محلّيّ الغاية بقرار — يحرس عزل Colima على الميني
-# عن `~/Minhaj` و `~/PrimeMind` (CLAUDE.md § بيئة مشتركة · راجع رأس
-# `scripts/check-docker-context.mjs` § «محلّيّ بقرار»). Runner لينكس CI
-# ephemeral · بلا Colima · بلا مشاريع مشتركة — الغاية غير قابلة للتطبيق.
-# **التنفيذ:** خطوة `pnpm test (بلا check:docker-context — «محلّيّ فقط»)`
-# أدناه تقرأ سلسلة `pnpm test` من `package.json` وتحذف السطر — مصدر
-# حقيقة واحد، بلا حقيقة متوازية، بلا لمس `package.json`. لا `mv` ولا
-# متغيّر بيئة — الاستبعاد صريح ومكتوب في موضعَين: هنا وفي رأس السكربت.
+# **سياسة دائمة (قرار مالك · 20-CI-BUILD جواب (4)):** جمع كلّ الإخفاقات،
+# لا `bash -e` fail-fast. **لا تُعِد هذا إلى fail-fast.**
 #
-# **مؤجَّل عمداً (§5 من 20-CI-BUILD):**
-#   • تشخيص 5 إخفاقات `apps/renderer/src/observe.test.ts` (تحت `mkau`
-#     في تذكرة 100-OBSERVE-FAILURES). حين يصل التصنيف، هذا الملفّ يُعدَّل.
+# **الأسرار — الأسماء فقط:**
+#   • `CI_POSTGRES_BOOTSTRAP_PASSWORD` — postgres service.
+#   • `CI_SESSION_JWT_SECRET` (32+ chars) — verify:auth.
+#   • `CI_PLATFORM_JWT_SECRET` (32+ chars) — verify:auth.
+#   • `CI_AI_KEY_ENCRYPTION_KEY` (64 hex chars = 32 bytes) — verify:auth.
 
 name: CI
 
@@ -48,16 +36,17 @@ concurrency:
 
 jobs:
   test:
-    name: pnpm test (28 بوابة)
+    name: pnpm test (31 بوابة داخل حاوية Linux) + 3 mkau
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    # ── الحاوية (عقد §9 · GATE-2LAYER) ─────────────────────────
+    container:
+      image: node:20.18.1-bookworm-slim
 
-    # ── خدمات ──────────────────────────────────────────────
-    # postgres: للثلاث بوابات المُغلَقة الآن (§1 من 20-CI-BUILD) —
-    # check:template-sync · check:plan-sync · check:control-plane-policies.
-    # redis: لـ`vitest` (apps/renderer/src/observe.test.ts يستورد bullmq
-    # ويفتح اتّصالاً على REDIS_URL — العزل عن الميني عبر بادئة
-    # BULLMQ_PREFIX + قاعدة /3).
+    # ── خدمات ──────────────────────────────────────────────────
+    # postgres: hostname `postgres` (سيبلينغ للحاوية في نفس شبكة الوظيفة).
+    # redis: hostname `redis` (نفس المبدأ). داخل الحاوية لا يوجد 127.0.0.1
+    # للـservices — نستعمل أسماء الخدمة بحسب alias التلقائيّ.
     services:
       postgres:
         image: postgres:16-alpine
@@ -65,8 +54,6 @@ jobs:
           POSTGRES_DB: mediakit
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d mediakit"
           --health-interval 5s
@@ -74,8 +61,6 @@ jobs:
           --health-retries 20
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
@@ -83,132 +68,125 @@ jobs:
           --health-retries 20
 
     steps:
-      # ── (1) checkout + بيئة ──────────────────────────
-      - name: Checkout (full — check:skill-fresh يحتاج git show HEAD)
+      # ── (1) apt install داخل الحاوية ───────────────────────
+      # bookworm-slim بلا git/ffmpeg/python3 افتراضاً.
+      # git: actions/checkout · check:skill-fresh · check:docs-bundle-fresh
+      # ffmpeg: verify:render-video-all-templates · verify:breaking-video ·
+      #         verify:audio-gate + ffprobe · verify:media-track-gate ·
+      #         verify:text-tracks-gate · verify:transitions-gate
+      # python3: msgpackr-extract postinstall (يوقف تحذيراً)
+      - name: apt install (git + ffmpeg + python3) داخل الحاوية
+        run: |
+          apt-get update -qq
+          apt-get install -qq -y --no-install-recommends git ffmpeg python3
+          git --version
+          ffmpeg -version | head -1
+          node --version
+
+      # ── (2) Checkout ────────────────────────────────────────
+      - name: Checkout (fetch-depth: 0 — لـcheck:skill-fresh)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: تركيب أدوات النظام (git + ffmpeg + python3)
-        # git: check:dashboard-not-published · check:skill-fresh · check:docs-bundle-fresh
-        # ffmpeg: verify:render-video-all-templates · verify:breaking-video ·
-        #         verify:audio-gate (+ffprobe) · verify:media-track-gate ·
-        #         verify:text-tracks-gate · verify:transitions-gate
-        # python3: يُهدّئ msgpackr-extract postinstall (اختياريّ لكن يوقف تحذيراً)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -qq -y --no-install-recommends \
-            git ffmpeg python3
-          ffmpeg -version | head -1
-          node --version
-
-      - name: Node 20.18.1 + corepack pnpm 9.15.4 (يطابق .nvmrc + packageManager)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.18.1'
-
-      - name: تفعيل corepack (بلا npm install -g pnpm)
-        # نسخة pnpm مُثبَّتة في package.json حقل packageManager. corepack
-        # يُنشِّطها من هناك حتماً — لا تعارض مع أيّ pnpm نظاميّ.
+      # ── (3) corepack pnpm ─────────────────────────────────
+      # node:20.18.1-bookworm-slim يحوي corepack. لا حاجة لـactions/setup-node.
+      - name: corepack pnpm 9.15.4 (يطابق packageManager)
         run: |
           corepack enable
           corepack prepare pnpm@9.15.4 --activate
           pnpm --version
 
-      # ── (2) تخبئة متجر pnpm — التوفير المُقاس ~60ث ──
-      # mkau §5: 20.7s من الصفر (pnpm-reported) · ~130s إجماليّ مع apt.
-      # التخبئة تُخفض التركيب إلى ~5-10s على HIT، فيصبح المجموع ~65-70s.
+      # ── (4) تخبئة متجر pnpm (~60ث توفير) ──────────────────
       - name: تخبئة متجر pnpm
         uses: actions/cache@v4
         with:
           path: ~/.local/share/pnpm/store
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: pnpm-store-container-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            pnpm-store-${{ runner.os }}-
+            pnpm-store-container-
 
-      - name: تركيب التبعيّات (frozen — لا تعديل lockfile في CI)
+      - name: pnpm install (frozen)
         run: pnpm install --frozen-lockfile
 
-      # ── (3) تشغيل الهجرات على postgres الخدمة ──────────
-      # يُلزم الثلاث بوابات (§1) بفحص بنية DB حقيقيّة لا صامتة.
+      # ── (5) تشغيل الهجرات على postgres ────────────────────
+      # قد يفشل الآن على citext (mkau تعدّ في 150-FRESH-DB) — سيُحلّ دفعة
+      # واحدة في هجرة بيد mkapi، لا هنا.
       - name: تشغيل الهجرات على postgres
         env:
-          # migration_user + app_user لا يُنشآن آلياً عبر GitHub services
-          # (init/*.sql خاصّة بـdocker-compose المحلّيّ). نستعمل postgres
-          # مباشرةً كمستخدم بذر (bootstrap) للـmigrations في CI فقط.
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
         run: pnpm db:migrate
 
-      # ── (4) `pnpm test` بلا check:docker-context ─────────
-      # راجع رأس الملفّ § الاستثناء المُعلَن + رأس
-      # scripts/check-docker-context.mjs § «محلّيّ بقرار».
-      # نقرأ سلسلة `pnpm test` من `package.json` وقت التشغيل، نحذف
-      # السطر الوحيد `pnpm check:docker-context`، ونشغّل الباقي بالتتابع.
-      # فحص المزامنة: إن لم يعد السطر موجوداً (mk بسّط package.json
-      # لاحقاً)، الخطوة تفشل بتذكير — بسّط إلى `pnpm test` مباشرة.
-      - name: pnpm test (بلا check:docker-context — جمع كلّ الإخفاقات)
-        # ─────────────────────────────────────────────────────────────
-        # **سياسة دائمة (قرار مالك · 2026-09-11): جمع كلّ الإخفاقات، لا
-        # `bash -e` fail-fast.** سلسلة كاملة عندنا ~130s. توفير fail-fast
-        # عند أوّل سقوط دقائق؛ كلفة رحلة CI كاملة لكلّ عيب. CI يبلّغ كلّ
-        # ما سقط في كلّ دفعة، فلا نستهلك دورات على عيوب متتالية.
-        #
-        # **لا تُعِد هذا إلى fail-fast ظنّاً أنّه تحسين** — راجع 20-CI-BUILD
-        # جواب المالك (4) قبل أيّ لمس.
-        #
-        # **`if: always()`** جزء من نفس السياسة: نشغّل حتى لو فشلت خطوة
-        # الهجرات — الثلاث بوابات المعتمدة على DB ستفشل صراحةً (بلا صمت)،
-        # والـ24 الأخرى تظهر حالها. الوظيفة تبقى حمراء إن سقطت بوابة واحدة.
+      # ── (7) pnpm test (31 بوابة · حلقة جمع الإخفاقات) ─────
+      # عدد البوابات مقروء من `package.json` وقت التشغيل — إن غيّرَه mk،
+      # الحلقة تلتقط الرقم الجديد تلقائيّاً.
+      - name: pnpm test (31 بوابة · جمع كلّ الإخفاقات)
+        # سياسة دائمة (20-CI-BUILD جواب المالك (4)): جمع كلّ الإخفاقات.
+        # `if: always()` يشغّل حتى لو فشلت الهجرات — الرؤية تبقى مفتوحة.
+        # **لا تُعِد هذا إلى fail-fast ظنّاً أنّه تحسين.**
         if: always()
         env:
-          # الثلاث بوابات (§1) تفشل صراحةً بدون هذه:
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
-          # observe.test.ts (bullmq) يفتح اتّصالاً على REDIS_URL. القاعدة
-          # /3 ليست ضروريّة في CI (لا مشاركة) لكنّها للاتّساق مع الميني.
-          REDIS_URL: redis://127.0.0.1:6379/3
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
         run: |
+          export PATH="$PWD/node_modules/.bin:$PATH"
           GATES=$(node -e "
             const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
-            const chain = p.scripts.test.split('&&').map(s => s.trim());
-            const filtered = chain.filter(c => c !== 'pnpm check:docker-context');
-            const removed = chain.length - filtered.length;
-            if (removed !== 1) {
-              console.error('WORKFLOW-SYNC ERROR: expected exactly 1 removal of check:docker-context, got ' + removed);
-              console.error('إن أُزيل check:docker-context من pnpm test في package.json،');
-              console.error('بسِّط هذه الخطوة إلى: run: pnpm test');
-              process.exit(2);
-            }
-            console.log(filtered.join('\n'));
+            console.log(p.scripts.test.split('&&').map(s => s.trim()).join('\n'));
           ")
-          # سلسلة `pnpm test` تحوي أمراً واحداً (`vitest run`) بلا بادئة `pnpm`
-          # يعتمد على أن يكون `vitest` على PATH. `pnpm test` يفعل ذلك ضمنياً؛
-          # حلقة `eval` مباشرة لا. الحلّ: إضافة node_modules/.bin إلى PATH
-          # (ما يفعله pnpm داخلياً). كُشف بحقن اختباريّ محلّيّ (2026-09-11).
-          export PATH="$PWD/node_modules/.bin:$PATH"
           TOTAL=$(echo "$GATES" | grep -c .)
-          echo '===== سلسلة CI ('$TOTAL' بوابة — check:docker-context مُستبعَد بقرار) ====='
+          echo '===== سلسلة pnpm test ('$TOTAL' بوابة) ====='
           echo "$GATES"
-          echo '================================================================='
-          # جمع كلّ الإخفاقات (طور كشف · 2026-09-11):
-          # `if eval; then :; else FAILED+=; fi` — set -e لا يُطلق داخل شرط
-          # if، فالحلقة تكمل حتى النهاية بلا حاجة `set +e`.
+          echo '=========================================='
           FAILED=()
           while IFS= read -r cmd; do
             [ -z "$cmd" ] && continue
             echo ""
             echo "▶ $cmd"
-            if eval "$cmd"; then
-              :
-            else
+            if eval "$cmd"; then :; else
               echo "  ✗ سقطت: $cmd (exit=$?)"
               FAILED+=("$cmd")
             fi
           done <<< "$GATES"
           echo ""
-          echo "===== الملخّص: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
+          echo "===== ملخّص pnpm test: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
           if [ ${#FAILED[@]} -gt 0 ]; then
             printf '  ✗ %s\n' "${FAILED[@]}"
             exit 1
           fi
           echo "✓ كلّ البوابات ($TOTAL) اجتازت."
+
+      # ── (8-10) الثلاث التي اختارتها mkau من 110-VERIFY-33 ─
+      # خارج `pnpm test` قصداً — يبقى على mk قرار إدخالها لاحقاً.
+      # كلّ واحدة `if: always()` (سياسة الجمع تمتدّ إلى ما بعد pnpm test).
+
+      - name: verify:multilang (mkau · لا خدمة · ~1.5s محلّيّاً)
+        # قياس محلّيّ (2026-09-11 · macOS m4): 1.5s. تخمين mkau: ~1s.
+        # لا خدمة، لا سرّ، لا شبكة.
+        if: always()
+        run: pnpm verify:multilang
+
+      - name: verify:auth (mkau · postgres + JWT secrets)
+        # قياس محلّيّ (2026-09-11 · macOS m4 + postgres محلّيّ): 1.25s.
+        # في CI: يفشل الآن على «relation does not exist» بعد الهجرات (citext).
+        # بعد mkapi يُصلح citext + الأدوار: يمرّ. الآن هذا L-46 نفي طبيعيّ.
+        if: always()
+        env:
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
+          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
+          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
+        run: pnpm verify:auth
+
+      - name: verify:tenant-isolation (mkau · postgres roles)
+        # يحتاج migration_user + app_user (init/01-roles.sql) — غير موجودَين
+        # في postgres:16-alpine الافتراضيّ. سيفشل على «role does not exist»
+        # حتى يعالج mkapi البذر (150-FRESH-DB يعدّ). L-46 نفي طبيعيّ الآن.
+        if: always()
+        env:
+          DATABASE_URL_TEST: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_TEST_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+        run: pnpm verify:tenant-isolation
