@@ -101,6 +101,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      # git safe.directory داخل container: actions/checkout يضبطها للـstep
+      # الخاصّ به فقط. الحرّاس اللاحقة (check:skill-fresh · check:docs-bundle-fresh ·
+      # check:dashboard-not-published) تستدعي git من subprocess فتفشل بـ
+      # `fatal: detected dubious ownership`. نضبطها globally بدلاً من ذلك.
+      # `*` أضمن من مسار محدّد (يعمل بغضّ النظر عن WORKSPACE path).
+      - name: git safe.directory (بعد checkout · قبل الحرّاس)
+        run: git config --global --add safe.directory '*'
+
       # ── (3) corepack pnpm ─────────────────────────────────
       # node:20.18.1-bookworm-slim يحوي corepack. لا حاجة لـactions/setup-node.
       - name: corepack pnpm 9.15.4 (يطابق packageManager)
