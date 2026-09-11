@@ -22,7 +22,25 @@ model في shared) · النواة (`resolveAt` · `interpolate` بـ8 دوال 
 واجهة المنصة، لا تُبنى منفصلة). فك الترميز المسبق ينتظر مقطع مصدر
 حقيقي من العميل الأول.
 
-**تحديث بنيويّ (2026-09-11 · GATE-2LAYER · b4ce12e + 0a77bbd):**
+**تحديث بنيويّ (2026-09-11 · IMAGE-FIX · BASELINE-A · GATE-2LAYER · CI):**
+
+**١ · IMAGE-FIX (`93ae08f` · 2026-09-10 · L-72):** إصلاح سطر واحد في
+`packages/engine/src/render.ts:240` — كانت الصورة تُمرَّر في مرتبة
+`_brand` من `drawImage(ctx, size, brand, params)` بسبب بادئة `_` التي
+تُلغي حراسة TypeScript على المرتبة. الأثر السابق: خلفيّة الصورة لم تُرسم
+أبداً، ومع `crop` كان يُرمى TypeError. أُضيفت بوابة `verify:image-layer`
+(4 قوالب × 2 حالة = 8 حالات) — راجع رأس السكربت لتفصيل حقن العطب.
+
+**٢ · BASELINE-A (`af2acc2` + `2ae9fb8` · 2026-09-11 · L-73):**
+`measuredLineHeight` صار يستهلك متريكات رأس الخطّ (OS/2 typo
+ascent/descent + head.unitsPerEm) من `BrandKit.fonts.primary.weights.*.metrics`
+بدل `ctx.measureText.actualBoundingBox*`. الأثر: Chrome و skia يحسبان
+نفس lineHeight من نفس المدخل ⇒ التخطيط متطابق بنيويّاً بين المعاينة
+والمخرَج. أداة `pnpm measure-font` جديدة (opentype.js في devDeps للجذر
+فقط — المحرك يبقى نقيّاً · صفر تبعية جديدة على `packages/engine` أو
+`packages/shared`).
+
+**٣ · GATE-2LAYER (`b4ce12e` + `0a77bbd` · 2026-09-11):**
 - **البوابة البصريّة صارت ثلاث طبقات موصولة في `pnpm test`:**
   1. `verify:plan-values` (قيَم `RenderPlan` deep-equal · 12 خطّة)
   2. `verify:snapshot` (لقطات بايت-بايت · 24 لقطة · **دخلت `pnpm test` — كانت خارجها**)
@@ -36,6 +54,15 @@ model في shared) · النواة (`resolveAt` · `interpolate` بـ8 دوال 
 - **قرار مقصود:** `verify:snapshot` يفحص خلفيّة `preview.mjs` البديلة —
   **لا يُغطّي مسار الصورة**. `verify:image-fixture` يحرس مسار الصورة
   وحده. البوابتان منفصلتان بالتصميم (موثَّق في رأس السكربتَين).
+
+**٤ · أوّل CI في تاريخ المشروع (`feat/ci` · 2026-09-11):** فرع
+`feat/ci` (مسار `mkci`) يبني `.github/workflows/ci.yml` — يشغّل السلسلة
+داخل حاوية `node:20.18.1-bookworm-slim` وفق وصفة `90-LINUX-REFERENCE`،
+ويستهلك عقد المرجع الثلاثيّ من `60-GATE-2LAYER-GO §٩`. workflows أخرى
+مقترَحة: `l46-redis-observe.yml` (لتذكرة `CI-REDIS-SERVICE` — Redis
+service لحلّ 5 إخفاقات `observe.test.ts`) و `regen-breaking-linux-md5.yml`
+(لإعادة توليد مرجع Linux تحت الطلب). **الشاشة الخامسة `mkci` تضاف إلى
+`docs/11 §الجلسات` — راجع هناك.**
 
 **قرار المالك (2026-09-10) — التشكيل التلقائيّ مؤجَّل عن الإصدار الأول:**
 - **الحالة:** الميزة **غير مُفعَّلة في v1**. `brand.typography.diacritics.enabled`

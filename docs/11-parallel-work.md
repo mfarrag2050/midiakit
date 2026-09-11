@@ -14,10 +14,11 @@
 
 | المسار | الفرع | المجلد | الملفات المملوكة |
 |---|---|---|---|
-| **M — mediakit** (مسار دائم — التوثيق والسكيل والحزمة) | `main` | `~/MediaKit/pf-mediakit` | `docs/*` · `PHASES.md` · `CLAUDE.md` · `LESSONS.md` · `M1/M2` · `docs/SKILL-mediakit.md` · `docs/BUNDLE.md` وسكربتات توليدهما · `packages/engine` · `packages/shared` · `packages/templates` · `snapshots*/` |
+| **M — mediakit** (مسار دائم — التوثيق والسكيل والحزمة) | `main` | `~/MediaKit/pf-mediakit` | `docs/*` · `PHASES.md` · `CLAUDE.md` · `LESSONS.md` · `M1/M2` · `docs/SKILL-mediakit.md` · `docs/BUNDLE.md` وسكربتات توليدهما · `packages/engine` · `packages/shared` · `packages/templates` · `snapshots*/` · `fixtures/` · `bin/mk-ci` |
 | **S — الاستوديو** | `feat/studio` | `~/MediaKit/pf-mediakit-studio` | `apps/studio` · `packages/ui` · `packages/i18n` · `demo/studio` |
 | **P — البنية (mk-api)** | `feat/api` | `~/MediaKit/pf-mediakit-api` | `apps/api` · `infra/` · `packages/db` · migrations |
 | **D — اللوحات** | `feat/dashboards` | `~/MediaKit/pf-mediakit-dash` | `apps/dashboard` · طبقة قراءة في `apps/renderer` (لم يُفتح حالياً) |
+| **CI — mkci** (2026-09-11 · جديد) | `feat/ci` | `~/MediaKit/pf-mediakit-ci` | `.github/workflows/*.yml` (`ci.yml` · `l46-redis-observe.yml` · `regen-breaking-linux-md5.yml`). يستهلك عقد المرجع الثلاثيّ الذي يقرّره `mk` (راجع `60-GATE-2LAYER-GO §٩`) — لا يخترع شكل مرجع من نفسه |
 | **mkaudit — التحرّي** | worktree بـ`git checkout --detach` | `~/MediaKit/pf-mediakit-audit` | **لا يملك ملفاً** — قراءة فقط. يكتب تقاريره **خارج المستودع** (`~/mk-audit-*.md`) |
 
 **M — mediakit: مسار دائم للتوثيق وتوليد السكيل والحزمة. لا يُحسب
@@ -120,6 +121,7 @@ git worktree list
 # /Users/mdervis/MediaKit/pf-mediakit          <hash> [main]           ← mediakit (M)
 # /Users/mdervis/MediaKit/pf-mediakit-api      <hash> [feat/api]       ← mk-api (P)
 # /Users/mdervis/MediaKit/pf-mediakit-studio   <hash> [feat/studio]    ← mk-studio (S)
+# /Users/mdervis/MediaKit/pf-mediakit-ci       <hash> [feat/ci]        ← mkci (CI · جديد 2026-09-11)
 # /Users/mdervis/MediaKit/pf-mediakit-audit    <hash> (detached HEAD)  ← mkaudit (قراءة)
 ```
 
@@ -131,6 +133,7 @@ git worktree list
 tmux new -d -s mediakit   -c ~/MediaKit/pf-mediakit
 tmux new -d -s mk-api     -c ~/MediaKit/pf-mediakit-api
 tmux new -d -s mk-studio  -c ~/MediaKit/pf-mediakit-studio
+tmux new -d -s mkci       -c ~/MediaKit/pf-mediakit-ci
 tmux new -d -s mkaudit    -c ~/MediaKit/pf-mediakit-audit
 ```
 
@@ -139,6 +142,7 @@ tmux new -d -s mkaudit    -c ~/MediaKit/pf-mediakit-audit
 alias mk='tmux a -t mediakit -d 2>/dev/null || tmux new -s mediakit -c ~/MediaKit/pf-mediakit'
 alias mkapi='tmux a -t mk-api -d 2>/dev/null || tmux new -s mk-api -c ~/MediaKit/pf-mediakit-api'
 alias mkst='tmux a -t mk-studio -d 2>/dev/null || tmux new -s mk-studio -c ~/MediaKit/pf-mediakit-studio'
+alias mkci='tmux a -t mkci -d 2>/dev/null || tmux new -s mkci -c ~/MediaKit/pf-mediakit-ci'
 alias mkau='tmux a -t mkaudit -d 2>/dev/null || tmux new -s mkaudit -c ~/MediaKit/pf-mediakit-audit'
 ```
 
