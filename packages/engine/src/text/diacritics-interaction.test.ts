@@ -92,50 +92,60 @@ describe('kashida × diacritics — تفاعل صريح', () => {
   });
 });
 
-// ── measuredLineHeight — عقد الحدّ الأدنى ────────────────
+// ── measuredLineHeight — عقد الحدّ الأدنى (بعد BASELINE-A · 2026-09-11) ────
 
-describe('measuredLineHeight — لا يقلّ عن الحدّ الأدنى الثابت', () => {
-  // ctx وهمي يعيد ascent/descent بنسبة قابلة للتحكّم.
-  // نستعملها للتأكّد أن الدالة تحترم `minLineHeight` عند نصّ خفيف.
-  const mockCtx = (ascentRatio: number, descentRatio: number) => {
-    return {
-      font: '',
-      measureText: (text: string) => ({
-        width: text.length * 40,
-        actualBoundingBoxAscent: text.length * ascentRatio,
-        actualBoundingBoxDescent: text.length * descentRatio,
-      }),
-    };
-  };
+import type { FontMetrics } from '@pf-mediakit/shared';
 
-  it('حين ascent + descent < minLineHeight — تعيد minLineHeight', () => {
-    const ctx = mockCtx(0, 0);
-    const lines = [[{ text: 'كلمة', bold: false, accent: false}]];
-    const min = 100;
-    const result = measuredLineHeight(ctx, lines, 80, 'IBM', false, min);
-    expect(result).toBe(min);
+describe('measuredLineHeight — من متريكات رأس الخطّ (L-73)', () => {
+  // متريكات صناعية للاختبار — تُحاكي شكل OS/2 typo metrics في ملفّ حقيقي.
+  const M_TINY: FontMetrics = { ascent: 100, descent: 50, unitsPerEm: 1000 };
+  const M_ALMARAI: FontMetrics = { ascent: 905, descent: 211, unitsPerEm: 1000 };
+  const M_IBM: FontMetrics = { ascent: 1085, descent: 415, unitsPerEm: 1000 };
+
+  it('حين raw < minLineHeight — تعيد minLineHeight', () => {
+    // fs=80, M_TINY ⇒ raw = (100+50) × 80/1000 = 12، أصغر من min=100
+    const result = measuredLineHeight(M_TINY, 80, 100);
+    expect(result).toBe(100);
   });
 
-  it('حين ascent + descent > minLineHeight — تعيد المُقاس مع padding', () => {
-    // نضع ascent+descent كبيراً بحيث يتجاوز min = 100
-    const ctx = mockCtx(30, 15); // 4 حرف × 45 = 180
-    const lines = [[{ text: 'كلمة', bold: false, accent: false}]];
-    const min = 100;
-    const result = measuredLineHeight(ctx, lines, 80, 'IBM', false, min, 0.05);
-    // 180 × 1.05 = 189
-    expect(result).toBe(189);
-    expect(result).toBeGreaterThan(min);
+  it('حين raw > minLineHeight — تعيد raw × (1 + safetyPad) مُقرَّبة لأعلى', () => {
+    // fs=80, Almarai ⇒ raw = (905+211) × 80/1000 = 89.28
+    //   × 1.05 (pad افتراضي) = 93.744 ⇒ ceil = 94
+    const result = measuredLineHeight(M_ALMARAI, 80, 50);
+    expect(result).toBe(94);
   });
 
-  it('يأخذ أعلى ذُروة عبر الأسطر (السطر الأكثف يفرض المسافة)', () => {
-    // ctx يُعيد ارتفاعاً يتناسب مع طول النص.
-    const ctx = mockCtx(20, 10);
-    const light = [{ text: 'كل', bold: false, accent: false}]; // 2 × 30 = 60
-    const heavy = [{ text: 'كلمات', bold: false, accent: false}]; // 5 × 30 = 150
-    const result = measuredLineHeight(ctx, [light, heavy], 80, 'IBM', false, 50, 0);
-    expect(result).toBe(150); // ذُروة السطر الثاني
+  it('safetyPad = 0 يُخرج ceil(raw) بلا حشوة', () => {
+    // fs=100, IBM ⇒ raw = (1085+415) × 100/1000 = 150.0 ⇒ ceil = 150
+    const result = measuredLineHeight(M_IBM, 100, 50, 0);
+    expect(result).toBe(150);
+  });
+
+  it('الطرفان يحسبان النفسه من نفس المدخل (خاصّية BASELINE-A البنيويّة)', () => {
+    // نفس المتريكات + نفس fs ⇒ نفس النتيجة — لا فرق بين Chrome و skia.
+    // يُختبَر هنا: الدالة deterministic لا تعتمد على ctx أو font runtime.
+    const a = measuredLineHeight(M_ALMARAI, 96, 100);
+    const b = measuredLineHeight(M_ALMARAI, 96, 100);
+    expect(a).toBe(b);
+  });
+
+  it('unitsPerEm يُطبَّق بشكل صحيح (توافق TTF 1000 و OpenType 2048)', () => {
+    const m1000: FontMetrics = { ascent: 1000, descent: 200, unitsPerEm: 1000 };
+    // نسبة 1.2 · fs=100 ⇒ raw=120 · pad 5% = 126.0 · ceil = 126
+    expect(measuredLineHeight(m1000, 100, 50)).toBe(126);
+    // OpenType بنفس النسبة يعطي نتيجة مقاربة (فرق تقريب دقيق واحد بكسل
+    // بسبب unitsPerEm أكبر). القيمة الدقيقة: (2458×100/2048) × 1.05 =
+    // 126.017 ⇒ ceil = 127.
+    const m2048: FontMetrics = { ascent: 2048, descent: 410, unitsPerEm: 2048 };
+    expect(measuredLineHeight(m2048, 100, 50)).toBe(127);
   });
 });
+
+// **ملحوظة v1 · TASHKIL-OFF:** الاختبار السابق «measuredLineHeight يعكس
+// ارتفاع الكلمة المشكّلة» رُفع لأنّ المسار البكسليّ لم يعد يُستدعى من
+// `measuredLineHeight` (تشكيل مؤجَّل عن v1). حين يعود التشكيل في v2،
+// يحتاج مصدراً متطابقاً عبر المنصّات (راجع تذكرة `TASHKIL-METRICS-UNIFY`
+// المقترَحة). البنية الحاليّة تعرف حدّها بصراحة.
 
 // ── التشكيل الجزئي — متطلب منتج صريح (docs/09 التحرير) ────
 // «العميل يتحكّم — يشكّل الكلمة الملتبسة فقط ويترك البقية. تشكيل جزئي
@@ -184,24 +194,10 @@ describe('التشكيل الجزئي — كلمات مشكّلة تجاور ع�
     }
   });
 
-  it('measuredLineHeight يعكس ارتفاع الكلمة المشكّلة (الأعلى في السطر)', () => {
-    // ctx يعطي ascent إضافياً لكل حركة (يحاكي فتحة/شدة/كسرة/ضمة فوق أو تحت).
-    const ctxSmart = {
-      font: '',
-      measureText: (text: string) => {
-        const marks = (text.match(/[ً-ٰٟ]/g) ?? []).length;
-        return {
-          width: text.length * 40,
-          actualBoundingBoxAscent: 60 + marks * 15,
-          actualBoundingBoxDescent: 20,
-        };
-      },
-    };
-    const bareLine = parseTokens('الأميركي يزور القاهرة اليوم').filter(isWord);
-    const partialLine = parseTokens(PARTIAL).filter(isWord);
-    const bareH = measuredLineHeight(ctxSmart, [bareLine], 80, 'IBM', false, 100, 0);
-    const partialH = measuredLineHeight(ctxSmart, [partialLine], 80, 'IBM', false, 100, 0);
-    // السطر الجزئي يجب أن يكون أعلى — الكلمة المشكّلة تفرض المسافة.
-    expect(partialH).toBeGreaterThan(bareH);
-  });
+  // **الاختبار السابق «measuredLineHeight يعكس ارتفاع الكلمة المشكّلة»
+  // رُفع** — كان يعتمد قياس ctx.measureText الذي لم يعد المصدر (BASELINE-A ·
+  // 2026-09-11). في v1 التشكيل مطفأ (TASHKIL-OFF 2026-09-10)، والبنية
+  // الحاليّة (font-header metrics) لا تُميّز نصّاً بتشكيل عن آخر بلا
+  // تشكيل — ترجع نفس lineHeight للاثنين. الحلّ في v2 (راجع
+  // `TASHKIL-METRICS-UNIFY` المقترَحة).
 });

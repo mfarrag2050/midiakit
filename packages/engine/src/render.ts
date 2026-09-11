@@ -632,17 +632,35 @@ export function computeHeadlineLayout(
   const dynamicActive =
     brand.typography.lineHeightMode === 'dynamic' ||
     brand.typography.diacritics.enabled;
-  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
-  const finalLineHeight = dynamicActive
-    ? measuredLineHeight(
-        ctx,
-        linesJustified,
-        wrap.fontSize,
-        family,
-        false,
-        wrap.lineHeight
-      )
-    : wrap.lineHeight;
+  // BASELINE-A · 2026-09-11 · AMEND-55 · L-73: مصدر الأعداد صار متريكات
+  // رأس الخطّ (`brand.fonts.primary.weights.*.metrics`) بدل `ctx.measureText`.
+  // الطرفان (Chrome + skia) يحسبان نفس lineHeight من نفس المدخل.
+  //
+  // **لا ارتداد إلى measureText** (AMEND-55 §٢). إن غابت المتريكات نسقط
+  // بصوت — الرسالة تسمّي الهويّة والعائلة. غياب هنا خللٌ في التركيب
+  // (`fillIn` لم يعمل، أو `brand_snapshot` وصل raw بلا مرور بـfillIn —
+  // راجع تذكرة `RENDERER-BRAND-SNAPSHOT-FILLIN` المقترَحة).
+  let finalLineHeight: number;
+  if (dynamicActive) {
+    const primary = brand.fonts.primary;
+    const metrics =
+      primary.weights.regular.metrics ??
+      primary.weights.bold.metrics ??
+      primary.weights.light.metrics;
+    if (!metrics) {
+      throw new Error(
+        `[measuredLineHeight] هويّة «${brand.id}» — عائلة «${primary.family}»: ` +
+        `لا FontMetrics على أيّ وزن (light/regular/bold). ` +
+        `الإصلاح: أضف metrics عبر \`pnpm measure-font <path.ttf>\` وضعها ` +
+        `تحت كل وزن. أو تأكّد أن fillIn من DEFAULT_BRAND يعمل على مسار ` +
+        `تحميل الهويّة (toFull() في apps/api/src/shared/brand-kit-mapper.ts، ` +
+        `أو fillIn جديد قبل استهلاك brand_snapshot في apps/renderer).`
+      );
+    }
+    finalLineHeight = measuredLineHeight(metrics, wrap.fontSize, wrap.lineHeight);
+  } else {
+    finalLineHeight = wrap.lineHeight;
+  }
 
   return {
     fontSize: wrap.fontSize,
