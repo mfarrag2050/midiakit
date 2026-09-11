@@ -36,7 +36,7 @@ concurrency:
 
 jobs:
   test:
-    name: pnpm test (31 بوابة داخل حاوية Linux) + 3 mkau
+    name: pnpm test (31 بوابة) + 20 verifier خارج-السلسلة (70-CI-WIRE)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # ── الحاوية (عقد §9 · GATE-2LAYER) ─────────────────────────
@@ -177,24 +177,76 @@ jobs:
           fi
           echo "✓ كلّ البوابات ($TOTAL) اجتازت."
 
-      # ── (8) verify:multilang (الوحيدة الآن من ثلاث mkau) ─────
-      # verify:auth و verify:tenant-isolation **مؤجَّلتان** بحسب توجيه
-      # المالك (بعد قراءة mkau 150-FRESH-DB §الفجوات الصامتة):
-      #   • verify:tenant-isolation يفحص `pg_roles WHERE rolbypassrls=true`
-      #     يعود صفراً. postgres:16-alpine الخام يبقى فيه `postgres` بـ
-      #     BYPASSRLS=true. init/01-roles.sql (على الميني) يضبط
-      #     `ALTER ROLE postgres NOBYPASSRLS`، لكنّه لا يجري في CI.
-      #   • verify:auth يفحص طبقات auth مع JWT secrets و DB tables — الهجرات
-      #     تسقط قبل ذلك (citext + 3 أدوار في 150-FRESH-DB).
-      # الإدخال قبل bootstrap صريح = إخضرار بالصدفة. مؤجَّلتان حتى تفتح
-      # تذكرة mkapi «bootstrap step» في كلّ بيئة.
-
-      - name: "verify:multilang (mkau · لا خدمة · قياس محلّيّ 1.5s)"
-        # قياس محلّيّ (2026-09-11 · macOS m4): 1.5s (0.98s user + 0.11s sys).
-        # تخمين mkau في 110-VERIFY-33: ~1s. القيَاس الفعليّ في CI يأتي أدناه.
-        # لا خدمة، لا سرّ، لا شبكة — تدخل السلسلة اليوم.
+      # ── (8) 20 verifier خارج pnpm test (70-CI-WIRE §1) ────────
+      # قرار مالك (70-CI-WIRE-VERIFIERS §1): «الكلّ في pnpm test، إلّا
+      # البطيئتَين» — 22 حقيقيّة من 60-ORPHAN §3 · ناقص perf و alerts-wire.
+      # نضعها في **حلقة جمع** نفس الشكل — لا set -e يقطع عند أوّل سقوط.
+      # التسع المحجوزة (a18-5/6 · a21 · a25 · a28 · assets · control-plane
+      # · debt1 · renders) تنتظر §3 من 70-CI-WIRE (feat/api merge decision).
+      # verify:tashkil-collision (الميّتة) عند mk (§4 من 70-CI-WIRE).
+      # verify:perf + verify:alerts-wire في workflow ليليّ منفصل (§2).
+      #
+      # الأسرار المطلوبة (بأسماء فقط):
+      #   CI_SESSION_JWT_SECRET · CI_PLATFORM_JWT_SECRET · CI_AI_KEY_ENCRYPTION_KEY
+      # إن غاب أحدها: الفواحص التي تحتاجه تفشل بـexit 1 مع رسالة env صريحة.
+      - name: "20 verifier خارج pnpm test (60-ORPHAN جدول · بلا perf/alerts-wire)"
         if: always()
-        run: pnpm verify:multilang
+        env:
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_TEST: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_TEST_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          REDIS_URL: redis://redis:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
+          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
+          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
+        run: |
+          export PATH="$PWD/node_modules/.bin:$PATH"
+          GATES="verify:a22
+          verify:a23
+          verify:a24
+          verify:auth
+          verify:bk-numerals
+          verify:brand-kits
+          verify:limits1
+          verify:multilang
+          verify:plan-all-templates
+          verify:plans
+          verify:projects
+          verify:revisions
+          verify:smart-crop
+          verify:svg
+          verify:templates
+          verify:tenant
+          verify:tenant-isolation
+          verify:tts
+          verify:users
+          verify:workflows"
+          # نظِّف السطور من مسافات البادئة (YAML block indented)
+          GATES=$(echo "$GATES" | sed 's/^ *//')
+          TOTAL=$(echo "$GATES" | grep -c .)
+          echo "===== $TOTAL verifier خارج pnpm test (60-ORPHAN جدول) ====="
+          echo "$GATES"
+          echo '======================================='
+          FAILED=()
+          while IFS= read -r v; do
+            [ -z "$v" ] && continue
+            echo ""
+            echo "▶ pnpm $v"
+            if pnpm "$v"; then :; else
+              echo "  ✗ سقطت: pnpm $v (exit=$?)"
+              FAILED+=("$v")
+            fi
+          done <<< "$GATES"
+          echo ""
+          echo "===== ملخّص خارج-السلسلة: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            printf '  ✗ %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+          echo "✓ كلّ الـ$TOTAL خارج-السلسلة اجتازت."
 
       # ── (9) رفع verify-breaking.mp4 كـartifact (50-CI-SYNC-VIDEO §2) ─
       # الغاية: لا يُجمَّد md5 على مخرَج لم ينظر إليه أحد (L-17 · L-71).
