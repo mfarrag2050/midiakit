@@ -19,6 +19,7 @@ import type {
   TemplateListItem,
   TemplateScope,
 } from '@/src/api/endpoints/templates';
+import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
 
 // S11 — القوالب. القالب العام للقراءة فقط — الواجهة تعرض ذلك
 // **قبل** المحاولة (شارة «للقراءة فقط» بجوار الأزرار المعطَّلة)،
@@ -52,7 +53,12 @@ export default function TemplatesPage(): JSX.Element {
       if (kind !== 'all') filter.kind = kind;
       const opts = Object.keys(filter).length > 0 ? { filter } : {};
       const page = await templates.list(opts as Parameters<typeof templates.list>[0]);
-      setRows([...page.data]);
+      // REEL-HIDE: أخفِ قوالب الفيديو من صفحة التصفّح أيضاً (اتساق مع
+      // dialog الإنشاء).
+      const visible = REEL_TEMPLATE_ENABLED
+        ? page.data
+        : page.data.filter((r) => r.kind !== 'video');
+      setRows([...visible]);
     } catch (err) {
       setListErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {

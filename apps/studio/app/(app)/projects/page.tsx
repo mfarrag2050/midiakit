@@ -17,6 +17,7 @@ import {
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
+import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
 
 // S12 — قائمة المشاريع + إنشاء + حذف. المحرّر في /projects/[id].
 // **العقد المرجعي:** docs/16 §7.1 §7.3 §7.5 · §11.6 (currentState).
@@ -91,10 +92,14 @@ export default function ProjectsPage(): JSX.Element {
         brandKits.list(),
         templates.list(),
       ]);
+      // REEL-HIDE: أخفِ قوالب الفيديو (kind === 'video') من قائمة الاختيار.
+      const visibleTemplates = REEL_TEMPLATE_ENABLED
+        ? tplPage.data
+        : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
-      setTplOptions([...tplPage.data.map((tt) => ({ id: tt.id, name: tt.name }))]);
+      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
       setNewBrandKit(bkPage.data[0]?.id ?? '');
-      setNewTemplate(tplPage.data[0]?.id ?? '');
+      setNewTemplate(visibleTemplates[0]?.id ?? '');
     } catch (err) {
       setPickerErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     }
