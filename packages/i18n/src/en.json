@@ -271,6 +271,70 @@
         "diffPlaceholder": "No real diff in this MVP schema yet.",
         "ackCheckbox": "I have reviewed the diff above.",
         "submit": "Bump now"
+      },
+      "editBtn": "Edit",
+      "editor": {
+        "title": "Edit brand kit",
+        "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
+        "backToList": "← Back to list",
+        "save": "Save",
+        "saved": "Saved.",
+        "readOnlyTag": "Read-only · next phase",
+        "phase1Hint": "Punching the save (patch) path end-to-end on one field before building the twenty on top of it.",
+        "section": {
+          "identity": "Identity",
+          "font": "Font",
+          "colors": "Colors",
+          "logo": "Logo",
+          "bidi": "Direction & numerals"
+        },
+        "field": {
+          "direction": "Direction",
+          "locale": "Primary locale",
+          "fontFamily": "Font family",
+          "fontSource": "Font source",
+          "logoUrl": "Logo URL",
+          "logoSize": "Logo size",
+          "logoPosition": "Logo position",
+          "bidiEnabled": "Bidirectional (BiDi)",
+          "numerals": "Numeral style"
+        },
+        "value": {
+          "notSet": "not set",
+          "builtin": "built-in",
+          "custom": "uploaded",
+          "external": "external",
+          "arabic": "Arabic-Indic (١٢٣)",
+          "latin": "Latin (123)",
+          "rtl": "right-to-left (RTL)",
+          "ltr": "left-to-right (LTR)",
+          "on": "on",
+          "off": "off"
+        },
+        "color": {
+          "text": "Primary text",
+          "accent": "Accent",
+          "urgentBadge": "Urgent badge text",
+          "urgentBg": "Urgent bar background",
+          "urgentBgTint": "Urgent bar gradient",
+          "locationBadge": "Location badge",
+          "surface": "Surface",
+          "placeholder": "Placeholder fill"
+        },
+        "locale": {
+          "ar": "Arabic",
+          "en": "English",
+          "fr": "French",
+          "tr": "Turkish",
+          "es": "Spanish",
+          "de": "German"
+        },
+        "position": {
+          "bottom-left": "bottom-left",
+          "bottom-right": "bottom-right",
+          "top-left": "top-left",
+          "top-right": "top-right"
+        }
       }
     },
     "templates": {

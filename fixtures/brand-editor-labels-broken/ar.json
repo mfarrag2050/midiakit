@@ -1,0 +1,13 @@
+{
+  "pages": {
+    "brandKits": {
+      "editor": {
+        "color": {
+          "text": "لون النصّ الأساسيّ",
+          "accent": "accent",
+          "urgentBadge": ""
+        }
+      }
+    }
+  }
+}
