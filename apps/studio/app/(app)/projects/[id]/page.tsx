@@ -38,6 +38,7 @@ import {
   createDebouncedScheduler,
   drawPreview,
 } from '@/src/preview/live';
+import { TASHKEEL_UI_ENABLED } from '@/src/config/features';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -784,27 +785,31 @@ export default function ProjectEditorPage(): JSX.Element {
                     {f.required && <span className="ms-1 text-danger">*</span>}
                   </label>
                   <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void doDiacritize(f.key)}
-                      loading={diacritizeBusy === f.key}
-                      disabled={
-                        diacritizeBusy === f.key ||
-                        !(draft[f.key] ?? '').trim() ||
-                        contentLocale === 'latin'
-                      }
-                    >
-                      {t('pages.projects.workspace.diacritize')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => stripTashkeel(f.key)}
-                      disabled={contentLocale === 'latin'}
-                    >
-                      {t('pages.projects.workspace.stripTashkeel')}
-                    </Button>
+                    {TASHKEEL_UI_ENABLED && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void doDiacritize(f.key)}
+                          loading={diacritizeBusy === f.key}
+                          disabled={
+                            diacritizeBusy === f.key ||
+                            !(draft[f.key] ?? '').trim() ||
+                            contentLocale === 'latin'
+                          }
+                        >
+                          {t('pages.projects.workspace.diacritize')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => stripTashkeel(f.key)}
+                          disabled={contentLocale === 'latin'}
+                        >
+                          {t('pages.projects.workspace.stripTashkeel')}
+                        </Button>
+                      </>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => wrapAccent(f.key)}>
                       _word_
                     </Button>
@@ -832,7 +837,7 @@ export default function ProjectEditorPage(): JSX.Element {
                     }}
                   />
                 )}
-                {contentLocale === 'ar' && (
+                {contentLocale === 'ar' && TASHKEEL_UI_ENABLED && (
                   <div
                     className="flex flex-wrap items-center gap-1 pt-1"
                     data-testid={`tashkeel-kbd-${f.key}`}
@@ -857,7 +862,7 @@ export default function ProjectEditorPage(): JSX.Element {
             );
           })}
 
-          {diacritizeErrorKey && (
+          {TASHKEEL_UI_ENABLED && diacritizeErrorKey && (
             <div className="rounded border border-warning bg-warning/10 p-3 text-sm">
               <p className="font-medium text-fg">{t(diacritizeErrorKey)}</p>
             </div>
