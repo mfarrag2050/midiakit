@@ -20,13 +20,15 @@
 #   • `secrets.CI_DATABASE_URL` — إن غاب، الوظيفة تعتمد على URL البناء
 #     الافتراضيّ للخدمة postgres (127.0.0.1:5432 داخل الشبكة الافتراضيّة).
 #
-# **الاستثناء المُعلَن — `check:docker-context`:** الحارس محلّيّ الغاية
-# (يحرس عزل Colima على الميني عن مشاريع منهاج/PrimeMind — CLAUDE.md
-# §بيئة مشتركة). Runners لينكس CI لا يحملون هذه المشكلة أصلاً.
-# التنفيذ في CI: نُخفي `infra/docker-compose.yml` (نُعيده بعد `pnpm test`)
-# — الحارس نفسه (`scripts/check-docker-context.mjs:35`) يمرّ بلا فحص
-# عند غياب الملفّ ويطبع رسالة صريحة «بلا bنية Docker». **هذا ليس منفذ
-# هروب — الحارس مصمَّم بهذه الحالة الحدّيّة داخل مصدره.**
+# **الاستثناء المُعلَن — `check:docker-context` (Option B من §4 · شُدِّد
+# 2026-09-11):** الحارس محلّيّ الغاية بقرار — يحرس عزل Colima على الميني
+# عن `~/Minhaj` و `~/PrimeMind` (CLAUDE.md § بيئة مشتركة · راجع رأس
+# `scripts/check-docker-context.mjs` § «محلّيّ بقرار»). Runner لينكس CI
+# ephemeral · بلا Colima · بلا مشاريع مشتركة — الغاية غير قابلة للتطبيق.
+# **التنفيذ:** خطوة `pnpm test (بلا check:docker-context — «محلّيّ فقط»)`
+# أدناه تقرأ سلسلة `pnpm test` من `package.json` وتحذف السطر — مصدر
+# حقيقة واحد، بلا حقيقة متوازية، بلا لمس `package.json`. لا `mv` ولا
+# متغيّر بيئة — الاستبعاد صريح ومكتوب في موضعَين: هنا وفي رأس السكربت.
 #
 # **مؤجَّل عمداً (§5 من 20-CI-BUILD):**
 #   • تشخيص 5 إخفاقات `apps/renderer/src/observe.test.ts` (تحت `mkau`
@@ -137,24 +139,40 @@ jobs:
           DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
         run: pnpm db:migrate
 
-      # ── (4) إخفاء infra/docker-compose.yml (الاستثناء المُعلَن) ─
-      # راجع رأس الملفّ § الاستثناء المُعلَن. `scripts/check-docker-context.mjs:35`
-      # يمرّ بلا فحص عند غياب الملفّ ويطبع «بلا bنية Docker».
-      - name: إخفاء infra/docker-compose.yml (حارس Colima محلّيّ الغاية)
-        run: mv infra/docker-compose.yml infra/docker-compose.yml.local-only
-
-      # ── (5) `pnpm test` — 28 بوابة كاملةً ────────────
-      - name: pnpm test (كامل)
+      # ── (4) `pnpm test` بلا check:docker-context ─────────
+      # راجع رأس الملفّ § الاستثناء المُعلَن + رأس
+      # scripts/check-docker-context.mjs § «محلّيّ بقرار».
+      # نقرأ سلسلة `pnpm test` من `package.json` وقت التشغيل، نحذف
+      # السطر الوحيد `pnpm check:docker-context`، ونشغّل الباقي بالتتابع.
+      # فحص المزامنة: إن لم يعد السطر موجوداً (mk بسّط package.json
+      # لاحقاً)، الخطوة تفشل بتذكير — بسّط إلى `pnpm test` مباشرة.
+      - name: pnpm test (بلا check:docker-context — «محلّيّ فقط»)
         env:
           # الثلاث بوابات (§1) تفشل صراحةً بدون هذه:
           DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
-          # observe.test.ts (bullmq) يفتح اتّصالاً على REDIS_URL — القاعدة /3
-          # ليست ضروريّة في CI (لا مشاركة) لكنّا نبقيها للاتّساق مع الميني.
+          # observe.test.ts (bullmq) يفتح اتّصالاً على REDIS_URL. القاعدة
+          # /3 ليست ضروريّة في CI (لا مشاركة) لكنّها للاتّساق مع الميني.
           REDIS_URL: redis://127.0.0.1:6379/3
           BULLMQ_PREFIX: pf-mediakit
-        run: pnpm test
-
-      # ── (6) إعادة الملفّ المخفيّ (نظافة workspace) ──────
-      - name: إعادة infra/docker-compose.yml
-        if: always()
-        run: mv infra/docker-compose.yml.local-only infra/docker-compose.yml
+        run: |
+          GATES=$(node -e "
+            const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+            const chain = p.scripts.test.split('&&').map(s => s.trim());
+            const filtered = chain.filter(c => c !== 'pnpm check:docker-context');
+            const removed = chain.length - filtered.length;
+            if (removed !== 1) {
+              console.error('WORKFLOW-SYNC ERROR: expected exactly 1 removal of check:docker-context, got ' + removed);
+              console.error('إن أُزيل check:docker-context من pnpm test في package.json،');
+              console.error('بسِّط هذه الخطوة إلى: run: pnpm test');
+              process.exit(2);
+            }
+            console.log(filtered.join('\n'));
+          ")
+          echo '===== سلسلة CI (27 بوابة — check:docker-context مُستبعَد بقرار) ====='
+          echo "$GATES"
+          echo '================================================================='
+          while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+            echo "▶ $cmd"
+            eval "$cmd"
+          done <<< "$GATES"
