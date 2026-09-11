@@ -42,6 +42,11 @@ jobs:
     # ── الحاوية (عقد §9 · GATE-2LAYER) ─────────────────────────
     container:
       image: node:20.18.1-bookworm-slim
+    # داخل container mode، GH Actions افتراضاً `sh -e {0}` لا bash — يكسر
+    # herestrings و[[]] وbash arrays. نفرض bash لكلّ خطوة `run:`.
+    defaults:
+      run:
+        shell: bash
 
     # ── خدمات ──────────────────────────────────────────────────
     # postgres: hostname `postgres` (سيبلينغ للحاوية في نفس شبكة الوظيفة).
