@@ -41,6 +41,12 @@ export interface RenderVideoArgs {
   /** يُستدعى بعد كل إطار لتتبّع التقدم (اختياري — بلا logging افتراضياً). */
   readonly onProgress?: (frame: number, total: number) => void;
   /**
+   * تلميح تشخيصيّ — يُستدعى كلّما استُدعي `prepareHeadline` أثناء الحلقة.
+   * تستعمله بوّابة `verify:render-video-all-templates` (WIRE-1-CLOSE).
+   * الإنتاج لا يُمرّره.
+   */
+  readonly onHeadlinePrepared?: () => void;
+  /**
    * خطة الصوت (اختياري). حين تُمرَّر، تُترجم إلى `-i` + filter_complex
    * وتُدمج مع فيديو stdin. حين تغيب: صوت صامت (السلوك القديم).
    */
@@ -175,6 +181,7 @@ drawTimelineAt({
         brand: args.brand,
         content: args.content,
         ...(plan.headline && { headlinePrep: plan.headline }),
+        ...(args.onHeadlinePrepared && { onHeadlinePrepared: args.onHeadlinePrepared }),
         t,
       });
       const buf = rgbaBufferOf(canvas);

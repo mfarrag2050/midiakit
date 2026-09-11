@@ -76,10 +76,22 @@ function build() {
     });
   }
 
-  // (2) PHASES.md محلياً
+  // (2) PHASES.md و CLAUDE.md محلياً
+  //
+  // CLAUDE.md كان مرفوعاً إلى مشروع Opus نسخةً مستقلّة قديمة (31 أغسطس
+  // — «المرحلة 0، لم يُكتب كود منتج بعد»)، ثم حُذفت. الحزمة تحمله لئلا
+  // يبقى غائباً أو متأخّراً (تذكرة PUBLISH-1 · العيب الثالث).
+  //
+  // 00-README.md **لا يُضاف** — دليل إعداد لإعداد انتهى وحالته خاطئة
+  // (قرار التذكرة).
   sources.push({
     path: 'PHASES.md',
     content: readFileOrFail('PHASES.md', join(ROOT, 'PHASES.md')),
+    source: 'local (main)',
+  });
+  sources.push({
+    path: 'CLAUDE.md',
+    content: readFileOrFail('CLAUDE.md', join(ROOT, 'CLAUDE.md')),
     source: 'local (main)',
   });
 

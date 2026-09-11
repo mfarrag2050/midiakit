@@ -100,6 +100,16 @@ export interface RenderFrameArgs {
    * الجزء (ب) — لقب+اسم، اسم مكان مركّب، كيان مؤسسي. الافتراضي: أساسي.
    */
   readonly lexicon?: Lexicon;
+  /**
+   * تلميح تشخيصيّ اختياريّ — يُستدعى كلّما استُدعي `prepareHeadline`.
+   * الغرض الوحيد: بوّابة `verify:render-video-all-templates` تفحص أنّ
+   * الاستدعاء صفر داخل حلقة الإطار (كل شيء يُقرأ من الخطة). لا يُخزَّن،
+   * لا حالة على مستوى الوحدة (حفاظاً على `check:engine-purity`). الإنتاج
+   * لا يُمرّره؛ الغياب = tree-shakable (استدعاء بلا معنى).
+   *
+   * أُضيف في WIRE-1-CLOSE (2026-09-09) — إغلاق ش٣(ب) بالخيار (ii).
+   */
+  readonly onHeadlinePrepared?: () => void;
 }
 
 // ── حالة التخطيط بين الطبقات ─────────────────────────
@@ -227,7 +237,7 @@ function runImage(
     return false;
   }
   const crop = args.assets?.imageCrops?.[key];
-  drawImage(args.ctx, args.size, image, crop ? { crop } : {});
+  drawImage(args.ctx, args.size, args.brand, { image, ...(crop ? { crop } : {}) });
   return true;
 }
 
@@ -489,25 +499,53 @@ export function computeBreakPenalties(
  * الرسم الحالي. الخطوط مُسجَّلة عالمياً في skia-canvas عبر
  * `FontLibrary.use`، فالقياس نفسه بغضّ النظر عن الـcanvas.
  */
+/**
+ * **PreparedHeadline** — تخطيط + موضع اختياري (WIRE-1-FIX · 2026-09-09).
+ *
+ * الحقول الأساسية (`fontSize` · `linesJustified` · `chosenBoxW` ·
+ * `lineHeight` · `rightX` · `centerX` · `align` · `accentSpans`) **دائماً
+ * موجودة** — تُحسب من tokens + عرض القماش + config الخط والتبرير، لا
+ * تعتمد على `state`.
+ *
+ * الحقول المشتقّة من الأنكور (`firstBaseline` · `lastBaseline` · `bounds`
+ * · `measure`) **اختيارية**:
+ *   - موجودة حين يُحسب الأنكور بلا حاجة إلى state (كل القوالب عدا
+ *     `below-kicker`)، أي: كل بناء عبر `prepareHeadline` بحالة تحوي
+ *     `kicker` أو بأنكور مستقلّ.
+ *   - **غائبة** حين تكون الخطة قد بُنيت بحالة scratch فارغة لقالب
+ *     `below-kicker` (فقط card_kicker اليوم) — يُستعمل `computeHeadlineLayout`.
+ *
+ * **قرار مُراجَع (WIRE-1-FIX ينقض جزءاً من KICKER-2):** قرار KICKER-2
+ * كان فصل النوع إلى `PreparedHeadlineLayout` (بلا anchor) و
+ * `PreparedHeadline` (مع anchor). الفصل كسر `state.headline` pre-population
+ * في `draw-timeline-at.ts:212` (لأن `PreparedHeadlineLayout.bounds`
+ * غير موجود بنيوياً)، فرَمى badges above/below-headline في breaking + reel.
+ * الحلّ: عودة إلى نوع واحد بحقول اختيارية — يبقى النقاء الدلالي لغير
+ * card_kicker، ويكشف runtime لعقد card_kicker غياب bounds. راجع L-69.
+ */
 export interface PreparedHeadline {
   readonly fontSize: number;
   readonly lineHeight: number;
   readonly chosenBoxW: number;
   readonly rightX: number;
   readonly centerX: number;
-  readonly firstBaseline: number;
-  readonly lastBaseline: number;
+  readonly firstBaseline?: number;
+  readonly lastBaseline?: number;
   readonly linesJustified: readonly (readonly Token[])[];
   readonly align: HeadlineLayer['align'];
-  readonly bounds: HeadlineBounds;
+  readonly bounds?: HeadlineBounds;
   readonly accentSpans: readonly AccentSpanBounds[];
   readonly measure?: Measurer;
 }
 
-export function prepareHeadline(
+/**
+ * الجزء المستقلّ عن `state` من `prepareHeadline` — يُنفَّذ في `buildRenderPlan`.
+ * يفعل خطوات 1-8 من prepareHeadline (نصّ · خط · tokens · bidi · دلالي · wrap
+ * · justify · lineHeight الديناميكي)، ويُرجع layout بلا الأنكور والـbounds.
+ */
+export function computeHeadlineLayout(
   layer: HeadlineLayer,
-  args: RenderFrameArgs,
-  state: RenderState
+  args: RenderFrameArgs
 ): PreparedHeadline | null {
   const { brand, ctx, size, content } = args;
   const text = content[layer.field];
@@ -522,7 +560,6 @@ export function prepareHeadline(
       ? (resolveRef(brand, layer.justify) as BrandKit['typography']['justify'])
       : brand.typography.justify;
 
-  // اشتقاق نطاقات fs و boxWidth من نسبيّ القماش (درس L-02).
   const readableMin = Math.round(size.w * fontCfg.readableMinRatio);
   const [bwMinR, bwMaxR] = fontCfg.boxWidthRange;
   const BW_STEPS = 10;
@@ -541,9 +578,6 @@ export function prepareHeadline(
   });
   const tokens = parseTokens(processed);
 
-  // الكسر الدلالي (docs/07 §2): يُحسب مصفوفة العقوبات مرة هنا (L-07)
-  // إن كان مُفعَّلاً في الهوية. wrapOptimal يستهلكها بلا إعادة حساب.
-  // نمرِّر lexicon الموسَّع إن كان في args — يُفعِّل قواعد الجزء (ب).
   const semanticEnabled = brand.typography.semanticBreaks.enabled;
   const breakPenalties = semanticEnabled
     ? computeBreakPenalties(tokens, args.lexicon ?? DEFAULT_ARABIC_LEXICON)
@@ -582,8 +616,6 @@ export function prepareHeadline(
   const centerX = size.w / 2;
   const nLines = wrap.lines.length;
 
-  // justify أولاً — قد يُدخل كشيدة تزيد ارتفاع بعض الحروف قليلاً، لكن
-  // القرار الرئيسي في ارتفاع السطر يعتمد على التشكيل لا الكشيدة.
   const linesJustified = wrap.lines.map((line, i) =>
     justifyLine(
       line,
@@ -597,12 +629,6 @@ export function prepareHeadline(
     )
   );
 
-  // lineHeight الديناميكي (docs/07 §3): يُفعَّل تلقائياً حين التشكيل
-  // مُفعَّل (`diacritics.enabled`)، أو حين الهوية تفرضه صراحةً
-  // (`lineHeightMode='dynamic'`). النسبة الثابتة (fs × 1.34/1.42) تصبح
-  // **حداً أدنى**؛ نقيس الارتفاع الفعلي عبر actualBoundingBoxAscent/Descent
-  // ونأخذ الأكبر. عند 'fixed' وبلا تشكيل نُبقي wrap.lineHeight كما هو
-  // (سلوك سابق) — snapshots الذهبية تبقى مطابقة بايت-بايت.
   const dynamicActive =
     brand.typography.lineHeightMode === 'dynamic' ||
     brand.typography.diacritics.enabled;
@@ -618,50 +644,57 @@ export function prepareHeadline(
       )
     : wrap.lineHeight;
 
-  const anchorY = computeHeadlineAnchorY(
-    layer.anchor,
-    layer.verticalAnchor,
-    size,
-    nLines,
-    finalLineHeight,
-    wrap.fontSize,
-    state
-  );
-  const firstBaseline = anchorY;
-  const lastBaseline = firstBaseline + (nLines - 1) * finalLineHeight;
-
-  // نُقاس accent spans عبر «رسم صامت» على measure فقط — لا يُخلّ بالنقاء
-  // (النتيجة نفسها في أي استدعاء بنفس الوسائط).
-  const accentSpans: AccentSpanBounds[] = [];
-  linesJustified.forEach((ln, i) => {
-    const y = firstBaseline + i * finalLineHeight;
-    // نستعمل drawLine* لكن نُلغي التأثيرات عبر عدم استدعائها هنا —
-    // بدلاً من ذلك نحسب accent bounds من الإحداثيات مباشرةً.
-    // الأبسط: احتفظ بحدود accent فقط عند الرسم الفعلي في drawHeadlineLine.
-    void ln; void y;
-  });
-
-  const bounds: HeadlineBounds = {
-    top: firstBaseline - wrap.fontSize,
-    bottom: lastBaseline,
-    right: rightX,
-    left: rightX - chosenBoxW,
-    fontSize: wrap.fontSize,
-    firstBaseline,
-  };
-
   return {
     fontSize: wrap.fontSize,
     lineHeight: finalLineHeight,
     chosenBoxW,
     rightX,
     centerX,
-    firstBaseline,
-    lastBaseline,
     linesJustified,
     align: layer.align,
+    accentSpans: [],
+  };
+}
+
+export function prepareHeadline(
+  layer: HeadlineLayer,
+  args: RenderFrameArgs,
+  state: RenderState
+): PreparedHeadline | null {
+  args.onHeadlinePrepared?.();
+  const layout = computeHeadlineLayout(layer, args);
+  if (!layout) return null;
+
+  const nLines = layout.linesJustified.length;
+
+  const anchorY = computeHeadlineAnchorY(
+    layer.anchor,
+    layer.verticalAnchor,
+    args.size,
+    nLines,
+    layout.lineHeight,
+    layout.fontSize,
+    state
+  );
+  const firstBaseline = anchorY;
+  const lastBaseline = firstBaseline + (nLines - 1) * layout.lineHeight;
+
+  const bounds: HeadlineBounds = {
+    top: firstBaseline - layout.fontSize,
+    bottom: lastBaseline,
+    right: layout.rightX,
+    left: layout.rightX - layout.chosenBoxW,
+    fontSize: layout.fontSize,
+    firstBaseline,
+  };
+
+  const measure: Measurer = createCanvasMeasurer(args.ctx, args.brand);
+
+  return {
+    ...layout,
+    firstBaseline,
+    lastBaseline,
     bounds,
-    accentSpans,
     measure,
   };
 }
@@ -752,8 +785,20 @@ function computeHeadlineAnchorY(
     case 'below-kicker': {
       const k = state.kicker;
       if (!k) {
+        // الرسالة تُطلَق من `prepareHeadline` (لا من `renderFrame` كما
+        // كانت). الحالتان الممكنتان:
+        //   (١) استُدعيت من `buildRenderPlan` بحالة scratch فارغة — العطب
+        //       التاريخي (KICKER-2). الحلّ الآن: `buildRenderPlan` يستعمل
+        //       `computeHeadlineLayout` (بلا anchor)، فلا يصل إلى هنا.
+        //       لو رأيتَ هذه الرسالة من مسار plan اليوم ⇒ مستدعٍ يتجاوز
+        //       الطبقات الجديدة عمداً.
+        //   (٢) استُدعيت من `renderFrame` بترتيب طبقات خاطئ — قالب فيه
+        //       headline (anchor=below-kicker) قبل kicker. أصلح ترتيب
+        //       الطبقات في تعريف القالب.
         throw new Error(
-          '[renderFrame] headline anchor=below-kicker قبل رسم kicker — راجع ترتيب الطبقات'
+          '[prepareHeadline] anchor=below-kicker وطبقة kicker لم تُملأ في state — ' +
+          'إمّا ترتيب طبقات خاطئ في القالب (headline قبل kicker)، ' +
+          'أو استدعاء تجاوز `computeHeadlineLayout` من سياق بلا حالة رسم'
         );
       }
       // أول baseline = أسفل الكيكر + gapBelow + fontSize (لأن baseline في الأسفل)

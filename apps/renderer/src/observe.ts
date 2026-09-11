@@ -21,7 +21,7 @@ import {
   BULLMQ_PREFIX,
   type QueueName,
 } from './queues.js';
-import { DEFAULT_CONFIGS } from './worker.js';
+import { DEFAULT_CONFIGS } from './api-worker.js';
 
 const execFileAsync = promisify(execFile);
 

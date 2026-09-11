@@ -7,6 +7,17 @@
 //
 // **الاستخدام:** `node scripts/check-no-brand-leak.mjs`
 // **الخروج:** 0 عند النظافة، 1 عند اكتشاف تسرّب (يفشل البناء).
+//
+// **اختبار الوجود (L-46 · CHECK-FIX 2026-09-11):**
+//   1. أنشئ ملفّاً مؤقّتاً داخل النطاق المفحوص يحوي مصطلحاً من
+//      القائمة السوداء، مثلاً:
+//        echo '// canary — أناضول' > packages/engine/src/__canary.ts
+//   2. شغّل الفحص ⇒ يجب أن يخرج بـ1 مع طباعة السطر المخالف بصيغة
+//      `<file>:<line> — «<term>» (<reason>)`.
+//   3. احذف الملفّ ⇒ يعود لـexit 0 و«نظيف».
+// **مُثبَّت بمخرَج (2026-09-11):** الحقنة أدّت إلى exit 1 مع
+// `packages/engine/src/__canary-brand-leak.ts:1 — «أناضول» ...`
+// بعد الحذف: `فحص 440 ملفاً · ✓ نظيف`. راجع claude/reports/35-CHECK-FIX.md.
 
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative } from 'node:path';
