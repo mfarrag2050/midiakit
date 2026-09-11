@@ -22,6 +22,7 @@ import { Worker, UnrecoverableError, type Job, type WorkerOptions } from 'bullmq
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import pg from 'pg';
 import { Canvas, FontLibrary } from 'skia-canvas';
+import { deriveFontIdentity, applyRuntimeFontIdentity } from './lib/font-identity.js';
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -182,10 +183,13 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
       catch (err) { throw new Error(`FONT_ASSET_FETCH_FAILED: storage_key=${storageKey} err=${(err as Error).message}`); }
       const localPath = join(tmpDir, `${fa.assetId}.font`);
       writeFileSync(localPath, buf);
-      FontLibrary.use(fa.family, [localPath]);
-      loadedFonts.push({ family: fa.family, path: localPath });
+      // 141-FONT-IDENTITY-BY-ASSET: نُسجّل باسم مشتقّ من assetId لا اسم العائلة.
+      // شرح تفصيليّ + خطّة إزالة الـshim: `lib/font-identity.ts` رأس الملفّ.
+      const runtimeFamily = deriveFontIdentity(fa);
+      FontLibrary.use(runtimeFamily, [localPath]);
+      loadedFonts.push({ family: runtimeFamily, path: localPath });
       // eslint-disable-next-line no-console
-      console.log(`[api-worker] font loaded: family=${fa.family} path=${localPath}`);
+      console.log(`[api-worker] font loaded: runtime=${runtimeFamily} display=${fa.family} path=${localPath}`);
     }
 
     // 2. Parse + validate template
@@ -197,10 +201,13 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
       throw err;
     }
 
-    // 3. Resolve brand
+    // 3. Resolve brand + apply runtime font identity (shim · 141)
+    // engine يقرأ `brand.fonts.primary.family` لبناء ctx.font. نستبدله
+    // بـruntime المشتقّ ليتطابق مع ما سجّل api-worker في FontLibrary.
+    // يموت هذا السطر حين ينفّذ mk deriveFamily داخل resolveBrand.
     const { resolveBrand } = await import('@pf-mediakit/engine');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const brand = resolveBrand(brandSnapshot as any);
+    const brand = applyRuntimeFontIdentity(resolveBrand(brandSnapshot as any));
 
     // 4. size mapping
     const dims = SIZE_MAP[size];
