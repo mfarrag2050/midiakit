@@ -9,8 +9,8 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-11
-> **HEAD (main):** `b4ce12e`
-> **HEAD (origin/feat/api):** `ff22f1d`
+> **HEAD (main):** `8a08333`
+> **HEAD (origin/feat/api):** `8d6a6c9`
 > **HEAD (origin/feat/studio):** `d995a73`
 
 ## الفهرس
@@ -25,7 +25,7 @@
 | `docs/06-roadmap.md` | 179 | `f9022e8013a3` | local |
 | `docs/07-capabilities.md` | 191 | `597abf23a452` | local |
 | `docs/08-operations.md` | 231 | `8e645af79060` | local |
-| `docs/09-launch-spec.md` | 244 | `a1bd66727e59` | local |
+| `docs/09-launch-spec.md` | 251 | `39600a05dd4c` | local |
 | `docs/10-timeline-editor.md` | 284 | `a0afd4081935` | local |
 | `docs/11-parallel-work.md` | 315 | `e7c02ff8c0de` | local |
 | `docs/12-feature-scan.md` | 249 | `674cb0e3e07b` | local |
@@ -39,8 +39,8 @@
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 365 | `e9aa2d0d4e36` | local |
-| `PHASES.md` | 1515 | `e4d513cc92b5` | local (main) |
+| `docs/SKILL-mediakit.md` | 365 | `146e3e87b342` | local |
+| `PHASES.md` | 1536 | `fc22ece68189` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
@@ -2415,7 +2415,14 @@ Docker Compose:
 # الوعود
 
 **يُوعد به:**
-- المخرج يطابق المعاينة بالبكسل
+- **التخطيط في المعاينة يطابق المخرَج قِيَماً**: نفس حجم الخطّ، نفس
+  ارتفاع السطر، نفس نقاط كسر السطور، نفس مواضع النصّ داخل الإطار.
+  الطرفان يبنيان الخطّة من متريكات رأس الخطّ نفسها (`BASELINE-A` ·
+  2026-09-11 · `verify:plan-values` يفحص هذا آليّاً · commit `af2acc2`).
+  **لا يُوعد بتطابق البكسل الكامل للصورة** — محرّك ترقيم الغليف يختلف
+  بين متصفّح العميل وخادم الرندر (skia)، وبين نُسخ skia نفسها عبر
+  الأنظمة (فرق ~2px قياساً · `PLATFORM-2`). ما يراه العميل في المعاينة
+  هو **تخطيط المخرَج** لا صورة المخرَج.
 - الهوية مطبّقة على كل القوالب
 - إتاحة 99% وقت العمل
 - دعم خلال يوم عمل
@@ -2516,7 +2523,7 @@ Docker Compose:
 - [ ] لا خط تجاري ولا أصل أناضول في المستودع
 - [ ] ثلاثة ملفات هوية تُنتج ثلاثة مخرجات مختلفة
 - [ ] MP4 يُشغَّل على iPhone وأندرويد ويُرفع لإنستغرام بلا تحويل
-- [ ] المعاينة = المخرج بكسلياً
+- [ ] تخطيط المعاينة = تخطيط المخرَج قِيَماً (verify:plan-values) — راجع «الوعود» أعلاه لتفصيل حدود المطابقة
 - [ ] BiDi صحيح للنص المختلط
 - [ ] طوابير بأولوية + حصة عادلة + حدود صارمة
 - [ ] لوحة عميل تعرض الطابور والزمن المتوقع
@@ -10267,7 +10274,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-11 · **HEAD:** `b4ce12e` (`main`)
+> **تاريخ التوليد:** 2026-09-11 · **HEAD:** `8a08333` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10297,21 +10304,21 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 183 | 1 |
-| `feat/api` | `f7220f8` | 4 | 0 | 188 |
-| `feat/ci` | `027c3d4` | 7 | 2 | 189 |
-| `feat/dashboards` | `376077c` | 0 | 72 | 112 |
-| `feat/studio` | `d995a73` | 37 | 2 | 219 |
-| `origin/aa-internal` | `ee178ca` | 0 | 183 | 1 |
-| `origin/feat/api` | `ff22f1d` | 3 | 32 | 155 |
-| `origin/feat/ci` | `027c3d4` | 7 | 2 | 189 |
-| `origin/feat/dashboards` | `376077c` | 0 | 72 | 112 |
-| `origin/feat/studio` | `d995a73` | 37 | 2 | 219 |
+| `aa-internal` | `ee178ca` | 0 | 185 | 1 |
+| `feat/api` | `8d6a6c9` | 5 | 2 | 189 |
+| `feat/ci` | `89839de` | 10 | 0 | 196 |
+| `feat/dashboards` | `376077c` | 0 | 74 | 112 |
+| `feat/studio` | `d995a73` | 37 | 4 | 219 |
+| `origin/aa-internal` | `ee178ca` | 0 | 185 | 1 |
+| `origin/feat/api` | `8d6a6c9` | 5 | 2 | 189 |
+| `origin/feat/ci` | `89839de` | 10 | 0 | 196 |
+| `origin/feat/dashboards` | `376077c` | 0 | 74 | 112 |
+| `origin/feat/studio` | `d995a73` | 37 | 4 | 219 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (63):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/api (51):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (62):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (66):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
@@ -10631,6 +10638,21 @@ model في shared) · النواة (`resolveAt` · `interpolate` بـ8 دوال 
 واجهة المنصة، لا تُبنى منفصلة). فك الترميز المسبق ينتظر مقطع مصدر
 حقيقي من العميل الأول.
 
+**تحديث بنيويّ (2026-09-11 · GATE-2LAYER · b4ce12e + 0a77bbd):**
+- **البوابة البصريّة صارت ثلاث طبقات موصولة في `pnpm test`:**
+  1. `verify:plan-values` (قيَم `RenderPlan` deep-equal · 12 خطّة)
+  2. `verify:snapshot` (لقطات بايت-بايت · 24 لقطة · **دخلت `pnpm test` — كانت خارجها**)
+  3. `verify:image-fixture` (مسار الصورة الحقيقيّ · fixture PNG · platform-agnostic)
+- **مرجع اللقطات + الخطط + `breaking.mp4` صار Linux حصراً** (حاوية
+  `node:20.18.1-bookworm-slim` · وصفة `90-LINUX-REFERENCE`). سبب:
+  فرق `measureText` ~2px بين macOS و Linux (`PLATFORM-2`). على macOS
+  ثلاث حرّاس (snapshot · plan-values · breaking-video) تفشل بصوت واضح
+  وتوجّه إلى `./bin/mk-ci` — لا SKIP، لا tolerance.
+- **عدد أوامر `pnpm test`:** 31 (كان 28 قبل GATE-2LAYER · 25 قبل WIRE-7).
+- **قرار مقصود:** `verify:snapshot` يفحص خلفيّة `preview.mjs` البديلة —
+  **لا يُغطّي مسار الصورة**. `verify:image-fixture` يحرس مسار الصورة
+  وحده. البوابتان منفصلتان بالتصميم (موثَّق في رأس السكربتَين).
+
 **قرار المالك (2026-09-10) — التشكيل التلقائيّ مؤجَّل عن الإصدار الأول:**
 - **الحالة:** الميزة **غير مُفعَّلة في v1**. `brand.typography.diacritics.enabled`
   افتراضه `false` منذ البدء (`packages/shared/src/default-brand.ts:138`) —
@@ -10664,7 +10686,11 @@ diacritizer MIT، Python 3.12 venv، منفذ 19080) · `measuredLineHeight`
 على 265 عنوان RSS حقيقي (aljazeera · bbc · aawsat · dw · almasryalyoum ·
 rt · me-online · aljazeera-me) لتفادي فخّ L-05 (اختبار يوافق قواعده).
 **بوابات (ج، د، أداء) اجتازت:** Δfill=+0.56%، Δstddev=-0.26% (**تحسّن —
-درس L-10**)، softness regression=2.26%، p95=402ms. **بوابتا (أ) و (ب)
+درس L-10**)، softness regression=2.26%، **p95=402ms** (`buildRenderPlan`
+**مع القوائم الممتدَّة** — ExtendedLexicon مُفعَّل · بوابة ≤ 800ms). قياس
+p95 آخر في مواضع أخرى من هذا الملفّ (SUB-G3 · سطر 1345): **291ms** —
+مصدر مختلف: `buildRenderPlan` **بلا القوائم الممتدَّة** (بوابة ≤ 390ms).
+الرقمان صحيحان لسياقَين مختلفَين — تصحيح 2026-09-11 (70-CORRECT-1). **بوابتا (أ) و (ب)
 معلَّقتان** حتى وصول WojoodGaza (نموذج طلب أكاديمي عبر sina.birzeit.edu).
 
 **قرار التفعيل (2026-09-01):** `DEFAULT_BRAND.typography.semanticBreaks.
@@ -10690,7 +10716,7 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 · 3 ☑ (الرندر على الخادم) · 3.2 ☑ (لوحات التحكم — 2026-09-02) · 3.5 ◐
 (الكسر الدلالي + التشكيل — بوابتا أ/ب معلَّقتان WojoodGaza) · **3.7 ☑
 (محرّك الخط الزمني — 2026-09-02، الواجهة إلى المرحلة 4)** · **3.8 ☑
-(امتدادات المحرك — 2026-09-04: الإسناد ☑ · التفريغ ☑ (skeleton خدمة + طبقة caption محرك) · Lottie 🔻 مؤجَّل بشرط · SVG ☑ (6 بوابات) · كشف الوجوه ☑ (خدمة MTCNN معزولة + smart-crop في المحرك، 6 بوابات) · التعليق الصوتي ☑ (packages/tts BYO-key + mock adapter، 6 بوابات))** · **3.9 ☑ (البوابات الست: G1..G6 كلٌّ منها بوجود + ثبات + سلبي صريح — 2026-09-04، G6 معلَّق بشرط RLS للمرحلة 4)** · **3.10 ☑ (content.locale — Locale + applyLocaleToBrand + wrapLatin + checkFontCoverage + demo/multilang-demo.png ar/en/tr، 2026-09-04، L-49).**
+(امتدادات المحرك — 2026-09-04: الإسناد ☑ · التفريغ ☑ (skeleton خدمة + طبقة caption محرك) · Lottie 🔻 مؤجَّل بشرط · SVG ☑ (6 بوابات) · كشف الوجوه ☑ (خدمة MTCNN معزولة + smart-crop في المحرك، 6 بوابات) · التعليق الصوتي ☑ (packages/tts BYO-key + mock adapter، 6 بوابات))** · **3.9 ◐ (البوابات الست G1..G6 — تصحيح 2026-09-05: 4/6 مبنيّة · G6 skeleton · G1 و G2 غير مبنيَّين. الحالة الأصليّة ☑ في 2026-09-04 كانت خطأً منقوضاً — راجع §المرحلة 3.9 التفصيليّة أدناه)** · **3.10 ☑ (content.locale — Locale + applyLocaleToBrand + wrapLatin + checkFontCoverage + demo/multilang-demo.png ar/en/tr، 2026-09-04، L-49).**
 
 **التالي:** المرحلة **3.8** (امتدادات المحرك — 5 بنود: التفريغ +
 القاموس · الإسناد · Lottie/Skottie · كشف الوجوه · التعليق الصوتي).
@@ -10788,8 +10814,10 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 
 ### ما بُني وما لم يُجدوَل
 
-- **مسار A:** 30/30 · 74 نقطة نهاية · 25 بوابة · `verify:all`
-  بصفر إخفاق.
+- **مسار A:** 30/30 · ~108 نقطة نهاية HTTP (`git ls-tree` عدّ 103 ملف `.ts`
+  في `apps/api/src/routes/`، ناقص 8 shared، زائد ~15 نقطة من
+  `revisions/factory.ts` — تصحيح 2026-09-11 · 70-CORRECT-1 · «74» السابق كان خطأ) ·
+  25 بوابة في `verify:all` (`scripts/verify-all.mjs` — GATES array أعلن 25).
 - **مسار S:** 22/22 + S23 (مساحة العمل).
 - **نقاط التزامن:** 8/8 مفتوحة.
 
@@ -11049,7 +11077,7 @@ docs/marketing/أ). بناء المنصة فوق محرّك بلا حراسة ي
 
 **اختبار الذروة (`scripts/test-peak-load.mjs`):** 9 مهام urgent متزامنة، 3 مستأجرين × 3 مهام لكلٍّ، بترتيب round-robin عند الإدخال.
 - كل المهام اكتملت (9/9)، صفر فشل
-- **أقصى wait قبل البدء: 15.13s** (البوابة: ≤ 45s — عبرت بهامش 66%)
+- **أقصى wait قبل البدء: 15.13s** (تشغيل 2026-08-31 · التشغيل الأصليّ) · **أو 12.10s** (تشغيل لاحق · مذكور في `M1:188`). البوابة: ≤ 45s — كلا القياسَين عبرا بهامش ≥66%. تصحيح 2026-09-11 (70-CORRECT-1): القيمتان ليستا خطأً بل قياسان لنفس السكربت في تشغيلَين — يُعاد القياس عند شكّ حقيقيّ.
 - متوسط wait: 6.63s
 - نمط round-robin واضح في السجل: `A→B→C→A→B→C→A→B→C`
 
@@ -11070,7 +11098,7 @@ docs/marketing/أ). بناء المنصة فوق محرّك بلا حراسة ي
 4. ☑ **الأداء (بعد RenderPlan):** فيديو 8.4s ⇒ 2.2s رندر (×80 من 177s). فيديو 60s يُستقرأ ~15s (يتجاوز الالتزام 5 دقائق بأريحية).
 
 **البوابة (الجلسة الثانية — مُتحقّقة 2026-08-31):**
-5. ☑ **معيار الذروة:** 9 مهام urgent متزامنة (3 مستأجرين × 3) → أقصى wait 15.13s (البوابة ≤45s). كل المهام اكتملت، صفر فشل. round-robin واضح `A→B→C→A→B→C→A→B→C`.
+5. ☑ **معيار الذروة:** 9 مهام urgent متزامنة (3 مستأجرين × 3) → أقصى wait 15.13s (تشغيل 2026-08-31 · الأصليّ) — راجع التصحيح على السطر 445 لتفصيل القياسَين (15.13 و 12.10). البوابة ≤45s. كل المهام اكتملت، صفر فشل. round-robin واضح `A→B→C→A→B→C→A→B→C`.
 6. ☑ **عزل الفشل:** 8/8 مهام معطوبة رُفضت قبل الطابور (`waiting=0 قبل=بعد`). مهمة صحيحة معالَجة في 1.60s بعدها. `apps/renderer/src/validate.ts` هو نقطة الرفض الوحيدة.
 7. ⏸ **مؤجَّل للمرحلة 4:** MP4 يُشغَّل على iPhone/أندرويد ويُرفع لإنستغرام بلا تحويل — يحتاج جهاز عميل حقيقي للتحقق النهائي.
 
