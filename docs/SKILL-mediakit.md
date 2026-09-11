@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-05 · **HEAD:** `aebfc1a` (`main`)
+> **تاريخ التوليد:** 2026-09-11 · **HEAD:** `af2acc2` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -53,43 +53,60 @@ description: |
 | 4 | المنصة (بعد اكتشاف بنود 2026-09-02) | **6–8 أسابيع** | عميل يعمل ذاتياً + سجل مراجعات + سير عمل تحريري + دورة حياة أصول | ◐ جارية — الحالة التفصيلية في `PHASES-api.md` (feat/api) و `PHASES-studio.md` (feat/studio). `main` لا يتتبّع تقدّم المسارين. |
 | 5 | النمو | مستمر | — | ☐ |
 
-### الفروع — عبر الفروع (`git for-each-ref`)
+### الفروع — عبر الفروع (`git for-each-ref` · مقارَنة بـ`origin/main`)
 
-| الفرع | HEAD | عدد الالتزامات |
-|---|---|---|
-| `aa-internal` | `ee178ca` | 1 |
-| `feat/api` | `c11371a` | 118 |
-| `feat/studio` | `385a872` | 96 |
-| `origin/aa-internal` | `ee178ca` | 1 |
-| `origin/feat/api` | `c11371a` | 118 |
-| `origin/feat/studio` | `385a872` | 96 |
+| الفرع | HEAD | أمام main | خلف main | الإجمالي |
+|---|---|---:|---:|---:|
+| `aa-internal` | `ee178ca` | 0 | 181 | 1 |
+| `feat/api` | `ef0187d` | 2 | 30 | 154 |
+| `feat/ci` | `4c79a90` | 0 | 0 | 182 |
+| `feat/dashboards` | `376077c` | 0 | 70 | 112 |
+| `feat/studio` | `b0f7050` | 35 | 0 | 217 |
+| `origin/aa-internal` | `ee178ca` | 0 | 181 | 1 |
+| `origin/feat/api` | `ef0187d` | 2 | 30 | 154 |
+| `origin/feat/dashboards` | `376077c` | 0 | 70 | 112 |
+| `origin/feat/studio` | `f113540` | 34 | 71 | 145 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (15):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-git-internals` · `check:skill-fresh` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
-- **feat/api (20):** `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:script-paths` · `check:skill-fresh` · `verify:auth` · `verify:brand-kits` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users`
-- **feat/studio (17):** `check:digit-style-isolation` · `check:doc-paths` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
+- **main (61):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (51):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/studio (23):** `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:script-paths` · `check:skill-fresh` · `check:ui-keys` · `verify:multilang` · `verify:perf` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:tenant-isolation` · `verify:tts`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
 
-- **mk-api (feat/api):** آخر مبنيّ ✅ = `A12` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api`
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S6` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي`
+- **mk-api (feat/api):** آخر مبنيّ ✅ = `A28` · نقاط التزامن المفتوحة: `SYNC-α · فُتحت 2026-09-05 · المسار المُسلِّم: mk-api` · `SYNC-β · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-γ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-δ · فُتحت 2026-09-06 · المسار المُسلِّم: mk-api` · `SYNC-ε · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-ζ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-η · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api` · `SYNC-θ · فُتحت 2026-09-07 · المسار المُسلِّم: mk-api`
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = `S23` · جارٍ 🟡: `S6 · S7 — ربط حقيقي + تخطيط رئيسي` · `S8 — منتقي الأصول`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-67
-- **العدد الفريد:** 62 · **الإدخالات:** 62
+- **المدى:** L-1 → L-73
+- **العدد الفريد:** 68 · **الإدخالات:** 68
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
 ### قوائم المرحلة 4 — من main (`docs/17-phase4-plan.md`)
 
-- **A-list (28):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28`
-- **S-list (22):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22`
-- **SYNC (8):** `SYNC-α` · `SYNC-β` · `SYNC-γ` · `SYNC-δ` · `SYNC-ε` · `SYNC-ζ` · `SYNC-η` · `SYNC-θ`
+- **A-list (30):** `A1` · `A2` · `A3` · `A4` · `A5` · `A6` · `A7` · `A8` · `A9` · `A10` · `A11` · `A12` · `A13` · `A14` · `A15` · `A16` · `A17` · `A18` · `A19` · `A20` · `A21` · `A22` · `A23` · `A24` · `A25` · `A26` · `A27` · `A28` · `A18.5` · `A18.6`
+- **S-list (33):** `S1` · `S2` · `S3` · `S4` · `S5` · `S6` · `S7` · `S8` · `S9` · `S10` · `S11` · `S12` · `S13` · `S14` · `S15` · `S16` · `S17` · `S18` · `S19` · `S20` · `S21` · `S22` · `S23` · `S24` · `S25` · `S26` · `S27` · `S28` · `S29` · `S30` · `S31` · `S32` · `S33`
+- **SYNC (8):** `SYNC-γ` · `SYNC-α` · `SYNC-β` · `SYNC-δ` · `SYNC-ε` · `SYNC-ζ` · `SYNC-η` · `SYNC-θ`
 
 ### نقاط النهاية المبنيّة — عبر الفروع (`git ls-tree origin/feat/api apps/api/src/routes/`)
 
+- `apps/api/src/routes/ai/create.ts`
+- `apps/api/src/routes/ai/delete.ts`
+- `apps/api/src/routes/ai/invoke.ts`
+- `apps/api/src/routes/ai/list.ts`
+- `apps/api/src/routes/assets/delete.ts`
+- `apps/api/src/routes/assets/detect-faces.ts`
+- `apps/api/src/routes/assets/finalize.ts`
+- `apps/api/src/routes/assets/get.ts`
+- `apps/api/src/routes/assets/list.ts`
+- `apps/api/src/routes/assets/patch-faces.ts`
+- `apps/api/src/routes/assets/refresh-url.ts`
+- `apps/api/src/routes/assets/shared/kind-rules.ts`
+- `apps/api/src/routes/assets/shared/mapper.ts`
+- `apps/api/src/routes/assets/upload-url.ts`
 - `apps/api/src/routes/auth/forgot-password.ts`
 - `apps/api/src/routes/auth/login.ts`
 - `apps/api/src/routes/auth/logout.ts`
@@ -105,17 +122,84 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/health.ts`
+- `apps/api/src/routes/platform/auth/login.ts`
+- `apps/api/src/routes/platform/auth/logout.ts`
+- `apps/api/src/routes/platform/auth/refresh.ts`
+- `apps/api/src/routes/platform/ops/queues.ts`
+- `apps/api/src/routes/platform/ops/subscriptions.ts`
+- `apps/api/src/routes/platform/ops/usage.ts`
+- `apps/api/src/routes/platform/plans/create.ts`
+- `apps/api/src/routes/platform/plans/delete.ts`
+- `apps/api/src/routes/platform/plans/get.ts`
+- `apps/api/src/routes/platform/plans/list.ts`
+- `apps/api/src/routes/platform/plans/revisions.ts`
+- `apps/api/src/routes/platform/plans/shared.ts`
+- `apps/api/src/routes/platform/plans/update.ts`
+- `apps/api/src/routes/platform/shared/role-guard.ts`
+- `apps/api/src/routes/platform/tenants/get.ts`
+- `apps/api/src/routes/platform/tenants/list.ts`
+- `apps/api/src/routes/platform/tenants/update.ts`
+- `apps/api/src/routes/platform/users/create.ts`
+- `apps/api/src/routes/platform/users/delete.ts`
+- `apps/api/src/routes/platform/users/get.ts`
+- `apps/api/src/routes/platform/users/list.ts`
+- `apps/api/src/routes/platform/users/update.ts`
+- `apps/api/src/routes/projects/annotations/create.ts`
+- `apps/api/src/routes/projects/annotations/delete.ts`
+- `apps/api/src/routes/projects/annotations/list.ts`
+- `apps/api/src/routes/projects/annotations/update.ts`
+- `apps/api/src/routes/projects/assign.ts`
+- `apps/api/src/routes/projects/create.ts`
+- `apps/api/src/routes/projects/delete.ts`
+- `apps/api/src/routes/projects/get.ts`
+- `apps/api/src/routes/projects/list.ts`
+- `apps/api/src/routes/projects/shared/mapper.ts`
+- `apps/api/src/routes/projects/state.ts`
+- `apps/api/src/routes/projects/transitions.ts`
+- `apps/api/src/routes/projects/update.ts`
+- `apps/api/src/routes/renders/brand-snapshot.ts`
+- `apps/api/src/routes/renders/cancel.ts`
+- `apps/api/src/routes/renders/create.ts`
+- `apps/api/src/routes/renders/delete.ts`
+- `apps/api/src/routes/renders/get.ts`
+- `apps/api/src/routes/renders/list.ts`
+- `apps/api/src/routes/renders/output.ts`
+- `apps/api/src/routes/renders/shared/mapper.ts`
+- `apps/api/src/routes/renders/template-snapshot.ts`
+- `apps/api/src/routes/revisions/factory.ts`
+- `apps/api/src/routes/subscription/cancel.ts`
+- `apps/api/src/routes/subscription/checkout.ts`
+- `apps/api/src/routes/subscription/get.ts`
+- `apps/api/src/routes/subscription/invoices.ts`
+- `apps/api/src/routes/subscription/resume.ts`
+- `apps/api/src/routes/templates/create.ts`
+- `apps/api/src/routes/templates/delete.ts`
+- `apps/api/src/routes/templates/get.ts`
+- `apps/api/src/routes/templates/list.ts`
+- `apps/api/src/routes/templates/shared/mapper.ts`
+- `apps/api/src/routes/templates/update.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
+- `apps/api/src/routes/usage/current.ts`
+- `apps/api/src/routes/usage/history.ts`
+- `apps/api/src/routes/users/accept-invite.ts`
 - `apps/api/src/routes/users/delete.ts`
 - `apps/api/src/routes/users/get.ts`
 - `apps/api/src/routes/users/invite.ts`
 - `apps/api/src/routes/users/list.ts`
 - `apps/api/src/routes/users/update.ts`
+- `apps/api/src/routes/webhooks/subscription.ts`
+- `apps/api/src/routes/workflows/create.ts`
+- `apps/api/src/routes/workflows/delete.ts`
+- `apps/api/src/routes/workflows/get.ts`
+- `apps/api/src/routes/workflows/list.ts`
+- `apps/api/src/routes/workflows/shared/mapper.ts`
+- `apps/api/src/routes/workflows/shared/schema.ts`
+- `apps/api/src/routes/workflows/update.ts`
 
 ### محتويات المستودع — من main (`ls`)
 
-- **`packages/`:** `engine` · `shared` · `templates` · `tts`
+- **`packages/`:** `db` · `engine` · `shared` · `templates` · `tts`
 - **`demo/`:** 15 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
@@ -124,199 +208,156 @@ description: |
 <!-- BEGIN:DICTATED -->
 ## ما هو
 
-تحويل أداة `AA Media Kit` — ملف HTML واحد (~2000 سطر) يعمل إضافةً
-داخل Photopea، بُني لفريق التواصل الرقمي في وكالة الأناضول — إلى
-منتج SaaS يُباع لوكالات إدارة السوشيال ميديا العربية.
+تحويل أداة `AA Media Kit` — ملف HTML واحد يعمل إضافةً داخل
+Photopea، بُني لوكالة الأناضول — إلى منتج SaaS يُباع لوكالات
+السوشيال ميديا العربية.
 
-**النموذج:** العميل لا يشتري الكود ولا يبني القوالب. يدخل فيجد
-هويته — خطه، ألوانه، شعاره، قوالبه — فيكتب العنوان ويصدّر بطاقة
-أو فيديو جاهزاً للنشر.
+**النموذج:** العميل يدخل فيجد هويته — خطه وألوانه وشعاره
+وقوالبه — فيكتب العنوان ويصدّر بطاقة أو فيديو جاهزاً للنشر.
 
-**الأصل التجاري:** محرك الطباعة العربية، لا الواجهة ولا العلامة
-المائية.
-
-**التموضع:** «المكان الوحيد الذي تُطبَع فيه العربية بشكل صحيح على
-الويب.»
+**الأصل التجاري:** محرك الطباعة العربية.
+**التموضع:** «المكان الوحيد الذي تُطبَع فيه العربية بشكل صحيح
+على الويب.»
 
 ## القواعد التسع — لا تُخالَف
 
-1. **المحرك خالص.** لا `document`، لا `window`، لا `localStorage`،
-   لا متغيرات وحدة قابلة للتغيير. يستقبل
-   `(template, brand, content, size)` ويعيد Canvas.
-2. **Canvas 2D يبقى.** لا انتقال إلى HTML/CSS — منطق اللف العربي
-   غير قابل للتعبير عنه في CSS (ADR-001).
-3. **صفر قيم مثبتة للهوية.** أي `#RRGGBB` أو اسم خط أو هامش داخل
-   دالة رسم = خطأ. الهوية مصدر الحقيقة الوحيد لكل ما يظهر في
-   المخرَج.
-4. **القوالب بيانات لا كود.** JSON يفسّره المحرك.
-5. **`drawAt(ctx, W, H, T)` مقدّسة.** دالة خالصة من الزمن إلى
-   إطار — جسر الرندر على الخادم.
-6. **لا خطوط تجارية في المستودع.** مفتوحة افتراضياً + رفع العميل
-   لخطه المرخّص.
+1. **المحرك خالص.** لا `document` ولا `window` ولا
+   `localStorage`. يستقبل `(template, brand, content, size)`
+   ويعيد Canvas.
+2. **Canvas 2D يبقى** — منطق اللف العربي غير قابل للتعبير عنه
+   في CSS.
+3. **صفر قيم مثبتة للهوية.** أي لون أو خط أو هامش داخل دالة
+   رسم = خطأ.
+4. **القوالب بيانات لا كود.**
+5. **`drawAt(ctx, W, H, T)` مقدّسة** — دالة خالصة من الزمن إلى
+   إطار.
+6. **لا خطوط تجارية في المستودع.**
 7. **لا أصول أناضول في النسخة التجارية.**
-8. **البطاقة قبل الفيديو.** الاستخدام صور لا فيديو بفارق 10–100
-   ضعف.
-9. **الخط الزمني مكوّن أساسي** — محرّر كامل بمسارات ومفاتيح
-   مفتاحية، بمحرّك حركة عربي. `drawAt` تبقى خالصة.
+8. **البطاقة قبل الفيديو** — الاستخدام صور لا فيديو بفارق
+   10–100 ضعف.
+9. **الخط الزمني مكوّن أساسي** — محرّكه مبنيّ، وواجهته لم تُبنَ.
 
 **أسلوب العمل:** الخنق التدريجي لا إعادة الكتابة.
 
-## القيم المستخرجة من الكود الأصلي
+## خريطة الوثائق — أيّ ملف يحكم ماذا
 
-**لا تخمّن رقماً — كلها في `docs/03-brand-kit-spec.md`.**
+**لا تخطّط من ملف واحد.** افتح ما يحكم موضوعك من `docs/BUNDLE.md`:
 
-| الفئة | القيم |
+| الملف | يحكم |
 |---|---|
-| ألوان | `#B1876A` تمييز · `#C1012F` شارة عاجل · `#C82626` خلفية عاجل · `#C21C1C` تلوين الشعار · `#1D5FC4` شارة ريلز |
-| لف | `shortRatio 0.6` · تباعد `1.34` (بطاقات) و `1.42` (عاجل) |
-| هوامش | شعار 63px عند 51 · عاجل: يمين 71، عرض 900، قاعدة 200، مصدر 135 · بطاقات: عرض 880، أعلى 150، أسفل 350 |
-| خطوط | عنوان 96/40 · عاجل 80/44 · kicker 60/28 وزن 300 · مصدر 34 · ريلز 76/40 |
-| مدة المقطع | `max(7, min(10, 7 + max(0, n-8) × 0.3))` |
-| مقاسات | X 1080×1080 · إنستغرام 1080×1440 · Feed 1080×1350 · ريلز 1080×1920 |
+| `09-launch-spec` | **معايير الجاهزية** — قائمة «جاهز للبيع» 11 بنداً · «القبول قبل التسليم» 6 خانات · استمارة الإعداد · تدفّق التشكيل |
+| `12-feature-scan` | **نطاق الإصدار الأول** — 11 بنداً · وما أُسند للمرحلة 4 |
+| `11-parallel-work` | التوازي · ملكية الملفات · الملفات المقفلة · المنافذ |
+| `08-operations` | التشغيل · الطوابير · **الحدود الإلزامية** · لوحة التشغيل · SLA |
+| `03-brand-kit-spec` | **كل قيمة رقمية** — ألوان · هوامش · أحجام · نسب |
+| `04-template-spec` | القوالب · `content` · `content.locale` · قاعدة الأولوية |
+| `05-engine-api` | عقد المحرك |
+| `10-timeline-editor` | الخط الزمني — النموذج والمراحل أ..ز |
+| `16-api-contract` | عقد الـAPI — الأشكال والأخطاء والغلاف |
+| `17-phase4-plan` | خطة المرحلة 4 — **مشتقّة من 09 و 12 و PHASES، لا بديلة عنها** |
+| `PHASES.md` | الحالة الفعلية · القرارات بتواريخها · البنود المنقولة |
+| `LESSONS.md` | الدروس كاملة — السكيل يحمل عناوينها لا نصوصها |
 
-## الخندق التنافسي
+**والسكيل ملخّص لا بديل.** قراءته ليست قراءة الملف.
 
-الفئة مزدحمة بالإنجليزية (Bannerbear · Placid · Creatomate) ولا
-أحد يعالج العربية. Canva أقرّت بعدم دعمها الكامل للخطوط العربية؛
-Affinity بلا RTL أصلي.
+## الخندق
 
-1. **التبرير بالكشيدة** — لا متصفح يدعمه منذ IE 5.5. لافتة المنتج.
+Canva أقرّت بعدم دعمها الكامل للعربية · Affinity بلا RTL أصلي ·
+خلل Premiere بلا حلّ منذ سبع سنوات.
+
+1. **التبرير بالكشيدة** — لا متصفح يدعمه. لافتة المنتج.
 2. **كسر السطور الدلالي** — لا يُقسم «مجلس الأمن الدولي».
-3. **التشكيل الآلي** — التحدي في الرسم لا النموذج.
-4. **BiDi** — إلزامي قبل أول عرض حي.
-
-## المعمارية
-
-**تخزين ثلاثي:** PostgreSQL · S3/R2 (الملفات لا تدخل القاعدة) ·
-Redis.
-
-`brand_kits.config` و `templates.definition` عمود `jsonb` واحد —
-يُقرأ ككتلة. **أول `->>` في شرط `WHERE` انحراف معماري.**
-
-**تجميد الهوية:** كل تصدير يخزّن `brand_snapshot` و
-`template_snapshot` — تغيير العميل لا يغيّر مخرجاته القديمة.
-
-- **ADR-002** المحرك خالص — الجدار الوحيد بين الأداة والمنتج
-- **ADR-004** الرندر على الخادم؛ `MediaRecorder` محذوف
-- **ADR-006** تحميل الخطوط والانتظار **قبل** أي `measureText`
-- **ADR-007** مشترك افتراضياً، المخصص طبقة تسعير لا معمارية
-- **ADR-008** أنبوب مباشر إلى FFmpeg ⇒ `concurrency = floor(cores/2)`
-- **ADR-011** RLS بأقصى صرامة · مصادقة ذاتية بشروط الهجرة ·
-  Paddle آخر ما يُبنى
-- **ADR-012** `templates`: `scope` صريح + `CHECK` مركّب
-
-## التشغيل
-
-**أربعة طوابير:** `urgent` (عاملان، 30s) · `normal` (عامل، 3د) ·
-`edit` (**واحد**، 10د) · `batch` (ليلاً). حصة عادلة على
-`tenant_id`.
-
-**البطاقات لا تلمس الخادم** — تُنتج في المتصفح، بلا طابور.
-
-**البنية:** VPS واحد (8 أنوية، 16GB، 500GB NVMe) + R2 ≈ 60–95$
-شهرياً.
-
-## التسعير
-
-**إعداد:** 300–1500$ مرة واحدة.
-**اشتراك:** 29$ / 79$ / 149$ / API 299$+ — متدرّج بعدد الـBrand
-Kits، لأن الوكالة تنمو بعملائها.
+3. **التشكيل الآلي** — النموذج اقتراح لا سلطة؛ العميل يملك
+   القرار بالحرف (`docs/09`).
+4. **BiDi.**
 
 ## قواعد المراجعة
 
-هذه تحكم كيف يعمل Opus، لا ما يُبنى.
-
-- **الشجرة لا تُرى من هنا.** المخرَج الملصوق هو الحاسة الوحيدة.
-  كل جملة تحمل واحداً من ثلاثة: رأيتُه في مخرَج · قاله تقرير ولم
-  أتحقّق · لا أعرف. والثالثة جواب كامل.
-- **لا ترجيح لقرار معماري قبل أرقامه.** إن كان القرار يغيّر بنية
-  أو مخططاً أو ترقيماً، فلا رأي قبل مخرَج.
-- **السؤال للمالك محصور فيما لا يملك جوابه غيره:** التسعير،
-  العميل الأول، أولوية المسارات، المقايضات. «ما الموجود؟» و«كم
-  حجمه؟» للتحرّي.
-- **جرد الحالة المشتركة من `main` وحدها.** جلسة في worktree تصف
-  شجرة فرعها لا المشروع.
-- **لا اقتطاع في القوائم.** القائمة المقتطعة تبدو كاملة.
-- **الخطة تفتتح بنفي التنفيذ · تقرير الإنجاز يفتتح بـ`git log`**
-  (L-60).
+- **الشجرة لا تُرى من هنا.** كل جملة تحمل واحداً من ثلاثة:
+  رأيتُه في مخرَج · قاله تقرير ولم أتحقّق · **لا أعرف**.
+- **لا ترجيح لقرار معماري قبل أرقامه.**
+- **السؤال للمالك محصور فيما لا يملك جوابه غيره.** «ما الموجود؟»
+  للتحرّي.
+- **جرد الحالة المشتركة من `main` وحدها.**
+- **لا اقتطاع في القوائم.**
+- **الخطة تفتتح بنفي التنفيذ · تقرير الإنجاز بـ`git log`.**
 - **التذاكر في كتلة كود واحدة**، والتحليل نصّاً عادياً.
-- **المرجع في التقارير:** آخر التزام للجلسة نفسها، لا «آخر مرجع».
+- **المرجع في التقارير:** آخر التزام للجلسة نفسها.
+- **البوابة تُعلَن بعدد إخفاقاتها لا بحالتها.** «خضراء» ليست
+  دليلاً — `verify:brand-kits` أُعلن «إخفاق واحد» أربع مرات
+  وكانت 30.
+- **لا إعلان جاهزية وفي الخطّة بند مؤجَّل بلا موعد.**
+- **الملخّص ليس الملف.**
+- **أي رسالة تشير إلى مسار خارج worktree الجلسة ⇒ توقّف قبل
+  التنفيذ.**
 
 ## نمط العمل
 
-أربع جلسات على الميني: `mediakit` (`mk`، `main`) · `mk-api`
-(`mkapi`، `feat/api`) · `mk-studio` (`mkst`، `feat/studio`) ·
-`mkaudit` (`mkau`، worktree منفصل للقراءة).
+خمسة مسارات في `docs/11`: `mediakit` (‏`mk`, main — توثيق دائم
+غير محسوب، ويُحسب مسارَ بناء حين يمسّ `packages/*`) ·
+`mk-api` (‏`mkapi`, feat/api) · `mk-studio` (‏`mkst`,
+feat/studio) · `feat/dashboards` (لم يُفتح) · `mkaudit`
+(‏`mkau`، قراءة فقط، غير محسوب).
 
-Opus يخطّط ويصوغ التذاكر ← Muhammed يلصقها ← Claude Code ينفّذ ←
-يعيد التقرير. المستودع خاص ولا يصله Claude.ai.
+**مساران كاتبان لا ثلاثة** — المراجعة هي القيد.
 
-**التحرّي (`mkaudit`):** سبعة كواشف — تباعد الحُرّاس · انحراف
-التسمية · المبنيّ مقابل العقد · انحراف الحالة · الأرقام · البنية ·
-الصلاحيات. يُستدعى ولا يعمل تلقائياً. **وكل كاشف ينجح مرة يتحوّل
-إلى سكربت** — التحرّي يتقلّص أو يكون تعويضاً عن غياب حراسة.
+Opus يخطّط ← Muhammed يلصق ← Claude Code ينفّذ ← يعيد التقرير.
+المستودع خاص ولا يصله Claude.ai.
 
-**بوابة التزامن لا تُفتح بتقرير** (`docs/17`): دليل تنفيذي من
-المسار المُسلِّم — استدعاء فعلي بمخرجه — ويُسجَّل في `PHASES.md`.
+**التحرّي:** ثمانية كواشف، يُستدعى ولا يعمل تلقائياً. وكل كاشف
+ينجح مرة يتحوّل إلى سكربت.
+
+**بوابة التزامن لا تُفتح بتقرير** — دليل تنفيذي مسجَّل في
+`PHASES-api.md`.
 
 ## الدروس الحاكمة
 
-`docs/LESSONS.md`. الأكثر إعمالاً:
+عناوين فقط — النصوص في `LESSONS.md` (67 درساً).
 
-- **L-01** الأداة الأصلية مصدر قيم لا معيار جودة
-- **L-17** لا تُعلَن بوابة بصرية ناجحة قبل النظر إلى المخرج
-- **L-46** اختبار الثبات لا يكشف الغياب — لكل ميزة اختبارا وجود
-  وثبات
+- **L-17** لا بوابة بصرية تُعلَن قبل النظر إلى المخرج
+- **L-22** المكوّنات تستقبل مفاتيح لا نصّاً
+- **L-46** اختبار الثبات لا يكشف الغياب
 - **L-53** التقرير الذي يعلن الإنجاز ليس دليلاً عليه
 - **L-54** القاعدة بلا فرض آلي تُنسى بصمت
-- **L-57** `git log` + `git status` + `git push` في كل تقرير
-- **L-58** الاستثناء الموثَّق يبقى ثغرة — اسحب الصلاحية
-- **L-61** سياسة RLS واحدة تُخفي ولا تمنع — 404 حيث كانت 403
-- **L-62** `UNIQUE` على عمود nullable ليس قيداً — **بقيد:** فقط
-  حين يكون التفرّد مقصوداً للصفوف الفارغة. السؤال الفاصل: ماذا
-  يعني `NULL` هنا — غياب الميزة أم قيمة صالحة؟
+- **L-57** `git log` + `status` + `push` في كل تقرير
+- **L-58** الاستثناء الموثَّق يبقى ثغرة
+- **L-61** سياسة RLS واحدة تُخفي ولا تمنع
+- **L-62** `UNIQUE` على nullable ليس قيداً — حين يكون التفرّد
+  مقصوداً للصفوف الفارغة
 - **L-63** السكيل يُكتب من الملفات لا من الذاكرة
+- **L-66** المصادر مراتب لا أنداد
+- **L-67** `.git` حالة مشتركة لا ملف جلسة
 
-## الدَين المفتوح — 2026-09-05
+## القرارات المحسومة
 
-| البند | الموضع |
-|---|---|
-| سياسة `templates` تحجب `scope='global'` (مؤكَّد ببيانات) | A13 |
-| `templates` فارغ ولا مسار بذر — القوالب ثوابت TS فقط | A13 |
-| `templates` بلا قيد تفرّد | A13 |
-| `app_user` CRUD على `pgmigrations` — موروث من `ALTER DEFAULT PRIVILEGES` | تذكرة أمن |
-| SSRF كامنة: `logo.url` و `fonts.*.url` بلا تحقّق، ولا جالب اليوم | حارس لا تحقّق |
-| تباعد الحُرّاس: `feat/api` 10 مقابل main 14 | تذكرة أمن |
-| لا `DEFAULT_BRAND` عند القراءة | تذكرة مستقلة |
-| إقرار الترخيص علم في `config` لا سجلّ | تذكرة مستقلة |
-| G1 · G2 غير مبنيَّين (3.9 ◐) | مسجَّل |
-| 3.5 ◐ — بوابتا قياس تنتظران مجموعة موسومة | مسجَّل |
-| `PHASES.md` متباعد بين الفروع | مسجَّل |
-| التباعد البصري: اللوحة بلا متغيّرات الهوية | بعد S7 |
+- الكيان بريطاني أو أوروبي · Paddle بلا حاجز · الدفع الشخصي بلا
+  قيد. و`mada`/`KNET` مزوّد إقليمي ثانٍ بجانبه — مسجَّل لا مبنيّ.
+- الباقات: `trial · starter · studio · agency · api`.
+- الحدود بيانات في `plans` + `plan_overrides` — المالك يغيّرها
+  بلا نشر.
+- مستوى التحكّم بسياسات صريحة، صفر `BYPASSRLS`.
+- واجهة الخط الزمني ⇒ المرحلة 4، في مسار S لا T (2026-09-02).
+- **العرض الأول يشمل فيديو بخطّ العميل** لا بطاقات وحدها.
+- التنبيهات: **BullMQ repeat** كل خمس دقائق · webhook عام
+  والقناة وسيط تشغيلي خارج المنتج.
+- أول مزوّد TTS: **Google**.
+- النطاق: **`docs/09` هو المرجع**.
 
 ## القرارات المعلّقة
 
-- **شكل A11:** `asset_id` أم `url` نصّي؟ مؤجَّل بموافقة المالك حتى
-  بعد A9 و A10.
-- **دور القاعدة في القوالب:** الستة ثوابت في الكود ولا تحتاج
-  صفوفاً؛ الجدول يلزم للمخصّصة ولإظهار الستة في القائمة. غرضان
-  قد يُحلّان بطريقتين. يُحسم في A13.
-- تعدد العضوية: القاعدة تدعمه، الواجهة تفترض واحداً.
-- Paddle: هل يقبل كياناً خليجياً؟
-
-## التالي
-
-الترتيب العام الثابت (لا تذاكر جارية هنا — تعيش في PHASES.md و
-docs/17):
-
-- **mk-api:** A9 → A10 → A11 → A13 → **A26 → A27 → A28**
-- **mk-studio:** S5 → S6 → S7 → S8 → …
-- **العميل الأول:** بعد الاكتمال والاختبار — قرار المالك.
+- القدرات الخمس في `docs/07` — أيّها يُجدوَل؟
+- الثلاثة من `docs/12`: النماذج القابلة للمشاركة · القصّ الذكي ·
+  واجهة التفريغ.
+- مجموعة القياس الموسومة لبوابتي 3.5 — يصنعها المالك.
+- قياس فكّ ترميز مقطع 20 ثانية على العتاد — **شرط قبل أي
+  التزام تعاقدي** (`docs/08`).
+- عمق لوحة المالك: كل رقم قابل للنزول إليه (2026-09-07).
 
 ## عند الشك
 
 - لا تخترع قيمة رقمية — كلها في `docs/03`.
-- إن اقتضى الحل مخالفة قاعدة من التسع، **توقّف واعرض المقايضة**.
+- إن اقتضى الحل مخالفة قاعدة من التسع، توقّف واعرض المقايضة.
 - الكود بالإنجليزية، النقاش والتوثيق بالعربية.
 - لا تفترض وجود كود — تحقّق.
+- **ولا تقرأ ملخّصاً وتحسبه الملف.**
 <!-- END:DICTATED -->

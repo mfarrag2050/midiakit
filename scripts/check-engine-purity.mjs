@@ -8,6 +8,18 @@
 //   • let أو var على مستوى الوحدة (متغير قابل للتغيير مشترك).
 //
 // خرج غير صفري ⇒ CI يفشل.
+//
+// **اختبار الوجود (L-46 · CHECK-FIX 2026-09-11):**
+//   1. أنشئ ملفّاً مؤقّتاً داخل packages/engine/src يستعمل هوية محظورة:
+//        cat > packages/engine/src/__canary.ts <<'EOF'
+//        export function __canary() { return document.body; }
+//        EOF
+//   2. شغّل الفحص ⇒ يجب أن يخرج بـ1 مع سطر المخالفة:
+//        `<file>:<line>  banned-identifier (document)  ← <line-content>`
+//   3. احذف الملفّ ⇒ يعود لـexit 0 و«نظيف — المحرك يحترم القاعدة الوحيدة».
+// **مُثبَّت بمخرَج (2026-09-11):** الحقنة أدّت إلى exit 1 مع
+// `packages/engine/src/__canary-purity.ts:3  banned-identifier (document) ...`
+// بعد الحذف: exit 0 مع «نظيف». راجع claude/reports/35-CHECK-FIX.md.
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';

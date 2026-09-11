@@ -27,10 +27,15 @@ export const DEFAULT_BRAND: BrandKit = {
       family: 'IBM Plex Sans Arabic',
       source: 'builtin',
       licenseAck: true,
+      // BASELINE-A · 2026-09-11 · AMEND-55 · L-73 — مقاسة عبر
+      //   pnpm measure-font assets/fonts/IBMPlexSansArabic-*.ttf
+      // OS/2 typo metrics. **الأوزان الثلاثة تُنتج نفس القيم لهذا
+      // الخطّ** (تحقّق: راجع 55-BASELINE-A §١٢·٣). لكن الحقل على مستوى
+      // الوزن لأنّ خطوطاً أخرى قد تختلف — الحدّ يُقبَل على الأوزان.
       weights: {
-        light: { url: '', value: 300 },
-        regular: { url: '', value: 400 },
-        bold: { url: '', value: 700 },
+        light:   { url: '', value: 300, metrics: { ascent: 1085, descent: 415, unitsPerEm: 1000 } },
+        regular: { url: '', value: 400, metrics: { ascent: 1085, descent: 415, unitsPerEm: 1000 } },
+        bold:    { url: '', value: 700, metrics: { ascent: 1085, descent: 415, unitsPerEm: 1000 } },
       },
     },
     fallback: 'sans-serif',

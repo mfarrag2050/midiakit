@@ -1,15 +1,17 @@
-// verify-tashkil-collision — بوابة L-50.
+// verify-tashkil-collision — بوابة تشكيل يدويّة (v2 · لا يُشغَّل في pnpm test).
 //
-// **الفرضية:** سطران عربيان مشكَّلان قد يتصادمان إن اعتمد التخطيط
-// على `measureText` وحده — يُخفي التشكيل حتى 31 بكسل.
+// **BASELINE-A · 2026-09-11 · تعديل النطاق:** `measuredLineHeight` لم يعد
+// يستدعي pixelFactory (L-73). في v1 التشكيل مطفأ (TASHKIL-OFF 2026-09-10)،
+// و`measuredLineHeight` يستعمل متريكات رأس الخطّ حصراً. هذا السكربت يبقى
+// أداة تحقيق يدويّة تُبيّن الفارق بين المسارين:
+//   (أ) القياس من رأس الخطّ (v1 · مطبَّق): كافٍ للنصّ العاري، أقلّ من
+//       الارتفاع الفعليّ لسطر مشكَّل.
+//   (ب) القياس البكسليّ (v2 · متاح لكن غير مستدعى): يكشف ذُروة التشكيل
+//       الحقيقيّة. يبقى في `pixel-height.ts` كخدمة قابلة للاستدعاء.
 //
-// **الاختبارات:**
-//   (أ) **وجود:** `measuredLineHeight` مع pixelFactory على نص مشكَّل
-//       تُبلّغ ارتفاعاً > ما تُبلّغه بلا pixelFactory بفرق كبير (≥ 10px).
-//   (ب) **لا تصادم:** رسم سطرين مشكَّلين بـlineHeight الجديدة يترك
-//       فجوة > 0 بين قاع السطر الأوّل وأعلى السطر الثاني.
-//   (ج) **سلبي:** استعمل lineHeight «القديمة» (بلا pixelFactory) على
-//       نفس السطرين، أثبت التصادم (فجوة ≤ 0).
+// **متى يعود إلى pnpm test:** حين تُعاد ميزة التشكيل ويُتَّخذ قرار موحَّد
+// (راجع `TASHKIL-METRICS-UNIFY` المقترَحة). عندها يجب أيضاً حلّ تباين
+// المنصّات في القياس البكسليّ (skia vs Chrome).
 
 import { Canvas, FontLibrary } from 'skia-canvas';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -17,7 +19,8 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { measuredLineHeight, hasTashkil } from '@pf-mediakit/engine';
+import { measuredLineHeight, hasTashkil, measurePixelHeight } from '@pf-mediakit/engine';
+import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -53,20 +56,23 @@ const LINE_A = [{ text: 'اَللَّهُمَّ صَلِّ عَلَى', bold: tr
 const LINE_B = [{ text: 'مُحَمَّدٍ وَآلِهِ الطَّاهِرِينَ', bold: true, accent: false }];
 const LINES = [LINE_A, LINE_B];
 
-// ── (أ) وجود — pixelFactory يعطي ارتفاعاً أكبر ────────
-console.log('════════ أ) pixelFactory يكشف التشكيل الحقيقي ════════');
+// ── (أ) وجود — القياس البكسليّ يكشف التشكيل، رأس الخطّ لا ────
+console.log('════════ أ) البكسليّ يكشف التشكيل، رأس الخطّ يعطي حدّاً أدنى ثابتاً ════════');
+const metrics = DEFAULT_BRAND.fonts.primary.metrics;
 {
-  const canvas = new Canvas(1200, 300);
-  const ctx = canvas.getContext('2d');
-
-  const lhWithout = measuredLineHeight(ctx, LINES, FS, FONT, true, LH_MIN);
-  const lhWith = measuredLineHeight(ctx, LINES, FS, FONT, true, LH_MIN, 0.05, pixelFactory);
-  console.log(`    بلا pixelFactory (API فقط): ${lhWithout}px`);
-  console.log(`    مع pixelFactory (بكسلي):    ${lhWith}px`);
-  console.log(`    الفرق: +${lhWith - lhWithout}px`);
+  const lhHeader = measuredLineHeight(metrics, FS, LH_MIN);
+  // القياس البكسليّ لسطر مشكَّل مباشرةً (متاح كخدمة، غير مستدعى في v1)
+  const fontString = `700 ${FS}px "IBM Plex Sans Arabic", sans-serif`;
+  const pxA = measurePixelHeight(pixelFactory, LINE_A[0].text, fontString);
+  const pxB = measurePixelHeight(pixelFactory, LINE_B[0].text, fontString);
+  const pxRaw = Math.max(pxA.ascent + pxA.descent, pxB.ascent + pxB.descent);
+  const lhPixel = Math.ceil(pxRaw * 1.05);
+  console.log(`    من رأس الخطّ (v1 المطبَّق): ${lhHeader}px`);
+  console.log(`    البكسليّ (v2 · متاح غير مستدعى): ${lhPixel}px`);
+  console.log(`    الفرق: +${lhPixel - lhHeader}px (خفاء التشكيل)`);
   assert(hasTashkil('اَللَّهُمَّ صَلِّ عَلَى'), 'hasTashkil يكشف الفتحة والشدّة والسكون');
-  assert(lhWith > lhWithout, 'القياس البكسلي أكبر — يكشف خفاء API');
-  assert(lhWith - lhWithout >= 10, 'الفرق كبير (≥ 10px)', `+${lhWith - lhWithout}px`);
+  assert(lhPixel > lhHeader, 'القياس البكسلي أكبر — يكشف خفاء رأس الخطّ للتشكيل');
+  assert(lhPixel - lhHeader >= 10, 'الفرق كبير (≥ 10px) — يستحقّ عودة تشكيل مع حلّ يدمج البكسليّ', `+${lhPixel - lhHeader}px`);
 }
 
 // دالة قياس تصادم فعلي على canvas مرسوم
@@ -117,35 +123,35 @@ function drawTwoLinesAndMeasureGap(lineHeight) {
   return { canvas, gap: maxGap };
 }
 
-// ── (ب) راحة بصرية مع lineHeight المُصلَحة ─────────────
+// ── (ب) راحة بصرية مع lineHeight المُصلَحة (بكسليّ) ─────
 const SAFE_GAP = 15;   // فجوة مريحة بصرياً (لا anti-aliasing متسرّب)
-console.log('\n════════ ب) سطران مشكَّلان — راحة بصرية (مع pixelFactory) ════════');
+console.log('\n════════ ب) سطران مشكَّلان — راحة بصرية (مع القياس البكسليّ) ════════');
 let gapFixed;
 {
-  const canvas = new Canvas(1200, 300);
-  const ctx = canvas.getContext('2d');
-  const lh = measuredLineHeight(ctx, LINES, FS, FONT, true, LH_MIN, 0.05, pixelFactory);
+  const fontString = `700 ${FS}px "IBM Plex Sans Arabic", sans-serif`;
+  const pxA = measurePixelHeight(pixelFactory, LINE_A[0].text, fontString);
+  const pxB = measurePixelHeight(pixelFactory, LINE_B[0].text, fontString);
+  const pxRaw = Math.max(pxA.ascent + pxA.descent, pxB.ascent + pxB.descent);
+  const lh = Math.max(LH_MIN, Math.ceil(pxRaw * 1.05));
   const { canvas: drawn, gap } = drawTwoLinesAndMeasureGap(lh);
   gapFixed = gap;
-  console.log(`    lineHeight المستخدَمة: ${lh}px`);
+  console.log(`    lineHeight المستخدَمة (البكسليّ): ${lh}px`);
   console.log(`    فجوة أوسع بين قاع السطر 1 وقمة السطر 2: ${gap}px`);
   assert(gap >= SAFE_GAP, `فجوة مريحة (≥ ${SAFE_GAP}px)`, `${gap}px`);
   await writeFile(join(OUT, 'tashkil-fixed.png'), drawn.toBufferSync('png'));
   console.log(`    ✓ out/tashkil-fixed.png`);
 }
 
-// ── (ج) سلبي — بلا pixelFactory، الفجوة تنكمش خطيراً ───
-console.log('\n════════ ج) سلبي — بلا pixelFactory، الفجوة تنكمش (< حدّ الأمان) ════════');
+// ── (ج) سلبي — قياس رأس الخطّ (v1 · لا يكفي مع تشكيل) ───
+console.log('\n════════ ج) سلبي — قياس رأس الخطّ يخسر ذُروة التشكيل ════════');
 {
-  const canvas = new Canvas(1200, 300);
-  const ctx = canvas.getContext('2d');
-  const lhBad = measuredLineHeight(ctx, LINES, FS, FONT, true, LH_MIN);  // بلا factory
+  const lhBad = measuredLineHeight(metrics, FS, LH_MIN);  // v1 المطبَّق — يفقد التشكيل
   const { canvas: drawn, gap } = drawTwoLinesAndMeasureGap(lhBad);
-  console.log(`    lineHeight «القديمة»: ${lhBad}px`);
+  console.log(`    lineHeight من رأس الخطّ: ${lhBad}px`);
   console.log(`    فجوة أوسع: ${gap}px`);
-  console.log(`    الفرق مع الحالة المُصلَحة: -${gapFixed - gap}px`);
+  console.log(`    الفرق مع الحالة البكسليّة: -${gapFixed - gap}px`);
   assert(gap < SAFE_GAP, `فجوة أقلّ من حدّ الأمان (< ${SAFE_GAP}px)`, `${gap}px`);
-  assert(gap < gapFixed / 2, `الفرق كبير — القديم يخسر ≥ نصف الفجوة`, `${gap}px vs ${gapFixed}px`);
+  assert(gap < gapFixed / 2, `الفرق كبير — رأس الخطّ يخسر ≥ نصف الفجوة`, `${gap}px vs ${gapFixed}px`);
   await writeFile(join(OUT, 'tashkil-collision.png'), drawn.toBufferSync('png'));
   console.log(`    ✓ out/tashkil-collision.png`);
   console.log(`    ⇒ الحارس يُثبت أن التصحيح ضروري — بدونه، الفجوة تكفي anti-aliasing خطر بصرياً.`);

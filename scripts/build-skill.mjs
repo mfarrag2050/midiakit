@@ -32,7 +32,15 @@ const ROOT = join(__dirname, '..');
 const SKILL_PATH = join(ROOT, 'docs/SKILL-mediakit.md');
 const BEGIN = '<!-- BEGIN:GENERATED -->';
 const END = '<!-- END:GENERATED -->';
-const MAX_LINES = 400;
+// **الحدّ الأقصى للسكيل — سياسة المراجعة (قرار المالك 2026-09-07):**
+// الحدّ يُراجَع بالنموّ لا يُخنق النموّ لأجله. غرضه أن السكيل يُحمَّل
+// في كل محادثة ويستهلك سياقاً — لا أن يقتطع محتوى. عند التجاوز:
+// **يُرفع الحدّ، أو تُختصر المنطقة المُملاة بقرار المالك**. لا اقتطاع
+// في القوائم المولَّدة أبداً (قاعدة 2026-09-06).
+//
+// **تاريخ الرفع:** 300 (نشأة، 2026-09-05) → 400 (رأس YAML، 2026-09-06)
+// → 600 (نموّ نقاط النهاية على feat/api إلى 74 نقطة، 2026-09-07).
+const MAX_LINES = 600;
 
 // ── رأس YAML — ثابت، خارج المنطقتين ──────────────────
 // `description` هو ما يجعل السكيل يُستدعى في واجهة Claude عند ذكر
@@ -271,21 +279,26 @@ function extractLists17() {
   return { a, s, sync };
 }
 
-// ── الفروع ورؤوسها وعدد الالتزامات ──────────────────
+// ── الفروع ورؤوسها + الأمام/الخلف مقابل main ──────────────
+//
+// **العيب المصحَّح (PUBLISH-1 · 2026-09-09):** كان العمود «عدد
+// الالتزامات» = `rev-list --count <branch>` من الجذر. غامض —
+// aa-internal = 1 لأنه من المرحلة 0، وهذا لا يقول شيئاً عن موقع
+// الفرع من main. استُبدل بثلاثة أعمدة صريحة: أمام main · خلف
+// main · الإجمالي.
 
 function branchesInfo() {
   const section = 'الفروع';
-  // نستثني main و origin/main — قيمهما تتغيَّر مع كلّ commit على هذا
-  // الفرع، فتُبطل بوابة الطزاجة بلا فائدة (السطر يقول «main تغيَّر»
-  // — نعم، الالتزام الذي أضاف السطر غيَّره).
   const raw = shOrFail(section, `git for-each-ref --format='%(refname:short)|%(objectname:short)' refs/heads refs/remotes/origin`);
   const out = [];
   for (const line of raw.split('\n')) {
     const [name, hash] = line.split('|');
     if (!name || name.endsWith('/HEAD')) continue;
     if (name === 'main' || name === 'origin/main') continue;
-    const count = shOrFail(section, `git rev-list --count ${name}`);
-    out.push({ name, hash, count });
+    const ahead = shOrFail(section, `git rev-list --count origin/main..${name}`).trim();
+    const behind = shOrFail(section, `git rev-list --count ${name}..origin/main`).trim();
+    const total = shOrFail(section, `git rev-list --count ${name}`).trim();
+    out.push({ name, hash, ahead, behind, total });
   }
   if (out.length === 0) {
     throw new SectionReadError(section, `git for-each-ref`, 'لا فروع أخرى غير main');
@@ -357,11 +370,11 @@ function buildGenerated() {
 
 ${phaseTable}
 
-### الفروع — عبر الفروع (\`git for-each-ref\`)
+### الفروع — عبر الفروع (\`git for-each-ref\` · مقارَنة بـ\`origin/main\`)
 
-| الفرع | HEAD | عدد الالتزامات |
-|---|---|---|
-${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.count} |`).join('\n')}
+| الفرع | HEAD | أمام main | خلف main | الإجمالي |
+|---|---|---:|---:|---:|
+${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.ahead} | ${b.behind} | ${b.total} |`).join('\n')}
 
 ### الفحوص الآلية — عبر الفروع (\`package.json\` الجذر)
 
@@ -449,36 +462,40 @@ try {
 }
 
 if (process.argv.includes('--stdout')) {
-  process.stdout.write(generated);
-  process.exit(0);
-}
+  // process.exit() لا ينتظر تفريغ stdout؛ الكتابة الكبيرة (أكبر
+  // من buffer الأنبوب ≈ 8192 بايت على macOS) تُقتَطع إن خرجنا
+  // فوراً بعد write. نُطلق exit من كولباك write ليضمن التفريغ.
+  // (تصحيح 2026-09-06 · حادثة check-skill-fresh السقوط عند نموّ
+  // نقاط النهاية.)
+  process.stdout.write(generated, (err) => process.exit(err ? 1 : 0));
+} else {
+  const current = readFileSync(SKILL_PATH, 'utf8');
+  const withFrontmatter = ensureFrontmatter(current);
+  const updated = inject(withFrontmatter, generated);
+  const lines = updated.split('\n');
 
-const current = readFileSync(SKILL_PATH, 'utf8');
-const withFrontmatter = ensureFrontmatter(current);
-const updated = inject(withFrontmatter, generated);
-const lines = updated.split('\n');
-
-if (lines.length > MAX_LINES) {
-  const sections = [];
-  let cur = { title: '(قبل أول قسم)', count: 0 };
-  for (const line of lines) {
-    if (/^#{2,3}\s/.test(line)) {
-      if (cur.count > 0) sections.push(cur);
-      cur = { title: line.trim(), count: 1 };
-    } else {
-      cur.count++;
+  if (lines.length > MAX_LINES) {
+    const sections = [];
+    let cur = { title: '(قبل أول قسم)', count: 0 };
+    for (const line of lines) {
+      if (/^#{2,3}\s/.test(line)) {
+        if (cur.count > 0) sections.push(cur);
+        cur = { title: line.trim(), count: 1 };
+      } else {
+        cur.count++;
+      }
     }
+    if (cur.count > 0) sections.push(cur);
+    sections.sort((a, b) => b.count - a.count);
+    console.error(`[build-skill] ✗ الملف ${lines.length} سطراً — يتجاوز الحد ${MAX_LINES}.`);
+    console.error(`  القوائم تبقى كاملة — أنت تقرّر ما يُختصر (عادةً المنطقة المُملاة).`);
+    console.error(`  أطول ثلاثة أقسام:`);
+    for (const sec of sections.slice(0, 3)) {
+      console.error(`    ${sec.count} سطراً — ${sec.title}`);
+    }
+    process.exit(1);
   }
-  if (cur.count > 0) sections.push(cur);
-  sections.sort((a, b) => b.count - a.count);
-  console.error(`[build-skill] ✗ الملف ${lines.length} سطراً — يتجاوز الحد ${MAX_LINES}.`);
-  console.error(`  القوائم تبقى كاملة — أنت تقرّر ما يُختصر (عادةً المنطقة المُملاة).`);
-  console.error(`  أطول ثلاثة أقسام:`);
-  for (const sec of sections.slice(0, 3)) {
-    console.error(`    ${sec.count} سطراً — ${sec.title}`);
-  }
-  process.exit(1);
-}
 
-writeFileSync(SKILL_PATH, updated);
-console.log(`[build-skill] ✓ docs/SKILL-mediakit.md (${lines.length} سطر · حد ${MAX_LINES})`);
+  writeFileSync(SKILL_PATH, updated);
+  console.log(`[build-skill] ✓ docs/SKILL-mediakit.md (${lines.length} سطر · حد ${MAX_LINES})`);
+}
