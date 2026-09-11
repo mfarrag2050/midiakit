@@ -195,3 +195,17 @@ jobs:
         # لا خدمة، لا سرّ، لا شبكة — تدخل السلسلة اليوم.
         if: always()
         run: pnpm verify:multilang
+
+      # ── (9) رفع verify-breaking.mp4 كـartifact (50-CI-SYNC-VIDEO §2) ─
+      # الغاية: لا يُجمَّد md5 على مخرَج لم ينظر إليه أحد (L-17 · L-71).
+      # verify:breaking-video يخرج بـmp4 في `out/verify-breaking.mp4` سواء
+      # مرّ أو فشل. `if-no-files-found: error` يمنع صمت المسار الخطأ.
+      # md5 مطبوع في سجلّ الحلقة (سطر «فعلي: <hex>» من السكربت نفسه).
+      - name: "رفع verify-breaking.mp4 كـartifact (للنظر قبل التجميد)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: breaking-linux-amd64.mp4
+          path: out/verify-breaking-INTENTIONALLY-WRONG-PATH.mp4
+          if-no-files-found: error
+          retention-days: 30
