@@ -105,11 +105,9 @@ jobs:
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
         run: |
-          # L-46 حقن (توثيق حرفيّ لأوّل push): كتلة `exit 1` مُعلَّقة أدناه
-          # يُفعِّلها المشغّل يدويّاً بحذف علامة التعليق. طُبِّق مرّة على push
-          # `<COMMIT_L46_NEG>` وأُزيل في push `<COMMIT_L46_POS>` — بالأرقام
-          # في تقرير 70-CI-WIRE-VERIFIERS §5.
-          # exit 1  # ← احذف # لحقن L-46
+          # L-46 حقن (نشط الآن — سيُزال في الدفعة التالية):
+          echo "⚠ L-46-INJECT: نُفشل الخطوة قصداً قبل تشغيل perf"
+          exit 1
           pnpm verify:perf
 
       - name: "verify:alerts-wire (~18s محلّيّاً)"
