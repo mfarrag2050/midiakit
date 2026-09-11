@@ -125,7 +125,7 @@ jobs:
           git config user.email "ci@pf-mediakit.local"
           git config user.name "mkci merge-simulator"
           git fetch origin main
-          if git merge --no-commit --no-ff origin/NONEXISTENT-REF-L46-80CI; then
+          if git merge --no-commit --no-ff origin/main; then
             echo "✓ merge-simulation نجح — السلسلة ستجري على النسخة المدموجة"
             echo "  HEAD الأصليّ: $(git log --oneline -1 HEAD@{1} 2>/dev/null || echo '(لا history)')"
             echo "  merged HEAD: $(git log --oneline -1)"
