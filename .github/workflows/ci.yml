@@ -109,6 +109,36 @@ jobs:
       - name: git safe.directory (بعد checkout · قبل الحرّاس)
         run: git config --global --add safe.directory '*'
 
+      # ── merge-simulation مع origin/main (80-CI-ON-PR §1) ──
+      # فريقنا لا يفتح PRs — الدمج محلّيّ عبر merge commits (ab11626 ·
+      # a8d2671). فـpull_request trigger = صامت = L-71. البديل: قبل
+      # pnpm install وتشغيل السلسلة، ندمج origin/main محلّيّاً بلا commit،
+      # فتجري السلسلة على النسخة المدموجة، فتُكشَف انحرافات المرآة **قبل**
+      # الدمج الحقيقيّ لا بعده (كما اكتشفت mk في 97-MERGE-STUDIO ·
+      # L-77 في docs/LESSONS.md).
+      #
+      # في حالة تعارض حقيقيّ: git merge يخرج بـexit != 0 والخطوة تسقط.
+      # في حالة main = ancestor أو fast-forward: الدمج يتحوّل no-op والسلسلة
+      # تجري على HEAD كما هي — لا كلفة إضافيّة.
+      - name: "محاكاة الدمج مع origin/main (كاشف انحرافات المرآة)"
+        run: |
+          git config user.email "ci@pf-mediakit.local"
+          git config user.name "mkci merge-simulator"
+          git fetch origin main
+          if git merge --no-commit --no-ff origin/NONEXISTENT-REF-L46-80CI; then
+            echo "✓ merge-simulation نجح — السلسلة ستجري على النسخة المدموجة"
+            echo "  HEAD الأصليّ: $(git log --oneline -1 HEAD@{1} 2>/dev/null || echo '(لا history)')"
+            echo "  merged HEAD: $(git log --oneline -1)"
+          else
+            echo ""
+            echo "✗ merge-simulation فشل — تعارضات مع origin/main:"
+            git status --short | grep -E '^UU|^AA|^DD|^AU|^UA|^DU|^UD' || true
+            echo ""
+            echo "  السبب: الفرع feat/ci وorigin/main يعدّلان نفس السطر بشكل مختلف."
+            echo "  الحلّ: اسحب main محلّيّاً، حلّ التعارض، ادفع."
+            exit 1
+          fi
+
       # ── (3) corepack pnpm ─────────────────────────────────
       # node:20.18.1-bookworm-slim يحوي corepack. لا حاجة لـactions/setup-node.
       - name: corepack pnpm 9.15.4 (يطابق packageManager)
