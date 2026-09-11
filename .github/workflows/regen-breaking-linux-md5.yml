@@ -16,13 +16,18 @@
 # المجموعَين. إن اختلفا: المصيِّر غير حتميّ على هذا المعمار → مسألة
 # أكبر من المرجع → **قف · لا تحفظ · أبلغ المالك**.
 #
-# **الاستدعاء:** `gh workflow run regen-breaking-linux-md5.yml`
-# ثمّ قراءة السجلّ، أخذ md5 اليدويّة إن ثابت، تحديث الملفّ + التزام.
+# **الاستدعاء:** لمسة على هذا الملفّ نفسه (push:paths) — يعمل مرّة واحدة
+# عند التعديل، لا في كلّ commit. حين يُدمج feat/ci إلى main يمكن التحوّل
+# إلى `workflow_dispatch` (يتطلّب وجود الملفّ على default branch).
 # (لا نمنح permissions: contents: write — الحفظ يدويّ بقصد.)
 
 name: Regen breaking-linux.md5
 
 on:
+  push:
+    branches: [feat/ci]
+    paths:
+      - '.github/workflows/regen-breaking-linux-md5.yml'
   workflow_dispatch: {}
 
 jobs:
