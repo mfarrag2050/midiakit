@@ -146,7 +146,13 @@ jobs:
       # السطر الوحيد `pnpm check:docker-context`، ونشغّل الباقي بالتتابع.
       # فحص المزامنة: إن لم يعد السطر موجوداً (mk بسّط package.json
       # لاحقاً)، الخطوة تفشل بتذكير — بسّط إلى `pnpm test` مباشرة.
-      - name: pnpm test (بلا check:docker-context — «محلّيّ فقط»)
+      - name: pnpm test (بلا check:docker-context — جمع كلّ الإخفاقات)
+        # **`if: always()`** — نشغّل حتى لو فشلت خطوة الهجرات. المبرِّر
+        # (طور كشف · 2026-09-11): لا تُقصَ الرؤية إلى عيبٍ واحد في الدفعة.
+        # الثلاث بوابات المعتمدة على DB ستفشل صراحةً (بلا صمت)، والباقي
+        # 24 بوابة يظهر حالها. بعد أوّل تشغيل أخضر، يُحذف `if: always()`
+        # وتعود سلامة fail-fast (لا معنى لإكمال حلقة على بيئة مكسورة).
+        if: always()
         env:
           # الثلاث بوابات (§1) تفشل صراحةً بدون هذه:
           DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
@@ -168,11 +174,34 @@ jobs:
             }
             console.log(filtered.join('\n'));
           ")
-          echo '===== سلسلة CI (27 بوابة — check:docker-context مُستبعَد بقرار) ====='
+          # سلسلة `pnpm test` تحوي أمراً واحداً (`vitest run`) بلا بادئة `pnpm`
+          # يعتمد على أن يكون `vitest` على PATH. `pnpm test` يفعل ذلك ضمنياً؛
+          # حلقة `eval` مباشرة لا. الحلّ: إضافة node_modules/.bin إلى PATH
+          # (ما يفعله pnpm داخلياً). كُشف بحقن اختباريّ محلّيّ (2026-09-11).
+          export PATH="$PWD/node_modules/.bin:$PATH"
+          TOTAL=$(echo "$GATES" | grep -c .)
+          echo '===== سلسلة CI ('$TOTAL' بوابة — check:docker-context مُستبعَد بقرار) ====='
           echo "$GATES"
           echo '================================================================='
+          # جمع كلّ الإخفاقات (طور كشف · 2026-09-11):
+          # `if eval; then :; else FAILED+=; fi` — set -e لا يُطلق داخل شرط
+          # if، فالحلقة تكمل حتى النهاية بلا حاجة `set +e`.
+          FAILED=()
           while IFS= read -r cmd; do
             [ -z "$cmd" ] && continue
+            echo ""
             echo "▶ $cmd"
-            eval "$cmd"
+            if eval "$cmd"; then
+              :
+            else
+              echo "  ✗ سقطت: $cmd (exit=$?)"
+              FAILED+=("$cmd")
+            fi
           done <<< "$GATES"
+          echo ""
+          echo "===== الملخّص: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            printf '  ✗ %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+          echo "✓ كلّ البوابات ($TOTAL) اجتازت."
