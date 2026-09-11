@@ -18,9 +18,19 @@ import pg from 'pg';
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
+// **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** غياب المتغيّر ⇒ فشل صريح.
+// راجع check-template-sync.mjs للسبب البنيويّ. لا شرط بيئيّ — منفذ هروب
+// جديد باسم جديد هو نفس المنفذ القديم.
 if (!DB_URL) {
-  console.log('[check-plan-sync] لا DATABASE_URL — يُتخطّى (dev بلا قاعدة).');
-  process.exit(0);
+  console.error('[check-plan-sync] ✗ DATABASE_URL غير مضبوطة — البوابة لا تستطيع أن تفحص.');
+  console.error('  ما لم يُفحَص: تطابق definition_hash لكلّ صفٍّ في `plans` مع');
+  console.error('  canonical hash لهويّته (key, name_ar, name_en).');
+  console.error('  الأثر: تعديل SQL يدويّ على `plans` يعبر بلا إنذار.');
+  console.error('  الحلّ:');
+  console.error('    • محلّياً: `pnpm db:up && pnpm db:migrate` ثمّ صدِّر DATABASE_URL');
+  console.error('      (راجع packages/db/.env.example).');
+  console.error('    • في CI: مرِّر DATABASE_URL كسرّ إلى خدمة postgres.');
+  process.exit(1);
 }
 
 function sortKeysDeep(v) {
@@ -49,9 +59,12 @@ try {
   `);
   rows = r.rows;
 } catch (err) {
-  console.log(`[check-plan-sync] تعذّر الاتصال بـDB (${err.code || err.message}) — يُتخطّى.`);
+  // **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** فشل الاتصال ⇒ فشل صريح.
+  console.error(`[check-plan-sync] ✗ تعذّر الاتصال بـDB (${err.code || err.message}).`);
+  console.error('  ما لم يُفحَص: تطابق definition_hash لصفوف `plans`.');
+  console.error('  الحلّ: تأكّد أنّ postgres يعمل وأنّ الهجرات مُطبَّقة.');
   await pool.end();
-  process.exit(0);
+  process.exit(1);
 }
 
 const errors = [];

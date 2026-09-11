@@ -1,0 +1,160 @@
+# .github/workflows/ci.yml — سلسلة CI الرئيسيّة (20-CI-BUILD).
+#
+# **الغاية:** تشغيل `pnpm test` كاملةً — 28 بوابة (`check:*` + `vitest run`
+# + `verify:*`) — على Linux، مع الأدوات والخدمات التي تحتاجها كلّ بوابة
+# فعلاً. كلّ استثناء أو تخطٍّ **يُعلَن** ولا يُخفى.
+#
+# **المعمار: ubuntu-latest (x86_64).** الأسباب:
+#   1. **قرب من الإنتاج:** VPS مستهدَف x86_64 (docs/08). CI مطابق للمنصّة
+#      يعطي أعلى ثقة في أنّ ما يمرّ في CI يمرّ في الإنتاج.
+#   2. **حصص GitHub:** ubuntu-latest في الحصّة المجّانيّة القياسيّة؛
+#      arm64 عليه قيود مختلفة على المستودعات الخاصّة.
+#   3. **PLATFORM-3 (mkau):** `measureText` بت-بت متطابق بين linux/arm64
+#      و linux/amd64 — فمرجع snapshot لينكس واحد يخدم أيّ خيار linux.
+#      الفرق الحقيقيّ مع macOS فقط (PLATFORM-2 — انزياح ~2px عموديّ).
+#   4. **الأثر على اللقطات:** `verify:breaking-video` يقرأ
+#      `snapshots-video/breaking-linux.md5` (§3 من 20-CI-BUILD) — مُوَلَّد
+#      على Debian 12 linux/amd64. أيّ فرع لينكس يمرّ به.
+#
+# **الأسرار:** كل قيمة عبر `secrets.*` — لا قيمة مكتوبة في الملفّ.
+#   • `secrets.CI_DATABASE_URL` — إن غاب، الوظيفة تعتمد على URL البناء
+#     الافتراضيّ للخدمة postgres (127.0.0.1:5432 داخل الشبكة الافتراضيّة).
+#
+# **الاستثناء المُعلَن — `check:docker-context`:** الحارس محلّيّ الغاية
+# (يحرس عزل Colima على الميني عن مشاريع منهاج/PrimeMind — CLAUDE.md
+# §بيئة مشتركة). Runners لينكس CI لا يحملون هذه المشكلة أصلاً.
+# التنفيذ في CI: نُخفي `infra/docker-compose.yml` (نُعيده بعد `pnpm test`)
+# — الحارس نفسه (`scripts/check-docker-context.mjs:35`) يمرّ بلا فحص
+# عند غياب الملفّ ويطبع رسالة صريحة «بلا bنية Docker». **هذا ليس منفذ
+# هروب — الحارس مصمَّم بهذه الحالة الحدّيّة داخل مصدره.**
+#
+# **مؤجَّل عمداً (§5 من 20-CI-BUILD):**
+#   • تشخيص 5 إخفاقات `apps/renderer/src/observe.test.ts` (تحت `mkau`
+#     في تذكرة 100-OBSERVE-FAILURES). حين يصل التصنيف، هذا الملفّ يُعدَّل.
+
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pnpm test (28 بوابة)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # ── خدمات ──────────────────────────────────────────────
+    # postgres: للثلاث بوابات المُغلَقة الآن (§1 من 20-CI-BUILD) —
+    # check:template-sync · check:plan-sync · check:control-plane-policies.
+    # redis: لـ`vitest` (apps/renderer/src/observe.test.ts يستورد bullmq
+    # ويفتح اتّصالاً على REDIS_URL — العزل عن الميني عبر بادئة
+    # BULLMQ_PREFIX + قاعدة /3).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mediakit
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mediakit"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      # ── (1) checkout + بيئة ──────────────────────────
+      - name: Checkout (full — check:skill-fresh يحتاج git show HEAD)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: تركيب أدوات النظام (git + ffmpeg + python3)
+        # git: check:dashboard-not-published · check:skill-fresh · check:docs-bundle-fresh
+        # ffmpeg: verify:render-video-all-templates · verify:breaking-video ·
+        #         verify:audio-gate (+ffprobe) · verify:media-track-gate ·
+        #         verify:text-tracks-gate · verify:transitions-gate
+        # python3: يُهدّئ msgpackr-extract postinstall (اختياريّ لكن يوقف تحذيراً)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y --no-install-recommends \
+            git ffmpeg python3
+          ffmpeg -version | head -1
+          node --version
+
+      - name: Node 20.18.1 + corepack pnpm 9.15.4 (يطابق .nvmrc + packageManager)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: تفعيل corepack (بلا npm install -g pnpm)
+        # نسخة pnpm مُثبَّتة في package.json حقل packageManager. corepack
+        # يُنشِّطها من هناك حتماً — لا تعارض مع أيّ pnpm نظاميّ.
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          pnpm --version
+
+      # ── (2) تخبئة متجر pnpm — التوفير المُقاس ~60ث ──
+      # mkau §5: 20.7s من الصفر (pnpm-reported) · ~130s إجماليّ مع apt.
+      # التخبئة تُخفض التركيب إلى ~5-10s على HIT، فيصبح المجموع ~65-70s.
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: تركيب التبعيّات (frozen — لا تعديل lockfile في CI)
+        run: pnpm install --frozen-lockfile
+
+      # ── (3) تشغيل الهجرات على postgres الخدمة ──────────
+      # يُلزم الثلاث بوابات (§1) بفحص بنية DB حقيقيّة لا صامتة.
+      - name: تشغيل الهجرات على postgres
+        env:
+          # migration_user + app_user لا يُنشآن آلياً عبر GitHub services
+          # (init/*.sql خاصّة بـdocker-compose المحلّيّ). نستعمل postgres
+          # مباشرةً كمستخدم بذر (bootstrap) للـmigrations في CI فقط.
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
+        run: pnpm db:migrate
+
+      # ── (4) إخفاء infra/docker-compose.yml (الاستثناء المُعلَن) ─
+      # راجع رأس الملفّ § الاستثناء المُعلَن. `scripts/check-docker-context.mjs:35`
+      # يمرّ بلا فحص عند غياب الملفّ ويطبع «بلا bنية Docker».
+      - name: إخفاء infra/docker-compose.yml (حارس Colima محلّيّ الغاية)
+        run: mv infra/docker-compose.yml infra/docker-compose.yml.local-only
+
+      # ── (5) `pnpm test` — 28 بوابة كاملةً ────────────
+      - name: pnpm test (كامل)
+        env:
+          # الثلاث بوابات (§1) تفشل صراحةً بدون هذه:
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@127.0.0.1:5432/mediakit
+          # observe.test.ts (bullmq) يفتح اتّصالاً على REDIS_URL — القاعدة /3
+          # ليست ضروريّة في CI (لا مشاركة) لكنّا نبقيها للاتّساق مع الميني.
+          REDIS_URL: redis://127.0.0.1:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+        run: pnpm test
+
+      # ── (6) إعادة الملفّ المخفيّ (نظافة workspace) ──────
+      - name: إعادة infra/docker-compose.yml
+        if: always()
+        run: mv infra/docker-compose.yml.local-only infra/docker-compose.yml
