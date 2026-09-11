@@ -29,7 +29,12 @@ import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
 // (نقرة واحدة للمستخدم، طلبان تحتها).
 
 const SCOPES: readonly (TemplateScope | 'all')[] = ['all', 'global', 'tenant'];
-const KINDS: readonly (TemplateKind | 'all')[] = ['all', 'static', 'video'];
+// DEMO-POLISH §1: الرايَة نفسها تحكم القائمتَين — الصفوف (kind !== 'video')
+// والفلاتر (بلا خيار «فيديو»). مصدرٌ واحد يحول التفارق مستقبلاً.
+const KINDS_FULL: readonly (TemplateKind | 'all')[] = ['all', 'static', 'video'];
+const KINDS: readonly (TemplateKind | 'all')[] = REEL_TEMPLATE_ENABLED
+  ? KINDS_FULL
+  : KINDS_FULL.filter((k) => k !== 'video');
 
 export default function TemplatesPage(): JSX.Element {
   const { t } = useLocale();

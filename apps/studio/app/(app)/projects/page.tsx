@@ -324,8 +324,8 @@ export default function ProjectsPage(): JSX.Element {
               disabled={createBusy}
               className="h-10 w-full rounded border border-border bg-surface-2 px-3 text-sm text-fg outline-none focus:border-accent"
             >
-              <option value="ar">ar</option>
-              <option value="en">en</option>
+              <option value="ar">{t('locale.ar')}</option>
+              <option value="en">{t('locale.en')}</option>
             </select>
           </Field>
         </div>

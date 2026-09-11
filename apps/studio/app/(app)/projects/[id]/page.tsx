@@ -976,11 +976,12 @@ export default function ProjectEditorPage(): JSX.Element {
             </div>
             {previewWarning && (
               <p
-                dir="ltr"
                 className="text-[11px] text-warning"
                 data-testid="preview-warning"
               >
-                {previewWarning}
+                {previewWarning.startsWith('errors.')
+                  ? t(previewWarning)
+                  : previewWarning}
               </p>
             )}
             <p className="text-[11px] text-fg-subtle">

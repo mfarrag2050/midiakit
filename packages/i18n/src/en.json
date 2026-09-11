@@ -128,7 +128,7 @@
       },
       "preview": {
         "title": "Live preview",
-        "hint": "Digits follow brand.bidi.numerals from the client's kit — not DigitStyle."
+        "hint": "Card digits follow brand settings, not the user preference."
       },
       "workspace": {
         "sizeLabel": "Size",
@@ -603,7 +603,15 @@
     "FORBIDDEN": "Access denied.",
     "NOT_FOUND": "Not found.",
     "VALIDATION_FAILED": "Invalid input — check the field.",
-    "INTERNAL_ERROR": "Server error. Try again later."
+    "INTERNAL_ERROR": "Server error. Try again later.",
+    "FONT_LOAD_CONFIG_MISSING": "The brand font has no weights defined — add weight URLs in brand settings.",
+    "FONT_LOAD_NO_SOURCE": "Brand font weights have no URLs — add font file URLs or use a built-in font.",
+    "FONT_LOAD_FAILED": "Could not load font — check the URL in brand settings.",
+    "ASSET_NO_PUBLIC_URL": "Selected image has no public URL — reupload or pick another.",
+    "ASSET_LOAD_FAILED": "Could not load the selected image — reupload or pick another.",
+    "ASSET_ID_EMPTY": "Image field is empty — pick an image from assets.",
+    "CANVAS_NO_CONTEXT": "Browser cannot render the card — try a newer browser.",
+    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload."
   },
   "design": {
     "title": "Design System",

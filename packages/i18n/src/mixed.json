@@ -129,7 +129,7 @@
       },
       "preview": {
         "title": "Live preview",
-        "hint": "Digits follow brand.bidi.numerals from the client's kit — not DigitStyle."
+        "hint": "digits في البطاقة تتبع brand settings، not user preference."
       },
       "workspace": {
         "sizeLabel": "المقاس",
@@ -604,7 +604,15 @@
     "FORBIDDEN": "دخول مرفوض.",
     "NOT_FOUND": "غير موجود.",
     "VALIDATION_FAILED": "مدخلات غير صالحة — راجع الحقل.",
-    "INTERNAL_ERROR": "خطأ في الخدمة. حاول لاحقاً."
+    "INTERNAL_ERROR": "خطأ في الخدمة. حاول لاحقاً.",
+    "FONT_LOAD_CONFIG_MISSING": "brand font بلا weights — أضف roles في brand settings.",
+    "FONT_LOAD_NO_SOURCE": "font weights بلا URLs — أضف روابط أو استعمل خطّاً built-in.",
+    "FONT_LOAD_FAILED": "font load failed — تحقّق من URL في brand settings.",
+    "ASSET_NO_PUBLIC_URL": "image بلا publicUrl — أعد رفعها.",
+    "ASSET_LOAD_FAILED": "image load failed — أعد رفعها.",
+    "ASSET_ID_EMPTY": "image field فارغ — اختر من assets.",
+    "CANVAS_NO_CONTEXT": "browser لا يدعم canvas — جرّب newer browser.",
+    "PREVIEW_UNKNOWN": "preview failed — راجع القالب."
   },
   "design": {
     "title": "Design System",

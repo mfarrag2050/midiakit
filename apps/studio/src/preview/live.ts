@@ -81,6 +81,24 @@ function mergeBrand(config: unknown): BrandKit {
 
 const registeredFontKeys = new Set<string>();
 
+/** DEMO-POLISH §2: يحوّل رسالة خطأ إنجليزيّة خام إلى مفتاح i18n. الواجهة
+ * تترجم بـ`t(warning)`. لا نبتلع الفشل — نتيح رسالة عربيّة تقول ما المشكلة
+ * وما الخطوة التالية. أيّ خطأ غير معروف يعود بـ`errors.PREVIEW_UNKNOWN`
+ * مع الرسالة الأصليّة في السجلّ (السلوك القديم يبقى في `console.error`
+ * للمطوّر، الشريك لا يراه). */
+export function mapErrorToI18nKey(raw: string): string {
+  // eslint-disable-next-line no-console
+  console.error('[preview]', raw);
+  if (raw.startsWith('font-load-config-missing')) return 'errors.FONT_LOAD_CONFIG_MISSING';
+  if (raw.startsWith('font-load-no-source')) return 'errors.FONT_LOAD_NO_SOURCE';
+  if (raw.startsWith('font-load-error')) return 'errors.FONT_LOAD_FAILED';
+  if (raw.startsWith('asset-no-public-url')) return 'errors.ASSET_NO_PUBLIC_URL';
+  if (raw.startsWith('asset-load-failed')) return 'errors.ASSET_LOAD_FAILED';
+  if (raw.startsWith('asset-id-empty')) return 'errors.ASSET_ID_EMPTY';
+  if (raw.startsWith('canvas.no-2d-context')) return 'errors.CANVAS_NO_CONTEXT';
+  return 'errors.PREVIEW_UNKNOWN';
+}
+
 /** يترجم رابط الخط النسبي في brand.fonts.primary.weights[*].url
  * (مثل "assets/fonts/Almarai-Regular.ttf") إلى مسار قابل للتحميل
  * في المتصفح (/api/fonts/<basename>). في الإنتاج يجب أن يأتي رابط
@@ -182,12 +200,16 @@ export async function drawPreview(
   // FONT-1: تسجيل خطوط الهوية وتحميلها فعلياً قبل أيّ measureText داخل
   // المحرك. الاستدعاء السابق `ensureFontLoaded(family, 80)` كان يمرّ
   // صامتاً — الآن يفشل بصوت إن غاب url. الخطأ يُبلَّغ في الـwarning.
+  //
+  // DEMO-POLISH §2: نُعيد **مفتاح i18n** بدل رسالة إنجليزيّة خام. الواجهة
+  // تترجم عبر `t()`. لا نبتلع الخطأ — نغيّر لغته فقط.
   try {
     await ensureFontLoaded(brand.fonts.primary);
   } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
     return {
       durationMs: performance.now() - started,
-      warning: err instanceof Error ? err.message : 'font-load-error',
+      warning: mapErrorToI18nKey(raw),
     };
   }
 
@@ -197,7 +219,7 @@ export async function drawPreview(
   if (!ctx) {
     return {
       durationMs: performance.now() - started,
-      warning: 'canvas.no-2d-context',
+      warning: mapErrorToI18nKey('canvas.no-2d-context'),
     };
   }
 
@@ -208,9 +230,10 @@ export async function drawPreview(
     try {
       resolvedImages = await resolveAssetImages(input.assetIds);
     } catch (err) {
+      const raw = err instanceof Error ? err.message : String(err);
       return {
         durationMs: performance.now() - started,
-        warning: err instanceof Error ? err.message : 'asset-load-error',
+        warning: mapErrorToI18nKey(raw),
       };
     }
   }
@@ -226,18 +249,14 @@ export async function drawPreview(
       ...(resolvedImages && { assets: { images: resolvedImages } as any }),
     });
   } catch (err) {
-    // القالب أو المحتوى غير صالح — نطبع رسالة على القماش بدل الانفجار.
+    // DEMO-POLISH §2: نمسح القماش بلون التنبيه، بلا نصّ إنجليزيّ خام —
+    // الرسالة العربيّة تظهر تحت المعاينة عبر warning i18n key.
     ctx.fillStyle = '#161616';
     ctx.fillRect(0, 0, input.size.w, input.size.h);
-    ctx.fillStyle = '#e5484d';
-    ctx.font = '20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const msg = err instanceof Error ? err.message : 'render-error';
-    ctx.fillText(msg.slice(0, 80), input.size.w / 2, input.size.h / 2);
+    const raw = err instanceof Error ? err.message : 'render-error';
     return {
       durationMs: performance.now() - started,
-      warning: msg,
+      warning: mapErrorToI18nKey(raw),
     };
   }
 
