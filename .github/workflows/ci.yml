@@ -75,10 +75,17 @@ jobs:
       #         verify:audio-gate + ffprobe · verify:media-track-gate ·
       #         verify:text-tracks-gate · verify:transitions-gate
       # python3: msgpackr-extract postinstall (يوقف تحذيراً)
-      - name: apt install (git + ffmpeg + python3) داخل الحاوية
+      - name: apt install (ca-certificates + git + ffmpeg + python3) داخل الحاوية
+        # ca-certificates: بلاها git يفشل بـ«server certificate verification failed»
+        #                  عند actions/checkout (bookworm-slim بلاها افتراضاً).
+        # git: actions/checkout + check:skill-fresh + check:docs-bundle-fresh.
+        # ffmpeg: 6 حرّاس رندر (verify:render-video-all-templates · إلخ).
+        # python3: msgpackr-extract postinstall (يوقف تحذيراً).
         run: |
           apt-get update -qq
-          apt-get install -qq -y --no-install-recommends git ffmpeg python3
+          apt-get install -qq -y --no-install-recommends \
+            ca-certificates git ffmpeg python3
+          update-ca-certificates 2>&1 | tail -3
           git --version
           ffmpeg -version | head -1
           node --version
@@ -157,36 +164,21 @@ jobs:
           fi
           echo "✓ كلّ البوابات ($TOTAL) اجتازت."
 
-      # ── (8-10) الثلاث التي اختارتها mkau من 110-VERIFY-33 ─
-      # خارج `pnpm test` قصداً — يبقى على mk قرار إدخالها لاحقاً.
-      # كلّ واحدة `if: always()` (سياسة الجمع تمتدّ إلى ما بعد pnpm test).
+      # ── (8) verify:multilang (الوحيدة الآن من ثلاث mkau) ─────
+      # verify:auth و verify:tenant-isolation **مؤجَّلتان** بحسب توجيه
+      # المالك (بعد قراءة mkau 150-FRESH-DB §الفجوات الصامتة):
+      #   • verify:tenant-isolation يفحص `pg_roles WHERE rolbypassrls=true`
+      #     يعود صفراً. postgres:16-alpine الخام يبقى فيه `postgres` بـ
+      #     BYPASSRLS=true. init/01-roles.sql (على الميني) يضبط
+      #     `ALTER ROLE postgres NOBYPASSRLS`، لكنّه لا يجري في CI.
+      #   • verify:auth يفحص طبقات auth مع JWT secrets و DB tables — الهجرات
+      #     تسقط قبل ذلك (citext + 3 أدوار في 150-FRESH-DB).
+      # الإدخال قبل bootstrap صريح = إخضرار بالصدفة. مؤجَّلتان حتى تفتح
+      # تذكرة mkapi «bootstrap step» في كلّ بيئة.
 
-      - name: "verify:multilang (mkau · لا خدمة · ~1.5s محلّيّاً)"
-        # قياس محلّيّ (2026-09-11 · macOS m4): 1.5s. تخمين mkau: ~1s.
-        # لا خدمة، لا سرّ، لا شبكة.
+      - name: "verify:multilang (mkau · لا خدمة · قياس محلّيّ 1.5s)"
+        # قياس محلّيّ (2026-09-11 · macOS m4): 1.5s (0.98s user + 0.11s sys).
+        # تخمين mkau في 110-VERIFY-33: ~1s. القيَاس الفعليّ في CI يأتي أدناه.
+        # لا خدمة، لا سرّ، لا شبكة — تدخل السلسلة اليوم.
         if: always()
         run: pnpm verify:multilang
-
-      - name: "verify:auth (mkau · postgres + JWT secrets)"
-        # قياس محلّيّ (2026-09-11 · macOS m4 + postgres محلّيّ): 1.25s.
-        # في CI: يفشل الآن على «relation does not exist» بعد الهجرات (citext).
-        # بعد mkapi يُصلح citext + الأدوار: يمرّ. الآن هذا L-46 نفي طبيعيّ.
-        if: always()
-        env:
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
-          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
-          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
-        run: pnpm verify:auth
-
-      - name: "verify:tenant-isolation (mkau · postgres roles)"
-        # يحتاج migration_user + app_user (init/01-roles.sql) — غير موجودَين
-        # في postgres:16-alpine الافتراضيّ. سيفشل على «role does not exist»
-        # حتى يعالج mkapi البذر (150-FRESH-DB يعدّ). L-46 نفي طبيعيّ الآن.
-        if: always()
-        env:
-          DATABASE_URL_TEST: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_TEST_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-        run: pnpm verify:tenant-isolation
