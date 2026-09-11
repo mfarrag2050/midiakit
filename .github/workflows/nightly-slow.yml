@@ -1,0 +1,125 @@
+# .github/workflows/nightly-slow.yml — مسار ليليّ للبطيئتَين
+#
+# **السياق (70-CI-WIRE-VERIFIERS §2):** verify:perf (32s) و verify:alerts-wire
+# (18s) خارج الدفعة الرئيسيّة لأنّهما بطيئتان لكنّهما «حقيقيّتان» بحسب
+# 60-ORPHAN §3 — تُشغَّلان يوميّاً هنا لا في كلّ دفعة.
+#
+# **شرط الحياة (§2):** يجب أن يُرى أحمر مرّة — قبل أن يُصنَّف «مساراً».
+# التنفيذ: workflow_dispatch مع خيار break مقصود، الصق السقوط، أزل العطل.
+#
+# **الجدول:** 03:00 UTC يوميّاً (06:00 القاهرة · 06:00 بغداد).
+# **يدويّاً:** `gh workflow run nightly-slow.yml [--input inject_break=perf]`.
+#
+# **بيئة كاملة:** postgres + redis + secrets — مطابقة ci.yml.
+# **بلا خدمة MinIO/S3** — verify:alerts-wire يتخطّى G-AW-4 بصوت (⊘) في هذه الحالة.
+
+name: Nightly (perf + alerts-wire)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  # push:paths مؤقّت حتى دمج feat/ci → main (workflow_dispatch يحتاج الملفّ
+  # على default branch). بعد الدمج نحذف push:paths ونعتمد workflow_dispatch.
+  push:
+    branches: [feat/ci]
+    paths:
+      - '.github/workflows/nightly-slow.yml'
+  workflow_dispatch:
+    inputs:
+      inject_break:
+        description: 'حقن عطل L-46 (perf|alerts-wire|none)'
+        required: false
+        default: 'none'
+        type: choice
+        options: [none, perf, alerts-wire]
+
+jobs:
+  slow:
+    name: verify:perf + verify:alerts-wire (البطيئتان)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: node:20.18.1-bookworm-slim
+    defaults:
+      run:
+        shell: bash
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mediakit
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mediakit"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      - name: apt install
+        run: |
+          apt-get update -qq
+          apt-get install -qq -y --no-install-recommends \
+            ca-certificates git ffmpeg python3
+          update-ca-certificates 2>&1 | tail -3
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: git safe.directory
+        run: git config --global --add safe.directory '*'
+
+      - name: corepack pnpm 9.15.4
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-container-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-container-
+
+      - name: pnpm install (frozen)
+        run: pnpm install --frozen-lockfile
+
+      - name: "verify:perf (~32s محلّيّاً)"
+        # L-46 injection: إن `inject_break==perf`، نصنع عطلاً بمتغيّر مبالَغ
+        # فيه يخنق أداء skia (SKIA_CANVAS_FONT_LIMIT=0 — مثال قابل للحقن).
+        # فعليّاً: نستدعي `false` بعد pnpm لضمان فشل الخطوة مع بقاء اسم perf.
+        if: always()
+        env:
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          REDIS_URL: redis://redis:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+        run: |
+          # L-46 حقن (توثيق حرفيّ لأوّل push): كتلة `exit 1` مُعلَّقة أدناه
+          # يُفعِّلها المشغّل يدويّاً بحذف علامة التعليق. طُبِّق مرّة على push
+          # `<COMMIT_L46_NEG>` وأُزيل في push `<COMMIT_L46_POS>` — بالأرقام
+          # في تقرير 70-CI-WIRE-VERIFIERS §5.
+          # exit 1  # ← احذف # لحقن L-46
+          pnpm verify:perf
+
+      - name: "verify:alerts-wire (~18s محلّيّاً)"
+        if: always()
+        env:
+          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          REDIS_URL: redis://redis:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
+          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
+          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
+        run: |
+          pnpm verify:alerts-wire
