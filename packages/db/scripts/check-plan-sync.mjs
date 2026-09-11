@@ -14,13 +14,18 @@
  */
 import { createHash } from 'node:crypto';
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
+// 142-SKIP-IS-NOT-PASS — لا `exit 0` صامتاً.
 if (!DB_URL) {
-  console.log('[check-plan-sync] لا DATABASE_URL — يُتخطّى (dev بلا قاعدة).');
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-plan-sync',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 function sortKeysDeep(v) {
@@ -49,9 +54,13 @@ try {
   `);
   rows = r.rows;
 } catch (err) {
-  console.log(`[check-plan-sync] تعذّر الاتصال بـDB (${err.code || err.message}) — يُتخطّى.`);
+  // 142-SKIP-IS-NOT-PASS
   await pool.end();
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-plan-sync',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 }
 
 const errors = [];

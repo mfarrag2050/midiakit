@@ -26,6 +26,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/db/scripts/check-template-sync.mjs → packages/templates/src/templates
@@ -47,10 +48,13 @@ function canonicalHash(obj) {
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
-// dev مطفأ ⇒ نتخطّى (المطوّر بلا Docker لا يفشل بناءه).
+// 142-SKIP-IS-NOT-PASS — لا `exit 0` صامتاً حين يغيب المورد.
 if (!DB_URL) {
-  console.log('[check-template-sync] لا DATABASE_URL — يُتخطّى (dev بلا قاعدة).');
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-template-sync',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 const pool = new pg.Pool({ connectionString: DB_URL, max: 1 });
@@ -66,10 +70,13 @@ try {
   );
   rows = r.rows;
 } catch (err) {
-  // DB unreachable (dev بلا bin/mk) ⇒ لا نُفشِل، نُبلِّغ.
-  console.log(`[check-template-sync] تعذّر الاتصال بـDB (${err.code || err.message}) — يُتخطّى.`);
+  // 142-SKIP-IS-NOT-PASS — تعذّر الاتصال = مورد غائب · ليس نجاح فحص.
   await pool.end();
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-template-sync',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 } finally {
   // pool يُغلَق في نهاية النجاح أيضاً — نتأكّد لاحقاً.
 }

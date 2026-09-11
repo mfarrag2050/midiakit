@@ -14,13 +14,18 @@
  * ⇒ الحارس يسقط. أعِد السياسة ⇒ يمرّ.
  */
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
+// 142-SKIP-IS-NOT-PASS
 if (!DB_URL) {
-  console.log('[check-control-plane-policies] لا DATABASE_URL — يُتخطّى.');
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-control-plane-policies',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 // الجداول التي **يجب** أن تحمل سياسة control_plane.
@@ -61,9 +66,13 @@ try {
   `);
   policies = new Set(p.rows.map((r) => r.tablename));
 } catch (err) {
-  console.log(`[check-control-plane-policies] تعذّر الاتصال (${err.code || err.message}) — يُتخطّى.`);
+  // 142-SKIP-IS-NOT-PASS
   await pool.end();
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-control-plane-policies',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 }
 
 const errors = [];
