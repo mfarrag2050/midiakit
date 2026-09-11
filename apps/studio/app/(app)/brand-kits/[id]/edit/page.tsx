@@ -15,14 +15,33 @@ import {
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
+import {
+  contrastRatio,
+  formatContrast,
+  WCAG_AA_NORMAL,
+} from '@/src/utils/wcag';
 
-// S9-editor · المرحلة ١ من `100-BRAND-KIT-EDITOR`:
-// تحميل + عرض قراءة فقط + زرّ حفظ يعمل على `name` وحده — لتثقيب مسار
-// `PATCH /v1/brand-kits/:id` (JSON Merge Patch) من طرفه إلى طرفه قبل بناء
-// عشرين حقلاً فوقه. باقي الحقول ستُبنى في مراحل تالية بترتيب:
-//   ٢ · الألوان الثمانية بـ contrast display
-//   ٣ · الشعار بمعاينة حقيقية
-//   ٤ · منتقي الخطّ من الأصول (assetId · لا نصّ حرّ)
+// S9-editor · شاشة تحرير الهوية.
+//
+// **المرحلة ١** (نزلت في `c455cd8`): تثقيب `patch` من طرفه إلى طرفه
+// على `name` · باقي الحقول للقراءة.
+//
+// **المرحلة ٢** (هذا الملفّ): الألوان السبعة الصلبة تحريراً + عرض
+// تباين WCAG لثلاثة أزواج مسمّاة. الشعار يبقى قراءة فقط بقرار مالك
+// (تذكرة تالية · معاينة حقيقيّة تحتاج تحميل SVG).
+//
+// **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** الـAPI اليوم يطبّق
+// merge patch سطحيّاً على `config` (رصده المالك · فتُحت تذكرة عند
+// `mkapi`). فلو أرسلنا `{colors: {text: '#X'}}` لمَحَا الستّة الباقية
+// من `config.colors` بلا خطأ. **الحلّ من جهتنا:** نرسل الألوان
+// السبعة كاملةً في كلّ حفظ · شاشتنا تملك المجموعة كلّها فما نرسله
+// هو ما رآه المستخدم. **هذا يسقط حين يصير `PATCH` عميقاً · أو حين
+// تُحرَّر الألوان من موضعَين متزامناً** (سباق كتابة). راجع §٥·٢ من
+// التقرير.
+//
+// **مراحل تالية:**
+//   ٣ · الشعار (بعد الألوان — قرار مالك)
+//   ٤ · منتقي الخطّ من الأصول (`assetId` · لا نصّ حرّ · `_AMEND-100`)
 //   ٥ · المعاينة الحيّة على بطاقة حقيقيّة
 
 type ConfigLike = Readonly<Record<string, unknown>>;
@@ -129,6 +148,84 @@ function ColorSwatch({ hex }: { hex: string | undefined }): JSX.Element {
   );
 }
 
+// ContrastRow — سطر تباين واحد بزوج مسمّى. يُظهر الرقم كتنبيه (لا
+// كمنع) بحسب `feedback-visual-by-eye` + قرار مالك 2026-09-11:
+// «الرقم يُعرَض ولا يمنع». الحدّ WCAG AA=4.5 · تحته «قد لا يُقرأ»
+// (أحمر)، فوقه «مقروء» (أخضر)، على الحدّ (≥4.5 و<5) «على الحدّ».
+function ContrastRow({
+  pairLabelKey,
+  hexA,
+  hexB,
+}: {
+  pairLabelKey: string;
+  hexA: string | undefined;
+  hexB: string | undefined;
+}): JSX.Element {
+  const { t } = useLocale();
+  const ratio =
+    hexA && hexB ? contrastRatio(hexA, hexB) : null;
+  const invalid = (hexA !== undefined && hexB !== undefined) && ratio === null;
+  const missing = hexA === undefined || hexB === undefined;
+
+  let statusKey: string;
+  let tone: 'success' | 'warning' | 'danger' | 'neutral' = 'neutral';
+  let numText = '—';
+  if (missing) {
+    statusKey = 'pages.brandKits.editor.value.notSet';
+    tone = 'neutral';
+  } else if (invalid) {
+    statusKey = 'pages.brandKits.editor.contrast.invalid';
+    tone = 'warning';
+  } else if (ratio! < WCAG_AA_NORMAL) {
+    statusKey = 'pages.brandKits.editor.contrast.notReadable';
+    tone = 'danger';
+    numText = formatContrast(ratio!);
+  } else if (ratio! < 5.0) {
+    statusKey = 'pages.brandKits.editor.contrast.borderline';
+    tone = 'warning';
+    numText = formatContrast(ratio!);
+  } else {
+    statusKey = 'pages.brandKits.editor.contrast.readable';
+    tone = 'success';
+    numText = formatContrast(ratio!);
+  }
+
+  const toneClass =
+    tone === 'danger'
+      ? 'text-danger'
+      : tone === 'warning'
+      ? 'text-warning'
+      : tone === 'success'
+      ? 'text-success'
+      : 'text-fg-subtle';
+
+  return (
+    <div className="flex items-center justify-between gap-4 py-1 text-sm">
+      <span className="text-fg-muted">{t(pairLabelKey)}</span>
+      <span className="inline-flex items-center gap-2">
+        {hexA && (
+          <span
+            aria-hidden
+            className="inline-block h-3 w-3 rounded-sm border border-fg-subtle/30"
+            style={{ backgroundColor: hexA }}
+          />
+        )}
+        {hexB && (
+          <span
+            aria-hidden
+            className="inline-block h-3 w-3 rounded-sm border border-fg-subtle/30"
+            style={{ backgroundColor: hexB }}
+          />
+        )}
+        <span className={'font-mono text-xs ' + toneClass} dir="ltr">
+          {numText}
+        </span>
+        <span className={'text-xs ' + toneClass}>· {t(statusKey)}</span>
+      </span>
+    </div>
+  );
+}
+
 export default function BrandKitEditorPage(): JSX.Element {
   const { t } = useLocale();
   const params = useParams<{ id: string }>();
@@ -136,6 +233,9 @@ export default function BrandKitEditorPage(): JSX.Element {
 
   const [kit, setKit] = useState<BrandKitFull | null>(null);
   const [draftName, setDraftName] = useState('');
+  // مسوّدة الألوان السبعة — تُملأ من `kit.config.colors` عند التحميل.
+  // `null` لكلّ قيمة غير مسحوبة من الخادم — تبقى null في الحفظ.
+  const [draftColors, setDraftColors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -150,6 +250,13 @@ export default function BrandKitEditorPage(): JSX.Element {
       const k = await brandKits.get(id);
       setKit(k);
       setDraftName(k.name);
+      const cfg = k.config as ConfigLike;
+      const initial: Record<string, string> = {};
+      for (const key of COLOR_KEYS) {
+        const v = pickString(cfg, 'colors', key);
+        if (v) initial[key] = v;
+      }
+      setDraftColors(initial);
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
@@ -169,7 +276,15 @@ export default function BrandKitEditorPage(): JSX.Element {
     setSavedNoticeKey(null);
     try {
       // JSON Merge Patch · شكل top-level كما في RFC 7396.
-      const updated = await brandKits.patch(kit.id, { name: draftName });
+      // **حلٌّ مؤقّت (data-loss avoidance):** نبعث مجموعة `colors`
+      // كاملةً — الخادم اليوم يمرّ merge سطحيّاً وسيمحو ما لا نرسله.
+      // شاشتنا تملك المجموعة كلّها، فإرسالها كاملة آمن هنا. راجع
+      // التعليق الرأسيّ.
+      const payload: Record<string, unknown> = { name: draftName };
+      if (Object.keys(draftColors).length > 0) {
+        payload.colors = draftColors;
+      }
+      const updated = await brandKits.patch(kit.id, payload);
       setKit(updated);
       setSavedNoticeKey('pages.brandKits.editor.saved');
     } catch (err) {
@@ -198,7 +313,13 @@ export default function BrandKitEditorPage(): JSX.Element {
   if (!kit) return <div />;
 
   const identity = extract(kit.config as ConfigLike);
-  const dirty = draftName !== kit.name;
+  const dirtyName = draftName !== kit.name;
+  const dirtyColors = COLOR_KEYS.some(
+    (k) =>
+      draftColors[k] !== undefined &&
+      draftColors[k] !== pickString(kit.config as ConfigLike, 'colors', k)
+  );
+  const dirty = dirtyName || dirtyColors;
   // ملاحظة: لا نُعطّل الزرّ على الاسم الفارغ عمداً — نترك الخادم
   // يعيد `400 VALIDATION_FAILED` فيظهر الأحمر (L-46 · حالة أحمر
   // مُعادة الإنتاج). لو منعنا هنا لأخفينا مسار الأحمر.
@@ -323,28 +444,101 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Colors (read-only in Phase 1) */}
+      {/* Section — Colors (editable in Phase 2) */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {t('pages.brandKits.editor.section.colors')}
-          </h2>
-          <Badge tone="neutral">
-            {t('pages.brandKits.editor.readOnlyTag')}
-          </Badge>
+        <h2 className="mb-3 text-sm font-semibold">
+          {t('pages.brandKits.editor.section.colors')}
+        </h2>
+        <div className="space-y-2">
+          {COLOR_KEYS.map((key) => {
+            const current = draftColors[key] ?? '';
+            const hexInvalid =
+              current !== '' && !/^#[0-9a-fA-F]{6}$/.test(current);
+            return (
+              <div
+                key={key}
+                className="flex items-center justify-between gap-4 py-1 text-sm"
+              >
+                <label
+                  htmlFor={`color-${key}`}
+                  className="min-w-0 flex-1 text-fg-muted"
+                >
+                  {t(`pages.brandKits.editor.color.${key}`)}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id={`color-${key}`}
+                    type="color"
+                    aria-label={t('pages.brandKits.editor.colorEdit.swatchLabel')}
+                    value={
+                      /^#[0-9a-fA-F]{6}$/.test(current)
+                        ? current
+                        : '#000000'
+                    }
+                    onChange={(e) =>
+                      setDraftColors((prev) => ({
+                        ...prev,
+                        [key]: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    disabled={saving}
+                    className="h-7 w-9 cursor-pointer rounded border border-fg-subtle/30 bg-transparent p-0"
+                  />
+                  <input
+                    type="text"
+                    aria-label={t('pages.brandKits.editor.colorEdit.hexLabel')}
+                    value={current}
+                    onChange={(e) =>
+                      setDraftColors((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                    disabled={saving}
+                    placeholder="#RRGGBB"
+                    dir="ltr"
+                    className={
+                      'w-24 rounded border bg-surface px-2 py-1 font-mono text-xs ' +
+                      (hexInvalid
+                        ? 'border-danger text-danger'
+                        : 'border-fg-subtle/30')
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="space-y-1">
-          {identity.colors.map(([key, hex]) => (
-            <div
-              key={key}
-              className="flex items-baseline justify-between gap-4 py-1 text-sm"
-            >
-              <span className="text-fg-muted">
-                {t(`pages.brandKits.editor.color.${key}`)}
-              </span>
-              <ColorSwatch hex={hex} />
-            </div>
-          ))}
+      </Card>
+
+      {/* Section — Contrast (Phase 2 · advisory only) */}
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold">
+          {t('pages.brandKits.editor.contrast.sectionTitle')}
+        </h2>
+        <p className="text-xs text-fg-muted">
+          {t('pages.brandKits.editor.contrast.subtitle')}
+        </p>
+        <p className="mt-1 text-xs text-fg-subtle">
+          {t('pages.brandKits.editor.contrast.wcagThreshold')} ·{' '}
+          {t('pages.brandKits.editor.contrast.advisory')}
+        </p>
+        <div className="mt-3 space-y-2 border-t border-fg-subtle/10 pt-3">
+          <ContrastRow
+            pairLabelKey="pages.brandKits.editor.contrast.pair.textOnSurface"
+            hexA={draftColors.text}
+            hexB={draftColors.surface}
+          />
+          <ContrastRow
+            pairLabelKey="pages.brandKits.editor.contrast.pair.urgentBadgeOnBg"
+            hexA={draftColors.urgentBadge}
+            hexB={draftColors.urgentBg}
+          />
+          <ContrastRow
+            pairLabelKey="pages.brandKits.editor.contrast.pair.locationBadgeOnSurface"
+            hexA={draftColors.locationBadge}
+            hexB={draftColors.surface}
+          />
         </div>
       </Card>
 

@@ -334,7 +334,28 @@
           "bottom-right": "bottom-right",
           "top-left": "top-left",
           "top-right": "top-right"
-        }
+        },
+        "colorEdit": {
+          "hexLabel": "hex value",
+          "hexInvalid": "invalid format — must be #RRGGBB",
+          "swatchLabel": "color"
+        },
+        "contrast": {
+          "sectionTitle": "Contrast",
+          "subtitle": "Measured on solid backgrounds only. Actual contrast over an image is measured by mk's engine checker (verify:text-contrast).",
+          "wcagThreshold": "WCAG AA minimum for normal text: 4.5:1",
+          "advisory": "Shown as an advisory, not a block — the brand owner decides.",
+          "readable": "readable",
+          "borderline": "borderline",
+          "notReadable": "may not be readable",
+          "invalid": "cannot measure — invalid hex value",
+          "pair": {
+            "textOnSurface": "Text on surface",
+            "urgentBadgeOnBg": "Urgent badge on its background",
+            "locationBadgeOnSurface": "Location badge on surface"
+          }
+        },
+        "unsavedChanges": "unsaved changes"
       }
     },
     "templates": {

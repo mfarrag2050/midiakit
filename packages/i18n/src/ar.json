@@ -334,7 +334,28 @@
           "bottom-right": "أسفل اليمين",
           "top-left": "أعلى اليسار",
           "top-right": "أعلى اليمين"
-        }
+        },
+        "colorEdit": {
+          "hexLabel": "قيمة hex",
+          "hexInvalid": "الصيغة غير صالحة — يجب #RRGGBB",
+          "swatchLabel": "لون"
+        },
+        "contrast": {
+          "sectionTitle": "التباين",
+          "subtitle": "قياس على خلفيّة صلبة · التباين الفعليّ على صورة يقيسه فاحص محرّك mk (verify:text-contrast).",
+          "wcagThreshold": "الحدّ الأدنى WCAG AA للنصّ العاديّ: 4.5:1",
+          "advisory": "الرقم يُعرَض كتنبيه لا كمنع — قرار الاستعمال للعميل.",
+          "readable": "مقروء",
+          "borderline": "على الحدّ",
+          "notReadable": "قد لا يُقرأ",
+          "invalid": "لا يمكن قياسه — قيمة hex غير صالحة",
+          "pair": {
+            "textOnSurface": "لون النصّ على السطح",
+            "urgentBadgeOnBg": "لون شارة العاجل على خلفيّتها",
+            "locationBadgeOnSurface": "لون شارة الموقع على السطح"
+          }
+        },
+        "unsavedChanges": "تغييرات غير محفوظة"
       }
     },
     "templates": {
