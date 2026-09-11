@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// scripts/measure-font-metrics — أداة سطر أوامر تقيس متريكات الخطّ
-// من رأس الملفّ (font header) وتطبع { ascent, descent, unitsPerEm }.
+// scripts/measure-font-metrics — أداة سطر أوامر تقيس متريكات الخطّ.
+//
+// **مصدر المنطق الوحيد** الآن في `apps/api/src/services/font-metrics.ts`.
+// هذا الملفّ CLI wrapper فقط — يقرأ الملفّ، يستدعي `extractFontMetrics`،
+// يطبع الأعداد. **لا نسخ لمنطق قراءة opentype هنا.**
 //
 // **الاستخدام:**
-//   node scripts/measure-font-metrics.mjs assets/fonts/Almarai-Bold.ttf
-//   node scripts/measure-font-metrics.mjs assets/fonts/IBMPlexSansArabic-Regular.ttf
-//   node scripts/measure-font-metrics.mjs assets/fonts/*.ttf     # batch
+//   node --import tsx scripts/measure-font-metrics.mjs assets/fonts/Almarai-Bold.ttf
+//   node --import tsx scripts/measure-font-metrics.mjs assets/fonts/*.ttf
 //
 // **العلّة (BASELINE-A · 2026-09-11):** المحرك (`measuredLineHeight`) كان
 // يعتمد `ctx.measureText.actualBoundingBoxAscent/Descent` — Chrome يعيد
@@ -13,85 +15,55 @@
 // الحلّ: **قياس مرّة عند إعداد الهويّة**، تخزين في `BrandKit.fonts.*.metrics`،
 // المحرك يقرأها كأعداد لا يستدعي شيئاً.
 //
-// **قاعدة قصوى (docs/11 · check:engine-purity):**
-//   opentype.js في `devDependencies` **للجذر وحده**. لا في packages/engine
-//   ولا في packages/shared. المحرك نقيّ 100% — لا يقرأ ملفّ خطّ في
-//   أيّ وقت من دورة حياته.
+// **قاعدة معلَنة (docs/11 · check:engine-purity):**
+//   opentype.js في `apps/api/dependencies` وحدها — لا في الجذر ولا
+//   packages/engine ولا packages/shared. القياس يجري خارج مسار الرسم،
+//   لا يعبر إلى المحرك إلّا أعداد (FontMetrics).
 //
 // **الحقول المطبوعة:**
 //   ascent      = OS/2.sTypoAscender (المفضّل) أو hhea.ascender (احتياطي)
-//   descent     = OS/2.sTypoDescender (موجب: مطلق القيمة)
-//   unitsPerEm  = head.unitsPerEm — لتحويل إلى بكسل: ascent × fs / unitsPerEm
-//
-// **مصدر المفاضلة (OS/2 vs hhea):** OS/2 typo-metrics أنسق عبر المنصّات
-// لأنّه معياريّ (`useTypoMetrics` bit); hhea قد يُخصَّص لأداة رسم بعينها.
-// نأخذ OS/2 حين متاح، ونقع على hhea إن غاب (خطوط قديمة).
+//   descent     = |OS/2.sTypoDescender| (موجب مطلق القيمة)
+//   unitsPerEm  = head.unitsPerEm — للتحويل: pixelHeight = (asc+desc) × fs / unitsPerEm
 //
 // **الخروج:** 0 نجاح · 1 خطأ في قراءة أيّ ملفّ.
-
 import { readFileSync, existsSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
-import opentype from 'opentype.js';
+import { basename, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+// المصدر الوحيد للمنطق — apps/api/src/services/font-metrics.ts
+const { extractFontMetrics } = await import(`${ROOT}/apps/api/src/services/font-metrics.ts`);
 
 const paths = process.argv.slice(2);
 if (paths.length === 0) {
-  console.error('استعمال: node scripts/measure-font-metrics.mjs <path.ttf> [<path2.ttf> …]');
+  console.error('استعمال: node --import tsx scripts/measure-font-metrics.mjs <path.ttf> [<path2.ttf> …]');
   process.exit(2);
 }
 
-const results = [];
 let hadError = false;
+console.log('▶ measure-font-metrics\n');
 
 for (const p of paths) {
   const abs = resolve(p);
   if (!existsSync(abs)) {
-    console.error(`✗ غير موجود: ${p}`);
+    console.error(`✗ غير موجود: ${p}\n`);
     hadError = true;
     continue;
   }
-  try {
-    const buf = readFileSync(abs);
-    const font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-    // opentype.js يُظهر الحقول تحت font.tables.os2 و font.tables.hhea و font.tables.head
-    const os2 = font.tables.os2;
-    const hhea = font.tables.hhea;
-    const head = font.tables.head;
-
-    // typo metrics أفضل — إن غابت، نقع على hhea.
-    let ascent, descent, source;
-    if (os2 && typeof os2.sTypoAscender === 'number') {
-      ascent = os2.sTypoAscender;
-      descent = Math.abs(os2.sTypoDescender);
-      source = 'OS/2 typo';
-    } else if (hhea && typeof hhea.ascender === 'number') {
-      ascent = hhea.ascender;
-      descent = Math.abs(hhea.descender);
-      source = 'hhea';
-    } else {
-      throw new Error('لا OS/2 typo ولا hhea في الخطّ');
-    }
-
-    const unitsPerEm = head.unitsPerEm;
-    const familyName = font.names?.fontFamily?.en || font.names?.fullName?.en || basename(p);
-    const subfamily = font.names?.fontSubfamily?.en || '';
-
-    results.push({ path: p, familyName, subfamily, ascent, descent, unitsPerEm, source });
-  } catch (err) {
-    console.error(`✗ فشل قراءة ${p}: ${err.message}`);
+  const buf = readFileSync(abs);
+  const m = extractFontMetrics(buf);
+  if (!m) {
+    console.error(`✗ فشل قياس ${p}: ملفّ تالف أو غير مدعوم (لا opentype يقرؤه · أو ينقصه OS/2 وhhea)\n`);
     hadError = true;
+    continue;
   }
-}
-
-console.log('▶ measure-font-metrics');
-console.log('');
-for (const r of results) {
-  console.log(`  ${r.path}`);
-  console.log(`    family: ${r.familyName}${r.subfamily ? ' · ' + r.subfamily : ''}`);
-  console.log(`    source: ${r.source}`);
-  console.log(`    ascent:     ${r.ascent}`);
-  console.log(`    descent:    ${r.descent}`);
-  console.log(`    unitsPerEm: ${r.unitsPerEm}`);
-  console.log(`    JSON:  "metrics": { "ascent": ${r.ascent}, "descent": ${r.descent}, "unitsPerEm": ${r.unitsPerEm} }`);
+  console.log(`  ${p}`);
+  console.log(`    source:     ${m.source}`);
+  console.log(`    ascent:     ${m.ascent}`);
+  console.log(`    descent:    ${m.descent}`);
+  console.log(`    unitsPerEm: ${m.unitsPerEm}`);
+  console.log(`    JSON:  "metrics": { "ascent": ${m.ascent}, "descent": ${m.descent}, "unitsPerEm": ${m.unitsPerEm} }`);
   console.log('');
 }
 

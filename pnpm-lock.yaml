@@ -93,6 +93,9 @@ importers:
       jose:
         specifier: 5.9.6
         version: 5.9.6
+      opentype.js:
+        specifier: ^2.0.0
+        version: 2.0.0
       pg:
         specifier: 8.13.1
         version: 8.13.1

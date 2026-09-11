@@ -21,7 +21,9 @@ import { getStorage } from '../../storage/index.js';
 import { toAssetResponse, type DbAssetRow } from './shared/mapper.js';
 import {
   NotFound, UploadNotCompleted, LicenseAckMustBeTrue, InvalidSvgWithTextWarning,
+  InvalidFontMetrics,
 } from '../../errors.js';
+import { extractFontMetrics } from '../../services/font-metrics.js';
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
@@ -87,11 +89,30 @@ const route: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // 4-ب. FONT metrics — kind=font (90-FONT-METRICS-UPLOAD).
+    // القياس يجري مرّة واحدة عند الرفع خارج مسار الرسم — لا يعبر إلى المحرك
+    // إلّا أعداد. غياب OS/2/hhea/head ⇒ رفض عند الباب (422 INVALID_FONT_METRICS).
+    let fontMetrics: { ascent: number; descent: number; unitsPerEm: number; source: string } | null = null;
+    if (asset.kind === 'font') {
+      const buf = await getStorage().getObjectBuffer(asset.storage_key);
+      const m = extractFontMetrics(buf);
+      if (!m) throw InvalidFontMetrics();
+      fontMetrics = m;
+    }
+
     // 5. UPDATE finalize
     const label = body.meta?.label ?? null;
     // نجمّع metadata: label أوّلاً، ثم أي capabilities مستخرَجة (بند لاحق).
     const metadata: Record<string, unknown> = { ...(asset.metadata ?? {}) };
     if (label != null) metadata.label = label;
+    if (fontMetrics) {
+      // نُخزّن الأعداد فقط (لا الحقل «source» — للتشخيص فحسب).
+      metadata['metrics'] = {
+        ascent: fontMetrics.ascent,
+        descent: fontMetrics.descent,
+        unitsPerEm: fontMetrics.unitsPerEm,
+      };
+    }
 
     const upd = await req.dbClient!.query<DbAssetRow>(
       `UPDATE assets SET

@@ -61,6 +61,8 @@
     "db:down": "./bin/mk -f infra/docker-compose.yml down",
     "db:logs": "./bin/mk -f infra/docker-compose.yml logs -f",
     "db:reset": "./bin/mk -f infra/docker-compose.yml down -v && pnpm db:up",
+    "db:bootstrap": "pnpm --filter @pf-mediakit/db bootstrap",
+    "db:bootstrap:test": "pnpm --filter @pf-mediakit/db bootstrap:test",
     "db:migrate": "pnpm --filter @pf-mediakit/db migrate:up",
     "db:migrate:test": "pnpm --filter @pf-mediakit/db migrate:up:test",
     "verify:auth": "pnpm --filter @pf-mediakit/api verify:auth",
