@@ -89,6 +89,15 @@ interface MockAsset {
   meta?: Record<string, unknown>;
 }
 const MOCK_ASSETS = new Map<string, MockAsset>();
+// IMAGE-VERTICAL: seed أصل صورة واحد كي تعمل جربة UI بعد أيّ page.goto
+// (state داخل الـtab يُفقد عند full reload).
+MOCK_ASSETS.set('ast_seed_image', {
+  id: 'ast_seed_image',
+  kind: 'image',
+  filename: 'seed-demo.png',
+  sizeBytes: 113108,
+  createdAt: new Date().toISOString(),
+});
 
 interface MockTemplate {
   id: string;
@@ -152,14 +161,40 @@ const DEFAULT_LAYERS: unknown[] = [
     justify: 'brand.typography.justify',
   },
 ];
+// IMAGE-VERTICAL: طبقات مع صورة خلفيّة + fallback + عنوان — لاختبار المسار كاملاً.
+const IMAGE_LAYERS: unknown[] = [
+  {
+    type: 'image',
+    field: 'image',
+    fit: 'cover',
+    fallback: [{ type: 'solid', fill: 'brand.colors.surface' }],
+  },
+  { type: 'gradient', direction: 'bottom' },
+  {
+    type: 'headline',
+    field: 'headline',
+    wrap: 'uniform',
+    align: 'right',
+    anchor: 'centerLower',
+    verticalAnchor: 0.5,
+    font: 'brand.typography.breaking',
+    justify: 'brand.typography.justify',
+  },
+];
 SEED_TEMPLATES.forEach(([name, kind, fields], i) => {
   const id = `tpl_mock_g${i}`;
+  // IMAGE-VERTICAL: أضِف حقل صورة اختياريّاً إلى القالب الأول ("بسيط")
+  // كي تجربة UI/preview تُظهر مسار الصورة كاملاً.
+  const withImage = i === 0
+    ? [...fields, { key: 'image', label: 'الصورة', type: 'image', required: false } as TemplateField]
+    : fields;
+  const layers = i === 0 ? IMAGE_LAYERS : DEFAULT_LAYERS;
   MOCK_TEMPLATES.set(id, {
     id,
     scope: 'global',
     name,
     kind,
-    definition: { fields, layers: DEFAULT_LAYERS, sizes: ['x', 'instagram', 'feed'] },
+    definition: { fields: withImage, layers, sizes: ['x', 'instagram', 'feed'] },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -470,7 +505,9 @@ function mockAssetShape(a: MockAsset, withPublicUrl: boolean): Record<string, un
     ...(a.meta ? { meta: a.meta } : {}),
   };
   if (withPublicUrl) {
-    base.publicUrl = `mock://public/${a.id}`;
+    // IMAGE-VERTICAL: للصور نُشير إلى /dev/mock-image الذي يخدم PNG حقيقياً
+    // (المتصفح لا يقبل مخطط mock:// لصور). لسائر الأنواع نُبقي المخطط الوهمي.
+    base.publicUrl = a.kind === 'image' ? `/dev/mock-image/${a.id}` : `mock://public/${a.id}`;
     base.publicUrlExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
   }
   return base;

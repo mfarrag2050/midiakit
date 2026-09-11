@@ -39,6 +39,8 @@ import {
   drawPreview,
 } from '@/src/preview/live';
 import { TASHKEEL_UI_ENABLED } from '@/src/config/features';
+import { AssetPicker } from '@/src/ui/AssetPicker';
+import type { AssetListItem } from '@/src/api/endpoints/assets';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -68,6 +70,13 @@ function extractFields(tpl: Template | null): FieldDef[] {
 
 function isTextField(t: string): boolean {
   return t === 'text' || t === 'richtext';
+}
+
+// IMAGE-VERTICAL: نُظهر image فقط. `medialist` يبقى محجوباً (reel — لا
+// يصل إلى أيّ طبقة رسم اليوم؛ إظهاره وعدٌ لا يُوفَّى). التمييز صريح: نسأل
+// بالحرف `f.type === 'image'` فقط، لا مجموعة أنواع «صور» عامّة.
+function isImageField(t: string): boolean {
+  return t === 'image';
 }
 
 // ── S23: مقاسات المخرَج من docs/09 §المخرجات ──────────────
@@ -170,6 +179,9 @@ export default function ProjectEditorPage(): JSX.Element {
   const [diacritizeBusy, setDiacritizeBusy] = useState<string | null>(null);
   const [diacritizeErrorKey, setDiacritizeErrorKey] = useState<string | null>(null);
   const headlineRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+
+  // IMAGE-VERTICAL: منتقي الأصول — أيّ حقل image يُفتَح المنتقي عليه
+  const [imagePickerFor, setImagePickerFor] = useState<string | null>(null);
 
   // S16 — التعليقات. الطبقات مقروءة من template.definition.fields،
   // لا قائمة مثبَّتة في الواجهة.
@@ -292,12 +304,21 @@ export default function ProjectEditorPage(): JSX.Element {
     previewScheduler.current.schedule(() => {
       void (async (): Promise<void> => {
         try {
+          // IMAGE-VERTICAL: استخلص خريطة {field:assetId} من draft لكل حقل image.
+          const assetIds: Record<string, string> = {};
+          for (const f of fields) {
+            if (isImageField(f.type)) {
+              const v = draft[f.key];
+              if (typeof v === 'string' && v.length > 0) assetIds[f.key] = v;
+            }
+          }
           const res = await drawPreview(canvas, {
             template: tpl.definition,
             brandConfig: brandCfg,
             // نُمرِّر content.locale داخل content — preview.merge يقرأه ويطبّق applyLocaleToBrand.
             content: { ...draft, locale: contentLocale === 'latin' ? 'en' : 'ar' },
             size: previewSize,
+            ...(Object.keys(assetIds).length > 0 && { assetIds }),
           });
           setPreviewMs(res.durationMs);
           setPreviewWarning(res.warning ?? null);
@@ -773,6 +794,46 @@ export default function ProjectEditorPage(): JSX.Element {
           )}
           {fields.map((f) => {
             const multi = f.type === 'richtext' || f.type === 'multiline';
+            // IMAGE-VERTICAL: حقل image يظهر قبل فحص الحقل النصّي.
+            if (isImageField(f.type)) {
+              const selectedId = String(draft[f.key] ?? '');
+              return (
+                <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
+                  <label className="block text-xs font-medium text-fg-muted">
+                    {f.label ?? f.key}
+                    {f.required && <span className="ms-1 text-danger">*</span>}
+                  </label>
+                  <div className="flex items-center gap-2 rounded border border-border bg-surface p-3">
+                    {selectedId ? (
+                      <>
+                        <div className="flex-1 truncate text-sm">
+                          <span className="font-medium">{t('pages.projects.workspace.imageSelected')}</span>
+                          <span className="ms-2 font-mono text-xs text-fg-subtle">{selectedId}</span>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => setImagePickerFor(f.key)}>
+                          {t('pages.projects.workspace.imageChange')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setDraft({ ...draft, [f.key]: '' });
+                            setDirty(true);
+                            setSavingNoticeKey(null);
+                          }}
+                        >
+                          {t('pages.projects.workspace.imageRemove')}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="secondary" onClick={() => setImagePickerFor(f.key)}>
+                        {t('pages.projects.workspace.imageChoose')}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            }
             if (!isTextField(f.type) && f.type !== 'multiline') return null;
             return (
               <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
@@ -1294,6 +1355,21 @@ export default function ProjectEditorPage(): JSX.Element {
           </Field>
         </div>
       </Dialog>
+
+      {/* IMAGE-VERTICAL: منتقي الأصول */}
+      <AssetPicker
+        open={imagePickerFor !== null}
+        kind="image"
+        onSelect={(a: AssetListItem) => {
+          if (imagePickerFor !== null) {
+            setDraft({ ...draft, [imagePickerFor]: a.id });
+            setDirty(true);
+            setSavingNoticeKey(null);
+          }
+          setImagePickerFor(null);
+        }}
+        onClose={() => setImagePickerFor(null)}
+      />
     </div>
   );
 }

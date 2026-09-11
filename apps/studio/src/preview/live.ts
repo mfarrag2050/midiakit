@@ -16,12 +16,21 @@
 import { applyLocaleToBrand, renderFrame, resolveBrand } from '@pf-mediakit/engine';
 import type { BrandKit, Locale } from '@pf-mediakit/shared';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
+import { resolveAssetImages } from './asset-loader';
 
 export interface PreviewInput {
   readonly template: unknown;
   readonly brandConfig: unknown;
   readonly content: Readonly<Record<string, unknown>>;
   readonly size: { readonly w: number; readonly h: number };
+  /**
+   * IMAGE-VERTICAL: خريطة {fieldName: assetId} — الحقول التي يشير إليها
+   * المحتوى بأصل مرفوع. drawPreview يستدعي `assets.get(id)` لكل
+   * `assetId`، يحمّل publicUrl إلى HTMLImageElement، ويمرّرها إلى
+   * renderFrame كـassets.images[field]. مفتاح field يقابل حرفياً
+   * `layer.field` في القالب — runImage يستعمل `layer.field ?? 'image'`.
+   */
+  readonly assetIds?: Readonly<Record<string, string>>;
 }
 
 export interface PreviewResult {
@@ -39,7 +48,17 @@ function mergeBrand(config: unknown): BrandKit {
   const merged: BrandKit = {
     ...DEFAULT_BRAND,
     ...cfg,
-    fonts: { ...DEFAULT_BRAND.fonts, ...(cfg.fonts ?? {}) },
+    fonts: {
+      ...DEFAULT_BRAND.fonts,
+      ...(cfg.fonts ?? {}),
+      // IMAGE-VERTICAL: عمّق دمج `primary` — mk-api قد يرسل `{family, source}`
+      // بلا `weights`. إن أخذنا ما وصل كاملاً، نفقد الأوزان الافتراضيّة و
+      // ensureFontLoaded يفشل. الدمج العميق يحفظ الأوزان الافتراضيّة إن غابت.
+      primary: {
+        ...DEFAULT_BRAND.fonts.primary,
+        ...((cfg.fonts as { primary?: object } | undefined)?.primary ?? {}),
+      },
+    } as BrandKit['fonts'],
     colors: { ...DEFAULT_BRAND.colors, ...(cfg.colors ?? {}) },
     typography: {
       ...DEFAULT_BRAND.typography,
@@ -182,6 +201,20 @@ export async function drawPreview(
     };
   }
 
+  // IMAGE-VERTICAL: حلّ خريطة assetId → HTMLImageElement قبل الرسم.
+  // كل خطأ تحميل يُبلَّغ في warning بلا تعطيل باقي الطبقات.
+  let resolvedImages: Record<string, HTMLImageElement> | undefined;
+  if (input.assetIds && Object.keys(input.assetIds).length > 0) {
+    try {
+      resolvedImages = await resolveAssetImages(input.assetIds);
+    } catch (err) {
+      return {
+        durationMs: performance.now() - started,
+        warning: err instanceof Error ? err.message : 'asset-load-error',
+      };
+    }
+  }
+
   try {
     renderFrame({
       ctx: ctx as Parameters<typeof renderFrame>[0]['ctx'],
@@ -189,6 +222,8 @@ export async function drawPreview(
       template,
       brand,
       content: input.content,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(resolvedImages && { assets: { images: resolvedImages } as any }),
     });
   } catch (err) {
     // القالب أو المحتوى غير صالح — نطبع رسالة على القماش بدل الانفجار.

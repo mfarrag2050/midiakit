@@ -158,7 +158,11 @@
           "tanwinFatha": "tanwin fatha",
           "tanwinDamma": "tanwin damma",
           "tanwinKasra": "tanwin kasra"
-        }
+        },
+        "imageChoose": "اختر image",
+        "imageChange": "Change",
+        "imageRemove": "Remove",
+        "imageSelected": "صورة selected"
       },
       "editor2": {
         "noFields": "No fields in this template.",
@@ -328,7 +332,8 @@
         "kind": "Kind",
         "size": "Size",
         "created": "Created",
-        "actions": "Actions"
+        "actions": "Actions",
+        "action": "Actions"
       },
       "svgWarn": {
         "title": "SVG warning",
@@ -339,6 +344,11 @@
         "title": "License acknowledgement",
         "body": "الخطوط وملفات Lottie تحتاج إقراراً بأنك تملك حقّ استعمالها.",
         "checkbox": "I acknowledge the license."
+      },
+      "picker": {
+        "title": "Pick an أصل",
+        "pick": "Pick",
+        "empty": "No أصول من هذا النوع."
       }
     },
     "renders": {
@@ -501,7 +511,6 @@
     "UPLOAD_FAILED": "فشل الرفع — أعد المحاولة.",
     "UPLOAD_ABORTED": "أُلغي الرفع.",
     "SERVICE_UNAVAILABLE": "الخدمة غير متاحة — تأكّد من تشغيلها ثم أعد.",
-
     "INVALID_CREDENTIALS": "بريد أو كلمة سر خاطئة.",
     "ACCOUNT_DISABLED": "الحساب متوقّف — راسل الدعم.",
     "TOKEN_EXPIRED": "جلستك انتهت — سجّل الدخول من جديد.",
@@ -514,18 +523,14 @@
     "RESET_TOKEN_EXPIRED": "رابط الاستعادة منتهي — اطلب جديداً.",
     "RESET_TOKEN_USED": "رابط الاستعادة مستعمَل من قبل.",
     "RESET_TOKEN_INVALID": "رابط الاستعادة غير صالح.",
-
     "TOO_MANY_ATTEMPTS": "محاولات كثيرة — انتظر قليلاً ثم أعد.",
-
     "TENANT_NAME_EMPTY": "اسم الوكالة مطلوب.",
-
     "USER_ALREADY_MEMBER": "المستخدم عضو في وكالتك بالفعل.",
     "PENDING_INVITE_EXISTS": "دعوة سابقة لهذا البريد لا تزال معلَّقة.",
     "SEATS_EXHAUSTED": "استُنفدت المقاعد في باقتك — رقّها لدعوة المزيد.",
     "LAST_OWNER": "لا يمكن حذف آخر مالك في الوكالة.",
     "REASON_TOO_SHORT": "السبب قصير — 10 أحرف على الأقل.",
     "ACCOUNT_SUSPENDED": "الحساب موقوف — راسل الدعم.",
-
     "UNSUPPORTED_KIND": "نوع الأصل غير مدعوم.",
     "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "نوع الملف لا يطابق نوع الأصل.",
     "SIZE_TOO_LARGE": "الملف أكبر من الحدّ المسموح.",
@@ -537,11 +542,9 @@
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
     "INVALID_KIND_VALUE": "قيمة نوع الأصل غير معروفة.",
     "ASSET_IN_USE_BY_BRAND_KIT": "الأصل مستعمَل في هوية — أزل المرجع أولاً.",
-
     "GLOBAL_TEMPLATE_READONLY": "القالب العام للقراءة فقط — انسخه لتعديله.",
     "TEMPLATE_SCHEMA_VIOLATION": "بنية القالب لا تطابق المخطّط.",
     "TEMPLATE_IN_USE": "القالب مستعمَل في مشاريع — لا يمكن حذفه.",
-
     "BRAND_KIT_NOT_FOUND": "الهوية المطلوبة غير موجودة.",
     "TEMPLATE_NOT_FOUND": "القالب المطلوب غير موجود.",
     "WORKFLOW_NOT_FOUND": "سير العمل المطلوب غير موجود.",
@@ -550,7 +553,6 @@
     "TRANSITION_ROLE_REQUIRED": "دورك لا يسمح بهذا التحوّل.",
     "STALE_UPDATE": "التعديل قديم — أُعيد تحميل الصفحة.",
     "PROJECT_HAS_RENDERS": "المشروع له تصديرات — الحذف يحتاج قراراً منفصلاً.",
-
     "WORKFLOW_IN_USE": "سير العمل مستعمَل — لا يمكن حذفه.",
     "WORKFLOW_IN_USE_IMMUTABLE_FIELD": "هذا الحقل من سير العمل ثابت طالما يُستعمل.",
     "WORKFLOW_SCHEMA_VIOLATION": "بنية سير العمل لا تطابق المخطّط.",
@@ -560,11 +562,9 @@
     "REASON_REQUIRED_FOR_THIS_TRANSITION": "هذا التحوّل يستلزم سبباً — أدخل سطراً على الأقل.",
     "INVALID_SEGMENT_INDEX": "رقم المقطع غير صحيح.",
     "LAYER_NOT_FOUND": "الطبقة المطلوبة غير موجودة في القالب.",
-
     "REVISION_NOT_FOUND": "المراجعة المطلوبة غير موجودة.",
     "RESTORE_WOULD_BREAK_REFERENCES": "الاستعادة إلى هذه المراجعة ستكسر مراجع قائمة — راجع القوالب المرتبطة قبل المحاولة.",
     "IF_MATCH_REQUIRED": "الطلب يستلزم رأس If-Match — أعِد تحميل النسخة الحالية ثم أعد المحاولة.",
-
     "RENDER_NOT_ALLOWED_IN_CURRENT_STATE": "التصدير غير مسموح في الحالة الحالية للمشروع.",
     "QUOTA_EXCEEDED_VIDEOS": "استُنفدت حصّتك الشهرية من الفيديوهات — رقّ باقتك.",
     "QUOTA_EXCEEDED_RENDERS": "استُنفدت حصّتك الشهرية من التصديرات — رقّ باقتك.",
@@ -575,7 +575,6 @@
     "UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS": "الهوية تعتمد أصولاً خارجية غير مدعومة — راجعها.",
     "BRAND_SNAPSHOT_NOT_FOUND": "لقطة الهوية لهذا التصدير غير موجودة.",
     "TEMPLATE_SNAPSHOT_NOT_FOUND": "لقطة القالب لهذا التصدير غير موجودة.",
-
     "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
     "PLATFORM_INSUFFICIENT_ROLE": "هذه العملية على مستوى المنصّة تتطلّب دور مالك المنصّة.",
     "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",
@@ -589,7 +588,6 @@
     "INVALID_VERSION_FORMAT": "صيغة الإصدار غير صحيحة.",
     "VERSION_NOT_AVAILABLE": "الإصدار المطلوب غير متاح.",
     "DIFF_NOT_ACKNOWLEDGED": "الترقية تحتاج إقراراً بالفرق أولاً.",
-
     "INVALID_PROVIDER": "مزوّد ذكاء غير معروف.",
     "API_KEY_VALIDATION_FAILED": "مفتاح المزوّد رُفض عند التحقّق — راجعه.",
     "UNKNOWN_CAPABILITY": "قدرة الذكاء المطلوبة غير موجودة.",
@@ -597,12 +595,10 @@
     "CAPABILITY_NOT_ENABLED": "القدرة غير مُفعَّلة — أضف تكاملاً يوفّرها.",
     "PROVIDER_ERROR": "المزوّد لم يستجب استجابةً صحيحة — أعد المحاولة.",
     "PROVIDER_TIMEOUT": "المزوّد تأخّر — أعد المحاولة.",
-
     "INVITATION_NOT_FOUND": "الدعوة غير موجودة أو أُلغيت.",
     "INVITATION_EXPIRED": "الدعوة انتهت صلاحيّتها.",
     "INVITATION_ALREADY_ACCEPTED": "الدعوة قُبلت مسبقاً.",
     "PLAN_IN_USE": "الباقة مستعمَلة — لا يمكن حذفها.",
-
     "UNAUTHORIZED": "مصادقة مطلوبة.",
     "FORBIDDEN": "دخول مرفوض.",
     "NOT_FOUND": "غير موجود.",
