@@ -84,7 +84,7 @@ jobs:
           node --version
 
       # ── (2) Checkout ────────────────────────────────────────
-      - name: Checkout (fetch-depth: 0 — لـcheck:skill-fresh)
+      - name: "Checkout (fetch-depth 0 — لـcheck:skill-fresh)"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -161,13 +161,13 @@ jobs:
       # خارج `pnpm test` قصداً — يبقى على mk قرار إدخالها لاحقاً.
       # كلّ واحدة `if: always()` (سياسة الجمع تمتدّ إلى ما بعد pnpm test).
 
-      - name: verify:multilang (mkau · لا خدمة · ~1.5s محلّيّاً)
+      - name: "verify:multilang (mkau · لا خدمة · ~1.5s محلّيّاً)"
         # قياس محلّيّ (2026-09-11 · macOS m4): 1.5s. تخمين mkau: ~1s.
         # لا خدمة، لا سرّ، لا شبكة.
         if: always()
         run: pnpm verify:multilang
 
-      - name: verify:auth (mkau · postgres + JWT secrets)
+      - name: "verify:auth (mkau · postgres + JWT secrets)"
         # قياس محلّيّ (2026-09-11 · macOS m4 + postgres محلّيّ): 1.25s.
         # في CI: يفشل الآن على «relation does not exist» بعد الهجرات (citext).
         # بعد mkapi يُصلح citext + الأدوار: يمرّ. الآن هذا L-46 نفي طبيعيّ.
@@ -181,7 +181,7 @@ jobs:
           AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
         run: pnpm verify:auth
 
-      - name: verify:tenant-isolation (mkau · postgres roles)
+      - name: "verify:tenant-isolation (mkau · postgres roles)"
         # يحتاج migration_user + app_user (init/01-roles.sql) — غير موجودَين
         # في postgres:16-alpine الافتراضيّ. سيفشل على «role does not exist»
         # حتى يعالج mkapi البذر (150-FRESH-DB يعدّ). L-46 نفي طبيعيّ الآن.
