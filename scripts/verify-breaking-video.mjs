@@ -16,6 +16,16 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// ── فحص المنصّة (GATE-2LAYER §٤ · 2026-09-11 · PLATFORM-2) ──
+if (process.platform !== 'linux') {
+  console.error('');
+  console.error(`✗ verify-breaking-video: هذا المرجع لينكس حصراً.`);
+  console.error(`  المنصّة الحاليّة: ${process.platform} · المطلوبة: linux`);
+  console.error(``);
+  console.error(`  الحل: ./bin/mk-ci`);
+  process.exit(1);
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const OUT_DIR = join(ROOT, 'out');
