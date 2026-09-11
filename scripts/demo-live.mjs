@@ -129,6 +129,46 @@ for (let i = 0; i < 3; i++) {
   }
 }
 
+// ── images (اختياريّ · 95-CARD-COMPLETE) ──────────
+// عنصر بمسار PNG لكل عنوان. طول المصفوفة يجب = 3 إن حضرت.
+// عنصر فارغ/null داخل المصفوفة ⇒ لا صورة لهذا العنوان (fallback يعمل).
+let imageAbsPaths = [null, null, null];
+if (live.images !== undefined) {
+  if (!Array.isArray(live.images) || live.images.length !== 3) {
+    throw new Error(`[demo-live] حقل «images» اختياريّ. إن حضر، يجب أن يكون مصفوفة بطول 3 مطابق لعدد العناوين. الحاليّ: ${live.images?.length ?? typeof live.images}.`);
+  }
+  for (let i = 0; i < 3; i++) {
+    const p = live.images[i];
+    if (p === '' || p === null || p === undefined) continue;  // اختياريّ بالفعل — يبقى fallback
+    if (typeof p !== 'string') {
+      throw new Error(`[demo-live] images[${i}] ليس سلسلة نصّيّة (يجب مسار PNG نسبيّاً للجذر، أو "" لتخطّي).`);
+    }
+    const abs = resolve(ROOT, p);
+    if (!existsSync(abs)) {
+      throw new Error(`[demo-live] ملفّ الصورة غير موجود: ${abs} (images[${i}] = "${p}"). تأكّد أنّ المسار صحيح نسبةً لجذر المستودع.`);
+    }
+    imageAbsPaths[i] = abs;
+  }
+}
+
+// ── sources (اختياريّ · 95-CARD-COMPLETE) ─────────
+// اسم مصدر لكل عنوان. غياب الحقل ⇒ لا مصدر مرئيّ في البطاقات (طبقة
+// source في breaking لا تُرسَم صامتاً — `runSource` يعود إن غاب `content.source`).
+let sourceTexts = [null, null, null];
+if (live.sources !== undefined) {
+  if (!Array.isArray(live.sources) || live.sources.length !== 3) {
+    throw new Error(`[demo-live] حقل «sources» اختياريّ. إن حضر، يجب أن يكون مصفوفة بطول 3 مطابق لعدد العناوين. الحاليّ: ${live.sources?.length ?? typeof live.sources}.`);
+  }
+  for (let i = 0; i < 3; i++) {
+    const s = live.sources[i];
+    if (s === '' || s === null || s === undefined) continue;  // اختياريّ بالفعل — لا مصدر
+    if (typeof s !== 'string') {
+      throw new Error(`[demo-live] sources[${i}] ليس سلسلة نصّيّة (اسم المصدر مثل "رويترز" أو "" لتخطّي).`);
+    }
+    sourceTexts[i] = s;
+  }
+}
+
 // ── slug من brandName ─────────────────────────────
 // نحافظ على العربيّة + اللاتينيّة + الأرقام، ونستبدل الباقي بشرطة.
 function slugify(name) {
@@ -158,35 +198,54 @@ const brand = resolveBrand({
   },
 });
 
-// ── تحميل الشعار (إن كان القالب يستهلكه) ──────────
+// ── تحميل الشعار ─────────────────────────────────
 const logoImg = new Image();
 logoImg.src = readFileSync(logoAbs);
 await logoImg.decode();
 
+// ── تحميل صور العناوين (إن حضرت) ─────────────────
+const headlineImages = [null, null, null];
+for (let i = 0; i < 3; i++) {
+  if (imageAbsPaths[i]) {
+    const img = new Image();
+    img.src = readFileSync(imageAbsPaths[i]);
+    await img.decode();
+    headlineImages[i] = img;
+  }
+}
+
 // ── الرسم + القياس ────────────────────────────────
-async function renderCard(headline, outPath) {
+async function renderCard(headline, sourceText, headlineImage, outPath) {
   const canvas = new Canvas(SIZE.w, SIZE.h);
   const ctx = canvas.getContext('2d');
+  // content — نُدرِج `source` فقط إن حضر (`runSource` يخطّي صامتاً إن غاب)
+  const content = { headline };
+  if (sourceText) content.source = sourceText;
+  // assets — نُدرِج `image` فقط إن حضر (`runImage` يفعّل fallback إن غاب)
+  const images = { logo: logoImg };
+  if (headlineImage) images.image = headlineImage;
   renderFrame({
     ctx,
     size: SIZE,
     template: BREAKING,
     brand,
-    content: { headline, source: 'المصدر' },
-    assets: { images: { logo: logoImg } },
+    content,
+    assets: { images },
   });
   await canvas.toFile(outPath);
 }
 
-function measureLayout(headline) {
+function measureLayout(headline, sourceText) {
   const canvas = new Canvas(SIZE.w, SIZE.h);
   const ctx = canvas.getContext('2d');
+  const content = { headline };
+  if (sourceText) content.source = sourceText;
   const plan = buildRenderPlan({
     ctx,
     size: SIZE,
     template: BREAKING,
     brand,
-    content: { headline, source: 'المصدر' },
+    content,
     fps: 30,
   });
   const h = plan.headline;
@@ -207,10 +266,14 @@ console.log('');
 
 for (let i = 0; i < 3; i++) {
   const headline = live.headlines[i];
+  const sourceText = sourceTexts[i];
+  const headlineImage = headlineImages[i];
   const outPath = join(OUT_DIR, `${slug}-${i + 1}.png`);
-  const m = measureLayout(headline);
-  await renderCard(headline, outPath);
-  console.log(`  ✓ ${basename(outPath)} · fs=${m.fs} · ${m.lines.length} سطر`);
+  const m = measureLayout(headline, sourceText);
+  await renderCard(headline, sourceText, headlineImage, outPath);
+  const hasImg = headlineImage ? '· صورة' : '· بلا صورة';
+  const hasSrc = sourceText ? `· مصدر=${sourceText}` : '· بلا مصدر';
+  console.log(`  ✓ ${basename(outPath)} · fs=${m.fs} · ${m.lines.length} سطر ${hasImg} ${hasSrc}`);
   for (const line of m.lines) console.log(`      ${line}`);
   console.log('');
 }

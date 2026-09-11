@@ -241,8 +241,15 @@ function runImage(
   return true;
 }
 
-function runLogo(_layer: LogoLayer, args: RenderFrameArgs): void {
-  drawLogo(args.ctx, args.size, args.brand, {});
+function runLogo(layer: LogoLayer, args: RenderFrameArgs): void {
+  // 95-CARD-COMPLETE (2026-09-11): كان يمرّر `{}` — الشعار لا يُرسَم أبداً
+  // حتى لو مُرِّر `assets.images.logo`. نفس صنف L-72 (بادئة `_` أخفت
+  // مرتبة الوسيط وأنتجت تخطٍّ صامت). الآن نستخرج الأصل من `assets`
+  // (بمفتاح `layer.from ?? 'logo'` — نفس نمط `runImage`) ونمرّره.
+  // إن لم يُمرَّر — `drawLogo` يتخطّى صامتاً كما كان (سلوك بايت-بايت
+  // مطابق للسلوك السابق حين لا يُمرَّر الأصل).
+  const image = args.assets?.images?.[layer.from ?? 'logo'];
+  drawLogo(args.ctx, args.size, args.brand, image ? { image } : {});
 }
 
 /**
