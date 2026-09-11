@@ -9,8 +9,8 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-11
-> **HEAD (main):** `b4ce12e`
-> **HEAD (origin/feat/api):** `ff22f1d`
+> **HEAD (main):** `d901146`
+> **HEAD (origin/feat/api):** `8d6a6c9`
 > **HEAD (origin/feat/studio):** `d995a73`
 
 ## الفهرس
@@ -25,9 +25,9 @@
 | `docs/06-roadmap.md` | 179 | `f9022e8013a3` | local |
 | `docs/07-capabilities.md` | 191 | `597abf23a452` | local |
 | `docs/08-operations.md` | 231 | `8e645af79060` | local |
-| `docs/09-launch-spec.md` | 244 | `a1bd66727e59` | local |
+| `docs/09-launch-spec.md` | 251 | `39600a05dd4c` | local |
 | `docs/10-timeline-editor.md` | 284 | `a0afd4081935` | local |
-| `docs/11-parallel-work.md` | 315 | `e7c02ff8c0de` | local |
+| `docs/11-parallel-work.md` | 319 | `fd4e51603a3c` | local |
 | `docs/12-feature-scan.md` | 249 | `674cb0e3e07b` | local |
 | `docs/13-asset-lifecycle.md` | 228 | `a4ab67f4da3e` | local |
 | `docs/14-revisions.md` | 154 | `ae6833dc8fa1` | local |
@@ -35,12 +35,12 @@
 | `docs/16-api-contract.md` | 1702 | `560b518765bd` | local |
 | `docs/17-phase4-plan.md` | 1120 | `2ff47d5bd093` | local |
 | `docs/INVENTORY.md` | 174 | `52330c4e5048` | local |
-| `docs/LESSONS.md` | 2538 | `6b89706cd11f` | local |
+| `docs/LESSONS.md` | 2668 | `0002e9ae8aa7` | local |
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 365 | `e9aa2d0d4e36` | local |
-| `PHASES.md` | 1515 | `e4d513cc92b5` | local (main) |
+| `docs/SKILL-mediakit.md` | 365 | `121fa37e4afe` | local |
+| `PHASES.md` | 1563 | `37fedfeec5f4` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
@@ -2415,7 +2415,14 @@ Docker Compose:
 # الوعود
 
 **يُوعد به:**
-- المخرج يطابق المعاينة بالبكسل
+- **التخطيط في المعاينة يطابق المخرَج قِيَماً**: نفس حجم الخطّ، نفس
+  ارتفاع السطر، نفس نقاط كسر السطور، نفس مواضع النصّ داخل الإطار.
+  الطرفان يبنيان الخطّة من متريكات رأس الخطّ نفسها (`BASELINE-A` ·
+  2026-09-11 · `verify:plan-values` يفحص هذا آليّاً · commit `af2acc2`).
+  **لا يُوعد بتطابق البكسل الكامل للصورة** — محرّك ترقيم الغليف يختلف
+  بين متصفّح العميل وخادم الرندر (skia)، وبين نُسخ skia نفسها عبر
+  الأنظمة (فرق ~2px قياساً · `PLATFORM-2`). ما يراه العميل في المعاينة
+  هو **تخطيط المخرَج** لا صورة المخرَج.
 - الهوية مطبّقة على كل القوالب
 - إتاحة 99% وقت العمل
 - دعم خلال يوم عمل
@@ -2516,7 +2523,7 @@ Docker Compose:
 - [ ] لا خط تجاري ولا أصل أناضول في المستودع
 - [ ] ثلاثة ملفات هوية تُنتج ثلاثة مخرجات مختلفة
 - [ ] MP4 يُشغَّل على iPhone وأندرويد ويُرفع لإنستغرام بلا تحويل
-- [ ] المعاينة = المخرج بكسلياً
+- [ ] تخطيط المعاينة = تخطيط المخرَج قِيَماً (verify:plan-values) — راجع «الوعود» أعلاه لتفصيل حدود المطابقة
 - [ ] BiDi صحيح للنص المختلط
 - [ ] طوابير بأولوية + حصة عادلة + حدود صارمة
 - [ ] لوحة عميل تعرض الطابور والزمن المتوقع
@@ -2841,10 +2848,11 @@ Creatomate بنى محرّك حركة بخط زمني ومفاتيح مفتاح�
 
 | المسار | الفرع | المجلد | الملفات المملوكة |
 |---|---|---|---|
-| **M — mediakit** (مسار دائم — التوثيق والسكيل والحزمة) | `main` | `~/MediaKit/pf-mediakit` | `docs/*` · `PHASES.md` · `CLAUDE.md` · `LESSONS.md` · `M1/M2` · `docs/SKILL-mediakit.md` · `docs/BUNDLE.md` وسكربتات توليدهما · `packages/engine` · `packages/shared` · `packages/templates` · `snapshots*/` |
+| **M — mediakit** (مسار دائم — التوثيق والسكيل والحزمة) | `main` | `~/MediaKit/pf-mediakit` | `docs/*` · `PHASES.md` · `CLAUDE.md` · `LESSONS.md` · `M1/M2` · `docs/SKILL-mediakit.md` · `docs/BUNDLE.md` وسكربتات توليدهما · `packages/engine` · `packages/shared` · `packages/templates` · `snapshots*/` · `fixtures/` · `bin/mk-ci` |
 | **S — الاستوديو** | `feat/studio` | `~/MediaKit/pf-mediakit-studio` | `apps/studio` · `packages/ui` · `packages/i18n` · `demo/studio` |
 | **P — البنية (mk-api)** | `feat/api` | `~/MediaKit/pf-mediakit-api` | `apps/api` · `infra/` · `packages/db` · migrations |
 | **D — اللوحات** | `feat/dashboards` | `~/MediaKit/pf-mediakit-dash` | `apps/dashboard` · طبقة قراءة في `apps/renderer` (لم يُفتح حالياً) |
+| **CI — mkci** (2026-09-11 · جديد) | `feat/ci` | `~/MediaKit/pf-mediakit-ci` | `.github/workflows/*.yml` (`ci.yml` · `l46-redis-observe.yml` · `regen-breaking-linux-md5.yml`). يستهلك عقد المرجع الثلاثيّ الذي يقرّره `mk` (راجع `60-GATE-2LAYER-GO §٩`) — لا يخترع شكل مرجع من نفسه |
 | **mkaudit — التحرّي** | worktree بـ`git checkout --detach` | `~/MediaKit/pf-mediakit-audit` | **لا يملك ملفاً** — قراءة فقط. يكتب تقاريره **خارج المستودع** (`~/mk-audit-*.md`) |
 
 **M — mediakit: مسار دائم للتوثيق وتوليد السكيل والحزمة. لا يُحسب
@@ -2947,6 +2955,7 @@ git worktree list
 # /Users/mdervis/MediaKit/pf-mediakit          <hash> [main]           ← mediakit (M)
 # /Users/mdervis/MediaKit/pf-mediakit-api      <hash> [feat/api]       ← mk-api (P)
 # /Users/mdervis/MediaKit/pf-mediakit-studio   <hash> [feat/studio]    ← mk-studio (S)
+# /Users/mdervis/MediaKit/pf-mediakit-ci       <hash> [feat/ci]        ← mkci (CI · جديد 2026-09-11)
 # /Users/mdervis/MediaKit/pf-mediakit-audit    <hash> (detached HEAD)  ← mkaudit (قراءة)
 ```
 
@@ -2958,6 +2967,7 @@ git worktree list
 tmux new -d -s mediakit   -c ~/MediaKit/pf-mediakit
 tmux new -d -s mk-api     -c ~/MediaKit/pf-mediakit-api
 tmux new -d -s mk-studio  -c ~/MediaKit/pf-mediakit-studio
+tmux new -d -s mkci       -c ~/MediaKit/pf-mediakit-ci
 tmux new -d -s mkaudit    -c ~/MediaKit/pf-mediakit-audit
 ```
 
@@ -2966,6 +2976,7 @@ tmux new -d -s mkaudit    -c ~/MediaKit/pf-mediakit-audit
 alias mk='tmux a -t mediakit -d 2>/dev/null || tmux new -s mediakit -c ~/MediaKit/pf-mediakit'
 alias mkapi='tmux a -t mk-api -d 2>/dev/null || tmux new -s mk-api -c ~/MediaKit/pf-mediakit-api'
 alias mkst='tmux a -t mk-studio -d 2>/dev/null || tmux new -s mk-studio -c ~/MediaKit/pf-mediakit-studio'
+alias mkci='tmux a -t mkci -d 2>/dev/null || tmux new -s mkci -c ~/MediaKit/pf-mediakit-ci'
 alias mkau='tmux a -t mkaudit -d 2>/dev/null || tmux new -s mkaudit -c ~/MediaKit/pf-mediakit-audit'
 ```
 
@@ -9563,9 +9574,139 @@ L-73 يُوسّع: بعد أن يعبر الاختبار الوجودَ، اسأ
 ويسكت عن التاريخيّة · L-72 (بادئة `_` تُلغي حراسة النوع) — L-73
 يعالج الصنف المقابل: النوع الموجود لكنّه غير مُنفَّذ.
 
+---
+
+## دروس من آليّة التنسيق (L-74 وما بعدها) — نطاق مُعلَن
+
+**الدروس التالية من طبقة تنسيق الجلسات لا من طبقة المنتج** — لا تبحث
+عن أثرها في `packages/*` ولا في `scripts/*` ولا في مادّة بيع. الشاهد
+والتطبيق يعيشان في الإطار الذي يوصلك بجلسات `mk` · `mk-api` · `mk-studio`
+· `mkci` · `mkaudit` (docs/11).
+
+**سبب اجتماعها هنا مع دروس المنتج:** صنفها الواحد «شيء يبلّغ نجاحاً بلا
+أن يفعل ما يدّعيه» — وهو الخيط الذي يجمع L-46 (اختبار يحرس فراغاً) و
+L-71 (سكربت بلا مفتاح) و L-73 (نوع بلا مدقّق runtime). الفصل يقطع
+الخيط، والملفّ الثاني ثانٍ يعني موضعَين للبحث وأوّل من ينسى الثاني
+كاتبه.
+
+**شرط انقسام مستقبليّ (بقرار لا بحدس):** حين تصير دروس الآليّة أكثر
+من دروس المنتج عدداً، تُفصل إلى `docs/SESSIONS.md` بقرار مالك مُعلَن —
+لا بحدس مبنيّ على «شعور تنافر». حتى ذلك، سلسلة الترقيم واحدة يحرسها
+`check:lessons-sequence`، وكل درس يحمل وسمه «من آليّة التنسيق» في سطره
+الأوّل.
+
+## L-74 — موافقة على خيار «لا تسأل ثانيةً» تمنح إذناً أوسع من الأمر المسؤول عنه
+
+**نطاق:** من آليّة التنسيق لا من المنتج.
+
+
+
+**القاعدة:** لا يُمنح إذن دائم لصنف أوامر إلّا لأمر **كان سيمرّ وحده**
+لو عُرض بلا خيار «لا تسأل ثانيةً». الحكم على الأمر أوّلاً، ثمّ اختيار
+الخيار. الخيار جزء من الحوار لا مُدخِلاً له.
+
+**الشاهد التاريخيّ (2026-09-11 · آليّة تنسيق الجلسات):** مراقب الجلسات
+كان يفحص خيار «Yes, and don't ask again for: git checkout *» بمنطق
+مبنيّ على شكل الخيار نفسه (يحوي «and don't ask» ⇒ يختاره). فُوجئ
+بأنّ الأمر المسؤول عنه من صنف الممنوع (`git checkout` بلا شرط).
+النتيجة: إذنٌ دائم لكامل صنف `git checkout` **مُنح من جانب المراقب لا
+من وجه الحوار**. الحاجز انفتح داخلياً.
+
+**كيف يُطبَّق:**
+
+- **قاعدة الترتيب:** قبل قبول أيّ خيار «don't ask again»، أجرِ الفحص
+  الذي كنتَ ستُجريه على الأمر لو عُرض وحده. النتيجة تحكم على الخيار،
+  لا العكس.
+- **قاعدة الحجب المستمرّ:** ما هو محجوز (`git checkout` · `rm -rf` ·
+  `docker system prune` · إلخ) **يبقى محجوزاً في كلّ عرض**. لا يشتري
+  خياراً يمنحه ما لا يستحقّه.
+- **قاعدة الوسم:** أيّ خيار يحمل نطاقاً أوسع من الأمر الحاليّ (`git *`
+  بدل `git status`، أو `rm *` بدل `rm out/tmp.log`) يستحقّ نظرة يدويّة
+  إضافية — لا يُقبَل آليّاً حتى لو الأمر الحاليّ مسموح.
+
+**علامة تحذيريّة:** حين ترى إذناً دائماً مُنِح لصنف كامل ولا تذكر أنّك
+أذنتَ لأيّ استعمال محدَّد منه — الحاجز انفتح من جانبه لا من وجهه.
+فتّش عن أوّل مرّة عُرض فيها الخيار، وأزل الإذن، وأعد بناء الحاجز.
+
+**قرار مرتبط:** L-71 (حارس بلا مفتاح · طمأنينة كاذبة) — L-74 حالة
+تطبيقيّة على طبقة التنسيق بدل طبقة المستودع: الحارس عندنا كان قرار
+«لا تُفتح صنوف الحذف» — انفتح لأنّ الفحص طُبِّق على الخيار قبل الأمر ·
+L-58 (الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق) —
+L-74 نفس المنطق على مستوى إذن الجلسة: الإذن الدائم يُلغى، لا يُعلَّق
+عليه أمل.
+
+## L-75 — كاشفٌ مربوط بلغة لا يرى ما أُنشئ ليراه · ووسمٌ يجمع حالتَين يُخفي إحداهما
+
+**نطاق:** من آليّة التنسيق لا من المنتج.
+
+**القاعدة (درسان في واحد):**
+
+**أ · الشكل قبل الكلمات:** كاشف يفصل «حالات المهمّة» يقرأ **الشكل**
+(إطار سؤال · سطر خيار مرقَّم · مؤشّر انتظار)، لا **الكلمات** (`Yes`/`No`
+بلغة معيّنة). الشكل ثابت عبر اللغات؛ الكلمات ثابتة عبر لغة واحدة.
+الكاشف الذي يشترط كلمةً يخفق حين نبدّل اللغة بأمرنا نحن.
+
+**ب · وسمٌ يجمع حالتَين يُخفي إحداهما:** الحالات الثلاث لجلسة
+(تعمل · عالقة عند سؤال · ساكنة منذ N دقيقة) تحتاج ثلاث علامات لا اثنتَين.
+«تعمل أو خاملة» — علامة واحدة لحالتَين — تُخفي حالة «عالقة عند سؤال»
+بجعلها تبدو «خاملة». المُلاحظ يرى «خاملة» فينسحب. المُنتظِر يبقى واقفاً.
+
+**الشاهد التاريخيّ (2026-09-11 · آليّة تنسيق الجلسات):** كاشف الأسئلة
+كان يشترط `Yes`/`No` بالإنجليزيّة. الجلسات تجيب بالعربيّة لأنّنا
+أمرناها بذلك (`CLAUDE.md`). **شاشة `mk-api` وقفت 44 دقيقة على سؤال لم
+يره الكاشف**، وظهرت في اللوحة «تعمل أو خاملة». الفصل الثنائيّ خلط
+الانشغال بالوقوف؛ الفصل الثلاثيّ كان سيُظهر «عالقة عند سؤال — 44 دقيقة»
+فيدفع للنظر.
+
+**كيف يُطبَّق:**
+
+- **الكاشف يفحص الشكل:** إطار (`╭─...─╮`) + سطر يحوي `?` + قائمة مرقَّمة
+  (`1.` · `2.` · …) — بأيّ لغة. لا اشتراط كلمة بعينها.
+- **الحالات ثلاث دائماً:** تعمل (activity في آخر دقيقة) · عالقة عند سؤال
+  (كاشف الشكل رصد سؤال، ولا نشاط منذ) · ساكنة (ولا سؤال). الوسم يحمل
+  الحالة **والمدّة**: «عالقة منذ 44 دقيقة» ≠ «خاملة منذ 44 دقيقة».
+- **قاعدة عامّة:** كل تعميم يجمع حالتَين ذات سلوكَين مختلفَين يستحقّ
+  التفكيك — الاختصار الذي يُخفي فرقاً مهمّاً هو الفرق نفسه في المستقبل.
+
+**قرار مرتبط:** L-49 (لغة الواجهة ≠ لغة الرسائل ≠ لغة المحتوى — الاختبار
+يُفصَّل على لغة المحتوى) — L-75 يوسّع: **الكاشف نفسه يستقلّ عن لغة
+الرسائل**، لأنّه أداة على النظام لا رسالة تُقرأ · L-33 (تناقض التوجيه
+مع الفحص — اعرض التناقض) — L-75 يُوسّع بجعل التناقض قابلاً للرصد بشكل
+لا يعتمد على لغة إعلان التناقض.
+
+## L-76 — نصّ متروك في مجرى الإدخال يلتصق بالجواب
+
+**نطاق:** من آليّة التنسيق لا من المنتج.
+
+**القاعدة:** صندوق إدخال الجلسة قد يحمل نصّاً غير مُرسَل (اقتراح سياقيّ
+من التكميل التلقائيّ أو كتابة يدويّة نصف مكتملة). قبل إرسال أيّ جواب
+نصّيّ، **يُمسح سطر الإدخال**. جواب الرقم الواحد (خيار من قائمة) يُرسَل
+كما هو — لا صندوق نصّ في أسئلة الاختيار المرقَّمة.
+
+**الشاهد التاريخيّ (2026-09-11 · آليّة تنسيق الجلسات):** جواب أُرسل إلى
+جلسة كان صندوق إدخالها يحمل نصّاً سابقاً غير مُرسَل. الجواب التصق بالنصّ
+السابق فصار أمراً لم يكتبه أحد ولم يراجعه أحد. الجلسة نفذت التركيبة
+الملتصقة على أنّها أمر واحد.
+
+**كيف يُطبَّق:**
+
+- **قبل أيّ إرسال نصّيّ:** `Ctrl-U` (أو ما يقابله في الطبقة المستعملة)
+  لمحو سطر الإدخال، ثمّ اكتب الجواب من الصفر.
+- **جواب الرقم (خيار من قائمة مرقَّمة):** آمن — يذهب مباشرةً، لا يمرّ
+  بصندوق النصّ. أسئلة الاختيار ليست حواراً نصّيّاً.
+- **الفحص الاستطلاعيّ:** حين تلاحظ جواباً يبدأ بنصّ لا يخصّ السؤال (أو
+  أمر مقتضب يليه سطر ثانٍ لا سياق له)، **ابحث عن نصّ عالق في المُدخِل**
+  قبل الاستمرار.
+
+**قرار مرتبط:** L-32 (بعد تعليمة توقّف — لا اجتهاد · وسّع النطاق لا
+تضيّقه) — L-76 حالة تطبيقيّة على مستوى إدخال الجلسة: النصّ العالق يُوسّع
+الجواب بلا قصد · L-56 (التسجيل فور الإقرار — الدرس المؤجَّل يضيع) —
+L-76 يُوسّع: الجواب الذي يحمل نصّاً غير مقصود يشوّه سجلّ المحادثة نفسه،
+فيصير التوثيق اللاحق يشرح ما لم يُقصد.
+
 قبل بدء مهمة جوهرية:
 1. اقرأ هذا الملف كاملاً — تحت 6 دقائق.
-2. اسأل: أيّ درس مرشّح للتكرار في هذه المهمة؟ (L-01 عند نقل من الأصل، L-02 عند كتابة عتبة، L-03 عند تغيير بصري، L-04 عند حدود نظام، L-05 عند إضافة رقم، L-06 عند تحدّي مواصفة، L-07 عند حلقة إطارات/زمن، L-08 عند قاعدة نحوية، L-09 عند بناء تحسين، L-10 عند بوابة تفترض ثمناً، L-11 عند «نسبة غير مصنّفة» غير مفسَّرة، L-12 عند إضافة مكوّن غير-JS، L-14 عند تصميم دالة على مجموعة، L-15 عند تغيير قرار معماري متأخر، L-16 عند بناء بوابة كمّية لمخرج بصري، L-17 قبل إعلان نجاح بوابة تُنتج صورة/فيديو، L-18 عند حساب صيغة زمن على نظام متوازٍ، L-19 عند تعداد BullMQ 5، L-20 عند بناء Next.js app جديد يستهلك workspace ESM، L-21 عند تصميم «حالة نظام»، L-22 عند رسائل API متعددة اللغات، L-23 عند مركّب رقمي في RTL، L-24 عند تصميم قاعدة i18n للخلط، L-25 بعد أي عمل لغوي/بصري، L-26 قبل تخطيط مرحلة كبيرة أو منتج جديد، L-27 قبل تثبيت أي تصنيف «مؤجَّل/مرفوض» ودورياً على المسبق منها، L-28 عند اقتراح أيّ أصل يمثّل علامة تجارية — فَحص رخصتَين لا واحدة، L-29 عند إضافة مصدر خارجي — صمّم تجميد إصدار قبل الحاجة، L-30 عند تصميم منتج B2B — اسأل «مستخدم واحد أم فريق؟»، L-31 عند بدء مواصفة — اسأل «كيف يعمل العمل يومياً؟» لا «ما الميزات المطلوبة؟»، L-32 قبل أيّ فعل بعد تعليمة توقّف — لا تجتهد، توسّع النطاق لا تضيّقه، L-33 عند تناقض التوجيه مع فحص أجريتَه — اعرض التناقض واطلب تأكيداً لا ترجّح، L-34 قبل كتابة أيّ رقم في مادة تسويقية — لكل رقم مصدر قياس، وإلا حُذف، L-35 عند اختلاف رقمَين — شغّل القياس وأرسل الناتج، لا تشرح الفرق سردياً، L-36 عند قياس أثر ميزة انتقائية — قسّم إلى «تدخّلت/لم تتدخّل» وقس على الأولى، L-40 عند استلام مهمة جديدة — إن لم تلمس packages/ ⇒ فرع مستقل، L-41 عند تعارض مقياسين — افحص ما يقيسه كل واحد + استعن باللقطة البصرية، L-42 قبل تشغيل قياس دقة — طابق العيّنة لحالة الاستخدام الفعلية، لا للسهلة الوصول، L-46 قبل كتابة اختبار ثبات — اكتب اختبار وجود أولاً، وإلا حرست فراغاً، L-47 قبل الاعتماد على قيد نصّي مطلق — ابنِ بوابة آلية تفحصه، لأن التلوث يعود من نصوص الاختبار لا من الكود، L-48 قبل الإحالة من وثيقة إلى مسار — تأكّد أنه ليس في مجلد مؤقّت؛ المخرج الذي يُعرض لا يعيش في out/، L-49 قبل أيّ افتراض عن «لغة العميل» — ميّز بين لغة الواجهة ولغة الرسائل ولغة المحتوى، وحدَها الثالثة تُحدّد سلوك المحرك، L-50 قبل أيّ حساب تخطيطي يعتمد على measureText — تحقّق من combining marks (تشكيل عربي)؛ عند وجودها، القياس البكسلي هو الوحيد الموثوق، L-51 عند نفي كل الفرضيات المطروحة — لا تتوقّف، اقرأ المخرج الخام؛ الفرضية الصحيحة قد تكون خامسة لم تُذكر، L-52 عند تصحيح المالك لاسم مكوّن — ابحث قبل الافتراض؛ التصحيح لا يُثبت الوجود، فقط القصد، L-53 عند إعلان إنجاز مركّب — تحقّق من كل بند بمسار ملف أو أمر؛ الفجوة في تسلسل مرقَّم مؤشر مجاني على عمل غير منجَز، L-54 بعد كل قاعدة تشغيلية — ابنِ سكربتاً يفشل عند مخالفتها وإلا فهي توصية، L-55 المخرج المعروض يعيش في demo/ لا out/ · فحص آلي يمنع الإحالة من وثيقة إلى مؤقت، L-56 التسجيل فور الإقرار لا بعد اكتمال المهمة — الدرس المؤجَّل يضيع، L-57 git log + git status + git push في تقرير الإنجاز قبل إعلان الإتمام، L-58 الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق، L-59 سجل التدقيق يُكتب من trigger لا من app_user، L-60 تقرير الإنجاز يفتتح بـgit log · الخطة تفتتح بنفي التنفيذ — العنوان وحده لا يُصدَّق، L-61 RLS: سياستان منفصلتان USING و WITH CHECK — الأولى وحدها تُخفي بدل أن تمنع، L-62 UNIQUE مع عمود nullable ليس قيداً — أضف UNIQUE INDEX WHERE ... IS NULL، L-63 قسم «أين نحن» يُصاغ من tail LESSONS.md + ls scripts/ + git log · لا من ذاكرة المحادثة — التوصيف يخرج من الفحص، L-64 عند تعارض تعليمة متأخرة مع قيد سابق من نفس المالك — توقّف واعرض التعارض؛ الإلغاء الضمني ليس إلغاءً، L-65 قبل إعلان بوابة — صنّف الاختبار (وجود / ثبات / سلبي) واسأل ما نطاق المدخلات؛ اختبار الحالة النموذجية دليل ثبات لا وجود، L-66 عند تعارض كود ووثيقة — صنّف المصادر إلى مقرِّر ومنفِّذ؛ الأدنى المخالف انحراف يُصحَّح لا خلاف يُحسم، L-67 قبل محاكاة عطل يمسّ حالة مشتركة — .git ملك جلسات أخرى؛ عدّل السكربت لا المراجع، والحارس check-no-git-internals يمنع الكتابة على .git الداخلية، L-68 حين تبني حارساً على فرع بينما الكود على فرع آخر — النقل جزء من إنجاز البوابة لا خطوة تالية، L-69 قبل قرار بنيوي على واجهة مستهلَكة في Timeline v2 — افحص مسار الاستهلاك لا البناء وحده؛ verify:snapshot يفحص الرسم، verify:render-video-all-templates يفحص التوصيل، L-70 verify:snapshot يُثبت أنّ الرسم لم يتغيّر لا أنّ خطّ إنتاج MP4 صحيح — أضف فاحصاً لكل مسار، L-71 سكربت بلا مفتاح ليس بوابة ولو حمل ✓ ورقماً في وثيقة — الحارس غير الموصول يشتري طمأنينة كاذبة، L-72 بادئة `_` على وسيط دالة تُلغي حراسة النوع على مرتبته — أنشئ اختبار وجود يوفّر المدخل كاملاً لكل مسار في المحرك، L-73 نوعٌ اختياريّ يبلّغ أماناً بلا أن يؤمّن — «حاضر دائماً في التشغيل + fail-loud» بديلاً عن الإلزام في النوع حين المصدر jsonb بلا CHECK).
+2. اسأل: أيّ درس مرشّح للتكرار في هذه المهمة؟ (L-01 عند نقل من الأصل، L-02 عند كتابة عتبة، L-03 عند تغيير بصري، L-04 عند حدود نظام، L-05 عند إضافة رقم، L-06 عند تحدّي مواصفة، L-07 عند حلقة إطارات/زمن، L-08 عند قاعدة نحوية، L-09 عند بناء تحسين، L-10 عند بوابة تفترض ثمناً، L-11 عند «نسبة غير مصنّفة» غير مفسَّرة، L-12 عند إضافة مكوّن غير-JS، L-14 عند تصميم دالة على مجموعة، L-15 عند تغيير قرار معماري متأخر، L-16 عند بناء بوابة كمّية لمخرج بصري، L-17 قبل إعلان نجاح بوابة تُنتج صورة/فيديو، L-18 عند حساب صيغة زمن على نظام متوازٍ، L-19 عند تعداد BullMQ 5، L-20 عند بناء Next.js app جديد يستهلك workspace ESM، L-21 عند تصميم «حالة نظام»، L-22 عند رسائل API متعددة اللغات، L-23 عند مركّب رقمي في RTL، L-24 عند تصميم قاعدة i18n للخلط، L-25 بعد أي عمل لغوي/بصري، L-26 قبل تخطيط مرحلة كبيرة أو منتج جديد، L-27 قبل تثبيت أي تصنيف «مؤجَّل/مرفوض» ودورياً على المسبق منها، L-28 عند اقتراح أيّ أصل يمثّل علامة تجارية — فَحص رخصتَين لا واحدة، L-29 عند إضافة مصدر خارجي — صمّم تجميد إصدار قبل الحاجة، L-30 عند تصميم منتج B2B — اسأل «مستخدم واحد أم فريق؟»، L-31 عند بدء مواصفة — اسأل «كيف يعمل العمل يومياً؟» لا «ما الميزات المطلوبة؟»، L-32 قبل أيّ فعل بعد تعليمة توقّف — لا تجتهد، توسّع النطاق لا تضيّقه، L-33 عند تناقض التوجيه مع فحص أجريتَه — اعرض التناقض واطلب تأكيداً لا ترجّح، L-34 قبل كتابة أيّ رقم في مادة تسويقية — لكل رقم مصدر قياس، وإلا حُذف، L-35 عند اختلاف رقمَين — شغّل القياس وأرسل الناتج، لا تشرح الفرق سردياً، L-36 عند قياس أثر ميزة انتقائية — قسّم إلى «تدخّلت/لم تتدخّل» وقس على الأولى، L-40 عند استلام مهمة جديدة — إن لم تلمس packages/ ⇒ فرع مستقل، L-41 عند تعارض مقياسين — افحص ما يقيسه كل واحد + استعن باللقطة البصرية، L-42 قبل تشغيل قياس دقة — طابق العيّنة لحالة الاستخدام الفعلية، لا للسهلة الوصول، L-46 قبل كتابة اختبار ثبات — اكتب اختبار وجود أولاً، وإلا حرست فراغاً، L-47 قبل الاعتماد على قيد نصّي مطلق — ابنِ بوابة آلية تفحصه، لأن التلوث يعود من نصوص الاختبار لا من الكود، L-48 قبل الإحالة من وثيقة إلى مسار — تأكّد أنه ليس في مجلد مؤقّت؛ المخرج الذي يُعرض لا يعيش في out/، L-49 قبل أيّ افتراض عن «لغة العميل» — ميّز بين لغة الواجهة ولغة الرسائل ولغة المحتوى، وحدَها الثالثة تُحدّد سلوك المحرك، L-50 قبل أيّ حساب تخطيطي يعتمد على measureText — تحقّق من combining marks (تشكيل عربي)؛ عند وجودها، القياس البكسلي هو الوحيد الموثوق، L-51 عند نفي كل الفرضيات المطروحة — لا تتوقّف، اقرأ المخرج الخام؛ الفرضية الصحيحة قد تكون خامسة لم تُذكر، L-52 عند تصحيح المالك لاسم مكوّن — ابحث قبل الافتراض؛ التصحيح لا يُثبت الوجود، فقط القصد، L-53 عند إعلان إنجاز مركّب — تحقّق من كل بند بمسار ملف أو أمر؛ الفجوة في تسلسل مرقَّم مؤشر مجاني على عمل غير منجَز، L-54 بعد كل قاعدة تشغيلية — ابنِ سكربتاً يفشل عند مخالفتها وإلا فهي توصية، L-55 المخرج المعروض يعيش في demo/ لا out/ · فحص آلي يمنع الإحالة من وثيقة إلى مؤقت، L-56 التسجيل فور الإقرار لا بعد اكتمال المهمة — الدرس المؤجَّل يضيع، L-57 git log + git status + git push في تقرير الإنجاز قبل إعلان الإتمام، L-58 الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق، L-59 سجل التدقيق يُكتب من trigger لا من app_user، L-60 تقرير الإنجاز يفتتح بـgit log · الخطة تفتتح بنفي التنفيذ — العنوان وحده لا يُصدَّق، L-61 RLS: سياستان منفصلتان USING و WITH CHECK — الأولى وحدها تُخفي بدل أن تمنع، L-62 UNIQUE مع عمود nullable ليس قيداً — أضف UNIQUE INDEX WHERE ... IS NULL، L-63 قسم «أين نحن» يُصاغ من tail LESSONS.md + ls scripts/ + git log · لا من ذاكرة المحادثة — التوصيف يخرج من الفحص، L-64 عند تعارض تعليمة متأخرة مع قيد سابق من نفس المالك — توقّف واعرض التعارض؛ الإلغاء الضمني ليس إلغاءً، L-65 قبل إعلان بوابة — صنّف الاختبار (وجود / ثبات / سلبي) واسأل ما نطاق المدخلات؛ اختبار الحالة النموذجية دليل ثبات لا وجود، L-66 عند تعارض كود ووثيقة — صنّف المصادر إلى مقرِّر ومنفِّذ؛ الأدنى المخالف انحراف يُصحَّح لا خلاف يُحسم، L-67 قبل محاكاة عطل يمسّ حالة مشتركة — .git ملك جلسات أخرى؛ عدّل السكربت لا المراجع، والحارس check-no-git-internals يمنع الكتابة على .git الداخلية، L-68 حين تبني حارساً على فرع بينما الكود على فرع آخر — النقل جزء من إنجاز البوابة لا خطوة تالية، L-69 قبل قرار بنيوي على واجهة مستهلَكة في Timeline v2 — افحص مسار الاستهلاك لا البناء وحده؛ verify:snapshot يفحص الرسم، verify:render-video-all-templates يفحص التوصيل، L-70 verify:snapshot يُثبت أنّ الرسم لم يتغيّر لا أنّ خطّ إنتاج MP4 صحيح — أضف فاحصاً لكل مسار، L-71 سكربت بلا مفتاح ليس بوابة ولو حمل ✓ ورقماً في وثيقة — الحارس غير الموصول يشتري طمأنينة كاذبة، L-72 بادئة `_` على وسيط دالة تُلغي حراسة النوع على مرتبته — أنشئ اختبار وجود يوفّر المدخل كاملاً لكل مسار في المحرك، L-73 نوعٌ اختياريّ يبلّغ أماناً بلا أن يؤمّن — «حاضر دائماً في التشغيل + fail-loud» بديلاً عن الإلزام في النوع حين المصدر jsonb بلا CHECK، L-74 موافقة على خيار «لا تسأل ثانيةً» تمنح إذناً أوسع من الأمر المسؤول — احكم على الأمر أوّلاً ثمّ اختر الخيار، L-75 كاشفٌ مربوط بلغة لا يرى ما أُنشئ ليراه — الشكل قبل الكلمات، والحالات ثلاث لا اثنتان (تعمل · عالقة عند سؤال · ساكنة)، L-76 نصّ متروك في مجرى الإدخال يلتصق بالجواب — امسح السطر قبل أيّ إرسال نصّيّ · جواب الرقم آمن).
 3. إن ظهر خلل، وقبل النقض، افحص: هل خالفت درساً؟
 
 بعد مهمة أنتجت درساً جديداً: أضف قسماً جديداً بنفس البنية (شاهد + كيف يُطبَّق + قرارات مرتبطة). لا تختصر.
@@ -10267,7 +10408,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-11 · **HEAD:** `b4ce12e` (`main`)
+> **تاريخ التوليد:** 2026-09-11 · **HEAD:** `d901146` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10297,21 +10438,21 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 183 | 1 |
-| `feat/api` | `f7220f8` | 4 | 0 | 188 |
-| `feat/ci` | `027c3d4` | 7 | 2 | 189 |
-| `feat/dashboards` | `376077c` | 0 | 72 | 112 |
-| `feat/studio` | `d995a73` | 37 | 2 | 219 |
-| `origin/aa-internal` | `ee178ca` | 0 | 183 | 1 |
-| `origin/feat/api` | `ff22f1d` | 3 | 32 | 155 |
-| `origin/feat/ci` | `027c3d4` | 7 | 2 | 189 |
-| `origin/feat/dashboards` | `376077c` | 0 | 72 | 112 |
-| `origin/feat/studio` | `d995a73` | 37 | 2 | 219 |
+| `aa-internal` | `ee178ca` | 0 | 187 | 1 |
+| `feat/api` | `8d6a6c9` | 5 | 4 | 189 |
+| `feat/ci` | `ecec605` | 13 | 2 | 199 |
+| `feat/dashboards` | `376077c` | 0 | 76 | 112 |
+| `feat/studio` | `d995a73` | 37 | 6 | 219 |
+| `origin/aa-internal` | `ee178ca` | 0 | 187 | 1 |
+| `origin/feat/api` | `8d6a6c9` | 5 | 4 | 189 |
+| `origin/feat/ci` | `ecec605` | 13 | 2 | 199 |
+| `origin/feat/dashboards` | `376077c` | 0 | 76 | 112 |
+| `origin/feat/studio` | `d995a73` | 37 | 6 | 219 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
 - **main (63):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/api (51):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:doc-paths` · `check:docker-context` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:control-plane` · `verify:debt1` · `verify:limits1` · `verify:multilang` · `verify:perf` · `verify:plans` · `verify:projects` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (62):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (66):** `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
@@ -10321,8 +10462,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-73
-- **العدد الفريد:** 68 · **الإدخالات:** 68
+- **المدى:** L-1 → L-76
+- **العدد الفريد:** 71 · **الإدخالات:** 71
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -10631,6 +10772,48 @@ model في shared) · النواة (`resolveAt` · `interpolate` بـ8 دوال 
 واجهة المنصة، لا تُبنى منفصلة). فك الترميز المسبق ينتظر مقطع مصدر
 حقيقي من العميل الأول.
 
+**تحديث بنيويّ (2026-09-11 · IMAGE-FIX · BASELINE-A · GATE-2LAYER · CI):**
+
+**١ · IMAGE-FIX (`93ae08f` · 2026-09-10 · L-72):** إصلاح سطر واحد في
+`packages/engine/src/render.ts:240` — كانت الصورة تُمرَّر في مرتبة
+`_brand` من `drawImage(ctx, size, brand, params)` بسبب بادئة `_` التي
+تُلغي حراسة TypeScript على المرتبة. الأثر السابق: خلفيّة الصورة لم تُرسم
+أبداً، ومع `crop` كان يُرمى TypeError. أُضيفت بوابة `verify:image-layer`
+(4 قوالب × 2 حالة = 8 حالات) — راجع رأس السكربت لتفصيل حقن العطب.
+
+**٢ · BASELINE-A (`af2acc2` + `2ae9fb8` · 2026-09-11 · L-73):**
+`measuredLineHeight` صار يستهلك متريكات رأس الخطّ (OS/2 typo
+ascent/descent + head.unitsPerEm) من `BrandKit.fonts.primary.weights.*.metrics`
+بدل `ctx.measureText.actualBoundingBox*`. الأثر: Chrome و skia يحسبان
+نفس lineHeight من نفس المدخل ⇒ التخطيط متطابق بنيويّاً بين المعاينة
+والمخرَج. أداة `pnpm measure-font` جديدة (opentype.js في devDeps للجذر
+فقط — المحرك يبقى نقيّاً · صفر تبعية جديدة على `packages/engine` أو
+`packages/shared`).
+
+**٣ · GATE-2LAYER (`b4ce12e` + `0a77bbd` · 2026-09-11):**
+- **البوابة البصريّة صارت ثلاث طبقات موصولة في `pnpm test`:**
+  1. `verify:plan-values` (قيَم `RenderPlan` deep-equal · 12 خطّة)
+  2. `verify:snapshot` (لقطات بايت-بايت · 24 لقطة · **دخلت `pnpm test` — كانت خارجها**)
+  3. `verify:image-fixture` (مسار الصورة الحقيقيّ · fixture PNG · platform-agnostic)
+- **مرجع اللقطات + الخطط + `breaking.mp4` صار Linux حصراً** (حاوية
+  `node:20.18.1-bookworm-slim` · وصفة `90-LINUX-REFERENCE`). سبب:
+  فرق `measureText` ~2px بين macOS و Linux (`PLATFORM-2`). على macOS
+  ثلاث حرّاس (snapshot · plan-values · breaking-video) تفشل بصوت واضح
+  وتوجّه إلى `./bin/mk-ci` — لا SKIP، لا tolerance.
+- **عدد أوامر `pnpm test`:** 31 (كان 28 قبل GATE-2LAYER · 25 قبل WIRE-7).
+- **قرار مقصود:** `verify:snapshot` يفحص خلفيّة `preview.mjs` البديلة —
+  **لا يُغطّي مسار الصورة**. `verify:image-fixture` يحرس مسار الصورة
+  وحده. البوابتان منفصلتان بالتصميم (موثَّق في رأس السكربتَين).
+
+**٤ · أوّل CI في تاريخ المشروع (`feat/ci` · 2026-09-11):** فرع
+`feat/ci` (مسار `mkci`) يبني `.github/workflows/ci.yml` — يشغّل السلسلة
+داخل حاوية `node:20.18.1-bookworm-slim` وفق وصفة `90-LINUX-REFERENCE`،
+ويستهلك عقد المرجع الثلاثيّ من `60-GATE-2LAYER-GO §٩`. workflows أخرى
+مقترَحة: `l46-redis-observe.yml` (لتذكرة `CI-REDIS-SERVICE` — Redis
+service لحلّ 5 إخفاقات `observe.test.ts`) و `regen-breaking-linux-md5.yml`
+(لإعادة توليد مرجع Linux تحت الطلب). **الشاشة الخامسة `mkci` تضاف إلى
+`docs/11 §الجلسات` — راجع هناك.**
+
 **قرار المالك (2026-09-10) — التشكيل التلقائيّ مؤجَّل عن الإصدار الأول:**
 - **الحالة:** الميزة **غير مُفعَّلة في v1**. `brand.typography.diacritics.enabled`
   افتراضه `false` منذ البدء (`packages/shared/src/default-brand.ts:138`) —
@@ -10664,7 +10847,11 @@ diacritizer MIT، Python 3.12 venv، منفذ 19080) · `measuredLineHeight`
 على 265 عنوان RSS حقيقي (aljazeera · bbc · aawsat · dw · almasryalyoum ·
 rt · me-online · aljazeera-me) لتفادي فخّ L-05 (اختبار يوافق قواعده).
 **بوابات (ج، د، أداء) اجتازت:** Δfill=+0.56%، Δstddev=-0.26% (**تحسّن —
-درس L-10**)، softness regression=2.26%، p95=402ms. **بوابتا (أ) و (ب)
+درس L-10**)، softness regression=2.26%، **p95=402ms** (`buildRenderPlan`
+**مع القوائم الممتدَّة** — ExtendedLexicon مُفعَّل · بوابة ≤ 800ms). قياس
+p95 آخر في مواضع أخرى من هذا الملفّ (SUB-G3 · سطر 1345): **291ms** —
+مصدر مختلف: `buildRenderPlan` **بلا القوائم الممتدَّة** (بوابة ≤ 390ms).
+الرقمان صحيحان لسياقَين مختلفَين — تصحيح 2026-09-11 (70-CORRECT-1). **بوابتا (أ) و (ب)
 معلَّقتان** حتى وصول WojoodGaza (نموذج طلب أكاديمي عبر sina.birzeit.edu).
 
 **قرار التفعيل (2026-09-01):** `DEFAULT_BRAND.typography.semanticBreaks.
@@ -10690,7 +10877,7 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 · 3 ☑ (الرندر على الخادم) · 3.2 ☑ (لوحات التحكم — 2026-09-02) · 3.5 ◐
 (الكسر الدلالي + التشكيل — بوابتا أ/ب معلَّقتان WojoodGaza) · **3.7 ☑
 (محرّك الخط الزمني — 2026-09-02، الواجهة إلى المرحلة 4)** · **3.8 ☑
-(امتدادات المحرك — 2026-09-04: الإسناد ☑ · التفريغ ☑ (skeleton خدمة + طبقة caption محرك) · Lottie 🔻 مؤجَّل بشرط · SVG ☑ (6 بوابات) · كشف الوجوه ☑ (خدمة MTCNN معزولة + smart-crop في المحرك، 6 بوابات) · التعليق الصوتي ☑ (packages/tts BYO-key + mock adapter، 6 بوابات))** · **3.9 ☑ (البوابات الست: G1..G6 كلٌّ منها بوجود + ثبات + سلبي صريح — 2026-09-04، G6 معلَّق بشرط RLS للمرحلة 4)** · **3.10 ☑ (content.locale — Locale + applyLocaleToBrand + wrapLatin + checkFontCoverage + demo/multilang-demo.png ar/en/tr، 2026-09-04، L-49).**
+(امتدادات المحرك — 2026-09-04: الإسناد ☑ · التفريغ ☑ (skeleton خدمة + طبقة caption محرك) · Lottie 🔻 مؤجَّل بشرط · SVG ☑ (6 بوابات) · كشف الوجوه ☑ (خدمة MTCNN معزولة + smart-crop في المحرك، 6 بوابات) · التعليق الصوتي ☑ (packages/tts BYO-key + mock adapter، 6 بوابات))** · **3.9 ◐ (البوابات الست G1..G6 — تصحيح 2026-09-05: 4/6 مبنيّة · G6 skeleton · G1 و G2 غير مبنيَّين. الحالة الأصليّة ☑ في 2026-09-04 كانت خطأً منقوضاً — راجع §المرحلة 3.9 التفصيليّة أدناه)** · **3.10 ☑ (content.locale — Locale + applyLocaleToBrand + wrapLatin + checkFontCoverage + demo/multilang-demo.png ar/en/tr، 2026-09-04، L-49).**
 
 **التالي:** المرحلة **3.8** (امتدادات المحرك — 5 بنود: التفريغ +
 القاموس · الإسناد · Lottie/Skottie · كشف الوجوه · التعليق الصوتي).
@@ -10788,8 +10975,10 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
 
 ### ما بُني وما لم يُجدوَل
 
-- **مسار A:** 30/30 · 74 نقطة نهاية · 25 بوابة · `verify:all`
-  بصفر إخفاق.
+- **مسار A:** 30/30 · ~108 نقطة نهاية HTTP (`git ls-tree` عدّ 103 ملف `.ts`
+  في `apps/api/src/routes/`، ناقص 8 shared، زائد ~15 نقطة من
+  `revisions/factory.ts` — تصحيح 2026-09-11 · 70-CORRECT-1 · «74» السابق كان خطأ) ·
+  25 بوابة في `verify:all` (`scripts/verify-all.mjs` — GATES array أعلن 25).
 - **مسار S:** 22/22 + S23 (مساحة العمل).
 - **نقاط التزامن:** 8/8 مفتوحة.
 
@@ -11049,7 +11238,7 @@ docs/marketing/أ). بناء المنصة فوق محرّك بلا حراسة ي
 
 **اختبار الذروة (`scripts/test-peak-load.mjs`):** 9 مهام urgent متزامنة، 3 مستأجرين × 3 مهام لكلٍّ، بترتيب round-robin عند الإدخال.
 - كل المهام اكتملت (9/9)، صفر فشل
-- **أقصى wait قبل البدء: 15.13s** (البوابة: ≤ 45s — عبرت بهامش 66%)
+- **أقصى wait قبل البدء: 15.13s** (تشغيل 2026-08-31 · التشغيل الأصليّ) · **أو 12.10s** (تشغيل لاحق · مذكور في `M1:188`). البوابة: ≤ 45s — كلا القياسَين عبرا بهامش ≥66%. تصحيح 2026-09-11 (70-CORRECT-1): القيمتان ليستا خطأً بل قياسان لنفس السكربت في تشغيلَين — يُعاد القياس عند شكّ حقيقيّ.
 - متوسط wait: 6.63s
 - نمط round-robin واضح في السجل: `A→B→C→A→B→C→A→B→C`
 
@@ -11070,7 +11259,7 @@ docs/marketing/أ). بناء المنصة فوق محرّك بلا حراسة ي
 4. ☑ **الأداء (بعد RenderPlan):** فيديو 8.4s ⇒ 2.2s رندر (×80 من 177s). فيديو 60s يُستقرأ ~15s (يتجاوز الالتزام 5 دقائق بأريحية).
 
 **البوابة (الجلسة الثانية — مُتحقّقة 2026-08-31):**
-5. ☑ **معيار الذروة:** 9 مهام urgent متزامنة (3 مستأجرين × 3) → أقصى wait 15.13s (البوابة ≤45s). كل المهام اكتملت، صفر فشل. round-robin واضح `A→B→C→A→B→C→A→B→C`.
+5. ☑ **معيار الذروة:** 9 مهام urgent متزامنة (3 مستأجرين × 3) → أقصى wait 15.13s (تشغيل 2026-08-31 · الأصليّ) — راجع التصحيح على السطر 445 لتفصيل القياسَين (15.13 و 12.10). البوابة ≤45s. كل المهام اكتملت، صفر فشل. round-robin واضح `A→B→C→A→B→C→A→B→C`.
 6. ☑ **عزل الفشل:** 8/8 مهام معطوبة رُفضت قبل الطابور (`waiting=0 قبل=بعد`). مهمة صحيحة معالَجة في 1.60s بعدها. `apps/renderer/src/validate.ts` هو نقطة الرفض الوحيدة.
 7. ⏸ **مؤجَّل للمرحلة 4:** MP4 يُشغَّل على iPhone/أندرويد ويُرفع لإنستغرام بلا تحويل — يحتاج جهاز عميل حقيقي للتحقق النهائي.
 
