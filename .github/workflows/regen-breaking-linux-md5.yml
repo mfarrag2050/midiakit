@@ -1,0 +1,100 @@
+# .github/workflows/regen-breaking-linux-md5.yml — توليد مرجع لينكس
+# لـverify:breaking-video من بيئة CI نفسها.
+#
+# **السياق (20-CI-BUILD § جواب المالك (2) · 2026-09-11):** مرجع
+# `snapshots-video/breaking-linux.md5` الحاليّ وُلِّد داخل Debian 12
+# تحت QEMU x86_64 على M4 (Colima). runner CI الفعليّ Ubuntu 24.04
+# amd64 نظيف — قد يختلف ffmpeg (Debian bookworm 5.1.x · Ubuntu 24.04
+# يشحن 6.x). PLATFORM-3 يضمن `measureText` عبر معماريّات linux لا
+# نُسخ ffmpeg. النتيجة: التشغيل الثالث (34597420133) أظهر md5 مختلفاً
+# (`9f1a8135…` بدل `41a01b82…`).
+#
+# **قاعدة mkau (رأس تقريرها):** «مرجع يُولَّد في بيئة غير بيئة التشغيل
+# ليس مرجعاً».
+#
+# **آليّة الحفظ (شرط المالك):** توليد مرّتَين في التشغيل نفسه، طبع
+# المجموعَين. إن اختلفا: المصيِّر غير حتميّ على هذا المعمار → مسألة
+# أكبر من المرجع → **قف · لا تحفظ · أبلغ المالك**.
+#
+# **الاستدعاء:** `gh workflow run regen-breaking-linux-md5.yml`
+# ثمّ قراءة السجلّ، أخذ md5 اليدويّة إن ثابت، تحديث الملفّ + التزام.
+# (لا نمنح permissions: contents: write — الحفظ يدويّ بقصد.)
+
+name: Regen breaking-linux.md5
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  regen:
+    name: توليد مرّتَين + فحص استقرار
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # لا نحتاج fetch-depth: 0 — لا نستدعي git show HEAD ولا build-skill.
+
+      - name: تركيب ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Node 20.18.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: corepack pnpm 9.15.4
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          pnpm --version
+
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: تركيب التبعيّات
+        run: pnpm install --frozen-lockfile
+
+      - name: توليد المرجع — جولتان + مقارنة
+        run: |
+          mkdir -p out
+          echo '===== الجولة الأولى ====='
+          node --import tsx apps/renderer/src/cli.ts \
+            --brand=default --template=breaking \
+            --out=out/breaking-run1.mp4
+          R1=$(md5sum out/breaking-run1.mp4 | cut -d' ' -f1)
+          echo "MD5_RUN1=$R1"
+          echo ""
+          echo '===== الجولة الثانية ====='
+          node --import tsx apps/renderer/src/cli.ts \
+            --brand=default --template=breaking \
+            --out=out/breaking-run2.mp4
+          R2=$(md5sum out/breaking-run2.mp4 | cut -d' ' -f1)
+          echo "MD5_RUN2=$R2"
+          echo ""
+          echo '===== نتيجة الاستقرار ====='
+          if [ "$R1" = "$R2" ]; then
+            echo "STABLE_LINUX_MD5=$R1"
+            echo ""
+            echo "الحفظ (يدويّ · بقصد):"
+            echo "  1. حدِّث محلّيّاً: echo $R1 > snapshots-video/breaking-linux.md5"
+            echo "  2. commit + push."
+            echo "  3. أوّل CI بعده سيمرّ verify:breaking-video ✓"
+          else
+            echo "UNSTABLE — لا تحفظ"
+            echo "  run1: $R1"
+            echo "  run2: $R2"
+            echo ""
+            echo "المصيِّر غير حتميّ على linux/amd64 هنا — مسألة أكبر من المرجع."
+            echo "أبلغ المالك قبل أيّ خطوة."
+            exit 1
+          fi
