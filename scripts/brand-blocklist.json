@@ -21,10 +21,12 @@
   ],
   "$expansionNote": "أضف مؤسسات أخرى هنا بأمر صريح من صاحب المشروع — لا تجتهد. أمثلة محتملة (لم تُقرَّر): 'الجزيرة'/'aljazeera' (يظهر حالياً في RSS pipeline كمعرِّف مصدر، ليس نص اختبار).",
   "$skillPathsNote": "docs/SKILL-mediakit.md · docs/BUNDLE.md · scripts/build-skill.mjs — وثائق داخلية تذكر أصل المشروع تاريخياً. القاعدة السابعة تمنع أصول أناضول في المنتج (خط · شعار · لون · قالب)، لا ذكر المصدر في توثيق لا يُشحن ولا يراه عميل. BUNDLE هو تجميع docs/ + PHASES.md — يرث الاستثناء بالإحاطة. نفس صنف PHASES.md و CLAUDE.md و LESSONS.md المستثناة قبلها.",
+  "$claudeWorkspaceNote": "claude/** — مساحة عمل الوكلاء (inbox, reports, panes, .dispatched). محتواها **تقارير/سجلّات عمل** تصف الحارس أو تقتبس نصّ التذكرة، لا نصّ اختبار ولا مخرَج ولا مادّة تسويقية. نفس منطق استثناء scripts/check-no-brand-leak.mjs (السكربت يذكر الاسم في التعليقات ليصفه). CHECK-FIX 2026-09-11.",
   "excludeGlobs": [
     "reference/**",
     "node_modules/**",
     ".git/**",
+    "claude/**",
     "**/.venv/**",
     "PHASES.md",
     "CLAUDE.md",
