@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Alert,
@@ -270,6 +270,10 @@ export default function BrandKitEditorPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // §130-DEMO-FIX-1 §2: `saving` state لا يُحدَّث بصورة فوريّة داخل
+  // نفس مِعْلاق الحدث (React batches). فضغطتان متتاليتان في نفس الـ
+  // microtask تريان `saving=false` كلاهما وتمرّان. ref يُطبَّق فوراً.
+  const savingRef = useRef(false);
   const [saveErrorKey, setSaveErrorKey] = useState<string | null>(null);
   const [saveErrorField, setSaveErrorField] = useState<string | null>(null);
   const [savedNoticeKey, setSavedNoticeKey] = useState<string | null>(null);
@@ -391,6 +395,12 @@ export default function BrandKitEditorPage(): JSX.Element {
 
   async function doSave(): Promise<void> {
     if (!kit) return;
+    // §130-DEMO-FIX-1 §2: `saving` state لا يُحدَّث فوراً داخل نفس
+    // مِعْلاق الحدث. `savingRef.current` يُطبَّق فوراً، فيمنع ضغطة
+    // ثانية في نفس microtask من المرور. اختبار الحياة موثَّق في
+    // §٢ من التقرير: قبل هذا الحارس ⇒ ٢ PATCH · بعده ⇒ ١ PATCH.
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setSaveErrorKey(null);
     setSaveErrorField(null);
@@ -463,6 +473,7 @@ export default function BrandKitEditorPage(): JSX.Element {
       }
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   }
 

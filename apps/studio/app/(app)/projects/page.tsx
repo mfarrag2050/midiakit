@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -35,6 +36,7 @@ const STATE_TONE: Record<string, 'neutral' | 'success' | 'accent' | 'warning'> =
 
 export default function ProjectsPage(): JSX.Element {
   const { t } = useLocale();
+  const router = useRouter();
 
   const [rows, setRows] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,17 +108,21 @@ export default function ProjectsPage(): JSX.Element {
   }
 
   async function doCreate(): Promise<void> {
+    // §130-DEMO-FIX-1 §1: احمِ من double-submit — إن كنّا busy فتجاهل.
+    if (createBusy) return;
     setCreateBusy(true);
     setCreateErrorKey(null);
     try {
-      await projects.create({
+      const created = await projects.create({
         title: newTitle.trim(),
         brand_kit_id: newBrandKit,
         template_id: newTemplate,
         locale: newLocale,
       });
+      // §130-DEMO-FIX-1 §1: بعد الإنشاء أَغلِق الحوار وانتقل إلى
+      // المشروع الجديد — لا تُبقِ الحوار مفتوحاً بلا خبر.
       setCreateOpen(false);
-      await refresh();
+      router.push(`/projects/${encodeURIComponent(created.id)}`);
     } catch (err) {
       setCreateErrorKey(err instanceof ApiError ? err.messageKey : 'errors.UNKNOWN');
     } finally {
@@ -221,7 +227,10 @@ export default function ProjectsPage(): JSX.Element {
         titleKey="pages.projects.title"
         subtitleKey="pages.projects.subtitle"
         action={
-          <Button onClick={() => void openCreate()}>
+          <Button
+            onClick={() => void openCreate()}
+            disabled={createOpen}
+          >
             {t('pages.projects.create')}
           </Button>
         }
@@ -272,7 +281,7 @@ export default function ProjectsPage(): JSX.Element {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         titleKey="pages.projects.createTitle"
-        confirmKey="pages.projects.create"
+        confirmKey="pages.projects.createConfirm"
         onConfirm={doCreate}
       >
         <div className="space-y-4">

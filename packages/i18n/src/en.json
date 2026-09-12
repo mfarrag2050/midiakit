@@ -51,6 +51,7 @@
       "emptyBody": "Start a project from a brand kit and template.",
       "create": "New project",
       "createTitle": "Create a new project",
+      "createConfirm": "Create project",
       "titleLabel": "Project title",
       "brandKitLabel": "Brand kit",
       "templateLabel": "Template",

@@ -51,6 +51,7 @@
       "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب.",
       "create": "مشروع جديد",
       "createTitle": "إنشاء مشروع جديد",
+      "createConfirm": "أنشئ المشروع",
       "titleLabel": "عنوان المشروع",
       "brandKitLabel": "الهوية",
       "templateLabel": "القالب",

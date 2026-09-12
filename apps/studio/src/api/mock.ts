@@ -668,6 +668,11 @@ export async function handleMock(
   const bkPatch = /^PATCH \/v1\/brand-kits\/([^/]+)$/.exec(key);
   if (bkPatch) {
     const id = bkPatch[1] ?? '';
+    // Observability لـ`130-DEMO-FIX-1` §2 · تُقرَأ من puppeteer عبر
+    // `page.on('console', …)`. لا أثر على الإنتاج لأنّ `handleMock`
+    // لا يُستدعى إلاّ حين `NEXT_PUBLIC_API_MOCK=true`.
+    // eslint-disable-next-line no-console
+    console.log('[mock:PATCH:bk]', id, new Date().toISOString());
     const k = MOCK_BRAND_KITS.get(id);
     if (!k) err(404, 'NOT_FOUND');
     // §5.4 blocked paths: يمنع تعديل assets.version + fonts.primary.licenseAck.
