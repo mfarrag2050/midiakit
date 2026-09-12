@@ -40,10 +40,12 @@ const EXPECTED_TABLES = [
   // ai_integrations موجود من A2 — control_plane_all موجودة
   'plan_revisions',                    // A28 — تدقيق تحرير plans
   'license_acks',                      // DEBT-1 §3 — سجلّ إقرار ترخيص append-only
+  'exports',                           // 240-EXPORT-LIMITS — سجلّ التصديرات (rate + counter)
   // Reference data
   'plans',
-  // Platform-scoped (2)
+  // Platform-scoped (3 — 151 أضاف سجلّ الحذف)
   'platform_users', 'platform_sessions',
+  'tenant_deletion_log',               // 151-TENANT-DELETE-BUILD — سجلّ حذف المستأجرين (بلا FK إلى tenants)
 ];
 
 // جداول مستثناة صراحةً من الفحص:
