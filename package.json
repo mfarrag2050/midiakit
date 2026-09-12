@@ -22,6 +22,7 @@
     "check:docs-bundle-fresh": "node scripts/check-docs-bundle-fresh.mjs",
     "check:template-drift": "node scripts/check-template-drift.mjs",
     "check:auth-coverage": "node --import tsx scripts/check-auth-coverage.mjs",
+    "check:templates-render-ready": "node scripts/check-templates-render-ready.mjs",
     "docs:bundle": "node scripts/bundle-docs.mjs",
     "skill:build": "node scripts/build-skill.mjs",
     "skill:publish": "pnpm skill:build && pnpm docs:bundle",
