@@ -30,6 +30,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",
     "templates": "Templates",
@@ -45,6 +46,27 @@
     }
   },
   "pages": {
+    "composer": {
+      "breaking": {
+        "title": "Compose breaking card",
+        "subtitle": "اختر الهوية، اكتب العنوان والمصدر، ثمّ صدّر — same engine.",
+        "kitLabel": "Brand kit",
+        "noKits": "لا هويّات بعد — create one from Brand Kits.",
+        "headlineLabel": "العنوان",
+        "headlinePlaceholder": "اكتب عنوان الخبر هنا.",
+        "sourceLabel": "المصدر / agency",
+        "sourcePlaceholder": "e.g. وكالات.",
+        "exportHint": "rendered server-side · الملفّ يحمل اسم الهويّة والتاريخ.",
+        "section": {
+          "inputs": "Inputs"
+        },
+        "reasons": {
+          "noKit": "اختر هوية أوّلاً.",
+          "noTemplate": "قالب «بطاقة عاجل» غير متاح.",
+          "noHeadline": "اكتب عنواناً أوّلاً — no export without headline."
+        }
+      }
+    },
     "projects": {
       "title": "Projects",
       "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
@@ -52,6 +74,7 @@
       "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب.",
       "create": "New project",
       "createTitle": "إنشاء مشروع جديد",
+      "createConfirm": "أنشئ المشروع",
       "titleLabel": "Project title",
       "brandKitLabel": "Brand Kit",
       "templateLabel": "Template",
@@ -253,10 +276,10 @@
       },
       "fontAck": {
         "title": "Acknowledge font license",
-        "body": "الخطوط المرفوعة تحتاج إقراراً بحقّ الاستعمال. البنيوية 'builtin' لا تحتاج.",
+        "body": "قبل استعمال خطّ رفعتَه بنفسك، أَقِرَّ هنا أنّك تملك حقّ استعماله قانونيّاً في مخرجات هذه الهويّة. يُسجَّل الإقرار باسمك وتاريخه — مرّةً واحدة لكلّ خطّ. الخطوط المدمَجة (built-in) مرخّصة أصلاً ولا تحتاج هذه الخطوة.",
         "family": "Font family",
         "notes": "Notes (optional)",
-        "checkbox": "I acknowledge the license.",
+        "checkbox": "أقرّ بأنّني أملك حقّ استعمال هذا الخطّ.",
         "submit": "Save acknowledgement",
         "ackedBy": "Acknowledged by",
         "ackedAt": "Acknowledged at"
@@ -356,7 +379,38 @@
             "locationBadgeOnSurface": "لون شارة الموقع على السطح"
           }
         },
-        "unsavedChanges": "unsaved changes"
+        "unsavedChanges": "unsaved changes",
+        "logo": {
+          "sectionSubtitle": "SVG or PNG · بين 40 و2048 بكسل · النسبة بين 1:6 و6:1.",
+          "chooseFile": "Choose logo file",
+          "replaceFile": "استبدل الشعار",
+          "uploadingLabel": "uploading…",
+          "previewTitle": "المعاينة — actual dimensions",
+          "previewDimensions": "{w}×{h} px · ratio {ratio}",
+          "previewAnchor": "Anchor: {anchor}",
+          "noneChosen": "لا شعار — اختر ملفّاً",
+          "cardMockup": "معاينة الموضع على البطاقة"
+        },
+        "fontPicker": {
+          "emptyLibrary": "لا خطوط في مكتبتك — ارفع خطّاً من صفحة Assets ليظهر هنا.",
+          "chooseFromLibrary": "اختر خطّاً من المكتبة",
+          "assetIdHint": "القيمة المحفوظة assetId — الاسم عرضٌ. يمنع «اسم خطّ غير مسجَّل» (ticket §2.1 + _AMEND-100)."
+        },
+        "preview": {
+          "title": "معاينة حيّة · Breaking card",
+          "subtitle": "same engine · نصّ عيّنة عربيّ · updates on change (250ms debounce).",
+          "durationHint": "render duration"
+        },
+        "export": {
+          "button": "صدّر البطاقة",
+          "busy": "جارٍ التصدير…",
+          "hint": "rendered server-side · احفظ التغييرات قبل التصدير.",
+          "dirtyBlocked": "cannot export with unsaved changes — save first.",
+          "success": "تمّ التصدير · file downloaded.",
+          "queuedStep": "queued…",
+          "runningStep": "rendering…",
+          "downloadingStep": "downloading…"
+        }
       }
     },
     "templates": {
@@ -624,6 +678,11 @@
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
     "INVALID_FONT_METRICS": "font metrics missing — الخطّ المرفوع لم تُقَس أبعاده. شغّل `pnpm measure-font <path.ttf>` ثمّ أعِد الرفع.",
+    "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1.",
+    "RENDER_FAILED": "تعذّر إخراج البطاقة — أعد المحاولة.",
+    "RENDER_TIMEOUT": "export timed out — الشبكة بطيئة، أعد المحاولة.",
+    "RATE_LIMITED": "too many requests — انتظر ثمّ أعد المحاولة.",
+    "EXPORT_DOWNLOAD_FAILED": "the file was produced but download failed — تحقّق من الاتّصال.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
@@ -698,7 +757,10 @@
     "ASSET_LOAD_FAILED": "image load failed — أعد رفعها.",
     "ASSET_ID_EMPTY": "image field فارغ — اختر من assets.",
     "CANVAS_NO_CONTEXT": "browser لا يدعم canvas — جرّب newer browser.",
-    "PREVIEW_UNKNOWN": "preview failed — راجع القالب."
+    "PREVIEW_UNKNOWN": "preview failed — راجع القالب.",
+    "HEADLINE_TOO_LONG": "headline طويل — قصِّره أو غيّر maximum length في القالب.",
+    "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
+    "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل."
   },
   "design": {
     "title": "Design System",

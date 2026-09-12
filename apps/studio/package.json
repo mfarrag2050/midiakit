@@ -7,7 +7,9 @@
     "dev": "next dev -p 19050 -H 127.0.0.1",
     "build": "next build",
     "start": "next start -p 19050 -H 127.0.0.1",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "measure:parity": "node scripts/measure-parity.mjs",
+    "measure:parity-real": "node scripts/measure-parity-real.mjs"
   },
   "dependencies": {
     "@pf-mediakit/engine": "workspace:*",

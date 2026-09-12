@@ -31,6 +31,7 @@ interface NavItem {
 }
 
 const NAV: readonly NavItem[] = [
+  { href: '/breaking', labelKey: 'nav.breaking', icon: '⚡' },
   { href: '/projects', labelKey: 'nav.projects', icon: '◫' },
   { href: '/brand-kits', labelKey: 'nav.brandKits', icon: '❋' },
   { href: '/templates', labelKey: 'nav.templates', icon: '▤' },
