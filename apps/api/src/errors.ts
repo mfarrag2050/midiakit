@@ -81,6 +81,9 @@ export type ErrorCode =
   | 'UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS'        // A18 MVP (400)
   | 'BRAND_SNAPSHOT_NOT_FOUND'                     // §8.5 (404)
   | 'TEMPLATE_SNAPSHOT_NOT_FOUND'                  // §8.6 (404)
+  | 'HEADLINE_TOO_LONG'                            // 240 · content.headline > MAX (422)
+  | 'SOURCE_TOO_LONG'                              // 240 · content.source > MAX (422)
+  | 'EXPORTS_RATE_LIMIT'                           // 240 · rate/دقيقة/tenant (429)
   // Revisions (§10)
   | 'REVISION_NOT_FOUND'                           // §10.3 (404)
   | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)
@@ -230,6 +233,10 @@ export const OutputNotReady = () => new ApiError('OUTPUT_NOT_READY', 404);
 export const RenderRunning = () => new ApiError('RENDER_RUNNING', 409);
 export const RenderAlreadyTerminal = () => new ApiError('RENDER_ALREADY_TERMINAL', 409);
 export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS', 400);
+// 240-EXPORT-LIMITS · حدود المحتوى + rate limit
+export const HeadlineTooLong = () => new ApiError('HEADLINE_TOO_LONG', 422, 'content.headline');
+export const SourceTooLong = () => new ApiError('SOURCE_TOO_LONG', 422, 'content.source');
+export const ExportsRateLimit = () => new ApiError('EXPORTS_RATE_LIMIT', 429);
 export const BrandSnapshotNotFound = () => new ApiError('BRAND_SNAPSHOT_NOT_FOUND', 404);
 export const TemplateSnapshotNotFound = () => new ApiError('TEMPLATE_SNAPSHOT_NOT_FOUND', 404);
 // Revisions (§10)
