@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Alert,
@@ -21,6 +21,18 @@ import {
   formatContrast,
   WCAG_AA_NORMAL,
 } from '@/src/utils/wcag';
+import { createDebouncedScheduler, drawPreview } from '@/src/preview/live';
+import { TEMPLATES } from '@pf-mediakit/templates';
+
+// نصّ عيّنة عربيّ واقعيّ للمعاينة الحيّة — من عناويننا التجريبيّة
+// (المصدر: `verify-text-contrast.mjs` · `aa6ade2`). لا Lorem · لا نصّ
+// إنجليزيّ (قاعدة `140-LIVE-CARD-PREVIEW` §٣).
+const PREVIEW_SAMPLE_CONTENT = {
+  headline: 'انفجار في محطّة الوقود يودي بحياة ثلاثة أشخاص',
+  source: 'وكالات',
+  locale: 'ar' as const,
+};
+const PREVIEW_SIZE = { w: 1080, h: 1350 } as const;
 
 // حدود الشعار — الفشل عند الخروج منها يرمي `INVALID_LOGO_DIMENSIONS`.
 // المصدر: قرار مالك في `110-EDITOR-LOGO`. حدود متحفّظة وواسعة كافياً
@@ -42,11 +54,16 @@ const LOGO_MAX_ASPECT = 6; // width/height أو height/width — كلاهما �
 // ورفضٌ بصوتٍ عالٍ عند أبعاد شاذّة (`INVALID_LOGO_DIMENSIONS`).
 // حدود [40, 2048] بكسل + نسبة ≤ 6:1. لا مربّع نائب.
 //
-// **المرحلة ٤** (هذا الملفّ · مستأنَفة من stash): منتقي الخطّ من
-// `assetId` (لا نصّ حرّ) حسب `_AMEND-100`. يُجلب
-// `list({filter:{kind:'font'}})` من الخادم (mock يُعيد الكلّ
-// فنُصفّي جانب العميل بحسب `kind === 'font'`). المستخدم يختار
-// عائلة · القيمة المحفوظة `assetId` · الاسم عرضٌ.
+// **المرحلة ٤** (نزلت في `ac35348`): منتقي الخطّ من `assetId` (لا
+// نصّ حرّ) حسب `_AMEND-100`.
+//
+// **المرحلة ٥** (هذا الملفّ · `140-LIVE-CARD-PREVIEW`): معاينة بطاقة
+// «عاجل» حيّة داخل المحرّر، تتحدّث مع كلّ تغيير (لون · خطّ · شعار)
+// بلا حفظ. بالمحرّك نفسه (`renderFrame` من `@pf-mediakit/engine`) —
+// لا رسمٌ تقريبيّ بـCSS (قاعدة #2 من التذكرة). نصّ عربيّ واقعيّ
+// (قاعدة #3). حين يفشل الرسم (خطّ لم يُحمَّل · شعار تالف) تُعرَض
+// رسالة صريحة في مكان المعاينة بدل بطاقة كاذبة (قاعدة #4).
+// debounce 250ms على الرسم (قاعدة #5).
 //
 // **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** ثلاث تكرارات لنفس
 // النمط — الألوان (§٢) · الشعار (§٣) · الخطوط (§٤). الـAPI اليوم
@@ -267,6 +284,11 @@ export default function BrandKitEditorPage(): JSX.Element {
   const [availableFonts, setAvailableFonts] = useState<AssetListItem[]>([]);
   const [draftFontAssetId, setDraftFontAssetId] = useState<string>('');
   const [initialFontAssetId, setInitialFontAssetId] = useState<string>('');
+  // §140-LIVE-CARD-PREVIEW · معاينة بطاقة عاجل حيّة داخل المحرّر.
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const previewScheduler = useRef(createDebouncedScheduler(250));
+  const [previewMs, setPreviewMs] = useState<number | null>(null);
+  const [previewWarning, setPreviewWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -318,6 +340,90 @@ export default function BrandKitEditorPage(): JSX.Element {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // §140-LIVE-CARD-PREVIEW · حالة الهوية المرشَّحة من `kit.config` مع
+  // فوقها الحقول التي يعدّلها المستخدم الآن (name/colors/logo/font).
+  // المعاينة تُعيد رسمها كلّما تغيّر أيّ من هذه الحقول (debounced).
+  const effectiveBrandConfig = useMemo<Record<string, unknown> | null>(() => {
+    if (!kit) return null;
+    const cfg = kit.config as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...cfg, name: draftName };
+    // الألوان: دمج مسوّدة على الأصل — نفس نمط الحفظ.
+    if (Object.keys(draftColors).length > 0) {
+      out.colors = {
+        ...((cfg.colors as Record<string, unknown>) ?? {}),
+        ...draftColors,
+      };
+    }
+    // الشعار: إن رُفع أصل جديد ولم يُحفظ بعد، أدرج dataUri للمعاينة
+    // (لا نحتاج شبكة). publicUrl الفعليّ من الخادم أفضل حين الحفظ.
+    if (draftLogo) {
+      out.logo = {
+        ...((cfg.logo as Record<string, unknown>) ?? {}),
+        url: draftLogo.dataUri,
+        // احتفظ بـsize/position/watermark من الأصل — الشاشة لا تحرّرها.
+      };
+    }
+    // الخطّ: إن اختار المستخدم assetId جديداً، حدّث family + weights.regular.url.
+    // ملاحظة (170-FONT-SERVE): mk-api يخدم الخطّ عبر `/v1/assets/:id/font`
+    // لكنّ `@font-face` في المتصفّح لا يحمل Bearer JWT — التوصيل الكامل
+    // يحتاج إمّا cookie-auth أو proxy عبر Next route. لم أُوصله في هذه
+    // المرحلة (راجع §الفنّ لاحقاً في التقرير).
+    if (draftFontAssetId && draftFontAssetId !== initialFontAssetId) {
+      const selected = availableFonts.find((f) => f.id === draftFontAssetId);
+      if (selected) {
+        const existingFonts = (cfg.fonts as Record<string, unknown>) ?? {};
+        const existingPrimary =
+          (existingFonts.primary as Record<string, unknown>) ?? {};
+        out.fonts = {
+          ...existingFonts,
+          primary: {
+            ...existingPrimary,
+            family:
+              (selected.meta?.family as string | undefined) ??
+              selected.filename,
+            source:
+              ((selected.meta?.source as string | undefined) ?? 'custom'),
+          },
+        };
+      }
+    }
+    return out;
+  }, [
+    kit,
+    draftName,
+    draftColors,
+    draftLogo,
+    draftFontAssetId,
+    initialFontAssetId,
+    availableFonts,
+  ]);
+
+  useEffect(() => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas || !effectiveBrandConfig) return;
+    previewScheduler.current.schedule(() => {
+      void (async (): Promise<void> => {
+        try {
+          const res = await drawPreview(canvas, {
+            template: TEMPLATES.breaking as unknown as Parameters<
+              typeof drawPreview
+            >[1]['template'],
+            brandConfig: effectiveBrandConfig,
+            content: PREVIEW_SAMPLE_CONTENT,
+            size: PREVIEW_SIZE,
+          });
+          setPreviewMs(res.durationMs);
+          setPreviewWarning(res.warning ?? null);
+        } catch (err) {
+          setPreviewWarning(
+            err instanceof Error ? err.message : 'errors.PREVIEW_UNKNOWN'
+          );
+        }
+      })();
+    });
+    return (): void => previewScheduler.current.cancel();
+  }, [effectiveBrandConfig]);
 
   async function handleLogoFile(file: File): Promise<void> {
     setLogoErrorKey(null);
@@ -540,6 +646,42 @@ export default function BrandKitEditorPage(): JSX.Element {
           )}
         </Alert>
       )}
+
+      {/* Section — Live card preview (§140-LIVE-CARD-PREVIEW) */}
+      <Card>
+        <div className="mb-3 flex items-baseline justify-between gap-4">
+          <h2 className="text-sm font-semibold">
+            {t('pages.brandKits.editor.preview.title')}
+          </h2>
+          {previewMs !== null && (
+            <span
+              className="font-mono text-xs text-fg-subtle"
+              dir="ltr"
+              title={t('pages.brandKits.editor.preview.durationHint')}
+            >
+              {previewMs.toFixed(0)}ms
+            </span>
+          )}
+        </div>
+        <p className="mb-3 text-xs text-fg-subtle">
+          {t('pages.brandKits.editor.preview.subtitle')}
+        </p>
+        {previewWarning && (
+          <div className="mb-3">
+            <Alert kind="warning" titleKey={previewWarning} />
+          </div>
+        )}
+        <div
+          className="mx-auto"
+          style={{ maxWidth: '360px', aspectRatio: '1080 / 1350' }}
+        >
+          <canvas
+            ref={previewCanvasRef}
+            className="h-full w-full rounded border border-fg-subtle/20 bg-surface-2"
+            style={{ display: 'block' }}
+          />
+        </div>
+      </Card>
 
       {/* Section — Identity (editable: name; read-only: direction, locale) */}
       <Card>

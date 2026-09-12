@@ -373,6 +373,11 @@
           "emptyLibrary": "لا خطوط في مكتبتك — ارفع خطّاً من صفحة Assets ليظهر هنا.",
           "chooseFromLibrary": "اختر خطّاً من المكتبة",
           "assetIdHint": "القيمة المحفوظة assetId — الاسم عرضٌ. يمنع «اسم خطّ غير مسجَّل» (ticket §2.1 + _AMEND-100)."
+        },
+        "preview": {
+          "title": "معاينة حيّة · Breaking card",
+          "subtitle": "same engine · نصّ عيّنة عربيّ · updates on change (250ms debounce).",
+          "durationHint": "render duration"
         }
       }
     },

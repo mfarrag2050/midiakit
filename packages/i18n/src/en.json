@@ -372,6 +372,11 @@
           "emptyLibrary": "No fonts in your library — upload one from the Assets page and it will appear here.",
           "chooseFromLibrary": "Choose a font from the library",
           "assetIdHint": "The saved value is the asset id — the name is display only. Prevents \"unregistered font family\" (ticket §2.1 + _AMEND-100)."
+        },
+        "preview": {
+          "title": "Live preview · Breaking card",
+          "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
+          "durationHint": "Render duration — every keystroke reschedules"
         }
       }
     },
