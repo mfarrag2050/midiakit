@@ -366,6 +366,11 @@
           "previewAnchor": "Anchor: {anchor}",
           "noneChosen": "No logo — choose a file",
           "cardMockup": "Position preview on the card"
+        },
+        "fontPicker": {
+          "emptyLibrary": "No fonts in your library — upload one from the Assets page and it will appear here.",
+          "chooseFromLibrary": "Choose a font from the library",
+          "assetIdHint": "The saved value is the asset id — the name is display only. Prevents \"unregistered font family\" (ticket §2.1 + _AMEND-100)."
         }
       }
     },

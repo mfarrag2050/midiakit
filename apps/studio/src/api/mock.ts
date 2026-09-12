@@ -99,6 +99,26 @@ MOCK_ASSETS.set('ast_seed_image', {
   createdAt: new Date().toISOString(),
 });
 
+// FONT-PICKER (§3 من 100-BRAND-KIT-EDITOR): seed خطَّان كي يظهر
+// المنتقي بخيارات حقيقيّة على mock. `meta.family` هي القيمة المعروضة
+// للمستخدم; `assetId` هو ما يُحفَظ في patch كما اشترط `_AMEND-100`.
+MOCK_ASSETS.set('ast_seed_font_ibm', {
+  id: 'ast_seed_font_ibm',
+  kind: 'font',
+  filename: 'IBMPlexSansArabic-Regular.ttf',
+  sizeBytes: 234000,
+  createdAt: new Date().toISOString(),
+  meta: { family: 'IBM Plex Sans Arabic', source: 'builtin' },
+});
+MOCK_ASSETS.set('ast_seed_font_almarai', {
+  id: 'ast_seed_font_almarai',
+  kind: 'font',
+  filename: 'Almarai-Regular.ttf',
+  sizeBytes: 189000,
+  createdAt: new Date().toISOString(),
+  meta: { family: 'Almarai', source: 'custom' },
+});
+
 interface MockTemplate {
   id: string;
   scope: 'global' | 'tenant';
@@ -215,7 +235,15 @@ MOCK_BRAND_KITS.set('bk_mock_default', {
   config: {
     direction: 'rtl',
     locale: 'ar',
-    fonts: { primary: { family: 'IBM Plex Sans Arabic', source: 'builtin' } },
+    fonts: {
+      primary: {
+        family: 'IBM Plex Sans Arabic',
+        source: 'builtin',
+        weights: {
+          regular: { assetId: 'ast_seed_font_ibm', value: 400, url: '' },
+        },
+      },
+    },
     colors: {
       text: '#111111',
       accent: '#B78D2E',

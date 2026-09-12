@@ -15,6 +15,7 @@ import {
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, assets, brandKits } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
+import type { AssetListItem } from '@/src/api/endpoints/assets';
 import {
   contrastRatio,
   formatContrast,
@@ -36,25 +37,24 @@ const LOGO_MAX_ASPECT = 6; // width/height أو height/width — كلاهما �
 // **المرحلة ٢** (نزلت في `79f8840`): الألوان السبعة الصلبة تحريراً +
 // عرض تباين WCAG لثلاثة أزواج مسمّاة.
 //
-// **المرحلة ٣** (هذا الملفّ): الشعار — رفعٌ عبر مسار الأصول القائم،
-// معاينة حقيقيّة بالأبعاد الفعليّة، ورفضٌ بصوتٍ عالٍ عند أبعاد شاذّة
-// (`INVALID_LOGO_DIMENSIONS`). حدود [40, 2048] بكسل + نسبة عرض/ارتفاع
-// ≤ 6:1. لا مربّع نائب — نائبٌ يكذب أهون منه غيابٌ صادق (قرار مالك
-// في المرحلة ٢ · مؤكَّد في `110-EDITOR-LOGO`).
+// **المرحلة ٣** (نزلت في `1f56cfc` · `110-EDITOR-LOGO`): الشعار —
+// رفعٌ عبر مسار الأصول القائم، معاينة حقيقيّة بالأبعاد الفعليّة،
+// ورفضٌ بصوتٍ عالٍ عند أبعاد شاذّة (`INVALID_LOGO_DIMENSIONS`).
+// حدود [40, 2048] بكسل + نسبة ≤ 6:1. لا مربّع نائب.
 //
-// **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** الـAPI اليوم يطبّق
-// merge patch سطحيّاً على `config` (رصده المالك · فتُحت تذكرة عند
-// `mkapi`). فلو أرسلنا `{colors: {text: '#X'}}` لمَحَا الستّة الباقية
-// من `config.colors` بلا خطأ. **الحلّ من جهتنا:** نرسل الألوان
-// السبعة كاملةً في كلّ حفظ · شاشتنا تملك المجموعة كلّها فما نرسله
-// هو ما رآه المستخدم. **هذا يسقط حين يصير `PATCH` عميقاً · أو حين
-// تُحرَّر الألوان من موضعَين متزامناً** (سباق كتابة). راجع §٥·٢ من
-// التقرير.
+// **المرحلة ٤** (هذا الملفّ · مستأنَفة من stash): منتقي الخطّ من
+// `assetId` (لا نصّ حرّ) حسب `_AMEND-100`. يُجلب
+// `list({filter:{kind:'font'}})` من الخادم (mock يُعيد الكلّ
+// فنُصفّي جانب العميل بحسب `kind === 'font'`). المستخدم يختار
+// عائلة · القيمة المحفوظة `assetId` · الاسم عرضٌ.
 //
-// **مراحل تالية:**
-//   ٣ · الشعار (بعد الألوان — قرار مالك)
-//   ٤ · منتقي الخطّ من الأصول (`assetId` · لا نصّ حرّ · `_AMEND-100`)
-//   ٥ · المعاينة الحيّة على بطاقة حقيقيّة
+// **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** ثلاث تكرارات لنفس
+// النمط — الألوان (§٢) · الشعار (§٣) · الخطوط (§٤). الـAPI اليوم
+// يطبّق merge patch سطحيّاً على `config`. لكلّ من الثلاث نُعيد بناء
+// المجموعة كاملةً من `kit.config.<group>` ونحدّث الحقول التي غيّرها
+// المستخدم فقط، ثمّ نرسل الكلّ. يسقط حين يصير `PATCH` عميقاً (تذكرة
+// `mkapi` مفتوحة) أو حين تُحرَّر المجموعة من موضعَين متزامناً (سباق
+// كتابة صامت).
 
 type ConfigLike = Readonly<Record<string, unknown>>;
 
@@ -262,6 +262,11 @@ export default function BrandKitEditorPage(): JSX.Element {
   const [logoUploading, setLogoUploading] = useState(false);
   const [uploadedLogoAssetId, setUploadedLogoAssetId] = useState<string | null>(null);
   const [uploadedLogoPublicUrl, setUploadedLogoPublicUrl] = useState<string | null>(null);
+  // منتقي الخطّ (المرحلة ٤): assetId المختار + قائمة الخطوط المتاحة.
+  // مصدر البيانات: `/v1/assets` (mock يعيد الكلّ · نصفّي بـkind=='font').
+  const [availableFonts, setAvailableFonts] = useState<AssetListItem[]>([]);
+  const [draftFontAssetId, setDraftFontAssetId] = useState<string>('');
+  const [initialFontAssetId, setInitialFontAssetId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -273,7 +278,12 @@ export default function BrandKitEditorPage(): JSX.Element {
     setLoading(true);
     setLoadErrorKey(null);
     try {
-      const k = await brandKits.get(id);
+      const [k, fontsPage] = await Promise.all([
+        brandKits.get(id),
+        assets
+          .list({ filter: { kind: 'font' } })
+          .catch(() => ({ data: [] as AssetListItem[], nextCursor: null, hasMore: false })),
+      ]);
       setKit(k);
       setDraftName(k.name);
       const cfg = k.config as ConfigLike;
@@ -283,6 +293,17 @@ export default function BrandKitEditorPage(): JSX.Element {
         if (v) initial[key] = v;
       }
       setDraftColors(initial);
+      // تصفية العميل — mock لا يفهم `filter[kind]` (query يُهدَر عند
+      // handleMock)، فنُبقيه هنا. الخادم الحقيقيّ يصفّي · فتصفيتنا
+      // no-op معه.
+      const fonts = fontsPage.data.filter((a) => a.kind === 'font');
+      setAvailableFonts(fonts);
+      // اقرأ assetId الحاليّ من الوزن الأساسيّ regular. غيابُه يعني
+      // «لم يُختَر أصلٌ من مكتبتنا» — قد يكون خطّاً مدمَجاً بلا مرجع.
+      const currentAssetId =
+        pickString(cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId') ?? '';
+      setDraftFontAssetId(currentAssetId);
+      setInitialFontAssetId(currentAssetId);
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
@@ -397,6 +418,39 @@ export default function BrandKitEditorPage(): JSX.Element {
           url: uploadedLogoPublicUrl ?? existingLogo.url ?? '',
         };
       }
+      // الخطّ: إن اختار المستخدم `assetId` جديداً، أعِد بناء `fonts`
+      // كاملاً · نفس نمط الألوان والشعار (data-loss avoidance).
+      if (draftFontAssetId !== initialFontAssetId && draftFontAssetId) {
+        const selected = availableFonts.find((f) => f.id === draftFontAssetId);
+        const existing = (kit.config as ConfigLike).fonts ?? {};
+        const existingPrimary =
+          ((existing as Record<string, unknown>).primary as Record<string, unknown>) ?? {};
+        const existingWeights =
+          (existingPrimary.weights as Record<string, unknown>) ?? {};
+        const existingRegular =
+          (existingWeights.regular as Record<string, unknown>) ?? {};
+        const familyName =
+          (selected?.meta?.family as string | undefined) ??
+          selected?.filename ??
+          '';
+        const source =
+          ((selected?.meta?.source as string | undefined) ?? 'custom');
+        payload.fonts = {
+          ...(existing as Record<string, unknown>),
+          primary: {
+            ...existingPrimary,
+            family: familyName,
+            source,
+            weights: {
+              ...existingWeights,
+              regular: {
+                ...existingRegular,
+                assetId: draftFontAssetId,
+              },
+            },
+          },
+        };
+      }
       const updated = await brandKits.patch(kit.id, payload);
       setKit(updated);
       setSavedNoticeKey('pages.brandKits.editor.saved');
@@ -433,7 +487,9 @@ export default function BrandKitEditorPage(): JSX.Element {
       draftColors[k] !== pickString(kit.config as ConfigLike, 'colors', k)
   );
   const dirtyLogo = uploadedLogoAssetId !== null && draftLogo !== null;
-  const dirty = dirtyName || dirtyColors || dirtyLogo;
+  const dirtyFont =
+    draftFontAssetId !== initialFontAssetId && draftFontAssetId !== '';
+  const dirty = dirtyName || dirtyColors || dirtyLogo || dirtyFont;
   // ملاحظة: لا نُعطّل الزرّ على الاسم الفارغ عمداً — نترك الخادم
   // يعيد `400 VALIDATION_FAILED` فيظهر الأحمر (L-46 · حالة أحمر
   // مُعادة الإنتاج). لو منعنا هنا لأخفينا مسار الأحمر.
@@ -520,29 +576,52 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Font (read-only in Phase 1) */}
+      {/* Section — Font (editable in Phase 3 · assetId not free text) */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {t('pages.brandKits.editor.section.font')}
-          </h2>
-          <Badge tone="neutral">
-            {t('pages.brandKits.editor.readOnlyTag')}
-          </Badge>
-        </div>
-        <div className="space-y-1">
-          <ReadOnlyRow
-            labelKey="pages.brandKits.editor.field.fontFamily"
-            value={
-              identity.fontFamily ? (
-                <span dir="ltr">{identity.fontFamily}</span>
-              ) : (
-                <span className="text-fg-subtle">
-                  {t('pages.brandKits.editor.value.notSet')}
-                </span>
-              )
-            }
-          />
+        <h2 className="mb-3 text-sm font-semibold">
+          {t('pages.brandKits.editor.section.font')}
+        </h2>
+        {availableFonts.length === 0 ? (
+          <p className="text-xs text-fg-muted">
+            {t('pages.brandKits.editor.fontPicker.emptyLibrary')}
+          </p>
+        ) : (
+          <>
+            <Field
+              htmlFor="font-picker"
+              labelKey="pages.brandKits.editor.field.fontFamily"
+            >
+              <select
+                id="font-picker"
+                value={draftFontAssetId}
+                onChange={(e) => setDraftFontAssetId(e.target.value)}
+                disabled={saving}
+                className="w-full rounded border border-fg-subtle/30 bg-surface px-2 py-1.5 text-sm"
+              >
+                {draftFontAssetId === '' && (
+                  <option value="">
+                    {t('pages.brandKits.editor.fontPicker.chooseFromLibrary')}
+                  </option>
+                )}
+                {availableFonts.map((f) => {
+                  const family =
+                    typeof f.meta?.family === 'string'
+                      ? f.meta.family
+                      : f.filename;
+                  return (
+                    <option key={f.id} value={f.id} dir="ltr">
+                      {family}
+                    </option>
+                  );
+                })}
+              </select>
+            </Field>
+            <p className="mt-2 text-xs text-fg-subtle">
+              {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+            </p>
+          </>
+        )}
+        <div className="mt-3 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
             labelKey="pages.brandKits.editor.field.fontSource"
             value={

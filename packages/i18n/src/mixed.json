@@ -367,6 +367,11 @@
           "previewAnchor": "Anchor: {anchor}",
           "noneChosen": "لا شعار — اختر ملفّاً",
           "cardMockup": "معاينة الموضع على البطاقة"
+        },
+        "fontPicker": {
+          "emptyLibrary": "لا خطوط في مكتبتك — ارفع خطّاً من صفحة Assets ليظهر هنا.",
+          "chooseFromLibrary": "اختر خطّاً من المكتبة",
+          "assetIdHint": "القيمة المحفوظة assetId — الاسم عرضٌ. يمنع «اسم خطّ غير مسجَّل» (ticket §2.1 + _AMEND-100)."
         }
       }
     },
