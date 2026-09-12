@@ -45,6 +45,7 @@ import assetsListRoute from './routes/assets/list.js';
 import assetsGetRoute from './routes/assets/get.js';
 import assetsFontServeRoute from './routes/assets/font-serve.js';
 import readyRoute from './routes/ready.js';
+import exportsListRoute from './routes/exports/list.js';
 import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
 import assetsDeleteRoute from './routes/assets/delete.js';
 import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
@@ -257,6 +258,11 @@ export async function buildServer() {
       await r.register(rendersCancelRoute);
       await r.register(rendersDeleteRoute);
     }, { prefix: '/renders' });
+
+    // 200-EXPORT-HISTORY — سجلّ التصديرات
+    await v1.register(async (e) => {
+      await e.register(exportsListRoute);
+    }, { prefix: '/exports' });
 
     // A20 Revisions — 3 endpoints × 5 موارد
     await v1.register(makeRevisionsPlugin({
