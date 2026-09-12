@@ -978,9 +978,22 @@ function runSource(
     }
     const gapPx = bounds.fontSize * (layer.gapFsRatio ?? 1.4);
     const baseline = bounds.bottom + gapPx;
-    args.ctx.textAlign = 'right';
+    // 99G · 2026-09-12: المحاذاة الأفقيّة تُقرأ من الهويّة، لا مثبَّتة.
+    // الأنكور بنيويّ (رأسيّاً من العنوان)، والمحاذاة الأفقيّة من
+    // `brand.placement.source.align`. الافتراضي `'left'` بحسب أسلوب
+    // البيت. راجع docs/03 §placement.
+    const align = args.brand.placement?.source?.align ?? 'left';
     args.ctx.direction = 'rtl';
-    args.ctx.fillText(text, bounds.right, baseline);
+    if (align === 'right') {
+      args.ctx.textAlign = 'right';
+      args.ctx.fillText(text, bounds.right, baseline);
+    } else if (align === 'center') {
+      args.ctx.textAlign = 'center';
+      args.ctx.fillText(text, (bounds.left + bounds.right) / 2, baseline);
+    } else {
+      args.ctx.textAlign = 'left';
+      args.ctx.fillText(text, bounds.left, baseline);
+    }
     return;
   }
 
