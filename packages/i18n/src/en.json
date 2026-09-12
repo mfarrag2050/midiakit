@@ -29,6 +29,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",
     "templates": "Templates",
@@ -44,6 +45,27 @@
     }
   },
   "pages": {
+    "composer": {
+      "breaking": {
+        "title": "Compose breaking card",
+        "subtitle": "Pick the brand, write the headline and source, then export — the card is rendered with the same engine.",
+        "kitLabel": "Brand kit",
+        "noKits": "No brand kits yet — create one from the Brand Kits page.",
+        "headlineLabel": "Headline",
+        "headlinePlaceholder": "Type the news headline here.",
+        "sourceLabel": "Source / agency",
+        "sourcePlaceholder": "e.g. Reuters.",
+        "exportHint": "Rendered server-side with the export engine · the file carries the brand name and date.",
+        "section": {
+          "inputs": "Inputs"
+        },
+        "reasons": {
+          "noKit": "Pick a brand kit first.",
+          "noTemplate": "The 'breaking' template is not available — check the Templates page.",
+          "noHeadline": "Type a headline first — no export without a headline."
+        }
+      }
+    },
     "projects": {
       "title": "Projects",
       "subtitle": "Your cards, videos, and in-flight work.",

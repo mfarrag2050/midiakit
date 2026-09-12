@@ -30,6 +30,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",
     "templates": "Templates",
@@ -45,6 +46,27 @@
     }
   },
   "pages": {
+    "composer": {
+      "breaking": {
+        "title": "Compose breaking card",
+        "subtitle": "اختر الهوية، اكتب العنوان والمصدر، ثمّ صدّر — same engine.",
+        "kitLabel": "Brand kit",
+        "noKits": "لا هويّات بعد — create one from Brand Kits.",
+        "headlineLabel": "العنوان",
+        "headlinePlaceholder": "اكتب عنوان الخبر هنا.",
+        "sourceLabel": "المصدر / agency",
+        "sourcePlaceholder": "e.g. وكالات.",
+        "exportHint": "rendered server-side · الملفّ يحمل اسم الهويّة والتاريخ.",
+        "section": {
+          "inputs": "Inputs"
+        },
+        "reasons": {
+          "noKit": "اختر هوية أوّلاً.",
+          "noTemplate": "قالب «بطاقة عاجل» غير متاح.",
+          "noHeadline": "اكتب عنواناً أوّلاً — no export without headline."
+        }
+      }
+    },
     "projects": {
       "title": "Projects",
       "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
