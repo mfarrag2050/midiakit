@@ -1,0 +1,747 @@
+{
+  "brand": {
+    "name": "Media Kit",
+    "tagline": "Media Studio"
+  },
+  "locale": {
+    "label": "Language",
+    "ar": "العربية",
+    "mixed": "Mixed",
+    "en": "English"
+  },
+  "digits": {
+    "label": "Digits",
+    "latin": "123",
+    "arabicIndic": "١٢٣"
+  },
+  "time": {
+    "now": "just now",
+    "future": "in the future",
+    "minAgo": "{n} min ago",
+    "hourAgo": "{n} h ago",
+    "dayAgo": "{n} d ago"
+  },
+  "format": {
+    "storage": "Storage",
+    "renders": "Renders",
+    "usage": "Usage",
+    "lastRender": "Last render"
+  },
+  "nav": {
+    "workspace": "Workspace",
+    "projects": "Projects",
+    "brandKits": "Brand Kits",
+    "templates": "Templates",
+    "assets": "Assets",
+    "renders": "Renders",
+    "design": "Design",
+    "workflows": "Workflows",
+    "aiSettings": "AI",
+    "billing": "Billing",
+    "user": {
+      "placeholder": "Account",
+      "signOut": "Sign out"
+    }
+  },
+  "pages": {
+    "projects": {
+      "title": "Projects",
+      "subtitle": "Your cards, videos, and in-flight work.",
+      "empty": "No projects yet",
+      "emptyBody": "Start a project from a brand kit and template.",
+      "create": "New project",
+      "createTitle": "Create a new project",
+      "titleLabel": "Project title",
+      "brandKitLabel": "Brand kit",
+      "templateLabel": "Template",
+      "localeLabel": "Content locale",
+      "delete": "Delete",
+      "confirmDelete": "Delete project",
+      "confirmDeleteBody": "Deletion is permanent and cannot be undone.",
+      "col": {
+        "title": "Title",
+        "state": "State",
+        "brandKit": "Brand kit",
+        "template": "Template",
+        "assignee": "Assignee",
+        "updatedAt": "Updated at",
+        "actions": "Actions"
+      },
+      "filter": {
+        "label": "Filter",
+        "state": "State",
+        "all": "All"
+      },
+      "state": {
+        "draft": "Draft",
+        "review": "In review",
+        "approved": "Approved",
+        "archived": "Archived"
+      },
+      "assignee": {
+        "unassigned": "Unassigned"
+      },
+      "editor": {
+        "title": "Editor",
+        "back": "Back to projects",
+        "save": "Save",
+        "saved": "Saved",
+        "content": "Content",
+        "workflow": "Workflow",
+        "revisions": "Revisions",
+        "renders": "Renders",
+        "renderNow": "Render now",
+        "renderQueued": "Render queued...",
+        "renderRunning": "Running...",
+        "renderReady": "Output ready — open to download",
+        "renderFailed": "Render failed",
+        "transitions": "Available transitions",
+        "noTransitions": "No transitions from this state.",
+        "reasonLabel": "Transition reason (at least one line)",
+        "assignTo": "Assign to",
+        "systemActor": "System",
+        "history": "History",
+        "externalAssetsBlocked": "This brand kit uses unsupported external assets — resolve them before rendering.",
+        "staleUpdate": "Someone else edited this project. Reloading the current version.",
+        "ifMatchRequired": "Request was refused without an If-Match header — check the network layer."
+      },
+      "revisions": {
+        "title": "Revisions",
+        "empty": "No revisions yet.",
+        "col": {
+          "at": "Timestamp",
+          "actor": "Actor",
+          "op": "Op",
+          "snapshot": "Snapshot"
+        },
+        "op": {
+          "insert": "insert",
+          "update": "update",
+          "delete": "delete"
+        },
+        "view": "View",
+        "restore": "Restore",
+        "restoreTitle": "Restore to this revision",
+        "restoreReason": "Reason for restoring (at least 10 characters — L-15)",
+        "restoreConfirm": "Restore now",
+        "reconstructed": "Reconstructed state"
+      },
+      "preview": {
+        "title": "Live preview",
+        "hint": "Card digits follow brand settings, not the user preference."
+      },
+      "workspace": {
+        "sizeLabel": "Size",
+        "formatLabel": "Format",
+        "contentLocaleLabel": "Content locale",
+        "contentLocaleHint": "Content locale ≠ UI locale. The former drives output direction and typography rules.",
+        "contentLocale": {
+          "ar": "Arabic",
+          "latin": "Latin"
+        },
+        "size": {
+          "x": "X card",
+          "instagram": "Instagram card",
+          "reel": "Story / Reel",
+          "video": "Video"
+        },
+        "diacritize": "Diacritize",
+        "stripTashkeel": "Strip tashkeel",
+        "tashkeelKbd": "Tashkeel aid",
+        "tashkeel": {
+          "fatha": "fatha",
+          "damma": "damma",
+          "kasra": "kasra",
+          "sukun": "sukun",
+          "shadda": "shadda",
+          "tanwinFatha": "tanwin fatha",
+          "tanwinDamma": "tanwin damma",
+          "tanwinKasra": "tanwin kasra"
+        },
+        "imageChoose": "Choose image",
+        "imageChange": "Change",
+        "imageRemove": "Remove",
+        "imageSelected": "Image selected",
+        "fieldUnsupported": "Unsupported field type in this version"
+      },
+      "editor2": {
+        "noFields": "No fields in this template.",
+        "assignee": "Assignee",
+        "unassigned": "Unassigned",
+        "assignSelf": "Assign to me",
+        "unassign": "Unassign",
+        "roleHint": "Current user role",
+        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
+        "transitionReasonInline": "This transition requires a reason — enter it and retry.",
+        "transitionRoleRequired": "Your role isn't allowed — required role: {role}."
+      },
+      "annotations": {
+        "title": "Annotations",
+        "empty": "No annotations yet.",
+        "add": "Add annotation",
+        "layer": "Layer",
+        "segmentIndex": "Segment #",
+        "body": "Body",
+        "submit": "Submit",
+        "resolve": "Resolve",
+        "unresolve": "Reopen",
+        "remove": "Remove",
+        "resolvedTag": "resolved",
+        "openTag": "open",
+        "filterAll": "All",
+        "filterOpen": "Open",
+        "filterResolved": "Resolved",
+        "hintLayerFromTemplate": "Layers read from template definition — no hard-coded list in the UI."
+      }
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "States and transitions — data rules, not hard-coded.",
+      "empty": "No workflows yet",
+      "emptyBody": "Pick a preset to start your first workflow, or build from scratch.",
+      "create": "New workflow",
+      "createTitle": "Create workflow",
+      "presets": {
+        "label": "Presets (sent via POST — no server-side seed)",
+        "individual": "Individual — writer submits, reviewer approves",
+        "smallTeam": "Small team — writer/editor/reviewer/admin",
+        "fullAgency": "Full agency — longer chain + archive"
+      },
+      "nameLabel": "Name",
+      "isDefault": "Default",
+      "delete": "Delete",
+      "confirmDelete": "Delete workflow",
+      "confirmDeleteBody": "Deletion is permanent.",
+      "editor": {
+        "backToList": "Back to list",
+        "statesTitle": "States",
+        "addState": "Add state",
+        "stateId": "ID",
+        "stateLabel": "Label",
+        "assignableTo": "Assignable to (comma-separated roles)",
+        "transitionsTitle": "Transitions",
+        "addTransition": "Add transition",
+        "transitionId": "ID",
+        "transitionLabel": "Label",
+        "from": "From",
+        "to": "To",
+        "requiredRole": "Required role",
+        "requiresReason": "Requires reason",
+        "save": "Save",
+        "saved": "Saved",
+        "schemaHintUnknownState": "Unknown state — check states above.",
+        "removeRow": "Remove row"
+      }
+    },
+    "brandKits": {
+      "title": "Brand Kits",
+      "subtitle": "Fonts, colors, logos, and typography rules per client.",
+      "empty": "No brand kits yet",
+      "emptyBody": "A kit holds the font, palette, logo, margins, and motion rules.",
+      "create": "Create brand kit",
+      "createTitle": "Create a new brand kit",
+      "nameLabel": "Brand kit name",
+      "delete": "Delete",
+      "confirmDelete": "Confirm brand kit deletion",
+      "confirmDeleteBody": "Deletion is permanent.",
+      "col": {
+        "name": "Name",
+        "font": "Primary font",
+        "assetsVersion": "Assets version",
+        "actions": "Actions"
+      },
+      "fontAck": {
+        "title": "Acknowledge font license",
+        "body": "Uploaded fonts require an acknowledgement of usage rights. 'builtin' fonts do not.",
+        "family": "Font family",
+        "notes": "Notes (optional)",
+        "checkbox": "I acknowledge the license.",
+        "submit": "Save acknowledgement",
+        "ackedBy": "Acknowledged by",
+        "ackedAt": "Acknowledged at"
+      },
+      "assetsVersion": {
+        "title": "Bump assets version",
+        "body": "Bumping pins a new version. Review the diff before confirming (L-29).",
+        "current": "Current version",
+        "target": "New version",
+        "targetHint": "Format YYYY.MM (e.g. 2026.03).",
+        "diffTitle": "Diff",
+        "diffBody": "Expected asset changes for this bump.",
+        "diffPlaceholder": "No real diff in this MVP schema yet.",
+        "ackCheckbox": "I have reviewed the diff above.",
+        "submit": "Bump now"
+      },
+      "editBtn": "Edit",
+      "editor": {
+        "title": "Edit brand kit",
+        "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
+        "backToList": "← Back to list",
+        "save": "Save",
+        "saved": "Saved.",
+        "readOnlyTag": "Read-only · next phase",
+        "phase1Hint": "Punching the save (patch) path end-to-end on one field before building the twenty on top of it.",
+        "section": {
+          "identity": "Identity",
+          "font": "Font",
+          "colors": "Colors",
+          "logo": "Logo",
+          "bidi": "Direction & numerals"
+        },
+        "field": {
+          "direction": "Direction",
+          "locale": "Primary locale",
+          "fontFamily": "Font family",
+          "fontSource": "Font source",
+          "logoUrl": "Logo URL",
+          "logoSize": "Logo size",
+          "logoPosition": "Logo position",
+          "bidiEnabled": "Bidirectional (BiDi)",
+          "numerals": "Numeral style"
+        },
+        "value": {
+          "notSet": "not set",
+          "builtin": "built-in",
+          "custom": "uploaded",
+          "external": "external",
+          "arabic": "Arabic-Indic (١٢٣)",
+          "latin": "Latin (123)",
+          "rtl": "right-to-left (RTL)",
+          "ltr": "left-to-right (LTR)",
+          "on": "on",
+          "off": "off"
+        },
+        "color": {
+          "text": "Primary text",
+          "accent": "Accent",
+          "urgentBadge": "Urgent badge text",
+          "urgentBg": "Urgent bar background",
+          "urgentBgTint": "Urgent bar gradient",
+          "locationBadge": "Location badge",
+          "surface": "Surface",
+          "placeholder": "Placeholder fill"
+        },
+        "locale": {
+          "ar": "Arabic",
+          "en": "English",
+          "fr": "French",
+          "tr": "Turkish",
+          "es": "Spanish",
+          "de": "German"
+        },
+        "position": {
+          "bottom-left": "bottom-left",
+          "bottom-right": "bottom-right",
+          "top-left": "top-left",
+          "top-right": "top-right"
+        },
+        "colorEdit": {
+          "hexLabel": "hex value",
+          "hexInvalid": "invalid format — must be #RRGGBB",
+          "swatchLabel": "color"
+        },
+        "contrast": {
+          "sectionTitle": "Contrast",
+          "subtitle": "Measured on solid backgrounds only. Actual contrast over an image is measured by mk's engine checker (verify:text-contrast).",
+          "wcagThreshold": "WCAG AA minimum for normal text: 4.5:1",
+          "advisory": "Shown as an advisory, not a block — the brand owner decides.",
+          "readable": "readable",
+          "borderline": "borderline",
+          "notReadable": "may not be readable",
+          "invalid": "cannot measure — invalid hex value",
+          "pair": {
+            "textOnSurface": "Text on surface",
+            "urgentBadgeOnBg": "Urgent badge on its background",
+            "locationBadgeOnSurface": "Location badge on surface"
+          }
+        },
+        "unsavedChanges": "unsaved changes"
+      }
+    },
+    "templates": {
+      "title": "Templates",
+      "subtitle": "Card, Urgent, and Reel templates — public and your own.",
+      "empty": "No templates yet",
+      "emptyBody": "Templates are JSON files with fields you fill in to produce output.",
+      "readOnly": "Read-only",
+      "duplicate": "Duplicate",
+      "duplicateSuffix": " — copy",
+      "delete": "Delete",
+      "confirmDelete": "Confirm template deletion",
+      "confirmDeleteBody": "Deletion is permanent. Templates in use by projects can't be deleted.",
+      "scope": {
+        "label": "Scope",
+        "all": "All",
+        "global": "Public",
+        "tenant": "Your own"
+      },
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "static": "Static",
+        "video": "Video"
+      },
+      "col": {
+        "name": "Name",
+        "scope": "Scope",
+        "kind": "Kind",
+        "created": "Created",
+        "actions": "Actions"
+      }
+    },
+    "assets": {
+      "title": "Assets",
+      "subtitle": "Fonts, logos, images, audio, Lottie, SVG.",
+      "empty": "No assets uploaded",
+      "emptyBody": "Uploads go through a signed URL from the API (docs/16 §9).",
+      "upload": "Upload asset",
+      "chooseFile": "Choose a file",
+      "uploading": "Uploading…",
+      "finalize": "Finalize",
+      "delete": "Delete",
+      "confirmDelete": "Confirm asset deletion",
+      "confirmDeleteBody": "Deletion is permanent. Assets in use by brand kits can't be deleted.",
+      "kind": {
+        "label": "Kind",
+        "all": "All",
+        "font": "Font",
+        "logo": "Logo",
+        "image": "Image",
+        "audio": "Audio",
+        "video": "Video",
+        "lottie": "Lottie",
+        "svg": "SVG"
+      },
+      "col": {
+        "filename": "Filename",
+        "kind": "Kind",
+        "size": "Size",
+        "created": "Created",
+        "actions": "Actions",
+        "action": "Actions"
+      },
+      "svgWarn": {
+        "title": "SVG warning",
+        "body": "The file contains text not converted to paths — some renderers will drop it. Acknowledge to continue.",
+        "acknowledge": "Acknowledge & continue"
+      },
+      "licenseAck": {
+        "title": "License acknowledgement",
+        "body": "Fonts and Lottie files require acknowledging you have the right to use them.",
+        "checkbox": "I acknowledge the license."
+      },
+      "picker": {
+        "title": "Pick an asset",
+        "pick": "Pick",
+        "empty": "No assets of this kind."
+      }
+    },
+    "renders": {
+      "title": "Renders",
+      "subtitle": "PNG and MP4 history per project, with the brand snapshot used.",
+      "empty": "No renders yet",
+      "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8).",
+      "col": {
+        "id": "ID",
+        "project": "Project",
+        "status": "Status",
+        "format": "Format",
+        "size": "Size",
+        "created": "Started",
+        "duration": "Duration",
+        "actions": "Actions"
+      },
+      "status": {
+        "queued": "queued",
+        "running": "running",
+        "succeeded": "succeeded",
+        "failed": "failed",
+        "cancelled": "cancelled",
+        "cancelling": "cancelling"
+      },
+      "download": "Download",
+      "cancel": "Cancel",
+      "cancelling": "…",
+      "cancelledBadge": "cancelled",
+      "queueNote": "Status and position appear above — polled every second until terminal state.",
+      "position": "position {n}",
+      "brandSnapshot": "Brand snapshot used",
+      "brandSnapshotHint": "Frozen at POST — not affected by later brand edits.",
+      "quotaExceeded": "Render quota exhausted on this plan — upgrade from the Billing page."
+    },
+    "billing": {
+      "title": "Billing",
+      "subtitle": "Current plan, quotas, and live usage.",
+      "planLabel": "Plan",
+      "statusLabel": "Status",
+      "renewsAt": "Renews at",
+      "cancelsAt": "Cancels at",
+      "seats": "Seats",
+      "quotas": "Quotas",
+      "quota": {
+        "brandKits": "Brand kits",
+        "videos": "Videos",
+        "renders": "Renders"
+      },
+      "usageWindow": "Usage window",
+      "counts": "Counters",
+      "count": {
+        "rendersTotal": "Renders",
+        "videos": "Videos",
+        "videosSeconds": "Video seconds",
+        "storageBytes": "Storage (bytes)",
+        "aiTokens": "AI tokens (in+out)"
+      },
+      "byBrandKit": "Per brand kit",
+      "aiHint": "AI is counted but not capped on this plan — the number is a signal, not a limit bar.",
+      "upgrade": "Upgrade",
+      "cancelPlan": "Cancel renewal",
+      "resumePlan": "Resume renewal",
+      "cancelReason": "Cancellation reason (≥ 10 chars)",
+      "cancelConfirm": "Confirm cancellation",
+      "unlimited": "unlimited"
+    },
+    "ai": {
+      "title": "AI",
+      "subtitle": "Provider keys and their capabilities — the key is sent once, never shown.",
+      "empty": "No integrations yet",
+      "emptyBody": "Add a provider key to enable capabilities in the editor.",
+      "add": "Add integration",
+      "addTitle": "Add AI integration",
+      "col": {
+        "provider": "Provider",
+        "keyRef": "Key ref",
+        "enabled": "Enabled",
+        "capabilities": "Capabilities",
+        "since": "Since",
+        "by": "By",
+        "actions": "Actions"
+      },
+      "provider": "Provider",
+      "apiKey": "API key (sent once, not stored)",
+      "apiKeyHint": "The server never returns the key. The UI wipes it from memory after submit.",
+      "submit": "Add",
+      "delete": "Delete",
+      "confirmDelete": "Delete integration",
+      "confirmDeleteBody": "Capabilities served by this provider will be disabled.",
+      "capabilityInvokeTitle": "Invoke capability",
+      "capability": "Capability",
+      "invokeInput": "Input",
+      "invoke": "Invoke",
+      "invoking": "…",
+      "output": "Output",
+      "counters": "Measured",
+      "tokensIn": "Tokens in",
+      "tokensOut": "Tokens out",
+      "durationMs": "Duration (ms)",
+      "providerNotResponding": "The provider didn't respond — retry.",
+      "providerTimeout": "The provider timed out — retry.",
+      "retry": "Retry"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Enter your credentials to continue.",
+      "submit": "Sign in",
+      "needAccount": "No account? Create one",
+      "forgot": "Forgot your password?"
+    },
+    "signup": {
+      "title": "Create account",
+      "subtitle": "Start a new studio for your agency in a minute.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account — sign in"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "subtitle": "We'll send a recovery link to your email.",
+      "submit": "Send reset link",
+      "backToLogin": "Back to sign in",
+      "sent": "If your email is on file, a reset link is on its way."
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "Enter a new password for your account.",
+      "submit": "Save password",
+      "backToLogin": "Back to sign in"
+    },
+    "field": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "tenantName": "Agency name"
+    },
+    "hint": {
+      "passwordMin": "At least 12 characters."
+    }
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "search": "Search"
+  },
+  "table": {
+    "empty": "No rows yet.",
+    "loading": "Loading…"
+  },
+  "errors": {
+    "UNKNOWN": "Something went wrong.",
+    "UNAUTHENTICATED": "Your session expired. Please sign in again.",
+    "NETWORK_ERROR": "Can't reach the service.",
+    "URL_EXPIRED": "Upload URL expired — retry will request a fresh one.",
+    "UPLOAD_FAILED": "Upload failed — try again.",
+    "UPLOAD_ABORTED": "Upload cancelled.",
+    "SERVICE_UNAVAILABLE": "Service unavailable — make sure it's running and retry.",
+    "INVALID_CREDENTIALS": "Wrong email or password.",
+    "ACCOUNT_DISABLED": "Account is disabled — contact support.",
+    "TOKEN_EXPIRED": "Your session expired — please sign in again.",
+    "TOKEN_INVALID": "Session token is invalid.",
+    "SESSION_REVOKED": "Session revoked — please sign in again.",
+    "REFRESH_TOKEN_INVALID": "Refresh token is invalid.",
+    "PASSWORD_TOO_WEAK": "Password too short — 12 characters minimum.",
+    "EMAIL_INVALID": "Not a valid email address.",
+    "EMAIL_TAKEN": "Email is already in use — sign in instead.",
+    "RESET_TOKEN_EXPIRED": "Reset link expired — request a new one.",
+    "RESET_TOKEN_USED": "Reset link has already been used.",
+    "RESET_TOKEN_INVALID": "Reset link is invalid.",
+    "TOO_MANY_ATTEMPTS": "Too many attempts — wait a moment and try again.",
+    "TENANT_NAME_EMPTY": "Agency name is required.",
+    "USER_ALREADY_MEMBER": "User is already a member of your agency.",
+    "PENDING_INVITE_EXISTS": "A pending invite for this email already exists.",
+    "SEATS_EXHAUSTED": "Your plan's seats are exhausted — upgrade to invite more.",
+    "LAST_OWNER": "Can't remove the agency's last owner.",
+    "REASON_TOO_SHORT": "Reason is too short — 10 characters minimum.",
+    "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+    "UNSUPPORTED_KIND": "Asset kind not supported.",
+    "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "File type doesn't match the asset kind.",
+    "SIZE_TOO_LARGE": "File is larger than the allowed limit.",
+    "STORAGE_QUOTA_EXCEEDED": "Storage quota exhausted — delete assets or upgrade your plan.",
+    "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
+    "INVALID_FONT_FILE": "Font file is invalid.",
+    "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
+    "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
+    "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
+    "INVALID_FILTER_FIELD": "Unknown filter field.",
+    "INVALID_KIND_VALUE": "Unknown asset kind value.",
+    "ASSET_IN_USE_BY_BRAND_KIT": "Asset is referenced by a brand kit — remove the reference first.",
+    "GLOBAL_TEMPLATE_READONLY": "Global template is read-only — duplicate to modify.",
+    "TEMPLATE_SCHEMA_VIOLATION": "Template structure violates the schema.",
+    "TEMPLATE_IN_USE": "Template is referenced by projects — can't delete.",
+    "BRAND_KIT_NOT_FOUND": "Requested brand kit doesn't exist.",
+    "TEMPLATE_NOT_FOUND": "Requested template doesn't exist.",
+    "WORKFLOW_NOT_FOUND": "Requested workflow doesn't exist.",
+    "PLAN_LIMIT_REACHED": "You've reached your plan's limit — upgrade to continue.",
+    "LOCALE_UNSUPPORTED": "Requested locale isn't supported.",
+    "TRANSITION_ROLE_REQUIRED": "Your role doesn't allow this transition.",
+    "STALE_UPDATE": "Your edit is out of date — please reload.",
+    "PROJECT_HAS_RENDERS": "Project has renders — deletion needs a separate decision.",
+    "WORKFLOW_IN_USE": "Workflow is in use — can't delete.",
+    "WORKFLOW_IN_USE_IMMUTABLE_FIELD": "This workflow field is fixed while the workflow is in use.",
+    "WORKFLOW_SCHEMA_VIOLATION": "Workflow structure violates the schema.",
+    "CANNOT_DELETE_DEFAULT": "Can't delete the default item.",
+    "PROJECT_HAS_NO_WORKFLOW": "Project has no workflow — no transitions available.",
+    "TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE": "Requested transition isn't available from the current state.",
+    "REASON_REQUIRED_FOR_THIS_TRANSITION": "This transition requires a reason — enter at least one line.",
+    "INVALID_SEGMENT_INDEX": "Segment index is invalid.",
+    "LAYER_NOT_FOUND": "Requested layer doesn't exist in the template.",
+    "REVISION_NOT_FOUND": "The requested revision doesn't exist.",
+    "RESTORE_WOULD_BREAK_REFERENCES": "Restoring this revision would break existing references — review linked templates first.",
+    "IF_MATCH_REQUIRED": "Request requires an If-Match header — reload the current version and retry.",
+    "RENDER_NOT_ALLOWED_IN_CURRENT_STATE": "Rendering isn't allowed in the project's current state.",
+    "QUOTA_EXCEEDED_VIDEOS": "You've used your monthly video quota — upgrade your plan.",
+    "QUOTA_EXCEEDED_RENDERS": "You've used your monthly render quota — upgrade your plan.",
+    "RATE_LIMIT_EXCEEDED": "Rate limit exceeded — wait a moment and retry.",
+    "OUTPUT_NOT_READY": "The output isn't ready yet — wait and retry.",
+    "RENDER_RUNNING": "The render is running — no changes allowed right now.",
+    "RENDER_ALREADY_TERMINAL": "The render has reached a terminal state — no action available.",
+    "UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS": "This brand relies on unsupported external assets — review them.",
+    "BRAND_SNAPSHOT_NOT_FOUND": "The brand snapshot for this render isn't available.",
+    "TEMPLATE_SNAPSHOT_NOT_FOUND": "The template snapshot for this render isn't available.",
+    "INSUFFICIENT_ROLE": "Your role doesn't allow this action.",
+    "PLATFORM_INSUFFICIENT_ROLE": "This platform-level operation requires the platform-owner role.",
+    "BRAND_KIT_IN_USE": "Brand kit is in use by projects — can't delete.",
+    "LAST_BRAND_KIT": "Can't delete the last brand kit.",
+    "IMMUTABLE_FIELD": "This field can't be changed.",
+    "LICENSE_ACK_MUST_BE_TRUE": "You must acknowledge the license to proceed.",
+    "LICENSE_ACK_REQUIRED": "License acknowledgement is required first.",
+    "FONT_NOT_UPLOADED": "Font hasn't been uploaded for this brand kit.",
+    "UNKNOWN_PLATFORM": "Unknown platform.",
+    "LOGO_MODE_NOT_OFFICIAL": "Official logo isn't enabled for this platform.",
+    "INVALID_VERSION_FORMAT": "Version format is invalid.",
+    "VERSION_NOT_AVAILABLE": "Requested version isn't available.",
+    "DIFF_NOT_ACKNOWLEDGED": "Version bump requires acknowledging the diff first.",
+    "INVALID_PROVIDER": "Unknown AI provider.",
+    "API_KEY_VALIDATION_FAILED": "Provider rejected the API key — check it.",
+    "UNKNOWN_CAPABILITY": "Requested AI capability doesn't exist.",
+    "INVALID_INPUT_FOR_CAPABILITY": "Input is invalid for this capability.",
+    "CAPABILITY_NOT_ENABLED": "Capability isn't enabled — add an integration that provides it.",
+    "PROVIDER_ERROR": "The provider didn't respond correctly — retry.",
+    "PROVIDER_TIMEOUT": "The provider timed out — retry.",
+    "INVITATION_NOT_FOUND": "Invitation not found or cancelled.",
+    "INVITATION_EXPIRED": "Invitation has expired.",
+    "INVITATION_ALREADY_ACCEPTED": "Invitation already accepted.",
+    "PLAN_IN_USE": "Plan is in use — cannot delete.",
+    "UNAUTHORIZED": "Authentication required.",
+    "FORBIDDEN": "Access denied.",
+    "NOT_FOUND": "Not found.",
+    "VALIDATION_FAILED": "Invalid input — check the field.",
+    "INTERNAL_ERROR": "Server error. Try again later.",
+    "FONT_LOAD_CONFIG_MISSING": "The brand font has no weights defined — add weight URLs in brand settings.",
+    "FONT_LOAD_NO_SOURCE": "Brand font weights have no URLs — add font file URLs or use a built-in font.",
+    "FONT_LOAD_FAILED": "Could not load font — check the URL in brand settings.",
+    "ASSET_NO_PUBLIC_URL": "Selected image has no public URL — reupload or pick another.",
+    "ASSET_LOAD_FAILED": "Could not load the selected image — reupload or pick another.",
+    "ASSET_ID_EMPTY": "Image field is empty — pick an image from assets.",
+    "CANVAS_NO_CONTEXT": "Browser cannot render the card — try a newer browser.",
+    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload."
+  },
+  "design": {
+    "title": "Design System",
+    "subtitle": "Live gallery of every component — for visual review (L-17).",
+    "cta": "Primary action",
+    "buttons": {
+      "title": "Buttons",
+      "subtitle": "primary · secondary · ghost · danger · loading · disabled."
+    },
+    "form": {
+      "title": "Fields",
+      "subtitle": "Field wraps label + input + help/error.",
+      "name": "Name",
+      "namePh": "Type here…",
+      "invalid": "Invalid field",
+      "invalidError": "Value not accepted.",
+      "note": "Note",
+      "noteHelp": "Accepts multiple lines."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "info": "Info",
+      "infoBody": "A brief informational message.",
+      "success": "Saved",
+      "warning": "Warning",
+      "warningBody": "Details you may want to attend to.",
+      "danger": "Error",
+      "dangerBody": "Action failed — check the data."
+    },
+    "table": {
+      "title": "Title",
+      "state": "State",
+      "count": "Count",
+      "title2": "Table"
+    },
+    "dialog": {
+      "title": "Dialog",
+      "open": "Open dialog",
+      "confirmTitle": "Delete confirmation",
+      "confirmBody": "Really delete this item? This can't be undone."
+    },
+    "numeric": {
+      "title": "Numbers & Direction",
+      "subtitle": "Ltr for composites · LRM/RLM for inline separators · toggle latin/arabic-indic."
+    }
+  }
+}

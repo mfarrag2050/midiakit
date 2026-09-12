@@ -29,6 +29,17 @@ import { buildAudioFilterGraph } from './audio-ffmpeg.js';
 // (وإن كان هذا الملف Node-only، فالحرص لا يضر).
 import { Canvas } from 'skia-canvas';
 
+/** IMAGE-VERTICAL: خرائط أصول محلولة تُمرَّر إلى `drawTimelineAt`.
+ * الخريطة `images[field]` تقابل حرفياً `layer.field` في القالب —
+ * `runImage` يستعمل `layer.field ?? 'image'` كمفتاح.
+ * `imageCrops[field]` اختياريّة؛ عند غيابها يقصّ المحرك تلقائياً بـ`cover`.
+ * **صيغة `ImageLike` = `{ width, height }`** — أيّ صورة skia-canvas
+ * ناتجة من `loadImage(...)` تحقّق الشكل. */
+export interface RenderAssetsInput {
+  readonly images?: Readonly<Record<string, { width: number; height: number }>>;
+  readonly imageCrops?: Readonly<Record<string, { sx: number; sy: number; sw: number; sh: number }>>;
+}
+
 export interface RenderVideoArgs {
   readonly template: Template;
   readonly brand: BrandKit;
@@ -51,6 +62,14 @@ export interface RenderVideoArgs {
    * وتُدمج مع فيديو stdin. حين تغيب: صوت صامت (السلوك القديم).
    */
   readonly audioPlan?: AudioPlan;
+  /**
+   * IMAGE-VERTICAL: أصول محلولة (صور مُحمَّلة عبر skia `loadImage`).
+   * المستدعي (عامل الطابور أو CLI) يحمّلها قبل الاستدعاء — العامل
+   * **يسقط بصوت** إن كان القالب يحمل طبقة image وحقلها `content[field]`
+   * غير فارغ لكن `assets.images[field]` غائب. لا fallback صامت إلى
+   * الخلفيّة (لأنّ ذلك يخفي عطباً في الحمولة).
+   */
+  readonly assets?: RenderAssetsInput;
 }
 
 export interface RenderVideoResult {
@@ -182,6 +201,8 @@ drawTimelineAt({
         content: args.content,
         ...(plan.headline && { headlinePrep: plan.headline }),
         ...(args.onHeadlinePrepared && { onHeadlinePrepared: args.onHeadlinePrepared }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(args.assets && { assets: args.assets as any }),
         t,
       });
       const buf = rgbaBufferOf(canvas);

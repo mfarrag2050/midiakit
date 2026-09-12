@@ -1,0 +1,31 @@
+/* tokens (--bg, --surface, --fg, --accent, --danger…) تعيش في
+ * @pf-mediakit/ui/styles/tokens.css. `@import` يُوضَع قبل تعليمات
+ * Tailwind كي تُدمج القيم في CSS قبل التوليد. */
+@import '@pf-mediakit/ui/styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: 'ss01' on, 'cv11' on;
+}
+
+/* أرقام جدولية أوضح داخل الجداول والمقاييس */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* focus حلقة بلون الهوية لا افتراضي المتصفح */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* حوار: تعطيل تمرير الصفحة عند فتحه */
+body.overflow-locked {
+  overflow: hidden;
+}

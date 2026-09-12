@@ -1,0 +1,25 @@
+{
+  "_comment": "عيّنة اختبار وهميّة — TEST SAMPLE — ليست هويّة عميل حقيقيّة. تُستَعمَل لـpnpm demo:live -- fixtures/demo-live/example.live.json. الحقول images و sources اختياريّة (95-CARD-COMPLETE): إن غابت، البطاقة تُرسَم على الخلفيّة البديلة بلا سطر مصدر.",
+  "brandName": "طيف الاختبار",
+  "colors": {
+    "primary": "#C1012F",
+    "accent": "#F5A623",
+    "text": "#FFFFFF"
+  },
+  "logo": "fixtures/demo-live/test-sample-logo.png",
+  "headlines": [
+    "الاتحاد الأوروبيّ يدعو إلى وقف إطلاق النار الفوريّ في القطاع",
+    "قرار",
+    "رئيس الوزراء يستقبل نظيره الأميركي في قمّة Brussels عام 2026"
+  ],
+  "images": [
+    "fixtures/demo-live/scene-diplomacy.png",
+    "fixtures/demo-live/scene-decision.png",
+    "fixtures/demo-live/scene-summit.png"
+  ],
+  "sources": [
+    "رويترز",
+    "بلومبرغ",
+    "AFP"
+  ]
+}

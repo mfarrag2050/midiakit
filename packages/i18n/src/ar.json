@@ -1,0 +1,747 @@
+{
+  "brand": {
+    "name": "Media Kit",
+    "tagline": "استوديو الوسائط"
+  },
+  "locale": {
+    "label": "اللغة",
+    "ar": "العربية",
+    "mixed": "مختلطة",
+    "en": "الإنجليزية"
+  },
+  "digits": {
+    "label": "الأرقام",
+    "latin": "123",
+    "arabicIndic": "١٢٣"
+  },
+  "time": {
+    "now": "الآن",
+    "future": "لاحقاً",
+    "minAgo": "منذ {n} دقيقة",
+    "hourAgo": "منذ {n} ساعة",
+    "dayAgo": "منذ {n} يوم"
+  },
+  "format": {
+    "storage": "التخزين",
+    "renders": "التصديرات",
+    "usage": "الاستهلاك",
+    "lastRender": "آخر تصدير"
+  },
+  "nav": {
+    "workspace": "مساحة العمل",
+    "projects": "المشاريع",
+    "brandKits": "الهويات",
+    "templates": "القوالب",
+    "assets": "الأصول",
+    "renders": "التصديرات",
+    "design": "النظام",
+    "workflows": "سير العمل",
+    "aiSettings": "الذكاء",
+    "billing": "الاشتراك",
+    "user": {
+      "placeholder": "الحساب",
+      "signOut": "تسجيل الخروج"
+    }
+  },
+  "pages": {
+    "projects": {
+      "title": "المشاريع",
+      "subtitle": "بطاقاتك وفيديوهاتك ومشاريعك الجارية.",
+      "empty": "لا مشاريع بعد",
+      "emptyBody": "ابدأ مشروعاً جديداً من هوية وقالب.",
+      "create": "مشروع جديد",
+      "createTitle": "إنشاء مشروع جديد",
+      "titleLabel": "عنوان المشروع",
+      "brandKitLabel": "الهوية",
+      "templateLabel": "القالب",
+      "localeLabel": "لغة المحتوى",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف المشروع",
+      "confirmDeleteBody": "الحذف نهائي. لا يمكن استعادته.",
+      "col": {
+        "title": "العنوان",
+        "state": "الحالة",
+        "brandKit": "الهوية",
+        "template": "القالب",
+        "assignee": "المُسنَد إليه",
+        "updatedAt": "آخر تحديث",
+        "actions": "إجراء"
+      },
+      "filter": {
+        "label": "تصفية",
+        "state": "الحالة",
+        "all": "الكل"
+      },
+      "state": {
+        "draft": "مسودّة",
+        "review": "قيد المراجعة",
+        "approved": "معتمد",
+        "archived": "مؤرشف"
+      },
+      "assignee": {
+        "unassigned": "غير مُسنَد"
+      },
+      "editor": {
+        "title": "المحرّر",
+        "back": "عودة إلى المشاريع",
+        "save": "حفظ",
+        "saved": "تم الحفظ",
+        "content": "المحتوى",
+        "workflow": "سير العمل",
+        "revisions": "سجل المراجعات",
+        "renders": "التصديرات",
+        "renderNow": "تصدير الآن",
+        "renderQueued": "أُرسل التصدير — في الانتظار...",
+        "renderRunning": "قيد التنفيذ...",
+        "renderReady": "المخرج جاهز — افتح للتحميل",
+        "renderFailed": "فشل التصدير",
+        "transitions": "التحوّلات المتاحة",
+        "noTransitions": "لا تحوّلات من هذه الحالة.",
+        "reasonLabel": "سبب التحوّل (سطر واحد على الأقل)",
+        "assignTo": "إسناد إلى",
+        "systemActor": "النظام",
+        "history": "التاريخ",
+        "externalAssetsBlocked": "الهوية تحوي أصولاً خارجية غير مدعومة — يجب معالجتها قبل التصدير.",
+        "staleUpdate": "أُجريت تعديلات على المشروع من نافذة أخرى. يُعاد تحميل النسخة الحالية.",
+        "ifMatchRequired": "الطلب رفض بلا رأس If-Match — تحقّق من طبقة الشبكة."
+      },
+      "revisions": {
+        "title": "سجل المراجعات",
+        "empty": "لا مراجعات بعد.",
+        "col": {
+          "at": "وقت التغيير",
+          "actor": "المُغيِّر",
+          "op": "العملية",
+          "snapshot": "لقطة"
+        },
+        "op": {
+          "insert": "إنشاء",
+          "update": "تعديل",
+          "delete": "حذف"
+        },
+        "view": "عرض",
+        "restore": "استعادة",
+        "restoreTitle": "استعادة إلى هذه المراجعة",
+        "restoreReason": "سبب الاستعادة (١٠ أحرف على الأقل — L-15)",
+        "restoreConfirm": "استعادة الآن",
+        "reconstructed": "الحالة المُعاد بناؤها"
+      },
+      "editor2": {
+        "noFields": "لا حقول في هذا القالب.",
+        "assignee": "المُسنَد إليه",
+        "unassigned": "غير مُسنَد",
+        "assignSelf": "إسناد لي",
+        "unassign": "إلغاء الإسناد",
+        "roleHint": "دور المستخدم الحالي",
+        "actorHint": "مُشغِّل mock — أضف [role:writer] إلى عنوان المشروع لاختبار 403 على انتقال يتطلّب دور أعلى.",
+        "transitionReasonInline": "هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.",
+        "transitionRoleRequired": "دورك لا يسمح — الدور المطلوب: {role}."
+      },
+      "preview": {
+        "title": "معاينة حيّة",
+        "hint": "الأرقام في البطاقة تتبع إعدادات الهوية، لا تفضيل الموظّف."
+      },
+      "workspace": {
+        "sizeLabel": "المقاس",
+        "formatLabel": "الصيغة",
+        "contentLocaleLabel": "لغة المحتوى",
+        "contentLocaleHint": "لغة المحتوى ≠ لغة الواجهة. الأولى تحكم اتّجاه المخرَج وقواعد الطباعة.",
+        "contentLocale": {
+          "ar": "العربية",
+          "latin": "لاتينية"
+        },
+        "size": {
+          "x": "بطاقة X",
+          "instagram": "بطاقة إنستغرام",
+          "reel": "ستوري / ريلز",
+          "video": "فيديو"
+        },
+        "diacritize": "شكّل",
+        "stripTashkeel": "أزل التشكيل",
+        "tashkeelKbd": "مساعد الحركات",
+        "tashkeel": {
+          "fatha": "فتحة",
+          "damma": "ضمة",
+          "kasra": "كسرة",
+          "sukun": "سكون",
+          "shadda": "شدّة",
+          "tanwinFatha": "تنوين فتح",
+          "tanwinDamma": "تنوين ضم",
+          "tanwinKasra": "تنوين كسر"
+        },
+        "imageChoose": "اختر صورة",
+        "imageChange": "تبديل",
+        "imageRemove": "إزالة",
+        "imageSelected": "صورة مُختارة",
+        "fieldUnsupported": "نوع حقل غير مدعوم في هذه النسخة"
+      },
+      "annotations": {
+        "title": "التعليقات",
+        "empty": "لا تعليقات بعد.",
+        "add": "إضافة تعليق",
+        "layer": "الطبقة",
+        "segmentIndex": "رقم المقطع",
+        "body": "نصّ التعليق",
+        "submit": "إرسال",
+        "resolve": "حلّ",
+        "unresolve": "إعادة فتح",
+        "remove": "حذف",
+        "resolvedTag": "محلول",
+        "openTag": "مفتوح",
+        "filterAll": "الكل",
+        "filterOpen": "المفتوحة",
+        "filterResolved": "المحلولة",
+        "hintLayerFromTemplate": "الطبقات مقروءة من تعريف القالب — لا قائمة مثبَّتة في الواجهة."
+      }
+    },
+    "workflows": {
+      "title": "سير العمل",
+      "subtitle": "الحالات والانتقالات — قواعد بيانات لا كود مثبَّت.",
+      "empty": "لا سير عمل بعد",
+      "emptyBody": "اختر preset لبدء أوّل workflow، أو أنشئ واحداً من الصفر.",
+      "create": "سير عمل جديد",
+      "createTitle": "إنشاء سير عمل",
+      "presets": {
+        "label": "قوالب جاهزة (تُرسَل بـPOST — لا بذر خادم)",
+        "individual": "فرد — writer يرسل، reviewer يعتمد",
+        "smallTeam": "فريق صغير — writer/editor/reviewer/admin",
+        "fullAgency": "وكالة كاملة — سلسلة أطول + أرشفة"
+      },
+      "nameLabel": "الاسم",
+      "isDefault": "افتراضي",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف سير العمل",
+      "confirmDeleteBody": "الحذف نهائي.",
+      "editor": {
+        "backToList": "عودة إلى القائمة",
+        "statesTitle": "الحالات",
+        "addState": "إضافة حالة",
+        "stateId": "المعرِّف",
+        "stateLabel": "التسمية",
+        "assignableTo": "قابل للإسناد إلى (أدوار مفصولة بفاصلة)",
+        "transitionsTitle": "الانتقالات",
+        "addTransition": "إضافة انتقال",
+        "transitionId": "المعرِّف",
+        "transitionLabel": "التسمية",
+        "from": "من",
+        "to": "إلى",
+        "requiredRole": "الدور المطلوب",
+        "requiresReason": "يستلزم سبباً",
+        "save": "حفظ",
+        "saved": "تم الحفظ",
+        "schemaHintUnknownState": "الحالة غير موجودة — راجع الحالات أعلاه.",
+        "removeRow": "حذف الصف"
+      }
+    },
+    "brandKits": {
+      "title": "الهويات",
+      "subtitle": "خطوط وألوان وشعارات وقواعد الطباعة لكل عميل.",
+      "empty": "لا هويات بعد",
+      "emptyBody": "الهوية تحوي الخط والألوان والشعار والحواف وقواعد الحركة.",
+      "create": "إنشاء هوية",
+      "createTitle": "إنشاء هوية جديدة",
+      "nameLabel": "اسم الهوية",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف الهوية",
+      "confirmDeleteBody": "الحذف نهائي.",
+      "col": {
+        "name": "الاسم",
+        "font": "الخط الأساسي",
+        "assetsVersion": "إصدار الأصول",
+        "actions": "إجراء"
+      },
+      "fontAck": {
+        "title": "إقرار ترخيص خط الهوية",
+        "body": "الخطوط المرفوعة تحتاج إقراراً بحقّ الاستعمال. البنيوية 'builtin' لا تحتاج.",
+        "family": "اسم العائلة",
+        "notes": "ملاحظات (اختياري)",
+        "checkbox": "أقرّ بحقّ الاستعمال.",
+        "submit": "تسجيل الإقرار",
+        "ackedBy": "أقرّ بواسطة",
+        "ackedAt": "تاريخ الإقرار"
+      },
+      "assetsVersion": {
+        "title": "ترقية إصدار الأصول",
+        "body": "الترقية تُثبِّت إصداراً جديداً. راجع الفرق قبل التأكيد (L-29).",
+        "current": "الإصدار الحالي",
+        "target": "الإصدار الجديد",
+        "targetHint": "الصيغة YYYY.MM (مثال: 2026.03).",
+        "diffTitle": "الفرق",
+        "diffBody": "قائمة تغييرات الأصول المتوقّعة في هذه الترقية.",
+        "diffPlaceholder": "لا فرق فعلي في هذا المخطّط (MVP).",
+        "ackCheckbox": "أقرّ بمراجعة الفرق أعلاه.",
+        "submit": "ترقية الآن"
+      },
+      "editBtn": "تحرير",
+      "editor": {
+        "title": "تحرير الهوية",
+        "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
+        "backToList": "→ العودة إلى القائمة",
+        "save": "حفظ",
+        "saved": "تمّ الحفظ.",
+        "readOnlyTag": "قراءة فقط · مرحلة تالية",
+        "phase1Hint": "توصيل مسار الحفظ (patch) من طرفه إلى طرفه بحقل واحد قبل بناء العشرين حقلاً فوقه.",
+        "section": {
+          "identity": "الهوية",
+          "font": "الخط",
+          "colors": "الألوان",
+          "logo": "الشعار",
+          "bidi": "الاتجاه والأرقام"
+        },
+        "field": {
+          "direction": "الاتجاه",
+          "locale": "اللغة الأساسية",
+          "fontFamily": "عائلة الخط",
+          "fontSource": "مصدر الخط",
+          "logoUrl": "مسار الشعار",
+          "logoSize": "حجم الشعار",
+          "logoPosition": "موضع الشعار",
+          "bidiEnabled": "ثنائي الاتجاه (BiDi)",
+          "numerals": "نمط الأرقام"
+        },
+        "value": {
+          "notSet": "غير محدَّد",
+          "builtin": "مدمَج",
+          "custom": "مرفوع",
+          "external": "خارجي",
+          "arabic": "عربية-هندية (١٢٣)",
+          "latin": "لاتينية (123)",
+          "rtl": "من اليمين إلى اليسار (RTL)",
+          "ltr": "من اليسار إلى اليمين (LTR)",
+          "on": "مفعَّل",
+          "off": "معطَّل"
+        },
+        "color": {
+          "text": "لون النصّ الأساسيّ",
+          "accent": "لون التمييز",
+          "urgentBadge": "لون نصّ شارة العاجل",
+          "urgentBg": "لون خلفيّة شريط العاجل",
+          "urgentBgTint": "تدرّج خلفيّة العاجل",
+          "locationBadge": "لون شارة الموقع",
+          "surface": "لون السطح",
+          "placeholder": "لون الحشوة الافتراضيّة"
+        },
+        "locale": {
+          "ar": "العربيّة",
+          "en": "الإنجليزيّة",
+          "fr": "الفرنسيّة",
+          "tr": "التركيّة",
+          "es": "الإسبانيّة",
+          "de": "الألمانيّة"
+        },
+        "position": {
+          "bottom-left": "أسفل اليسار",
+          "bottom-right": "أسفل اليمين",
+          "top-left": "أعلى اليسار",
+          "top-right": "أعلى اليمين"
+        },
+        "colorEdit": {
+          "hexLabel": "قيمة hex",
+          "hexInvalid": "الصيغة غير صالحة — يجب #RRGGBB",
+          "swatchLabel": "لون"
+        },
+        "contrast": {
+          "sectionTitle": "التباين",
+          "subtitle": "قياس على خلفيّة صلبة · التباين الفعليّ على صورة يقيسه فاحص محرّك mk (verify:text-contrast).",
+          "wcagThreshold": "الحدّ الأدنى WCAG AA للنصّ العاديّ: 4.5:1",
+          "advisory": "الرقم يُعرَض كتنبيه لا كمنع — قرار الاستعمال للعميل.",
+          "readable": "مقروء",
+          "borderline": "على الحدّ",
+          "notReadable": "قد لا يُقرأ",
+          "invalid": "لا يمكن قياسه — قيمة hex غير صالحة",
+          "pair": {
+            "textOnSurface": "لون النصّ على السطح",
+            "urgentBadgeOnBg": "لون شارة العاجل على خلفيّتها",
+            "locationBadgeOnSurface": "لون شارة الموقع على السطح"
+          }
+        },
+        "unsavedChanges": "تغييرات غير محفوظة"
+      }
+    },
+    "templates": {
+      "title": "القوالب",
+      "subtitle": "قوالب البطاقات والعاجل والريلز — عامة وخاصة بك.",
+      "empty": "لا قوالب بعد",
+      "emptyBody": "القوالب ملفات JSON بحقول تُملأ لتنتج مخرجاً.",
+      "readOnly": "للقراءة فقط",
+      "duplicate": "نسخ",
+      "duplicateSuffix": " — نسخة",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف القالب",
+      "confirmDeleteBody": "الحذف نهائي. القالب المستعمَل في مشاريع لا يُحذف.",
+      "scope": {
+        "label": "النطاق",
+        "all": "الكل",
+        "global": "عام",
+        "tenant": "خاص"
+      },
+      "kind": {
+        "label": "النوع",
+        "all": "الكل",
+        "static": "ثابت",
+        "video": "فيديو"
+      },
+      "col": {
+        "name": "الاسم",
+        "scope": "النطاق",
+        "kind": "النوع",
+        "created": "أُنشئ",
+        "actions": "إجراء"
+      }
+    },
+    "assets": {
+      "title": "الأصول",
+      "subtitle": "خطوط، شعارات، صور، ملفات صوتية، Lottie، SVG.",
+      "empty": "لا أصول مرفوعة",
+      "emptyBody": "الرفع يمرّ برابط موقَّت من الخدمة (docs/16 §9).",
+      "upload": "رفع أصل",
+      "chooseFile": "اختر ملفاً",
+      "uploading": "جارٍ الرفع…",
+      "finalize": "إتمام",
+      "delete": "حذف",
+      "confirmDelete": "تأكيد حذف الأصل",
+      "confirmDeleteBody": "الحذف نهائي. الأصول المستعمَلة في هويات لا يمكن حذفها.",
+      "kind": {
+        "label": "النوع",
+        "all": "الكل",
+        "font": "خط",
+        "logo": "شعار",
+        "image": "صورة",
+        "audio": "صوت",
+        "video": "فيديو",
+        "lottie": "Lottie",
+        "svg": "SVG"
+      },
+      "col": {
+        "filename": "اسم الملف",
+        "kind": "النوع",
+        "size": "الحجم",
+        "created": "أُنشئ",
+        "actions": "إجراء",
+        "action": "إجراء"
+      },
+      "svgWarn": {
+        "title": "تحذير SVG",
+        "body": "الملف يحوي نصّاً غير محوَّل إلى مسارات — سيُحذف عند بعض المحرّكات. أقرّ للمتابعة.",
+        "acknowledge": "أقرّ وأكمل"
+      },
+      "licenseAck": {
+        "title": "إقرار ترخيص",
+        "body": "الخطوط وملفات Lottie تحتاج إقراراً بأنك تملك حقّ استعمالها.",
+        "checkbox": "أقرّ بحقّ الاستعمال."
+      },
+      "picker": {
+        "title": "اختر أصلاً",
+        "pick": "اختر",
+        "empty": "لا أصول من هذا النوع."
+      }
+    },
+    "renders": {
+      "title": "التصديرات",
+      "subtitle": "سجل PNG وMP4 لكل مشروع، مع لقطة الهوية وقت الإنتاج.",
+      "empty": "لا تصديرات بعد",
+      "emptyBody": "كل تصدير يحفظ لقطة الهوية المستعملة (docs/16 §8).",
+      "col": {
+        "id": "المعرِّف",
+        "project": "المشروع",
+        "status": "الحالة",
+        "format": "الصيغة",
+        "size": "الحجم",
+        "created": "بدأ",
+        "duration": "المدّة",
+        "actions": "إجراء"
+      },
+      "status": {
+        "queued": "في الطابور",
+        "running": "قيد التنفيذ",
+        "succeeded": "منجز",
+        "failed": "فشل",
+        "cancelled": "ملغى",
+        "cancelling": "قيد الإلغاء"
+      },
+      "download": "تحميل",
+      "cancel": "إلغاء",
+      "cancelling": "…",
+      "cancelledBadge": "أُلغي",
+      "queueNote": "الحالة والموضع تظهر أعلى — نستطلع كل ثانية حتى الحالة النهائية.",
+      "position": "موضع {n}",
+      "brandSnapshot": "لقطة الهوية المستعملة",
+      "brandSnapshotHint": "لقطة مُجمَّدة عند POST — لا تتأثّر بتعديل الهوية بعدها.",
+      "quotaExceeded": "استُنفدت حصّة التصديرات في هذه الباقة — رقّها من صفحة الاشتراك."
+    },
+    "billing": {
+      "title": "الاشتراك",
+      "subtitle": "الباقة الحالية وحصصها والاستهلاك القائم.",
+      "planLabel": "الباقة",
+      "statusLabel": "الحالة",
+      "renewsAt": "التجديد",
+      "cancelsAt": "الإلغاء المُقرَّر",
+      "seats": "المقاعد",
+      "quotas": "الحصص",
+      "quota": {
+        "brandKits": "الهويات",
+        "videos": "الفيديوهات",
+        "renders": "التصديرات"
+      },
+      "usageWindow": "نافذة الاستهلاك",
+      "counts": "العدّاد",
+      "count": {
+        "rendersTotal": "التصديرات",
+        "videos": "الفيديوهات",
+        "videosSeconds": "ثواني الفيديو",
+        "storageBytes": "التخزين (بايت)",
+        "aiTokens": "رموز الذكاء (in+out)"
+      },
+      "byBrandKit": "استهلاك حسب الهوية",
+      "aiHint": "الذكاء يُعدّ ولا يُحدَّد في الباقة الحالية — الرقم علم، ليس شريط استهلاك.",
+      "upgrade": "ترقية",
+      "cancelPlan": "إلغاء التجديد",
+      "resumePlan": "استئناف التجديد",
+      "cancelReason": "سبب الإلغاء (١٠ أحرف على الأقل)",
+      "cancelConfirm": "تأكيد إلغاء التجديد",
+      "unlimited": "بلا حدّ"
+    },
+    "ai": {
+      "title": "الذكاء",
+      "subtitle": "مفاتيح المزوّدين وقدراتها — المفتاح يُرسَل مرة ولا يُعرَض.",
+      "empty": "لا تكاملات بعد",
+      "emptyBody": "أضف مفتاح مزوّد لتفعيل القدرات في المحرّر.",
+      "add": "إضافة تكامل",
+      "addTitle": "إضافة تكامل ذكاء",
+      "col": {
+        "provider": "المزوّد",
+        "keyRef": "مرجع المفتاح",
+        "enabled": "مُفعَّل",
+        "capabilities": "القدرات",
+        "since": "منذ",
+        "by": "بواسطة",
+        "actions": "إجراء"
+      },
+      "provider": "المزوّد",
+      "apiKey": "المفتاح (يُرسَل مرة، لا يُخزَّن)",
+      "apiKeyHint": "الخادم لا يعيد المفتاح أبداً. الواجهة تمسحه من الذاكرة بعد الإرسال.",
+      "submit": "إضافة",
+      "delete": "حذف",
+      "confirmDelete": "حذف التكامل",
+      "confirmDeleteBody": "القدرات التي يوفّرها هذا المزوّد ستُعطَّل.",
+      "capabilityInvokeTitle": "استدعاء قدرة",
+      "capability": "القدرة",
+      "invokeInput": "المدخل",
+      "invoke": "استدعاء",
+      "invoking": "…",
+      "output": "المخرج",
+      "counters": "المُقيَس",
+      "tokensIn": "رموز داخلة",
+      "tokensOut": "رموز خارجة",
+      "durationMs": "المدّة (ms)",
+      "providerNotResponding": "المزوّد لم يستجب — أعد المحاولة.",
+      "providerTimeout": "المزوّد تأخّر — أعد المحاولة.",
+      "retry": "إعادة المحاولة"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "تسجيل الدخول",
+      "subtitle": "أدخل بيانات حسابك للمتابعة.",
+      "submit": "تسجيل الدخول",
+      "needAccount": "ليس لديك حساب؟ أنشئ واحداً",
+      "forgot": "نسيت كلمة السر؟"
+    },
+    "signup": {
+      "title": "إنشاء حساب",
+      "subtitle": "ابدأ استوديو جديداً لوكالتك في دقيقة.",
+      "submit": "إنشاء الحساب",
+      "haveAccount": "لديك حساب — سجّل الدخول"
+    },
+    "forgot": {
+      "title": "استعادة كلمة السر",
+      "subtitle": "سنرسل رابط استعادة إلى بريدك.",
+      "submit": "إرسال رابط الاستعادة",
+      "backToLogin": "العودة إلى تسجيل الدخول",
+      "sent": "إن كان بريدك مسجّلاً، وصلك رابط الاستعادة."
+    },
+    "reset": {
+      "title": "تعيين كلمة سر جديدة",
+      "subtitle": "أدخل كلمة سر جديدة لحسابك.",
+      "submit": "حفظ كلمة السر",
+      "backToLogin": "العودة إلى تسجيل الدخول"
+    },
+    "field": {
+      "email": "البريد الإلكتروني",
+      "password": "كلمة السر",
+      "newPassword": "كلمة سر جديدة",
+      "tenantName": "اسم الوكالة"
+    },
+    "hint": {
+      "passwordMin": "12 حرفاً على الأقل."
+    }
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "confirm": "تأكيد",
+    "close": "إغلاق",
+    "search": "بحث"
+  },
+  "table": {
+    "empty": "لا صفوف بعد.",
+    "loading": "جارٍ التحميل…"
+  },
+  "errors": {
+    "UNKNOWN": "حدث خطأ غير متوقّع.",
+    "UNAUTHENTICATED": "انتهت جلستك. سجّل الدخول من جديد.",
+    "NETWORK_ERROR": "تعذّر الوصول إلى الخدمة.",
+    "URL_EXPIRED": "انتهت صلاحية رابط الرفع — إعادة المحاولة ستطلب رابطاً جديداً.",
+    "UPLOAD_FAILED": "فشل الرفع — أعد المحاولة.",
+    "UPLOAD_ABORTED": "أُلغي الرفع.",
+    "SERVICE_UNAVAILABLE": "الخدمة غير متاحة — تأكّد من تشغيلها ثم أعد.",
+    "INVALID_CREDENTIALS": "بريد أو كلمة سر خاطئة.",
+    "ACCOUNT_DISABLED": "الحساب متوقّف — راسل الدعم.",
+    "TOKEN_EXPIRED": "جلستك انتهت — سجّل الدخول من جديد.",
+    "TOKEN_INVALID": "رمز الجلسة غير صالح.",
+    "SESSION_REVOKED": "أُلغيت الجلسة — سجّل الدخول من جديد.",
+    "REFRESH_TOKEN_INVALID": "رمز التجديد غير صالح.",
+    "PASSWORD_TOO_WEAK": "كلمة السر قصيرة — 12 حرفاً على الأقل.",
+    "EMAIL_INVALID": "بريد إلكتروني غير صالح.",
+    "EMAIL_TAKEN": "البريد مستعمَل — سجّل الدخول بدلاً من إنشاء حساب.",
+    "RESET_TOKEN_EXPIRED": "رابط الاستعادة منتهي — اطلب جديداً.",
+    "RESET_TOKEN_USED": "رابط الاستعادة مستعمَل من قبل.",
+    "RESET_TOKEN_INVALID": "رابط الاستعادة غير صالح.",
+    "TOO_MANY_ATTEMPTS": "محاولات كثيرة — انتظر قليلاً ثم أعد.",
+    "TENANT_NAME_EMPTY": "اسم الوكالة مطلوب.",
+    "USER_ALREADY_MEMBER": "المستخدم عضو في وكالتك بالفعل.",
+    "PENDING_INVITE_EXISTS": "دعوة سابقة لهذا البريد لا تزال معلَّقة.",
+    "SEATS_EXHAUSTED": "استُنفدت المقاعد في باقتك — رقّها لدعوة المزيد.",
+    "LAST_OWNER": "لا يمكن حذف آخر مالك في الوكالة.",
+    "REASON_TOO_SHORT": "السبب قصير — 10 أحرف على الأقل.",
+    "ACCOUNT_SUSPENDED": "الحساب موقوف — راسل الدعم.",
+    "UNSUPPORTED_KIND": "نوع الأصل غير مدعوم.",
+    "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "نوع الملف لا يطابق نوع الأصل.",
+    "SIZE_TOO_LARGE": "الملف أكبر من الحدّ المسموح.",
+    "STORAGE_QUOTA_EXCEEDED": "استنفدت مساحة التخزين — احذف أصولاً أو رقّ باقتك.",
+    "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
+    "INVALID_FONT_FILE": "ملف الخط غير صالح.",
+    "INVALID_FONT_METRICS": "الخطّ المرفوع لم تُقَس أبعاده — لن يُرسَم بشكل صحيح. شغّل `pnpm measure-font <مسار-الملفّ.ttf>` ثمّ أعِد الرفع.",
+    "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
+    "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
+    "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",
+    "INVALID_KIND_VALUE": "قيمة نوع الأصل غير معروفة.",
+    "ASSET_IN_USE_BY_BRAND_KIT": "الأصل مستعمَل في هوية — أزل المرجع أولاً.",
+    "GLOBAL_TEMPLATE_READONLY": "القالب العام للقراءة فقط — انسخه لتعديله.",
+    "TEMPLATE_SCHEMA_VIOLATION": "بنية القالب لا تطابق المخطّط.",
+    "TEMPLATE_IN_USE": "القالب مستعمَل في مشاريع — لا يمكن حذفه.",
+    "BRAND_KIT_NOT_FOUND": "الهوية المطلوبة غير موجودة.",
+    "TEMPLATE_NOT_FOUND": "القالب المطلوب غير موجود.",
+    "WORKFLOW_NOT_FOUND": "سير العمل المطلوب غير موجود.",
+    "PLAN_LIMIT_REACHED": "بلغت حدّ باقتك — رقّها للمتابعة.",
+    "LOCALE_UNSUPPORTED": "اللغة المطلوبة غير مدعومة.",
+    "TRANSITION_ROLE_REQUIRED": "دورك لا يسمح بهذا التحوّل.",
+    "STALE_UPDATE": "التعديل قديم — أُعيد تحميل الصفحة.",
+    "PROJECT_HAS_RENDERS": "المشروع له تصديرات — الحذف يحتاج قراراً منفصلاً.",
+    "WORKFLOW_IN_USE": "سير العمل مستعمَل — لا يمكن حذفه.",
+    "WORKFLOW_IN_USE_IMMUTABLE_FIELD": "هذا الحقل من سير العمل ثابت طالما يُستعمل.",
+    "WORKFLOW_SCHEMA_VIOLATION": "بنية سير العمل لا تطابق المخطّط.",
+    "CANNOT_DELETE_DEFAULT": "لا يمكن حذف العنصر الافتراضي.",
+    "PROJECT_HAS_NO_WORKFLOW": "المشروع بلا سير عمل — لا تحوّلات متاحة.",
+    "TRANSITION_NOT_AVAILABLE_FROM_CURRENT_STATE": "التحوّل المطلوب غير متاح من الحالة الحالية.",
+    "REASON_REQUIRED_FOR_THIS_TRANSITION": "هذا التحوّل يستلزم سبباً — أدخل سطراً على الأقل.",
+    "INVALID_SEGMENT_INDEX": "رقم المقطع غير صحيح.",
+    "LAYER_NOT_FOUND": "الطبقة المطلوبة غير موجودة في القالب.",
+    "REVISION_NOT_FOUND": "المراجعة المطلوبة غير موجودة.",
+    "RESTORE_WOULD_BREAK_REFERENCES": "الاستعادة إلى هذه المراجعة ستكسر مراجع قائمة — راجع القوالب المرتبطة قبل المحاولة.",
+    "IF_MATCH_REQUIRED": "الطلب يستلزم رأس If-Match — أعِد تحميل النسخة الحالية ثم أعد المحاولة.",
+    "RENDER_NOT_ALLOWED_IN_CURRENT_STATE": "التصدير غير مسموح في الحالة الحالية للمشروع.",
+    "QUOTA_EXCEEDED_VIDEOS": "استُنفدت حصّتك الشهرية من الفيديوهات — رقّ باقتك.",
+    "QUOTA_EXCEEDED_RENDERS": "استُنفدت حصّتك الشهرية من التصديرات — رقّ باقتك.",
+    "RATE_LIMIT_EXCEEDED": "تجاوزت حدّ المعدّل — انتظر قليلاً ثم أعد.",
+    "OUTPUT_NOT_READY": "المخرَج لم يكتمل بعد — انتظر ثم أعد.",
+    "RENDER_RUNNING": "التصدير قيد التنفيذ — لا يمكن التعديل عليه الآن.",
+    "RENDER_ALREADY_TERMINAL": "التصدير بلغ حالة نهائية — لا إجراء متاح.",
+    "UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS": "الهوية تعتمد أصولاً خارجية غير مدعومة — راجعها.",
+    "BRAND_SNAPSHOT_NOT_FOUND": "لقطة الهوية لهذا التصدير غير موجودة.",
+    "TEMPLATE_SNAPSHOT_NOT_FOUND": "لقطة القالب لهذا التصدير غير موجودة.",
+    "INSUFFICIENT_ROLE": "دورك لا يسمح بهذا الإجراء.",
+    "PLATFORM_INSUFFICIENT_ROLE": "هذه العملية على مستوى المنصّة تتطلّب دور مالك المنصّة.",
+    "BRAND_KIT_IN_USE": "الهوية مستعمَلة في مشاريع — لا يمكن حذفها.",
+    "LAST_BRAND_KIT": "لا يمكن حذف آخر هوية.",
+    "IMMUTABLE_FIELD": "هذا الحقل غير قابل للتعديل.",
+    "LICENSE_ACK_MUST_BE_TRUE": "يجب الإقرار بالترخيص لإتمام الإجراء.",
+    "LICENSE_ACK_REQUIRED": "الإقرار بالترخيص مطلوب أولاً.",
+    "FONT_NOT_UPLOADED": "الخط غير مرفوع لهذه الهوية.",
+    "UNKNOWN_PLATFORM": "منصّة غير معروفة.",
+    "LOGO_MODE_NOT_OFFICIAL": "الشعار الرسمي غير مفعَّل لهذه المنصّة.",
+    "INVALID_VERSION_FORMAT": "صيغة الإصدار غير صحيحة.",
+    "VERSION_NOT_AVAILABLE": "الإصدار المطلوب غير متاح.",
+    "DIFF_NOT_ACKNOWLEDGED": "الترقية تحتاج إقراراً بالفرق أولاً.",
+    "INVALID_PROVIDER": "مزوّد ذكاء غير معروف.",
+    "API_KEY_VALIDATION_FAILED": "مفتاح المزوّد رُفض عند التحقّق — راجعه.",
+    "UNKNOWN_CAPABILITY": "قدرة الذكاء المطلوبة غير موجودة.",
+    "INVALID_INPUT_FOR_CAPABILITY": "المدخل غير صالح لهذه القدرة.",
+    "CAPABILITY_NOT_ENABLED": "القدرة غير مُفعَّلة — أضف تكاملاً يوفّرها.",
+    "PROVIDER_ERROR": "المزوّد لم يستجب استجابةً صحيحة — أعد المحاولة.",
+    "PROVIDER_TIMEOUT": "المزوّد تأخّر — أعد المحاولة.",
+    "INVITATION_NOT_FOUND": "الدعوة غير موجودة أو أُلغيت.",
+    "INVITATION_EXPIRED": "الدعوة انتهت صلاحيّتها.",
+    "INVITATION_ALREADY_ACCEPTED": "الدعوة قُبلت مسبقاً.",
+    "PLAN_IN_USE": "الباقة مستعمَلة — لا يمكن حذفها.",
+    "UNAUTHORIZED": "مصادقة مطلوبة.",
+    "FORBIDDEN": "دخول مرفوض.",
+    "NOT_FOUND": "غير موجود.",
+    "VALIDATION_FAILED": "مدخلات غير صالحة — راجع الحقل.",
+    "INTERNAL_ERROR": "خطأ في الخدمة. حاول لاحقاً.",
+    "FONT_LOAD_CONFIG_MISSING": "الخطّ في الهويّة بلا أوزان — أضف روابط الأوزان في إعدادات الهوية.",
+    "FONT_LOAD_NO_SOURCE": "الخطّ يذكر أوزاناً بلا روابط — أضف روابط ملفات الخط أو استعمل خطّاً مدمجاً.",
+    "FONT_LOAD_FAILED": "تعذّر تحميل الخطّ — تحقّق من الرابط في إعدادات الهوية.",
+    "ASSET_NO_PUBLIC_URL": "الصورة المُختارة بلا رابط عرض — أعد رفعها أو اختر غيرها.",
+    "ASSET_LOAD_FAILED": "تعذّر تحميل الصورة المُختارة — أعد رفعها أو اختر غيرها.",
+    "ASSET_ID_EMPTY": "حقل الصورة فارغ — اختر صورة من الأصول.",
+    "CANVAS_NO_CONTEXT": "المتصفّح لا يدعم رسم البطاقة — جرّب متصفّحاً أحدث.",
+    "PREVIEW_UNKNOWN": "تعذّرت المعاينة — راجع محتوى القالب أو أعد التحميل."
+  },
+  "design": {
+    "title": "نظام التصميم",
+    "subtitle": "عرض حي لكل مكوّن — للمراجعة البصرية (L-17).",
+    "cta": "إجراء أساسي",
+    "buttons": {
+      "title": "الأزرار",
+      "subtitle": "primary · secondary · ghost · danger · loading · disabled."
+    },
+    "form": {
+      "title": "الحقول",
+      "subtitle": "Field يلفّ label + input + help/error.",
+      "name": "الاسم",
+      "namePh": "اكتب هنا…",
+      "invalid": "حقل غير صالح",
+      "invalidError": "قيمة غير مقبولة.",
+      "note": "ملاحظة",
+      "noteHelp": "يقبل عدة أسطر."
+    },
+    "alerts": {
+      "title": "التنبيهات",
+      "info": "معلومة",
+      "infoBody": "رسالة معلوماتية موجزة.",
+      "success": "تم الحفظ",
+      "warning": "تحذير",
+      "warningBody": "تفاصيل قد تحتاج انتباهاً.",
+      "danger": "خطأ",
+      "dangerBody": "الإجراء فشل — راجع البيانات."
+    },
+    "table": {
+      "title": "العنوان",
+      "state": "الحالة",
+      "count": "العدد",
+      "title2": "الجدول"
+    },
+    "dialog": {
+      "title": "الحوار",
+      "open": "افتح حواراً",
+      "confirmTitle": "تأكيد الحذف",
+      "confirmBody": "هل تريد فعلاً حذف هذا العنصر؟ لا يمكن التراجع."
+    },
+    "numeric": {
+      "title": "الأرقام والاتجاه",
+      "subtitle": "Ltr للمركّبات · LRM/RLM للفواصل · تبديل بين لاتيني وهندي."
+    }
+  }
+}

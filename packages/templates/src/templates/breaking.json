@@ -39,7 +39,8 @@
     {
       "type": "gradient",
       "direction": "bottom",
-      "onlyIf": "hasImage"
+      "onlyIf": "hasImage",
+      "opacity": 0.86
     },
     {
       "type": "headline",
