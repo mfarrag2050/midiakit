@@ -355,7 +355,18 @@
             "locationBadgeOnSurface": "Location badge on surface"
           }
         },
-        "unsavedChanges": "unsaved changes"
+        "unsavedChanges": "unsaved changes",
+        "logo": {
+          "sectionSubtitle": "SVG or PNG · between 40 and 2048 pixels · ratio between 1:6 and 6:1.",
+          "chooseFile": "Choose logo file",
+          "replaceFile": "Replace logo",
+          "uploadingLabel": "Uploading…",
+          "previewTitle": "Preview — actual dimensions",
+          "previewDimensions": "{w}×{h} px · ratio {ratio}",
+          "previewAnchor": "Anchor: {anchor}",
+          "noneChosen": "No logo — choose a file",
+          "cardMockup": "Position preview on the card"
+        }
       }
     },
     "templates": {
@@ -623,6 +634,7 @@
     "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
     "INVALID_FONT_FILE": "Font file is invalid.",
     "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
+    "INVALID_LOGO_DIMENSIONS": "Logo dimensions out of the accepted range — width and height must be between 40 and 2048 pixels, and the aspect ratio must be between 1:6 and 6:1. Pick another file or adjust it before uploading.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
     "INVALID_FILTER_FIELD": "Unknown filter field.",

@@ -356,7 +356,18 @@
             "locationBadgeOnSurface": "لون شارة الموقع على السطح"
           }
         },
-        "unsavedChanges": "unsaved changes"
+        "unsavedChanges": "unsaved changes",
+        "logo": {
+          "sectionSubtitle": "SVG or PNG · بين 40 و2048 بكسل · النسبة بين 1:6 و6:1.",
+          "chooseFile": "Choose logo file",
+          "replaceFile": "استبدل الشعار",
+          "uploadingLabel": "uploading…",
+          "previewTitle": "المعاينة — actual dimensions",
+          "previewDimensions": "{w}×{h} px · ratio {ratio}",
+          "previewAnchor": "Anchor: {anchor}",
+          "noneChosen": "لا شعار — اختر ملفّاً",
+          "cardMockup": "معاينة الموضع على البطاقة"
+        }
       }
     },
     "templates": {
@@ -624,6 +635,7 @@
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
     "INVALID_FONT_METRICS": "font metrics missing — الخطّ المرفوع لم تُقَس أبعاده. شغّل `pnpm measure-font <path.ttf>` ثمّ أعِد الرفع.",
+    "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",

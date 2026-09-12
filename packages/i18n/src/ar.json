@@ -355,7 +355,18 @@
             "locationBadgeOnSurface": "لون شارة الموقع على السطح"
           }
         },
-        "unsavedChanges": "تغييرات غير محفوظة"
+        "unsavedChanges": "تغييرات غير محفوظة",
+        "logo": {
+          "sectionSubtitle": "SVG أو PNG · بين 40 و2048 بكسل · النسبة بين 1:6 و6:1.",
+          "chooseFile": "اختر ملفّ شعار",
+          "replaceFile": "استبدل الشعار",
+          "uploadingLabel": "جارٍ الرفع…",
+          "previewTitle": "المعاينة — الأبعاد الفعليّة",
+          "previewDimensions": "{w}×{h} بكسل · النسبة {ratio}",
+          "previewAnchor": "الموضع: {anchor}",
+          "noneChosen": "لا شعار — اختر ملفّاً",
+          "cardMockup": "معاينة الموضع على البطاقة"
+        }
       }
     },
     "templates": {
@@ -623,6 +634,7 @@
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
     "INVALID_FONT_METRICS": "الخطّ المرفوع لم تُقَس أبعاده — لن يُرسَم بشكل صحيح. شغّل `pnpm measure-font <مسار-الملفّ.ttf>` ثمّ أعِد الرفع.",
+    "INVALID_LOGO_DIMENSIONS": "أبعاد الشعار خارج النطاق المقبول — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1. اختر ملفّاً آخر أو أعِد ضبطه قبل الرفع.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",

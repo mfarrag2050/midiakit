@@ -13,7 +13,7 @@ import {
   PageHeader,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
-import { ApiError, brandKits } from '@/src/api';
+import { ApiError, assets, brandKits } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
 import {
   contrastRatio,
@@ -21,14 +21,26 @@ import {
   WCAG_AA_NORMAL,
 } from '@/src/utils/wcag';
 
+// حدود الشعار — الفشل عند الخروج منها يرمي `INVALID_LOGO_DIMENSIONS`.
+// المصدر: قرار مالك في `110-EDITOR-LOGO`. حدود متحفّظة وواسعة كافياً
+// لكل الأشكال المعتادة (شريطيّ ٦:١، مربّع، عموديّ ١:٦).
+const LOGO_MIN_PX = 40;
+const LOGO_MAX_PX = 2048;
+const LOGO_MAX_ASPECT = 6; // width/height أو height/width — كلاهما ≤ 6
+
 // S9-editor · شاشة تحرير الهوية.
 //
 // **المرحلة ١** (نزلت في `c455cd8`): تثقيب `patch` من طرفه إلى طرفه
 // على `name` · باقي الحقول للقراءة.
 //
-// **المرحلة ٢** (هذا الملفّ): الألوان السبعة الصلبة تحريراً + عرض
-// تباين WCAG لثلاثة أزواج مسمّاة. الشعار يبقى قراءة فقط بقرار مالك
-// (تذكرة تالية · معاينة حقيقيّة تحتاج تحميل SVG).
+// **المرحلة ٢** (نزلت في `79f8840`): الألوان السبعة الصلبة تحريراً +
+// عرض تباين WCAG لثلاثة أزواج مسمّاة.
+//
+// **المرحلة ٣** (هذا الملفّ): الشعار — رفعٌ عبر مسار الأصول القائم،
+// معاينة حقيقيّة بالأبعاد الفعليّة، ورفضٌ بصوتٍ عالٍ عند أبعاد شاذّة
+// (`INVALID_LOGO_DIMENSIONS`). حدود [40, 2048] بكسل + نسبة عرض/ارتفاع
+// ≤ 6:1. لا مربّع نائب — نائبٌ يكذب أهون منه غيابٌ صادق (قرار مالك
+// في المرحلة ٢ · مؤكَّد في `110-EDITOR-LOGO`).
 //
 // **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** الـAPI اليوم يطبّق
 // merge patch سطحيّاً على `config` (رصده المالك · فتُحت تذكرة عند
@@ -236,6 +248,20 @@ export default function BrandKitEditorPage(): JSX.Element {
   // مسوّدة الألوان السبعة — تُملأ من `kit.config.colors` عند التحميل.
   // `null` لكلّ قيمة غير مسحوبة من الخادم — تبقى null في الحفظ.
   const [draftColors, setDraftColors] = useState<Record<string, string>>({});
+  // مسوّدة الشعار (المرحلة ٣): dataUri للمعاينة (بلا رحلة شبكة)،
+  // dims الفعليّة (المصدر: onLoad على `<img>`)، assetId بعد الرفع.
+  const [draftLogo, setDraftLogo] = useState<{
+    dataUri: string;
+    width: number;
+    height: number;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  } | null>(null);
+  const [logoErrorKey, setLogoErrorKey] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [uploadedLogoAssetId, setUploadedLogoAssetId] = useState<string | null>(null);
+  const [uploadedLogoPublicUrl, setUploadedLogoPublicUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -268,6 +294,80 @@ export default function BrandKitEditorPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  async function handleLogoFile(file: File): Promise<void> {
+    setLogoErrorKey(null);
+    // اقرأ الملفّ إلى dataURI · نستعمله للمعاينة الحقيقيّة مباشرةً +
+    // للتحقّق من الأبعاد قبل أيّ رحلة شبكة.
+    const dataUri = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error('read-failed'));
+      r.readAsDataURL(file);
+    });
+    // Image يعمل مع كلا PNG وSVG. للـSVG بلا وحدات دقيقة، يستعمل
+    // العرض/الارتفاع من viewBox أو النصّ الافتراضيّ.
+    const img = new Image();
+    const dims = await new Promise<{ w: number; h: number } | null>((resolve) => {
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve(null);
+      img.src = dataUri;
+    });
+    if (!dims || dims.w === 0 || dims.h === 0) {
+      // ملفّ تالف — لا يقرأه المتصفّح كصورة.
+      setLogoErrorKey('errors.INVALID_LOGO_DIMENSIONS');
+      setDraftLogo(null);
+      return;
+    }
+    const inRangeW = dims.w >= LOGO_MIN_PX && dims.w <= LOGO_MAX_PX;
+    const inRangeH = dims.h >= LOGO_MIN_PX && dims.h <= LOGO_MAX_PX;
+    const aspect = Math.max(dims.w / dims.h, dims.h / dims.w);
+    const goodAspect = aspect <= LOGO_MAX_ASPECT;
+    if (!inRangeW || !inRangeH || !goodAspect) {
+      setLogoErrorKey('errors.INVALID_LOGO_DIMENSIONS');
+      setDraftLogo(null);
+      return;
+    }
+    setDraftLogo({
+      dataUri,
+      width: dims.w,
+      height: dims.h,
+      filename: file.name,
+      contentType: file.type || (file.name.endsWith('.svg') ? 'image/svg+xml' : 'image/png'),
+      sizeBytes: file.size,
+    });
+    // ابدأ الرفع فوراً في الخلفيّة — نتيجته `assetId` نحفظه عند «حفظ».
+    void uploadDraftLogo(file);
+  }
+
+  async function uploadDraftLogo(file: File): Promise<void> {
+    setLogoUploading(true);
+    try {
+      const uploadUrl = await assets.requestUploadUrl({
+        kind: 'logo',
+        filename: file.name,
+        contentType: file.type || (file.name.endsWith('.svg') ? 'image/svg+xml' : 'image/png'),
+        sizeBytes: file.size,
+      });
+      // PUT إلى signed URL. في mock هذا نداء وهميّ لا يحفظ بايتاً، لكنّ
+      // finalize يجعل الأصل موجوداً في القائمة.
+      try {
+        await fetch(uploadUrl.uploadUrl, { method: 'PUT', body: file });
+      } catch {
+        // في mock، fetch على mock:// يفشل — نتجاهله ونمضي إلى finalize.
+      }
+      const asset = await assets.finalize(uploadUrl.assetId, {});
+      setUploadedLogoAssetId(asset.id);
+      setUploadedLogoPublicUrl(asset.publicUrl ?? null);
+    } catch (err) {
+      setLogoErrorKey(
+        err instanceof ApiError ? err.messageKey : 'errors.UPLOAD_FAILED'
+      );
+      setDraftLogo(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
   async function doSave(): Promise<void> {
     if (!kit) return;
     setSaving(true);
@@ -283,6 +383,19 @@ export default function BrandKitEditorPage(): JSX.Element {
       const payload: Record<string, unknown> = { name: draftName };
       if (Object.keys(draftColors).length > 0) {
         payload.colors = draftColors;
+      }
+      // الشعار: إن رُفع أصل جديد (`uploadedLogoAssetId`)، أعِد بناء
+      // `logo` كاملاً — نفس مبدأ الألوان (data-loss avoidance). القراءة
+      // من `kit.config.logo` تحفظ `position` و`size` و`watermark` وما
+      // نحن لا نعرضه صراحةً في هذه المرحلة.
+      if (uploadedLogoAssetId && draftLogo) {
+        const existingLogo =
+          ((kit.config as ConfigLike).logo as Record<string, unknown>) ?? {};
+        payload.logo = {
+          ...existingLogo,
+          assetId: uploadedLogoAssetId,
+          url: uploadedLogoPublicUrl ?? existingLogo.url ?? '',
+        };
       }
       const updated = await brandKits.patch(kit.id, payload);
       setKit(updated);
@@ -319,7 +432,8 @@ export default function BrandKitEditorPage(): JSX.Element {
       draftColors[k] !== undefined &&
       draftColors[k] !== pickString(kit.config as ConfigLike, 'colors', k)
   );
-  const dirty = dirtyName || dirtyColors;
+  const dirtyLogo = uploadedLogoAssetId !== null && draftLogo !== null;
+  const dirty = dirtyName || dirtyColors || dirtyLogo;
   // ملاحظة: لا نُعطّل الزرّ على الاسم الفارغ عمداً — نترك الخادم
   // يعيد `400 VALIDATION_FAILED` فيظهر الأحمر (L-46 · حالة أحمر
   // مُعادة الإنتاج). لو منعنا هنا لأخفينا مسار الأحمر.
@@ -542,31 +656,108 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Logo (read-only in Phase 1) */}
+      {/* Section — Logo (editable in Phase 3) */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {t('pages.brandKits.editor.section.logo')}
-          </h2>
-          <Badge tone="neutral">
-            {t('pages.brandKits.editor.readOnlyTag')}
-          </Badge>
-        </div>
-        <div className="space-y-1">
-          <ReadOnlyRow
-            labelKey="pages.brandKits.editor.field.logoUrl"
-            value={
-              identity.logoUrl ? (
-                <span dir="ltr" className="max-w-md truncate font-mono text-xs">
-                  {identity.logoUrl}
-                </span>
-              ) : (
-                <span className="text-fg-subtle">
-                  {t('pages.brandKits.editor.value.notSet')}
-                </span>
-              )
-            }
+        <h2 className="mb-1 text-sm font-semibold">
+          {t('pages.brandKits.editor.section.logo')}
+        </h2>
+        <p className="mb-3 text-xs text-fg-subtle">
+          {t('pages.brandKits.editor.logo.sectionSubtitle')}
+        </p>
+
+        {/* رفعٌ عبر مسار الأصول القائم (assets endpoints · لا مسار جديد) */}
+        <div className="mb-3">
+          <input
+            id="logo-file-input"
+            type="file"
+            accept=".svg,.png,image/svg+xml,image/png"
+            disabled={logoUploading || saving}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleLogoFile(f);
+              // امسح قيمة الإدخال كي يمكن اختيار نفس الملفّ ثانيةً.
+              e.target.value = '';
+            }}
+            className="block w-full text-xs text-fg-muted file:me-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:text-fg-inverse hover:file:bg-accent/90"
+            aria-label={t(
+              draftLogo || identity.logoUrl
+                ? 'pages.brandKits.editor.logo.replaceFile'
+                : 'pages.brandKits.editor.logo.chooseFile'
+            )}
           />
+          {logoUploading && (
+            <p className="mt-2 text-xs text-fg-muted">
+              {t('pages.brandKits.editor.logo.uploadingLabel')}
+            </p>
+          )}
+          {logoErrorKey && (
+            <div className="mt-2">
+              <Alert kind="danger" titleKey={logoErrorKey}>
+                <div className="mt-1 text-xs text-fg-muted">
+                  <span dir="ltr">field: logo</span>
+                </div>
+              </Alert>
+            </div>
+          )}
+        </div>
+
+        {/* المعاينة الحقيقيّة بالأبعاد الفعليّة — بلا مربّع نائب. */}
+        {draftLogo ? (
+          <div className="rounded border border-fg-subtle/20 bg-surface-2 p-3">
+            <div className="mb-2 flex items-baseline justify-between gap-2 text-xs text-fg-muted">
+              <span>{t('pages.brandKits.editor.logo.previewTitle')}</span>
+              <span dir="ltr" className="font-mono">
+                {draftLogo.width}×{draftLogo.height} · {(draftLogo.width / draftLogo.height).toFixed(2)}:1
+              </span>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={draftLogo.dataUri}
+              alt={draftLogo.filename}
+              width={draftLogo.width}
+              height={draftLogo.height}
+              className="max-h-64 max-w-full bg-white"
+              style={{
+                imageRendering: 'auto',
+              }}
+            />
+            {identity.logoPosition && (
+              <p className="mt-2 text-xs text-fg-subtle">
+                {t('pages.brandKits.editor.logo.previewAnchor').replace(
+                  '{anchor}',
+                  t(`pages.brandKits.editor.position.${identity.logoPosition}`)
+                )}
+              </p>
+            )}
+          </div>
+        ) : identity.logoUrl ? (
+          <div className="rounded border border-fg-subtle/20 bg-surface-2 p-3">
+            <div className="mb-2 text-xs text-fg-muted">
+              {t('pages.brandKits.editor.logo.previewTitle')}
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={identity.logoUrl}
+              alt="logo"
+              className="max-h-64 max-w-full bg-white"
+              onError={(e) => {
+                // إن فشل تحميل الصورة، أخفِ العنصر — بلا مربّع كذّاب.
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            {identity.logoUrl && (
+              <p className="mt-2 truncate font-mono text-xs text-fg-subtle" dir="ltr">
+                {identity.logoUrl}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-fg-subtle">
+            {t('pages.brandKits.editor.logo.noneChosen')}
+          </p>
+        )}
+
+        <div className="mt-4 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
             labelKey="pages.brandKits.editor.field.logoSize"
             value={
