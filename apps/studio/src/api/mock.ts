@@ -1076,7 +1076,10 @@ export async function handleMock(
       r.status = 'succeeded';
       r.completedAt = new Date().toISOString();
       r.duration_ms = 1800;
-      r.output_url = `mock://output/${r.id}.${r.format}`;
+      // §150-EXPORT-BUTTON: output_url يشير إلى مسار قابل للتحميل في
+      // المتصفّح (كان `mock://` غير قابل للتنزيل). نُعيد استعمال مصدر
+      // الصورة الاختباريّة كي يعمل التنزيل في mock ⇒ متصفّح ⇒ blob.
+      r.output_url = `/dev/mock-image/${r.id}`;
     }
     // نسخة سطحية — كي يرى React مرجعاً جديداً عبر polling (وإلا setState
     // على نفس المرجع = لا re-render).

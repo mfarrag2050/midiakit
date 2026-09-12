@@ -13,7 +13,7 @@ import {
   PageHeader,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
-import { ApiError, assets, brandKits } from '@/src/api';
+import { ApiError, assets, brandKits, projects, renders, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
 import {
@@ -289,6 +289,16 @@ export default function BrandKitEditorPage(): JSX.Element {
   const previewScheduler = useRef(createDebouncedScheduler(250));
   const [previewMs, setPreviewMs] = useState<number | null>(null);
   const [previewWarning, setPreviewWarning] = useState<string | null>(null);
+  // §150-EXPORT-BUTTON · «صدّر البطاقة» — مسار الخادم (POST /v1/renders
+  // + polling + fetch output). حارس ref لمنع سباق الكتابة كما في §130.
+  const [breakingTemplateId, setBreakingTemplateId] = useState<string | null>(
+    null
+  );
+  const exportBusyRef = useRef(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportStepKey, setExportStepKey] = useState<string | null>(null);
+  const [exportErrorKey, setExportErrorKey] = useState<string | null>(null);
+  const [exportSuccessKey, setExportSuccessKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -304,12 +314,21 @@ export default function BrandKitEditorPage(): JSX.Element {
     setLoading(true);
     setLoadErrorKey(null);
     try {
-      const [k, fontsPage] = await Promise.all([
+      const [k, fontsPage, tplPage] = await Promise.all([
         brandKits.get(id),
         assets
           .list({ filter: { kind: 'font' } })
           .catch(() => ({ data: [] as AssetListItem[], nextCursor: null, hasMore: false })),
+        templates
+          .list()
+          .catch(() => ({ data: [], nextCursor: null, hasMore: false })),
       ]);
+      // §150-EXPORT-BUTTON: نبحث عن قالب «بطاقة عاجل» (breaking) لأنّه ما
+      // تعرضه المعاينة. إن غاب يبقى الزرّ معطَّلاً · لا تصدير أعمى.
+      const breaking = tplPage.data.find(
+        (t) => t.name.includes('عاجل') || t.name.toLowerCase().includes('breaking')
+      );
+      setBreakingTemplateId(breaking?.id ?? null);
       setKit(k);
       setDraftName(k.name);
       const cfg = k.config as ConfigLike;
@@ -583,6 +602,119 @@ export default function BrandKitEditorPage(): JSX.Element {
     }
   }
 
+  // §150-EXPORT-BUTTON · تصدير بطاقة عاجل بمحرّك الخادم.
+  // المسار: أنشئ مشروعاً مؤقّتاً بالهويّة الحاليّة + قالب عاجل + نصّ
+  // العيّنة → POST /v1/renders → استطلع الحالة → نزّل الملفّ.
+  // نجاح لا يُعلَن إلاّ بعد وصول blob فعليّاً (قاعدة #3 من التذكرة).
+  // الحارس savingRef-pattern (من §130 §٢) يمنع سباق الكتابة.
+  async function doExport(): Promise<void> {
+    if (!kit || !breakingTemplateId) return;
+    if (exportBusyRef.current) return;
+    exportBusyRef.current = true;
+    setExportBusy(true);
+    setExportErrorKey(null);
+    setExportSuccessKey(null);
+    setExportStepKey('pages.brandKits.editor.export.queuedStep');
+    try {
+      // 1. مشروع مؤقّت — يحمل الهويّة الحاليّة + قالب عاجل + نصّ العيّنة.
+      // نتركه في المخزن (لا نحذفه) — تنظيفه شأن باقي التطبيق. الحذف
+      // الفوريّ يفتح احتمال أن يبقى الطلب في الطابور بعد فقدان المشروع.
+      const proj = await projects.create({
+        title: `تصدير — ${kit.name} — ${new Date().toISOString().slice(0, 10)}`,
+        brand_kit_id: kit.id,
+        template_id: breakingTemplateId,
+        content: PREVIEW_SAMPLE_CONTENT,
+        locale: 'ar',
+      });
+      // 2. طلب رندَر — idempotency-key فريد لكلّ محاولة تصدير.
+      const idempotencyKey = `bk-editor-export-${kit.id}-${Date.now()}`;
+      const rnd = await renders.create(
+        { project_id: proj.id, size: 'x', format: 'png' },
+        idempotencyKey
+      );
+      setExportStepKey('pages.brandKits.editor.export.runningStep');
+      // 3. استطلع كلّ 500ms · مهلة 30 ثانية · لا polling بعد succeeded/failed.
+      let final: Awaited<ReturnType<typeof renders.get>> | null = null;
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 500));
+        const row = await renders.get(rnd.id);
+        if (row.status === 'succeeded') {
+          final = row;
+          break;
+        }
+        if (row.status === 'failed') {
+          throw new ApiError({
+            code: 'RENDER_FAILED',
+            messageKey: 'errors.RENDER_FAILED',
+            field: null,
+            requestId: null,
+            status: 500,
+          });
+        }
+        if (row.status === 'cancelled') {
+          throw new ApiError({
+            code: 'RENDER_FAILED',
+            messageKey: 'errors.RENDER_FAILED',
+            field: null,
+            requestId: null,
+            status: 500,
+          });
+        }
+      }
+      if (!final) {
+        throw new ApiError({
+          code: 'RENDER_TIMEOUT',
+          messageKey: 'errors.RENDER_TIMEOUT',
+          field: null,
+          requestId: null,
+          status: 504,
+        });
+      }
+      // 4. اطلب output URL — قد يكون presigned/proxy · نتعامل معه كأيّ URL.
+      setExportStepKey('pages.brandKits.editor.export.downloadingStep');
+      const output = await renders.getOutput(rnd.id);
+      // 5. جلب blob + تنزيل — نجاح لا يُعلَن إلاّ بعد أن يصل الملفّ فعليّاً.
+      const resp = await fetch(output.url);
+      if (!resp.ok) {
+        throw new ApiError({
+          code: 'EXPORT_DOWNLOAD_FAILED',
+          messageKey: 'errors.EXPORT_DOWNLOAD_FAILED',
+          field: null,
+          requestId: null,
+          status: resp.status,
+        });
+      }
+      const blob = await resp.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const filename = `${kit.name}-${new Date()
+        .toISOString()
+        .slice(0, 10)}.png`;
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      // تحرير الذاكرة بعد فترة قصيرة (بعض المتصفّحات تحتاج زمناً).
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+      setExportSuccessKey('pages.brandKits.editor.export.success');
+      setExportStepKey(null);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setExportErrorKey(err.messageKey);
+      } else if (err instanceof TypeError) {
+        // fetch يرمي TypeError على انقطاع الشبكة.
+        setExportErrorKey('errors.NETWORK_ERROR');
+      } else {
+        setExportErrorKey('errors.UNKNOWN');
+      }
+      setExportStepKey(null);
+    } finally {
+      setExportBusy(false);
+      exportBusyRef.current = false;
+    }
+  }
+
   if (loading) return <div className="p-8 text-fg-muted">…</div>;
   if (loadErrorKey) {
     return (
@@ -647,7 +779,7 @@ export default function BrandKitEditorPage(): JSX.Element {
         </Alert>
       )}
 
-      {/* Section — Live card preview (§140-LIVE-CARD-PREVIEW) */}
+      {/* Section — Live card preview (§140-LIVE-CARD-PREVIEW) + export (§150) */}
       <Card>
         <div className="mb-3 flex items-baseline justify-between gap-4">
           <h2 className="text-sm font-semibold">
@@ -681,6 +813,48 @@ export default function BrandKitEditorPage(): JSX.Element {
             style={{ display: 'block' }}
           />
         </div>
+
+        {/* §150-EXPORT-BUTTON: زرّ التصدير — فعلٌ صريح، معطَّل عند dirty. */}
+        <div
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-fg-subtle/10 pt-4"
+          id="bk-export-block"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-fg-muted">
+              {dirty
+                ? t('pages.brandKits.editor.export.dirtyBlocked')
+                : t('pages.brandKits.editor.export.hint')}
+            </p>
+            {exportStepKey && (
+              <p className="mt-1 text-xs text-fg-subtle">
+                {t(exportStepKey)}
+              </p>
+            )}
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            loading={exportBusy}
+            disabled={
+              exportBusy || dirty || !breakingTemplateId
+            }
+            onClick={() => void doExport()}
+          >
+            {exportBusy
+              ? t('pages.brandKits.editor.export.busy')
+              : t('pages.brandKits.editor.export.button')}
+          </Button>
+        </div>
+        {exportSuccessKey && (
+          <div className="mt-3">
+            <Alert kind="success" titleKey={exportSuccessKey} />
+          </div>
+        )}
+        {exportErrorKey && (
+          <div className="mt-3">
+            <Alert kind="danger" titleKey={exportErrorKey} />
+          </div>
+        )}
       </Card>
 
       {/* Section — Identity (editable: name; read-only: direction, locale) */}

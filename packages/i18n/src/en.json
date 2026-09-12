@@ -377,6 +377,16 @@
           "title": "Live preview · Breaking card",
           "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
           "durationHint": "Render duration — every keystroke reschedules"
+        },
+        "export": {
+          "button": "Export card",
+          "busy": "Exporting…",
+          "hint": "Rendered server-side with the export engine · save changes before exporting so they appear in the file.",
+          "dirtyBlocked": "Cannot export with unsaved changes — press Save first.",
+          "success": "Exported · the file downloaded to your browser.",
+          "queuedStep": "Queued…",
+          "runningStep": "Rendering…",
+          "downloadingStep": "Downloading file…"
         }
       }
     },
@@ -646,6 +656,10 @@
     "INVALID_FONT_FILE": "Font file is invalid.",
     "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
     "INVALID_LOGO_DIMENSIONS": "Logo dimensions out of the accepted range — width and height must be between 40 and 2048 pixels, and the aspect ratio must be between 1:6 and 6:1. Pick another file or adjust it before uploading.",
+    "RENDER_FAILED": "Could not export the card — try again; if it repeats, contact support.",
+    "RENDER_TIMEOUT": "Export timed out before completing — the network may be slow; try again.",
+    "RATE_LIMITED": "Too many requests in a row — wait a moment then try again.",
+    "EXPORT_DOWNLOAD_FAILED": "The file was produced but couldn't be downloaded — check your connection and try again.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
     "INVALID_FILTER_FIELD": "Unknown filter field.",
