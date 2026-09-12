@@ -225,6 +225,40 @@ describe('220 · حالة (٥) Bearer صحيح لكنّ المستخدم مُع�
   });
 });
 
+describe('221 · حارس المنصّة · نفس الحالات الستّ على /v1/platform', () => {
+  const PLATFORM_ENDPOINT = '/v1/platform/tenants';
+
+  it('platform بلا Bearer ⇒ 401', async () => {
+    const r = await fastify.inject({ method: 'GET', url: PLATFORM_ENDPOINT });
+    expect(r.statusCode).toBe(401);
+  });
+
+  it('platform · token المستأجر العاديّ (tokenA) ⇒ 401 (منفصل عن platform_users)', async () => {
+    const r = await fastify.inject({
+      method: 'GET', url: PLATFORM_ENDPOINT,
+      headers: { authorization: `Bearer ${tokenA}` },
+    });
+    expect(r.statusCode).toBe(401);
+  });
+
+  it('platform · Bearer forged ⇒ 401', async () => {
+    const wrongSecret = new TextEncoder().encode('x'.repeat(32));
+    const forged = await new SignJWT({ platform_role: 'owner', session_id: 'forged' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuer('mk-api')
+      .setAudience('mk-app')
+      .setSubject('00000000-0000-0000-0000-000000000000')
+      .setIssuedAt()
+      .setExpirationTime('1h')
+      .sign(wrongSecret);
+    const r = await fastify.inject({
+      method: 'GET', url: PLATFORM_ENDPOINT,
+      headers: { authorization: `Bearer ${forged}` },
+    });
+    expect(r.statusCode).toBe(401);
+  });
+});
+
 describe('220 · حالة (٦) تلاعب حمولة · tenant_id مبدَّل بلا re-sign', () => {
   it('payload tamper ⇒ 401 TOKEN_INVALID', async () => {
     // نأخذ tokenA · نفصله إلى ثلاث أجزاء · نُبدّل tenant_id في payload · نُعيد التركيب

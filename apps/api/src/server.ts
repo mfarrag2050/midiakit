@@ -128,10 +128,30 @@ export async function buildServer() {
           options: { colorize: true, translateTime: 'HH:MM:ss.l' },
         },
       };
+  // 221-AUTH-COVERAGE-GATE — نجمع routes عبر onRoute hook · للفاحص.
+  const collectedRoutes: Array<{ method: string; path: string; hasPreHandler: boolean; preHandlerNames: string[] }> = [];
+
   const fastify = Fastify({
     logger: loggerConfig,
     trustProxy: true,
   });
+
+  // Hook قبل أيّ register · يجمع كل onRoute
+  fastify.addHook('onRoute', (routeOptions) => {
+    const methods = Array.isArray(routeOptions.method) ? routeOptions.method : [routeOptions.method];
+    const preHandler = routeOptions.preHandler;
+    const preHandlerArr = Array.isArray(preHandler) ? preHandler : preHandler ? [preHandler] : [];
+    const names = preHandlerArr.map((fn) => (fn as { name?: string }).name ?? 'anonymous');
+    for (const m of methods) {
+      collectedRoutes.push({
+        method: m as string,
+        path: routeOptions.url,
+        hasPreHandler: preHandlerArr.length > 0,
+        preHandlerNames: names,
+      });
+    }
+  });
+  (fastify as unknown as { mkCollectedRoutes: typeof collectedRoutes }).mkCollectedRoutes = collectedRoutes;
 
   await fastify.register(helmet, { global: true });
   await fastify.register(cors, {
