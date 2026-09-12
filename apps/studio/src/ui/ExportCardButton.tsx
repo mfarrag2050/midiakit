@@ -1,5 +1,6 @@
 'use client';
 
+import type { RefObject } from 'react';
 import { useRef, useState } from 'react';
 import { Alert, Button } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
@@ -31,6 +32,28 @@ export interface ExportCardButtonProps {
   readonly disabledReasonKey?: string | null;
   /** تلميح افتراضيّ حين لا يوجد سبب تعطيل. */
   readonly hintKey?: string;
+  /** ref على canvas المعاينة — إن مُرِّر ومسار الخادم كان mock (يعيد صورة
+   *  seed ثابتة)، نستبدل الملفّ المُنزَّل ببكسلات المعاينة الفعليّة. هذا
+   *  يُصلح «الملفّ ≠ البطاقة المعروضة» في mock بلا لمس المحرّك أو الخادم
+   *  الحقيقيّ (200-DEMO-FIX-2 §1·٢). */
+  readonly previewCanvasRef?: RefObject<HTMLCanvasElement>;
+}
+
+/** «mock output URL» — الخادم في mock يعيد `/dev/mock-image/<id>` (صورة
+ *  seed ثابتة). في هذه الحالة نُبدّل الملفّ بمخرج canvas المعاينة كي
+ *  يتطابق «ما تراه» مع «ما تُنزِّل». في الإنتاج URL محاكاة S3 presigned
+ *  حقيقيّة فيصل الملفّ كما هو. */
+function isMockOutputUrl(url: string): boolean {
+  return url.includes('/dev/mock-image/');
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('canvas.toBlob returned null'));
+    }, 'image/png');
+  });
 }
 
 export function ExportCardButton({
@@ -41,6 +64,7 @@ export function ExportCardButton({
   disabled = false,
   disabledReasonKey = null,
   hintKey = 'pages.brandKits.editor.export.hint',
+  previewCanvasRef,
 }: ExportCardButtonProps): JSX.Element {
   const { t } = useLocale();
   const busyRef = useRef(false);
@@ -103,18 +127,24 @@ export function ExportCardButton({
       // 4. output URL.
       setStepKey('pages.brandKits.editor.export.downloadingStep');
       const output = await renders.getOutput(rnd.id);
-      // 5. تنزيل.
-      const resp = await fetch(output.url);
-      if (!resp.ok) {
-        throw new ApiError({
-          code: 'EXPORT_DOWNLOAD_FAILED',
-          messageKey: 'errors.EXPORT_DOWNLOAD_FAILED',
-          field: null,
-          requestId: null,
-          status: resp.status,
-        });
+      // 5. تنزيل — في mock (seed image) نستبدل ببكسلات المعاينة كي يتطابق
+      // «ما تراه» مع «ما تُنزِّل». في الإنتاج نجلب URL الخادم كما هو.
+      let blob: Blob;
+      if (previewCanvasRef?.current && isMockOutputUrl(output.url)) {
+        blob = await canvasToBlob(previewCanvasRef.current);
+      } else {
+        const resp = await fetch(output.url);
+        if (!resp.ok) {
+          throw new ApiError({
+            code: 'EXPORT_DOWNLOAD_FAILED',
+            messageKey: 'errors.EXPORT_DOWNLOAD_FAILED',
+            field: null,
+            requestId: null,
+            status: resp.status,
+          });
+        }
+        blob = await resp.blob();
       }
-      const blob = await resp.blob();
       const objectUrl = URL.createObjectURL(blob);
       const filename = `${brandKitName}-${new Date().toISOString().slice(0, 10)}.png`;
       const a = document.createElement('a');

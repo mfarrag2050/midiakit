@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Card, Field, Input, PageHeader, Textarea } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, templates } from '@/src/api';
@@ -21,6 +21,9 @@ const PREVIEW_SIZE = { w: 1080, h: 1350 } as const;
 
 export default function BreakingComposerPage(): JSX.Element {
   const { t } = useLocale();
+  // ref مشتَرك بين المعاينة والتصدير — كي يستطيع الزرّ (في mock) قراءة
+  // بكسلات البطاقة الفعليّة بدل صورة seed الثابتة (200-DEMO-FIX-2 §1·٢).
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const [kits, setKits] = useState<BrandKitSummary[]>([]);
   const [selectedKitId, setSelectedKitId] = useState<string>('');
@@ -188,6 +191,7 @@ export default function BreakingComposerPage(): JSX.Element {
           brandConfig={selectedKit.config}
           content={content}
           size={PREVIEW_SIZE}
+          canvasRef={previewCanvasRef}
         >
           <ExportCardButton
             brandKitId={selectedKit.id}
@@ -197,6 +201,7 @@ export default function BreakingComposerPage(): JSX.Element {
             disabled={!canExport}
             disabledReasonKey={disabledReasonKey}
             hintKey="pages.composer.breaking.exportHint"
+            previewCanvasRef={previewCanvasRef}
           />
         </LiveCardPreview>
       )}

@@ -29,6 +29,8 @@ export interface AuthField {
   readonly minLength?: number;
   /** يفعّل تحقّق شكل البريد قبل الشبكة. */
   readonly emailFormat?: boolean;
+  /** مفتاح i18n لـplaceholder — مثالٌ يوضح المتوقَّع (200-DEMO-FIX-2 §2·٤). */
+  readonly placeholderKey?: string;
 }
 
 interface FooterLink {
@@ -170,6 +172,7 @@ export function AuthCard({
                 }
                 invalid={Boolean(errorKey)}
                 disabled={loading}
+                placeholder={f.placeholderKey ? t(f.placeholderKey) : undefined}
                 dir={
                   f.type === 'email' || f.type === 'password' ? 'ltr' : undefined
                 }

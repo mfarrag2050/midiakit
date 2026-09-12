@@ -23,6 +23,7 @@ export default function LoginPage() {
           autoComplete: 'email',
           required: true,
           emailFormat: true,
+          placeholderKey: 'auth.field.emailPlaceholder',
         },
         {
           name: 'password',
@@ -30,6 +31,7 @@ export default function LoginPage() {
           type: 'password',
           autoComplete: 'current-password',
           required: true,
+          placeholderKey: 'auth.field.passwordPlaceholder',
         },
       ]}
       footerLinks={[{ key: 'auth.login.forgot', href: '/forgot-password' }]}
@@ -38,10 +40,12 @@ export default function LoginPage() {
           email: values.email ?? '',
           password: values.password ?? '',
         });
-        // Access/refresh tokens ذاتياً في setSession داخل auth.login.
-        // ما نحفظه هنا: user + tenant للعرض قبل أن يوفّرهما endpoint خاص.
         setSessionInfo(res.user, res.tenant);
         router.push('/projects');
+        // نُبقي حالة التحميل في `AuthCard` حتى الانتقال بدل الوميض بين
+        // «متوقّف» وdashboard — بلا هذا يعود الزرّ إلى شكله الافتراضيّ
+        // ثوانيَ قبل الانتقال (مشية 190 §٥). ينتهي عند unmount.
+        await new Promise<void>(() => {});
       }}
     />
   );

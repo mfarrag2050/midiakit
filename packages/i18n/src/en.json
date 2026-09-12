@@ -398,7 +398,8 @@
         "preview": {
           "title": "Live preview · Breaking card",
           "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
-          "durationHint": "Render duration — every keystroke reschedules"
+          "durationHint": "Render duration — every keystroke reschedules",
+          "emptyHint": "Type a headline to see the card."
         },
         "export": {
           "button": "Export card",
@@ -624,7 +625,9 @@
       "email": "Email",
       "password": "Password",
       "newPassword": "New password",
-      "tenantName": "Agency name"
+      "tenantName": "Agency name",
+      "emailPlaceholder": "you@agency.com",
+      "passwordPlaceholder": "At least 12 characters"
     },
     "hint": {
       "passwordMin": "At least 12 characters."

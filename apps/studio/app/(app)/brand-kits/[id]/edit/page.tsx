@@ -298,6 +298,8 @@ export default function BrandKitEditorPage(): JSX.Element {
   // نفس مِعْلاق الحدث (React batches). فضغطتان متتاليتان في نفس الـ
   // microtask تريان `saving=false` كلاهما وتمرّان. ref يُطبَّق فوراً.
   const savingRef = useRef(false);
+  // ref مشتَرك بين المعاينة والتصدير (200-DEMO-FIX-2 §1·٢).
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const [saveErrorKey, setSaveErrorKey] = useState<string | null>(null);
   const [saveErrorField, setSaveErrorField] = useState<string | null>(null);
   const [savedNoticeKey, setSavedNoticeKey] = useState<string | null>(null);
@@ -645,6 +647,7 @@ export default function BrandKitEditorPage(): JSX.Element {
           brandConfig={effectiveBrandConfig}
           content={PREVIEW_SAMPLE_CONTENT}
           size={PREVIEW_SIZE}
+          canvasRef={previewCanvasRef}
         >
           <ExportCardButton
             brandKitId={kit.id}
@@ -655,6 +658,7 @@ export default function BrandKitEditorPage(): JSX.Element {
             disabledReasonKey={
               dirty ? 'pages.brandKits.editor.export.dirtyBlocked' : null
             }
+            previewCanvasRef={previewCanvasRef}
           />
         </LiveCardPreview>
       )}

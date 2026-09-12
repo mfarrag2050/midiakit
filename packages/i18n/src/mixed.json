@@ -399,7 +399,8 @@
         "preview": {
           "title": "معاينة حيّة · Breaking card",
           "subtitle": "same engine · نصّ عيّنة عربيّ · updates on change (250ms debounce).",
-          "durationHint": "render duration"
+          "durationHint": "render duration",
+          "emptyHint": "اكتب headline لترى البطاقة."
         },
         "export": {
           "button": "صدّر البطاقة",
@@ -625,7 +626,9 @@
       "email": "Email",
       "password": "Password",
       "newPassword": "New password",
-      "tenantName": "اسم الوكالة"
+      "tenantName": "اسم الوكالة",
+      "emailPlaceholder": "you@agency.com",
+      "passwordPlaceholder": "12 characters على الأقلّ"
     },
     "hint": {
       "passwordMin": "12 حرفاً على الأقل."
