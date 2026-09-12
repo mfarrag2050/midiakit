@@ -43,6 +43,7 @@ import assetsUploadUrlRoute from './routes/assets/upload-url.js';
 import assetsFinalizeRoute from './routes/assets/finalize.js';
 import assetsListRoute from './routes/assets/list.js';
 import assetsGetRoute from './routes/assets/get.js';
+import assetsFontServeRoute from './routes/assets/font-serve.js';
 import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
 import assetsDeleteRoute from './routes/assets/delete.js';
 import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
@@ -206,6 +207,7 @@ export async function buildServer() {
       await a.register(assetsFinalizeRoute);
       await a.register(assetsListRoute);
       await a.register(assetsGetRoute);
+      await a.register(assetsFontServeRoute);
       await a.register(assetsRefreshUrlRoute);
       await a.register(assetsDeleteRoute);
       await a.register(assetsDetectFacesRoute);
