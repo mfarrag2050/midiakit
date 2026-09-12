@@ -84,6 +84,7 @@ import platformLogoutRoute from './routes/platform/auth/logout.js';
 import platformTenantsListRoute from './routes/platform/tenants/list.js';
 import platformTenantsGetRoute from './routes/platform/tenants/get.js';
 import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
+import platformTenantsHardDeleteRoute from './routes/platform/tenants/hard-delete.js';
 import platformOpsQueuesRoute from './routes/platform/ops/queues.js';
 import platformOpsSubscriptionsRoute from './routes/platform/ops/subscriptions.js';
 import platformOpsUsageRoute from './routes/platform/ops/usage.js';
@@ -306,6 +307,7 @@ export async function buildServer() {
         await t.register(platformTenantsListRoute);
         await t.register(platformTenantsGetRoute);
         await t.register(platformTenantsUpdateRoute);
+        await t.register(platformTenantsHardDeleteRoute);
       }, { prefix: '/tenants' });
 
       // A25 — لوحة التشغيل (قراءة فقط، خلف platform-auth-guard)
