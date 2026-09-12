@@ -757,7 +757,10 @@
     "ASSET_LOAD_FAILED": "image load failed — أعد رفعها.",
     "ASSET_ID_EMPTY": "image field فارغ — اختر من assets.",
     "CANVAS_NO_CONTEXT": "browser لا يدعم canvas — جرّب newer browser.",
-    "PREVIEW_UNKNOWN": "preview failed — راجع القالب."
+    "PREVIEW_UNKNOWN": "preview failed — راجع القالب.",
+    "HEADLINE_TOO_LONG": "headline طويل — قصِّره أو غيّر maximum length في القالب.",
+    "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
+    "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل."
   },
   "design": {
     "title": "Design System",

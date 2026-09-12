@@ -756,7 +756,10 @@
     "ASSET_LOAD_FAILED": "Could not load the selected image — reupload or pick another.",
     "ASSET_ID_EMPTY": "Image field is empty — pick an image from assets.",
     "CANVAS_NO_CONTEXT": "Browser cannot render the card — try a newer browser.",
-    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload."
+    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload.",
+    "HEADLINE_TOO_LONG": "Headline exceeds maximum length — shorten it or adjust the template's headline limit.",
+    "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
+    "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly."
   },
   "design": {
     "title": "Design System",
