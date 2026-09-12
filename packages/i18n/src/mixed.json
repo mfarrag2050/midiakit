@@ -254,10 +254,10 @@
       },
       "fontAck": {
         "title": "Acknowledge font license",
-        "body": "الخطوط المرفوعة تحتاج إقراراً بحقّ الاستعمال. البنيوية 'builtin' لا تحتاج.",
+        "body": "قبل استعمال خطّ رفعتَه بنفسك، أَقِرَّ هنا أنّك تملك حقّ استعماله قانونيّاً في مخرجات هذه الهويّة. يُسجَّل الإقرار باسمك وتاريخه — مرّةً واحدة لكلّ خطّ. الخطوط المدمَجة (built-in) مرخّصة أصلاً ولا تحتاج هذه الخطوة.",
         "family": "Font family",
         "notes": "Notes (optional)",
-        "checkbox": "I acknowledge the license.",
+        "checkbox": "أقرّ بأنّني أملك حقّ استعمال هذا الخطّ.",
         "submit": "Save acknowledgement",
         "ackedBy": "Acknowledged by",
         "ackedAt": "Acknowledged at"

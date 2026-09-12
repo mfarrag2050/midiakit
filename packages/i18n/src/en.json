@@ -253,10 +253,10 @@
       },
       "fontAck": {
         "title": "Acknowledge font license",
-        "body": "Uploaded fonts require an acknowledgement of usage rights. 'builtin' fonts do not.",
+        "body": "Before using a font you uploaded yourself, record here that you legally hold the right to use it in this brand's outputs. The acknowledgement is stored with your name and timestamp — one time per font. Built-in fonts are already licensed and don't need this step.",
         "family": "Font family",
         "notes": "Notes (optional)",
-        "checkbox": "I acknowledge the license.",
+        "checkbox": "I confirm I hold the right to use this font.",
         "submit": "Save acknowledgement",
         "ackedBy": "Acknowledged by",
         "ackedAt": "Acknowledged at"
