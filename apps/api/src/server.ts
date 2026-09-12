@@ -143,15 +143,20 @@ export async function buildServer() {
 
   // A21 — رأس rawBody لكل طلب JSON (webhooks توقّع فوق البايتات الأصلية).
   // كلفة ثابتة (سلسلة إضافية على req). يستبدل parser الافتراضي.
-  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
-    (req as unknown as { rawBody: string }).rawBody = body as string;
+  const jsonParser = (req: unknown, body: unknown, done: (err: Error | null, json?: unknown) => void): void => {
+    (req as { rawBody: string }).rawBody = body as string;
     try {
       const json = (body as string).length > 0 ? JSON.parse(body as string) : {};
       done(null, json);
     } catch (err) {
       done(err as Error, undefined);
     }
-  });
+  };
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, jsonParser);
+  // 144-PATCH-DEEP-MERGE — RFC 7396 يوجب `application/merge-patch+json`.
+  // Fastify افتراضاً يرفضه بـFST_ERR_CTP_INVALID_MEDIA_TYPE. نُسجّل نفس
+  // منطق parse لـJSON — العقد المُعلَن في docs/16 §5.4 يعمل الآن.
+  fastify.addContentTypeParser('application/merge-patch+json', { parseAs: 'string' }, jsonParser);
 
   await fastify.register(errorHandlerPlugin);
   await fastify.register(authGuardPlugin);
