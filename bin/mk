@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+# فرع show → مدير الشووروم المنفصل (لا يمرّر إلى docker compose).
+if [[ "${1:-}" == "show" ]]; then
+  shift
+  exec "$(dirname "$0")/mk-show" "$@"
+fi
+
 EXPECTED="colima-mediakit"
 CURRENT="$(docker context show 2>/dev/null || echo none)"
 if [[ "$CURRENT" != "$EXPECTED" ]]; then

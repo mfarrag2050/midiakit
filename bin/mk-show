@@ -1,0 +1,431 @@
+#!/usr/bin/env bash
+# bin/mk-show — مدير بيئة العرض (Showroom).
+#
+# قاعدة حاكمة (docs/SHOWROOM.md · CLAUDE.md §بيئة مشتركة):
+#   • النقل بالوسم لا بالفرع. الشريك يرى «شيئاً واحداً» له اسم ثابت.
+#   • بيئة العرض في worktree منفصل: $HOME/MediaKit/pf-mediakit-show.
+#   • قاعدة/بloكت/شبكة/أسرار منفصلة عن التطوير (docker-compose.show.yml).
+#   • لا نفق، لا فتح منفذ خارج الشبكة — 127.0.0.1 فقط.
+#
+# الأوامر:
+#   bin/mk show up [<tag>]      إشعال البيئة (containers + migrate + seed + API + Studio)
+#   bin/mk show down            إطفاء (containers + processes) — القاعدة تبقى
+#   bin/mk show promote <sha>   وسم موقَّع على SHA من origin/main ونقل إليه
+#   bin/mk show status          الوسم الجاري · الالتزام · هل الخادمان حيّان
+#   bin/mk show rollback        العودة إلى الوسم السابق
+#   bin/mk show logs [api|studio]  متابعة سجلّات
+#   bin/mk show seed            (يدويّاً) إعادة تشغيل seed — يفشل إن كانت البذرة موجودة
+#
+# ما لا يفعله (بحسب §6 من تذكرة الـshowroom):
+#   • لا cloudflared, لا تعديل جدار حماية, لا فتح منفذ خارج الشبكة.
+
+set -euo pipefail
+
+# ═════ ثوابت البيئة ═════════════════════════════════════════════════════════
+SHOW_ROOT="${SHOW_ROOT:-$HOME/MediaKit/pf-mediakit-show}"
+DEV_ROOT="${DEV_ROOT:-$HOME/MediaKit/pf-mediakit-dash}"
+EXPECTED_DOCKER_CTX="colima-mediakit"
+COMPOSE_PROJECT="pf-mediakit-show"
+COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
+ENV_FILE_NAME=".env.show"
+STATE_DIR_NAME=".mk-show-state"          # داخل SHOW_ROOT: pids, tag pointer, previous tag
+API_PORT=19060
+STUDIO_PORT=19061
+PG_PORT=19062
+PG_DB="mediakit_show"
+REDIS_URL="redis://127.0.0.1:19063/0"
+S3_ENDPOINT="http://127.0.0.1:19064"
+S3_BUCKET="mk-assets-show"
+OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
+
+# ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
+say()   { printf '[mk-show] %s\n' "$*"; }
+warn()  { printf '[mk-show] ⚠  %s\n' "$*" >&2; }
+die()   { printf '[mk-show] ✗ %s\n' "$*" >&2; exit 1; }
+
+require_show_worktree() {
+  [[ -d "$SHOW_ROOT/.git" || -f "$SHOW_ROOT/.git" ]] \
+    || die "worktree غير موجود: $SHOW_ROOT
+        أنشئه من التطوير: git -C $DEV_ROOT worktree add $SHOW_ROOT <tag>"
+  [[ -f "$SHOW_ROOT/$COMPOSE_FILE_RELATIVE" ]] \
+    || die "compose المُتوقَّع غير موجود في الـworktree: $SHOW_ROOT/$COMPOSE_FILE_RELATIVE
+        اسحب من main بعد دمج feat/ci ثمّ أعد المحاولة."
+}
+
+require_docker_context() {
+  local cur
+  cur="$(docker context show 2>/dev/null || echo none)"
+  [[ "$cur" == "$EXPECTED_DOCKER_CTX" ]] \
+    || die "السياق الحالي: $cur — المتوقع: $EXPECTED_DOCKER_CTX
+        colima start mediakit --cpu 4 --memory 8 --disk 80
+        docker context use $EXPECTED_DOCKER_CTX"
+}
+
+# لا نستعمل bin/mk لأنّه يمرّر إلى -p pf-mediakit (dev). نستعمل docker compose مباشرةً.
+compose() {
+  ( cd "$SHOW_ROOT" && docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE_RELATIVE" "$@" )
+}
+
+state_dir() { printf '%s/%s' "$SHOW_ROOT" "$STATE_DIR_NAME"; }
+env_file()  { printf '%s/%s'  "$SHOW_ROOT" "$ENV_FILE_NAME"; }
+
+ensure_state_dir() {
+  mkdir -p "$(state_dir)"
+  # يحمي من الالتزام بالخطأ إن أضاف أحد state الى الفهرس.
+  local gi="$(state_dir)/.gitignore"
+  [[ -f "$gi" ]] || printf '*\n' > "$gi"
+}
+
+# ═════ إدارة الأسرار في .env.show ═══════════════════════════════════════════
+# القيَم تُولَّد مرّةً واحدة عند أوّل up. تبقى محفوظة بين تشغيلات — إعادة توليدها
+# تعني إبطال جلسات + عدم فكّ مفاتيح AI السابقة. لا تُطبع في التقرير.
+# **الاستثناء الوحيد:** كلمة مرور المالك تُطبع مرّةً واحدةً في stdout عند
+# أوّل seed — المالك ينسخها ثمّ يغيّرها.
+ensure_env_show() {
+  local ef; ef="$(env_file)"
+  if [[ -f "$ef" ]]; then
+    say ".env.show موجود — أحترمه ولا أُعيد التوليد."
+    return
+  fi
+
+  say "أوّل تشغيل — أولّد الأسرار وأكتبها في $ENV_FILE_NAME (خارج git)."
+  local session_jwt platform_jwt ai_key
+  session_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
+  platform_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
+  ai_key="$(openssl rand -hex 32)"
+
+  umask 077
+  cat > "$ef" <<ENV
+# .env.show — مولَّد تلقائياً بواسطة bin/mk-show.
+# لا يُلتزم (.gitignore يحجبه عبر النمط .env*).
+# إعادة التوليد يعني: إبطال كلّ الجلسات + عدم فكّ AI keys المحفوظة.
+NODE_ENV=development
+PORT=$API_PORT
+
+# قاعدة البيانات — نفس أدوار init/*.sql على قاعدة معزولة.
+DATABASE_URL=postgres://migration_user:dev_migration_pass@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_APP=postgres://app_user:dev_app_pass@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_PLATFORM=postgres://control_plane_user:dev_control_plane_pass@127.0.0.1:$PG_PORT/$PG_DB
+
+# أسرار مولَّدة — خاصّة ببيئة العرض وحدها. لا تُشارك dev أو production.
+SESSION_JWT_SECRET=$session_jwt
+PLATFORM_JWT_SECRET=$platform_jwt
+AI_KEY_ENCRYPTION_KEY=$ai_key
+
+# Redis + BullMQ — DB 0 (طاولة خاصّة بالعرض).
+REDIS_URL=$REDIS_URL
+BULLMQ_PREFIX=pf-mediakit-show
+
+# تخزين — MinIO محلّيّ معزول.
+STORAGE_DRIVER=s3
+S3_ENDPOINT=$S3_ENDPOINT
+S3_REGION=us-east-1
+S3_BUCKET=$S3_BUCKET
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_PRESIGN_TTL_SECONDS=900
+
+# CORS — الاستوديو يخدم من 19061.
+CORS_ORIGIN=http://127.0.0.1:$STUDIO_PORT
+
+# Studio → API.
+NEXT_PUBLIC_API_URL=http://127.0.0.1:$API_PORT
+
+# قائمة السماح — البذرة تُنشئ حساباً واحداً بهذا البريد وحده.
+SHOWROOM_OWNER_EMAIL=$OWNER_EMAIL
+ENV
+  say "الأسرار كُتبت — لا أطبعها هنا. راجع $ef إن أردت رؤيتها يدوياً."
+}
+
+# ═════ up: إشعال البيئة ═════════════════════════════════════════════════════
+cmd_up() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+  ensure_env_show
+
+  # 1) الحاويات
+  say "أشعِل postgres/redis/minio للعرض …"
+  compose up -d
+
+  say "أنتظر postgres حتّى يكون جاهزاً …"
+  local i=0
+  until compose exec -T postgres-show pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; do
+    ((i++)) || true
+    (( i > 60 )) && die "postgres لم يجهز خلال 60 ثانية"
+    sleep 1
+  done
+  say "postgres جاهز."
+
+  # 2) migrations — عبر pnpm في الـworktree
+  say "أشغّل migrations على $PG_DB …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/db migrate:up )
+
+  # 3) بناء الاستوديو (إن لم يكن) — أسرع من next dev، ومقارب للإنتاج
+  if [[ ! -d "$SHOW_ROOT/apps/studio/.next" ]]; then
+    say "أبني الاستوديو (next build) …"
+    ( set -a; . "$(env_file)"; set +a
+      cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/studio build )
+  fi
+
+  # 4) شغّل API أوّلاً — seed يحتاجه (signup عبر HTTP)
+  start_api
+
+  # 5) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
+  say "أشغّل seed العرض (يتخطّى إن كانت البذرة موجودة) …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/api exec node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+
+  # 6) Studio — بعد seed حتّى تعمل صفحة الدخول بحساب حقيقيّ
+  start_studio
+
+  say ""
+  say "✓ الشووروم يعمل."
+  say "  API:    http://127.0.0.1:$API_PORT/v1/health"
+  say "  Studio: http://127.0.0.1:$STUDIO_PORT"
+  say "  السجلّات: bin/mk show logs api  |  bin/mk show logs studio"
+}
+
+start_api() {
+  local pidf logf
+  pidf="$(state_dir)/api.pid"
+  logf="$(state_dir)/api.log"
+  if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+    say "API يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
+    return
+  fi
+  say "أشغّل API على $API_PORT …"
+  # exec داخل subshell → $! هو node مباشرةً (لا pnpm wrapper) → kill نظيف.
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT/apps/api"
+    nohup node --import tsx src/server.ts >"$logf" 2>&1 &
+    echo $! > "$pidf" )
+  sleep 3
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "API فشل الإقلاع — راجع $logf"
+
+  # فحص health قبل الاعتماد على العملية
+  local i=0
+  until curl -fsS "http://127.0.0.1:$API_PORT/v1/health" >/dev/null 2>&1; do
+    ((i++)) || true
+    (( i > 30 )) && die "API لم يصر جاهزاً على /v1/health خلال 30 ثانية — راجع $logf"
+    sleep 1
+  done
+  say "API جاهز على http://127.0.0.1:$API_PORT/v1/health"
+}
+
+start_studio() {
+  local pidf logf
+  pidf="$(state_dir)/studio.pid"
+  logf="$(state_dir)/studio.log"
+  if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+    say "Studio يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
+    return
+  fi
+  say "أشغّل Studio على $STUDIO_PORT …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT/apps/studio"
+    nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+    echo $! > "$pidf" )
+  sleep 3
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "Studio فشل الإقلاع — راجع $logf"
+}
+
+stop_proc() {
+  local name="$1"
+  local pidf="$(state_dir)/${name}.pid"
+  [[ -f "$pidf" ]] || return 0
+  local pid; pid="$(cat "$pidf")"
+  if kill -0 "$pid" 2>/dev/null; then
+    say "أُطفئ $name (PID $pid) …"
+    kill "$pid" 2>/dev/null || true
+    # انتظر 3 ثوان قبل SIGKILL
+    local i=0
+    while kill -0 "$pid" 2>/dev/null && (( i < 3 )); do
+      sleep 1; ((i++)) || true
+    done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pidf"
+}
+
+# ═════ down ═════════════════════════════════════════════════════════════════
+cmd_down() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+  stop_proc studio
+  stop_proc api
+  say "أُطفئ containers (data volumes تبقى) …"
+  compose down
+  say "✓ الشووروم مُطفَأ. القاعدة والبذرة محفوظتان."
+}
+
+# ═════ status ═══════════════════════════════════════════════════════════════
+cmd_status() {
+  require_show_worktree
+  ensure_state_dir
+
+  local tag commit
+  tag="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '(بلا وسم)')"
+  commit="$(git -C "$SHOW_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
+
+  local promoted_at="(غير مسجَّل)"
+  [[ -f "$(state_dir)/promoted-at" ]] && promoted_at="$(cat "$(state_dir)/promoted-at")"
+
+  local prev_tag="(لا شيء)"
+  [[ -f "$(state_dir)/previous-tag" ]] && prev_tag="$(cat "$(state_dir)/previous-tag")"
+
+  local api_state="متوقّف" studio_state="متوقّف"
+  [[ -f "$(state_dir)/api.pid" ]] && kill -0 "$(cat "$(state_dir)/api.pid")" 2>/dev/null && api_state="يعمل (PID $(cat "$(state_dir)/api.pid"))"
+  [[ -f "$(state_dir)/studio.pid" ]] && kill -0 "$(cat "$(state_dir)/studio.pid")" 2>/dev/null && studio_state="يعمل (PID $(cat "$(state_dir)/studio.pid"))"
+
+  cat <<STATUS
+حالة الشووروم — $(date '+%Y-%m-%d %H:%M:%S')
+
+  worktree   : $SHOW_ROOT
+  الوسم       : $tag
+  الالتزام    : $commit
+  نُقل في      : $promoted_at
+  الوسم السابق : $prev_tag
+
+  API (19060)   : $api_state
+  Studio (19061): $studio_state
+
+  الحاويات (pf-mediakit-show):
+STATUS
+  if command -v docker >/dev/null 2>&1; then
+    docker ps --filter "name=pf-mediakit-show-" --format "    {{.Names}}\t{{.Status}}" 2>/dev/null | sed 's/^/  /'
+  fi
+}
+
+# ═════ promote <sha>  → وسم جديد وسجّل السابق ═══════════════════════════════
+cmd_promote() {
+  local sha="${1:-}"
+  [[ -n "$sha" ]] || die "الاستعمال: bin/mk show promote <sha>
+        (sha من origin/main. مثال: bin/mk show promote 0b9cce9)"
+  require_show_worktree
+  ensure_state_dir
+
+  # تحقّق أنّ SHA على origin/main (بدون --contains لأنّه بطيء — نستعمل merge-base)
+  git -C "$DEV_ROOT" fetch --tags origin main >/dev/null 2>&1 || warn "fetch فشل — أتابع بمحلّيّ"
+  git -C "$DEV_ROOT" merge-base --is-ancestor "$sha" origin/main 2>/dev/null \
+    || die "SHA $sha ليس على origin/main — النقل يتطلّب SHA مدموج."
+
+  local date_tag
+  date_tag="show-$(date +%Y%m%d)"
+  # ابحث عن أعلى N على وسم اليوم
+  local n=1
+  while git -C "$DEV_ROOT" rev-parse "refs/tags/${date_tag}-${n}" >/dev/null 2>&1; do
+    n=$((n + 1))
+  done
+  local new_tag="${date_tag}-${n}"
+
+  # سجّل الوسم السابق قبل التغيير
+  local current_tag
+  current_tag="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '')"
+  [[ -n "$current_tag" ]] && echo "$current_tag" > "$(state_dir)/previous-tag"
+
+  say "أُنشئ وسماً موقَّعاً: $new_tag → $sha"
+  # -a (annotated) بدون -s (signed) لأنّ signing يتطلّب gpg — بيئة العرض
+  # على جهاز المالك، الوسم للأثر لا للتوثيق التشفيريّ. إن أراد التوقيع
+  # يمرّر: MK_SHOW_TAG_SIGN=1 bin/mk show promote <sha>
+  if [[ "${MK_SHOW_TAG_SIGN:-0}" == "1" ]]; then
+    git -C "$DEV_ROOT" tag -s "$new_tag" "$sha" -m "showroom promotion $new_tag → $sha"
+  else
+    git -C "$DEV_ROOT" tag -a "$new_tag" "$sha" -m "showroom promotion $new_tag → $sha"
+  fi
+  git -C "$DEV_ROOT" push origin "$new_tag" >/dev/null 2>&1 || warn "push للوسم فشل — الوسم محلّيّ حتّى تدفعه يدوياً."
+
+  # نقل الـworktree إلى الوسم الجديد (يوقف الخوادم أوّلاً)
+  stop_proc studio
+  stop_proc api
+  say "أنقل $SHOW_ROOT إلى $new_tag …"
+  git -C "$SHOW_ROOT" fetch --tags origin >/dev/null 2>&1 || true
+  git -C "$SHOW_ROOT" checkout --detach "refs/tags/$new_tag"
+
+  date '+%Y-%m-%d %H:%M:%S %Z' > "$(state_dir)/promoted-at"
+  echo "$new_tag" > "$(state_dir)/current-tag"
+
+  say "✓ نُقل إلى $new_tag. شغّل: bin/mk show up"
+}
+
+# ═════ rollback → إلى الوسم السابق ══════════════════════════════════════════
+cmd_rollback() {
+  require_show_worktree
+  ensure_state_dir
+  local prev
+  prev="$(cat "$(state_dir)/previous-tag" 2>/dev/null || true)"
+  [[ -n "$prev" ]] || die "لا يوجد وسم سابق مسجَّل — لا شيء للتراجع إليه.
+        state file: $(state_dir)/previous-tag"
+
+  local current
+  current="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '')"
+
+  stop_proc studio
+  stop_proc api
+  say "أُرجع $SHOW_ROOT من $current إلى $prev …"
+  git -C "$SHOW_ROOT" checkout --detach "refs/tags/$prev"
+
+  # بدّل السجلّ: الحاليّ الجديد = الوسم السابق، والسابق الجديد = الحاليّ القديم
+  [[ -n "$current" ]] && echo "$current" > "$(state_dir)/previous-tag"
+  echo "$prev" > "$(state_dir)/current-tag"
+  date '+%Y-%m-%d %H:%M:%S %Z (rollback)' > "$(state_dir)/promoted-at"
+
+  say "✓ رجعتَ إلى $prev. شغّل: bin/mk show up"
+}
+
+# ═════ logs ═════════════════════════════════════════════════════════════════
+cmd_logs() {
+  require_show_worktree
+  ensure_state_dir
+  local target="${1:-api}"
+  local logf="$(state_dir)/${target}.log"
+  [[ -f "$logf" ]] || die "لا سجلّ لـ$target حتّى الآن — شغّل bin/mk show up أوّلاً."
+  tail -f "$logf"
+}
+
+# ═════ seed (يدويّ) ═════════════════════════════════════════════════════════
+cmd_seed() {
+  require_show_worktree
+  require_docker_context
+  ensure_env_show
+  say "أشغّل seed العرض يدويّاً …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/api exec node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+}
+
+# ═════ dispatch ═════════════════════════════════════════════════════════════
+usage() {
+  cat <<USAGE
+bin/mk-show — مدير بيئة العرض
+  up [<tag>]      إشعال (containers + migrate + seed + API + Studio)
+  down            إطفاء (containers + processes) — القاعدة تبقى
+  promote <sha>   وسم جديد على SHA من origin/main ونقل إليه
+  rollback        العودة إلى الوسم السابق
+  status          الوسم · الالتزام · حالة الخوادم
+  logs [api|studio]  متابعة سجلّ
+  seed            إعادة seed يدوياً
+
+بيئة:
+  SHOW_ROOT (=$SHOW_ROOT)
+  DEV_ROOT  (=$DEV_ROOT)
+  MK_SHOW_TAG_SIGN=1 → وسم موقَّع بـgpg
+USAGE
+}
+
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+  up)       cmd_up "$@" ;;
+  down)     cmd_down ;;
+  promote)  cmd_promote "$@" ;;
+  rollback) cmd_rollback ;;
+  status)   cmd_status ;;
+  logs)     cmd_logs "$@" ;;
+  seed)     cmd_seed ;;
+  ""|-h|--help) usage ;;
+  *) die "أمر غير معروف: $cmd — bin/mk show --help" ;;
+esac

@@ -1,0 +1,104 @@
+# pf-mediakit-show — بيئة العرض (Showroom) المعزولة عن التطوير.
+#
+# قاعدة حاكمة (docs/SHOWROOM.md · §1):
+#   • قاعدة بيانات مستقلّة (mediakit_show) — لا تشارك dev/test إطلاقاً.
+#   • تخزين أصول مستقلّ (mk-assets-show) — bucket آخر.
+#   • أسرار مولَّدة لها وحدها في .env.show (خارج git).
+#   • منافذ خاصّة: 19060 (API) · 19061 (Studio) · 19062-19065 (خدمات).
+#   • بذرة عرضٍ مُختلَقة — لا بيانات عميلٍ حقيقيّ.
+#
+# البادئة `pf-mediakit-show-` تحمي من أيّ لبس مع stack التطوير
+# (`pf-mediakit-`) — كلاهما يعمل في سياق colima-mediakit نفسه.
+#
+# تُشغَّل عبر: `bin/mk show up` (يستدعي docker compose -p pf-mediakit-show).
+# دورا القاعدة (migration_user, app_user, control_plane_user, auth_lookup)
+# يُنشآن في init/*.sql (نفس ملفّات التطوير) — لا اختلاف في السياسة.
+
+name: pf-mediakit-show
+
+services:
+  postgres-show:
+    image: postgres:16-alpine
+    container_name: pf-mediakit-show-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19062:5432"
+    environment:
+      POSTGRES_DB: mediakit_show
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: bootstrap_only_never_used_by_app
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - pf-mediakit-show-postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediakit_show"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - pf-mediakit-show-net
+
+  redis-show:
+    image: redis:7-alpine
+    container_name: pf-mediakit-show-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19063:6379"
+    command: redis-server --appendonly no --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - pf-mediakit-show-net
+
+  minio-show:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    container_name: pf-mediakit-show-minio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:19064:9000"      # S3 API
+      - "127.0.0.1:19065:9001"      # console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - pf-mediakit-show-minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - pf-mediakit-show-net
+
+  # one-shot: ينشئ bucket العرض ثمّ يخرج.
+  minio-show-init:
+    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    container_name: pf-mediakit-show-minio-init
+    depends_on:
+      minio-show:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio-show:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/mk-assets-show &&
+      mc anonymous set none local/mk-assets-show &&
+      echo '✓ mk-assets-show bucket ready'
+      "
+    networks:
+      - pf-mediakit-show-net
+
+networks:
+  pf-mediakit-show-net:
+    name: pf-mediakit-show-net
+    driver: bridge
+
+volumes:
+  pf-mediakit-show-postgres-data:
+    name: pf-mediakit-show-postgres-data
+  pf-mediakit-show-minio-data:
+    name: pf-mediakit-show-minio-data
