@@ -45,6 +45,11 @@ export interface Storage {
   headObject(key: string): Promise<HeadResult>;
   deleteObject(key: string): Promise<void>;
   getObjectText(key: string): Promise<string>;
+  /**
+   * قراءة بايتات خام — لأصول ثنائية (خطّ، صورة، فيديو …). يرمي إن غاب المفتاح.
+   * أُضيف في FONT-METRICS-UPLOAD لقراءة ملفّات الخطّ عند finalize.
+   */
+  getObjectBuffer(key: string): Promise<Buffer>;
 
   /**
    * dev/test helper — يستعمله verify-assets ليحاكي رفع العميل قبل
@@ -92,6 +97,12 @@ class MemoryStorage implements Storage {
     const e = this.store.get(key);
     if (!e) throw new Error(`memory storage: key not found: ${key}`);
     return e.body.toString('utf-8');
+  }
+
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const e = this.store.get(key);
+    if (!e) throw new Error(`memory storage: key not found: ${key}`);
+    return e.body;
   }
 
   async putObjectRaw(key: string, body: Buffer | string, contentType: string): Promise<void> {
@@ -156,6 +167,13 @@ class S3Storage implements Storage {
     const r = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     if (!r.Body) throw new Error(`s3 storage: empty body: ${key}`);
     return await r.Body.transformToString('utf-8');
+  }
+
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const r = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!r.Body) throw new Error(`s3 storage: empty body: ${key}`);
+    const arr = await r.Body.transformToByteArray();
+    return Buffer.from(arr);
   }
 
   async putObjectRaw(key: string, body: Buffer | string, contentType: string): Promise<void> {

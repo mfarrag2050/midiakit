@@ -43,6 +43,9 @@ import assetsUploadUrlRoute from './routes/assets/upload-url.js';
 import assetsFinalizeRoute from './routes/assets/finalize.js';
 import assetsListRoute from './routes/assets/list.js';
 import assetsGetRoute from './routes/assets/get.js';
+import assetsFontServeRoute from './routes/assets/font-serve.js';
+import readyRoute from './routes/ready.js';
+import exportsListRoute from './routes/exports/list.js';
 import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
 import assetsDeleteRoute from './routes/assets/delete.js';
 import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
@@ -84,6 +87,7 @@ import platformLogoutRoute from './routes/platform/auth/logout.js';
 import platformTenantsListRoute from './routes/platform/tenants/list.js';
 import platformTenantsGetRoute from './routes/platform/tenants/get.js';
 import platformTenantsUpdateRoute from './routes/platform/tenants/update.js';
+import platformTenantsHardDeleteRoute from './routes/platform/tenants/hard-delete.js';
 import platformOpsQueuesRoute from './routes/platform/ops/queues.js';
 import platformOpsSubscriptionsRoute from './routes/platform/ops/subscriptions.js';
 import platformOpsUsageRoute from './routes/platform/ops/usage.js';
@@ -143,15 +147,20 @@ export async function buildServer() {
 
   // A21 — رأس rawBody لكل طلب JSON (webhooks توقّع فوق البايتات الأصلية).
   // كلفة ثابتة (سلسلة إضافية على req). يستبدل parser الافتراضي.
-  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
-    (req as unknown as { rawBody: string }).rawBody = body as string;
+  const jsonParser = (req: unknown, body: unknown, done: (err: Error | null, json?: unknown) => void): void => {
+    (req as { rawBody: string }).rawBody = body as string;
     try {
       const json = (body as string).length > 0 ? JSON.parse(body as string) : {};
       done(null, json);
     } catch (err) {
       done(err as Error, undefined);
     }
-  });
+  };
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, jsonParser);
+  // 144-PATCH-DEEP-MERGE — RFC 7396 يوجب `application/merge-patch+json`.
+  // Fastify افتراضاً يرفضه بـFST_ERR_CTP_INVALID_MEDIA_TYPE. نُسجّل نفس
+  // منطق parse لـJSON — العقد المُعلَن في docs/16 §5.4 يعمل الآن.
+  fastify.addContentTypeParser('application/merge-patch+json', { parseAs: 'string' }, jsonParser);
 
   await fastify.register(errorHandlerPlugin);
   await fastify.register(authGuardPlugin);
@@ -161,6 +170,7 @@ export async function buildServer() {
   // Routes
   await fastify.register(async (v1) => {
     await v1.register(healthRoute);
+    await v1.register(readyRoute);
     await v1.register(async (auth) => {
       await auth.register(signupRoute);
       await auth.register(loginRoute);
@@ -200,6 +210,7 @@ export async function buildServer() {
       await a.register(assetsFinalizeRoute);
       await a.register(assetsListRoute);
       await a.register(assetsGetRoute);
+      await a.register(assetsFontServeRoute);
       await a.register(assetsRefreshUrlRoute);
       await a.register(assetsDeleteRoute);
       await a.register(assetsDetectFacesRoute);
@@ -247,6 +258,11 @@ export async function buildServer() {
       await r.register(rendersCancelRoute);
       await r.register(rendersDeleteRoute);
     }, { prefix: '/renders' });
+
+    // 200-EXPORT-HISTORY — سجلّ التصديرات
+    await v1.register(async (e) => {
+      await e.register(exportsListRoute);
+    }, { prefix: '/exports' });
 
     // A20 Revisions — 3 endpoints × 5 موارد
     await v1.register(makeRevisionsPlugin({
@@ -301,6 +317,7 @@ export async function buildServer() {
         await t.register(platformTenantsListRoute);
         await t.register(platformTenantsGetRoute);
         await t.register(platformTenantsUpdateRoute);
+        await t.register(platformTenantsHardDeleteRoute);
       }, { prefix: '/tenants' });
 
       // A25 — لوحة التشغيل (قراءة فقط، خلف platform-auth-guard)
@@ -359,8 +376,8 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 
   try {
-    await fastify.listen({ port: config.PORT, host: '127.0.0.1' });
-    fastify.log.info(`▶ mk-api listening on http://127.0.0.1:${config.PORT}`);
+    await fastify.listen({ port: config.PORT, host: config.API_HOST });
+    fastify.log.info(`▶ mk-api listening on http://${config.API_HOST}:${config.PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

@@ -780,6 +780,65 @@ async function checkAppUserGrantsEnforcement(migrationPool) {
   else fail(`تنظيف فشل: pgmigrations لا يزال ممنوحاً`);
 }
 
+// ══════════════════════════════════════════════════════════════════
+//  RLS-NEG-PERM — اختبار سلبيّ لسياسة RLS ذاتها (L-46 صريح على RLS)
+// ══════════════════════════════════════════════════════════════════
+//
+// **السبب:** checkAllTablesRlsAndForce إيجابيّ فقط (يؤكّد rls=t). لو ضاعت
+// سياسة يوماً، تُلتقط ضمنياً عبر اختبارات neg SELECT/UPDATE لكل جدول —
+// لكنّها حماية غير مقصودة، قابلة للانحسار الصامت إن نُقلت. هنا نجعلها
+// L-46 صريحاً: نُطفئ RLS على جدول واحد ونؤكّد أنّ الخرق يُرى، ثمّ نعيد.
+//
+// **آليّة:** DISABLE ROW LEVEL SECURITY على templates ⇒ جلسة tenant_A
+// تستطيع رؤية صفّ templates لـtenant_B (خرق مكشوف = الرصد ناجح).
+// الاسترجاع في finally غير مشروط — لا يعتمد على نجاح أيّ خطوة.
+async function checkRlsEnforcementNegative(migrationPool, appPool) {
+  console.log(`\n▶ RLS-NEG-PERM (L-46): DISABLE ROW LEVEL SECURITY على templates → البوابة ترصد`);
+  await migrationPool.query(`ALTER TABLE templates DISABLE ROW LEVEL SECURITY`);
+  try {
+    // (١) تأكيد الحقن حصل فعلياً
+    const state = await migrationPool.query(
+      `SELECT relrowsecurity FROM pg_class WHERE relname='templates' AND relnamespace='public'::regnamespace`,
+    );
+    if (state.rows[0]?.relrowsecurity === false) {
+      pass(`الحقن مُطبَّق: templates.relrowsecurity=false (RLS مُعطَّل مؤقتاً)`);
+    } else {
+      fail(`الحقن لم يُطبَّق: relrowsecurity=${state.rows[0]?.relrowsecurity}`);
+      return;
+    }
+
+    // (٢) الرصد: جلسة tenant_A ترى صفّ tenant_B ⇒ الخرق مكشوف
+    const bRow = await migrationPool.query(
+      `SELECT id FROM templates WHERE tenant_id = $1 LIMIT 1`,
+      [TENANT_B],
+    );
+    if (bRow.rowCount === 0) {
+      fail(`لا صفّ tenant_B في templates — البذر ناقص، الاختبار غير معوَّل`);
+      return;
+    }
+    const bId = bRow.rows[0].id;
+    const leak = await inTxAsTenant(appPool, TENANT_A, (c) =>
+      c.query(`SELECT id FROM templates WHERE id = $1`, [bId]),
+    );
+    if (leak.rowCount === 1) {
+      pass(`الرصد يعمل: tenant_A رأى صفّ templates لـtenant_B (خرق RLS مكشوف)`);
+    } else {
+      fail(`الرصد لا يعمل: توقّعنا رؤية صفّ tenant_B من جلسة tenant_A مع RLS مُعطَّل، وجدنا rowCount=${leak.rowCount}`);
+    }
+  } finally {
+    // (٣) استرجاع غير مشروط — يعمل حتى لو رمى أيّ من (١) أو (٢)
+    await migrationPool.query(`ALTER TABLE templates ENABLE ROW LEVEL SECURITY`);
+    const after = await migrationPool.query(
+      `SELECT relrowsecurity FROM pg_class WHERE relname='templates' AND relnamespace='public'::regnamespace`,
+    );
+    if (after.rows[0]?.relrowsecurity === true) {
+      pass(`استرجاع بعد الاختبار: templates.relrowsecurity=true (RLS مُفعَّل)`);
+    } else {
+      fail(`استرجاع فشل: relrowsecurity=${after.rows[0]?.relrowsecurity} — تدخّل يدويّ لازم`);
+    }
+  }
+}
+
 async function checkLoginAttemptsGrants(migrationPool) {
   console.log(`\n▶ login_attempts: صلاحيات app_user محدودة (A8+ hardening)`);
   const r = await migrationPool.query(
@@ -952,6 +1011,7 @@ async function main() {
     await checkNoRlsExceptions(migrationPool);
     await checkAppUserGrantsMatchDeclared(migrationPool);
     await checkAppUserGrantsEnforcement(migrationPool);
+    await checkRlsEnforcementNegative(migrationPool, appPool);
     await checkLoginAttemptsGrants(migrationPool);
     await checkAuthLookupRole(migrationPool);
     await checkFindUserByEmail(appPool);

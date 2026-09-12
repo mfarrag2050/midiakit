@@ -40,6 +40,7 @@ export type ErrorCode =
   | 'STORAGE_QUOTA_EXCEEDED'              // §9.1، مُعلَن — الحصّة غير مُنفَّذة حتى A21
   | 'UPLOAD_NOT_COMPLETED'                // §9.2 ملف S3 غير موجود
   | 'INVALID_FONT_FILE'                   // §9.2 kind=font ليس ttf/otf/woff2
+  | 'INVALID_FONT_METRICS'                // 90 · فشل قراءة OS/2/hhea/head من ملفّ الخطّ
   | 'INVALID_LOTTIE_SCHEMA'               // §9.2 kind=lottie JSON غير صالح
   | 'INVALID_SVG_WITH_TEXT_WARNING'       // §9.2 svg يحمل <text>، لم يُقرّ acknowledgedWarnings
   | 'INVALID_FILTER_FIELD'                // §9.3 فلتر غير مسموح
@@ -191,6 +192,7 @@ export const SizeTooLarge = () => new ApiError('SIZE_TOO_LARGE', 413, 'sizeBytes
 export const StorageQuotaExceeded = () => new ApiError('STORAGE_QUOTA_EXCEEDED', 422);
 export const UploadNotCompleted = () => new ApiError('UPLOAD_NOT_COMPLETED', 404);
 export const InvalidFontFile = () => new ApiError('INVALID_FONT_FILE', 400);
+export const InvalidFontMetrics = () => new ApiError('INVALID_FONT_METRICS', 422);
 export const InvalidLottieSchema = () => new ApiError('INVALID_LOTTIE_SCHEMA', 400);
 export const InvalidSvgWithTextWarning = () => new ApiError('INVALID_SVG_WITH_TEXT_WARNING', 400);
 export const InvalidFilterField = (field: string) => new ApiError('INVALID_FILTER_FIELD', 400, field);
