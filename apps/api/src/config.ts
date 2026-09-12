@@ -11,6 +11,10 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(19040),
+    // _AMEND-180-HOST — عنوان الاستماع يُقرأ من البيئة. الافتراض 127.0.0.1
+    // (لا فتح للشبكة افتراضاً · قرار تشغيل لا شيفرة). للنشر على 0.0.0.0
+    // مثلاً · تُضبَط API_HOST في env بالبيئة المستهدفة.
+    API_HOST: z.string().min(1).default('127.0.0.1'),
 
     DATABASE_URL_APP: z
       .string()

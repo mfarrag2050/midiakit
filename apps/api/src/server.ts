@@ -368,8 +368,8 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 
   try {
-    await fastify.listen({ port: config.PORT, host: '127.0.0.1' });
-    fastify.log.info(`▶ mk-api listening on http://127.0.0.1:${config.PORT}`);
+    await fastify.listen({ port: config.PORT, host: config.API_HOST });
+    fastify.log.info(`▶ mk-api listening on http://${config.API_HOST}:${config.PORT}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
