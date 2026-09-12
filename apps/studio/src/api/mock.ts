@@ -213,7 +213,24 @@ MOCK_BRAND_KITS.set('bk_mock_default', {
   id: 'bk_mock_default',
   name: 'هوية العرض',
   config: {
+    direction: 'rtl',
+    locale: 'ar',
     fonts: { primary: { family: 'IBM Plex Sans Arabic', source: 'builtin' } },
+    colors: {
+      text: '#111111',
+      accent: '#B78D2E',
+      urgentBadge: '#FFFFFF',
+      urgentBg: '#B21F1F',
+      urgentBgTint: '#DA8E8E',
+      locationBadge: '#111111',
+      surface: '#FFFFFF',
+    },
+    logo: {
+      url: '/mock/logo-agency.svg',
+      size: 60,
+      position: 'bottom-left',
+    },
+    typography: { bidi: { enabled: true, numerals: 'arabic' } },
     assets: { version: '2026.01', autoUpdate: false },
   },
   createdAt: new Date().toISOString(),
@@ -630,7 +647,25 @@ export async function handleMock(
     const patchStr = JSON.stringify(b);
     if (/"assets"[\s\S]*"version"/.test(patchStr)) err(400, 'IMMUTABLE_FIELD', 'assets.version');
     if (/"licenseAck"/.test(patchStr)) err(400, 'IMMUTABLE_FIELD', 'fonts.primary.licenseAck');
-    k.config = { ...k.config, ...(b as Record<string, unknown>) };
+    // RFC 7396: مسار top-level يعكس شكل المورد. `name` حقل عليا، لا داخل config.
+    const bMap = b as Record<string, unknown>;
+    if ('name' in bMap) {
+      if (typeof bMap.name !== 'string' || bMap.name.trim() === '') {
+        err(400, 'VALIDATION_FAILED', 'name');
+      }
+      k.name = bMap.name as string;
+    }
+    // كل ما ليس top-level identity يُدمج في config (سطحيّ كافٍ لـMVP).
+    const { name: _n, id: _i, createdAt: _c, updatedAt: _u, ...configPatch } =
+      bMap as {
+        name?: unknown;
+        id?: unknown;
+        createdAt?: unknown;
+        updatedAt?: unknown;
+      };
+    if (Object.keys(configPatch).length > 0) {
+      k.config = { ...k.config, ...configPatch };
+    }
     k.updatedAt = new Date().toISOString();
     return ok(200, k);
   }

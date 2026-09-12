@@ -271,6 +271,91 @@
         "diffPlaceholder": "No real diff in this MVP schema yet.",
         "ackCheckbox": "I have reviewed the diff above.",
         "submit": "Bump now"
+      },
+      "editBtn": "Edit",
+      "editor": {
+        "title": "Edit brand kit",
+        "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
+        "backToList": "← Back to list",
+        "save": "Save",
+        "saved": "Saved.",
+        "readOnlyTag": "Read-only · next phase",
+        "phase1Hint": "Punching the save (patch) path end-to-end on one field before building the twenty on top of it.",
+        "section": {
+          "identity": "Identity",
+          "font": "Font",
+          "colors": "Colors",
+          "logo": "Logo",
+          "bidi": "Direction & numerals"
+        },
+        "field": {
+          "direction": "Direction",
+          "locale": "Primary locale",
+          "fontFamily": "Font family",
+          "fontSource": "Font source",
+          "logoUrl": "Logo URL",
+          "logoSize": "Logo size",
+          "logoPosition": "Logo position",
+          "bidiEnabled": "Bidirectional (BiDi)",
+          "numerals": "Numeral style"
+        },
+        "value": {
+          "notSet": "not set",
+          "builtin": "built-in",
+          "custom": "uploaded",
+          "external": "external",
+          "arabic": "Arabic-Indic (١٢٣)",
+          "latin": "Latin (123)",
+          "rtl": "right-to-left (RTL)",
+          "ltr": "left-to-right (LTR)",
+          "on": "on",
+          "off": "off"
+        },
+        "color": {
+          "text": "Primary text",
+          "accent": "Accent",
+          "urgentBadge": "Urgent badge text",
+          "urgentBg": "Urgent bar background",
+          "urgentBgTint": "Urgent bar gradient",
+          "locationBadge": "Location badge",
+          "surface": "Surface",
+          "placeholder": "Placeholder fill"
+        },
+        "locale": {
+          "ar": "Arabic",
+          "en": "English",
+          "fr": "French",
+          "tr": "Turkish",
+          "es": "Spanish",
+          "de": "German"
+        },
+        "position": {
+          "bottom-left": "bottom-left",
+          "bottom-right": "bottom-right",
+          "top-left": "top-left",
+          "top-right": "top-right"
+        },
+        "colorEdit": {
+          "hexLabel": "hex value",
+          "hexInvalid": "invalid format — must be #RRGGBB",
+          "swatchLabel": "color"
+        },
+        "contrast": {
+          "sectionTitle": "Contrast",
+          "subtitle": "Measured on solid backgrounds only. Actual contrast over an image is measured by mk's engine checker (verify:text-contrast).",
+          "wcagThreshold": "WCAG AA minimum for normal text: 4.5:1",
+          "advisory": "Shown as an advisory, not a block — the brand owner decides.",
+          "readable": "readable",
+          "borderline": "borderline",
+          "notReadable": "may not be readable",
+          "invalid": "cannot measure — invalid hex value",
+          "pair": {
+            "textOnSurface": "Text on surface",
+            "urgentBadgeOnBg": "Urgent badge on its background",
+            "locationBadgeOnSurface": "Location badge on surface"
+          }
+        },
+        "unsavedChanges": "unsaved changes"
       }
     },
     "templates": {
@@ -537,6 +622,7 @@
     "STORAGE_QUOTA_EXCEEDED": "Storage quota exhausted — delete assets or upgrade your plan.",
     "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
     "INVALID_FONT_FILE": "Font file is invalid.",
+    "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
     "INVALID_FILTER_FIELD": "Unknown filter field.",

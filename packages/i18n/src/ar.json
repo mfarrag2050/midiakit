@@ -271,6 +271,91 @@
         "diffPlaceholder": "لا فرق فعلي في هذا المخطّط (MVP).",
         "ackCheckbox": "أقرّ بمراجعة الفرق أعلاه.",
         "submit": "ترقية الآن"
+      },
+      "editBtn": "تحرير",
+      "editor": {
+        "title": "تحرير الهوية",
+        "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
+        "backToList": "→ العودة إلى القائمة",
+        "save": "حفظ",
+        "saved": "تمّ الحفظ.",
+        "readOnlyTag": "قراءة فقط · مرحلة تالية",
+        "phase1Hint": "توصيل مسار الحفظ (patch) من طرفه إلى طرفه بحقل واحد قبل بناء العشرين حقلاً فوقه.",
+        "section": {
+          "identity": "الهوية",
+          "font": "الخط",
+          "colors": "الألوان",
+          "logo": "الشعار",
+          "bidi": "الاتجاه والأرقام"
+        },
+        "field": {
+          "direction": "الاتجاه",
+          "locale": "اللغة الأساسية",
+          "fontFamily": "عائلة الخط",
+          "fontSource": "مصدر الخط",
+          "logoUrl": "مسار الشعار",
+          "logoSize": "حجم الشعار",
+          "logoPosition": "موضع الشعار",
+          "bidiEnabled": "ثنائي الاتجاه (BiDi)",
+          "numerals": "نمط الأرقام"
+        },
+        "value": {
+          "notSet": "غير محدَّد",
+          "builtin": "مدمَج",
+          "custom": "مرفوع",
+          "external": "خارجي",
+          "arabic": "عربية-هندية (١٢٣)",
+          "latin": "لاتينية (123)",
+          "rtl": "من اليمين إلى اليسار (RTL)",
+          "ltr": "من اليسار إلى اليمين (LTR)",
+          "on": "مفعَّل",
+          "off": "معطَّل"
+        },
+        "color": {
+          "text": "لون النصّ الأساسيّ",
+          "accent": "لون التمييز",
+          "urgentBadge": "لون نصّ شارة العاجل",
+          "urgentBg": "لون خلفيّة شريط العاجل",
+          "urgentBgTint": "تدرّج خلفيّة العاجل",
+          "locationBadge": "لون شارة الموقع",
+          "surface": "لون السطح",
+          "placeholder": "لون الحشوة الافتراضيّة"
+        },
+        "locale": {
+          "ar": "العربيّة",
+          "en": "الإنجليزيّة",
+          "fr": "الفرنسيّة",
+          "tr": "التركيّة",
+          "es": "الإسبانيّة",
+          "de": "الألمانيّة"
+        },
+        "position": {
+          "bottom-left": "أسفل اليسار",
+          "bottom-right": "أسفل اليمين",
+          "top-left": "أعلى اليسار",
+          "top-right": "أعلى اليمين"
+        },
+        "colorEdit": {
+          "hexLabel": "قيمة hex",
+          "hexInvalid": "الصيغة غير صالحة — يجب #RRGGBB",
+          "swatchLabel": "لون"
+        },
+        "contrast": {
+          "sectionTitle": "التباين",
+          "subtitle": "قياس على خلفيّة صلبة · التباين الفعليّ على صورة يقيسه فاحص محرّك mk (verify:text-contrast).",
+          "wcagThreshold": "الحدّ الأدنى WCAG AA للنصّ العاديّ: 4.5:1",
+          "advisory": "الرقم يُعرَض كتنبيه لا كمنع — قرار الاستعمال للعميل.",
+          "readable": "مقروء",
+          "borderline": "على الحدّ",
+          "notReadable": "قد لا يُقرأ",
+          "invalid": "لا يمكن قياسه — قيمة hex غير صالحة",
+          "pair": {
+            "textOnSurface": "لون النصّ على السطح",
+            "urgentBadgeOnBg": "لون شارة العاجل على خلفيّتها",
+            "locationBadgeOnSurface": "لون شارة الموقع على السطح"
+          }
+        },
+        "unsavedChanges": "تغييرات غير محفوظة"
       }
     },
     "templates": {
@@ -537,6 +622,7 @@
     "STORAGE_QUOTA_EXCEEDED": "استنفدت مساحة التخزين — احذف أصولاً أو رقّ باقتك.",
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
+    "INVALID_FONT_METRICS": "الخطّ المرفوع لم تُقَس أبعاده — لن يُرسَم بشكل صحيح. شغّل `pnpm measure-font <مسار-الملفّ.ttf>` ثمّ أعِد الرفع.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG يحوي نصّاً غير محوَّل إلى مسارات — أقرّ التحذير للمتابعة.",
     "INVALID_FILTER_FIELD": "حقل تصفية غير معروف.",

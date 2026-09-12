@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -214,7 +215,14 @@ export default function BrandKitsPage(): JSX.Element {
     {
       key: 'name',
       headerKey: 'pages.brandKits.col.name',
-      render: (r) => <span className="font-medium">{r.name}</span>,
+      render: (r) => (
+        <Link
+          href={`/brand-kits/${encodeURIComponent(r.id)}/edit`}
+          className="font-medium text-accent hover:underline"
+        >
+          {r.name}
+        </Link>
+      ),
     },
     {
       key: 'font',
@@ -242,6 +250,12 @@ export default function BrandKitsPage(): JSX.Element {
       align: 'center',
       render: (r) => (
         <div className="flex items-center justify-center gap-2">
+          <Link
+            href={`/brand-kits/${encodeURIComponent(r.id)}/edit`}
+            className="text-sm text-accent hover:underline"
+          >
+            {t('pages.brandKits.editBtn')}
+          </Link>
           <Button variant="secondary" size="sm" onClick={() => openFontAck(r)}>
             {t('pages.brandKits.fontAck.title')}
           </Button>
