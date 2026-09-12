@@ -24,16 +24,28 @@
 
 import { randomBytes } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import pg from 'pg';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// pg تُحلّ من apps/api/node_modules — السكربت في scripts/ لا يملك pg.
+// createRequire من مسار apps/api/package.json → يفتح شجرة node_modules الصحيحة.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const requireFromApi = createRequire(resolve(__dirname, '../apps/api/package.json'));
+const pg = requireFromApi('pg');
 
 const API_PORT = Number(process.env.PORT || 19060);
 const API_BASE = `http://127.0.0.1:${API_PORT}`;
 const OWNER_EMAIL = process.env.SHOWROOM_OWNER_EMAIL || 'mk@primeflow.co';
-const DB_URL = process.env.DATABASE_URL;
+// اتصالان:
+//   • control_plane_user (SELECT فقط cross-tenant) — لاستعلام users قبل معرفة tenant_id.
+//   • migration_user (DML كامل + RLS ملتزَم) — لإدراج brand_kit + projects بعد SET app.tenant_id.
+const DB_URL_PLATFORM = process.env.DATABASE_URL_PLATFORM;
+const DB_URL_MIGRATION = process.env.DATABASE_URL;
 const TENANT_NAME = 'وكالة العرض التجريبيّة';
 
-if (!DB_URL) {
-  console.error('✗ DATABASE_URL غير معرَّف. شغّل عبر bin/mk-show.');
+if (!DB_URL_PLATFORM || !DB_URL_MIGRATION) {
+  console.error('✗ DATABASE_URL_PLATFORM أو DATABASE_URL غير معرَّف. شغّل عبر bin/mk-show.');
   process.exit(1);
 }
 
@@ -60,7 +72,13 @@ async function waitForApi() {
   throw new Error(`API لم يستجب على ${url} خلال 60 ثانية`);
 }
 
-async function trySignup() {
+async function signupIfNew(plane) {
+  // نتحقّق أوّلاً من users بـcontrol_plane_user — نُغني عن الاعتماد
+  // على 409 من signup (الذي رأيتُه يُعيد 201 وهميّ مع IDs غير مُلتزَمة
+  // في حالة duplicate email، سلوك مكتشَف في mkapi's route).
+  const existing = await lookupExistingOwner(plane);
+  if (existing) return { created: false, ...existing };
+
   const res = await fetch(`${API_BASE}/v1/auth/signup`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -72,18 +90,19 @@ async function trySignup() {
     }),
   });
 
-  if (res.status === 201) {
-    const body = await res.json();
-    return { created: true, tenantId: body.tenant.id, userId: body.user.id };
+  if (res.status !== 201) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`signup فشل (status ${res.status}): ${text}`);
   }
 
-  // 409 (email taken) → البذرة موجودة → نستعلم عن tenant_id من DB
-  if (res.status === 409) {
-    return { created: false };
+  // نُثبت الالتزام بقراءة DB — استجابة signup ليست معياراً كافياً.
+  const created = await lookupExistingOwner(plane);
+  if (!created) {
+    throw new Error(
+      `signup أعاد 201 لكنّ users لا يحتوي ${OWNER_EMAIL} — الالتزام فشل صامتاً في mkapi.`,
+    );
   }
-
-  const text = await res.text().catch(() => '');
-  throw new Error(`signup فشل (status ${res.status}): ${text}`);
+  return { created: true, ...created };
 }
 
 async function lookupExistingOwner(client) {
@@ -111,8 +130,8 @@ async function ensureBrandKit(client, tenantId) {
   };
 
   const { rows } = await client.query(
-    `INSERT INTO brand_kits (tenant_id, name, config, assets_version)
-     VALUES ($1, $2, $3::jsonb, 1)
+    `INSERT INTO brand_kits (tenant_id, name, config)
+     VALUES ($1, $2, $3::jsonb)
      RETURNING id`,
     [tenantId, 'هويّة العرض الافتراضيّة', JSON.stringify(config)],
   );
@@ -178,46 +197,37 @@ async function main() {
   console.log(`[seed] أنتظر API على ${API_BASE} …`);
   await waitForApi();
 
-  console.log(`[seed] أطلب signup للحساب ${OWNER_EMAIL} …`);
-  const signup = await trySignup();
+  const plane = new pg.Client({ connectionString: DB_URL_PLATFORM });
+  await plane.connect();
 
-  const client = new pg.Client({ connectionString: DB_URL });
-  await client.connect();
+  console.log(`[seed] أفحص وجود الحساب ${OWNER_EMAIL} …`);
+  const result = await signupIfNew(plane);
+  const tenantId = result.tenant_id;
+  const userId = result.user_id;
 
-  let tenantId, userId;
-  if (signup.created) {
-    tenantId = signup.tenantId;
-    userId = signup.userId;
+  if (result.created) {
     console.log(`[seed] ✓ الحساب أُنشئ. tenant=${tenantId.slice(0, 8)}… user=${userId.slice(0, 8)}…`);
   } else {
-    const existing = await lookupExistingOwner(client);
-    if (!existing) {
-      await client.end();
-      throw new Error(
-        `signup أعاد 409 لكن users لا يحتوي ${OWNER_EMAIL} — تناقض. تحقّق يدوياً.`,
-      );
-    }
-    tenantId = existing.tenant_id;
-    userId = existing.user_id;
     console.log(`[seed] ⏭  الحساب موجود مسبقاً. tenant=${tenantId.slice(0, 8)}…`);
   }
+  await plane.end();
 
-  // RLS على brand_kits/projects يتطلّب app.tenant_id — نضبطه ثمّ ندرج.
-  // migration_user لا يبيسه RLS في القراءة العامّة، لكنّ سياسات
-  // TENANT_POLICY تفحص current_setting — لذا نضبط.
-  await client.query(`SET LOCAL app.tenant_id = '${tenantId}'`);
+  // migration_user + SET app.tenant_id → يمرّ عبر tenant_isolation policy.
+  const mig = new pg.Client({ connectionString: DB_URL_MIGRATION });
+  await mig.connect();
+  await mig.query(`SET app.tenant_id = '${tenantId}'`);
 
-  const brandKitId = await ensureBrandKit(client, tenantId);
+  const brandKitId = await ensureBrandKit(mig, tenantId);
   console.log(`[seed] brand_kit=${brandKitId.slice(0, 8)}…`);
 
-  const templateId = await pickDefaultTemplate(client);
-  const added = await ensureSampleProjects(client, tenantId, brandKitId, templateId, userId);
+  const templateId = await pickDefaultTemplate(mig);
+  const added = await ensureSampleProjects(mig, tenantId, brandKitId, templateId, userId);
   if (added > 0) console.log(`[seed] ✓ أضفتُ ${added} مشاريع تجريبيّة.`);
   else console.log(`[seed] ⏭  مشاريع تجريبيّة موجودة مسبقاً.`);
 
-  await client.end();
+  await mig.end();
 
-  if (passwordWasGenerated && signup.created) {
+  if (passwordWasGenerated && result.created) {
     console.log('');
     console.log('════════════════════════════════════════════════════════════');
     console.log('  ⚠  كلمة مرور المالك (تُطبع مرّةً واحدة — انسخها الآن):');

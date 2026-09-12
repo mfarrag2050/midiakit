@@ -162,22 +162,16 @@ cmd_up() {
   ( set -a; . "$(env_file)"; set +a
     cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/db migrate:up )
 
-  # 3) بناء الاستوديو (إن لم يكن) — أسرع من next dev، ومقارب للإنتاج
-  if [[ ! -d "$SHOW_ROOT/apps/studio/.next" ]]; then
-    say "أبني الاستوديو (next build) …"
-    ( set -a; . "$(env_file)"; set +a
-      cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/studio build )
-  fi
-
-  # 4) شغّل API أوّلاً — seed يحتاجه (signup عبر HTTP)
+  # 3) API أوّلاً — seed يحتاجه (signup عبر HTTP). فشلُه هنا يُبلَّغ فوراً.
   start_api
 
-  # 5) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
+  # 4) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
   say "أشغّل seed العرض (يتخطّى إن كانت البذرة موجودة) …"
   ( set -a; . "$(env_file)"; set +a
-    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/api exec node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+    cd "$SHOW_ROOT" && node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
 
-  # 6) Studio — بعد seed حتّى تعمل صفحة الدخول بحساب حقيقيّ
+  # 5) Studio — يحاول next build (إنتاج) ثمّ يرجع إلى next dev إن فشل.
+  #    فشل build لا يُسقط الشووروم — API + seed أهمّ. تُبلَّغ الحال في stdout.
   start_studio
 
   say ""
@@ -216,19 +210,49 @@ start_api() {
 }
 
 start_studio() {
-  local pidf logf
+  local pidf logf buildlog
   pidf="$(state_dir)/studio.pid"
   logf="$(state_dir)/studio.log"
+  buildlog="$(state_dir)/studio-build.log"
   if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
     say "Studio يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
     return
   fi
-  say "أشغّل Studio على $STUDIO_PORT …"
-  ( set -a; . "$(env_file)"; set +a
-    cd "$SHOW_ROOT/apps/studio"
-    nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
-    echo $! > "$pidf" )
-  sleep 3
+
+  # قرار الأسلوب: يحتاج .next مبنيّاً كاملاً → next start (إنتاج). إن غاب
+  # أو فشل بناؤه → next dev (تطوير). هذا يجعل الشووروم صامداً ضدّ عطبٍ
+  # عابر في مسار البناء (مثل useContext=null في prerender).
+  #
+  # تحقّق «مكتمل»: prerender-manifest.json — يظهر بعد اجتياز جميع مراحل
+  # next build. مجرّد `-d .next` كاذب (يوجد بعد فشل جزئيّ في prerender).
+  local mode="start"
+  if [[ ! -f "$SHOW_ROOT/apps/studio/.next/prerender-manifest.json" ]]; then
+    # نظّف .next الناقص قبل إعادة المحاولة
+    [[ -d "$SHOW_ROOT/apps/studio/.next" ]] && rm -rf "$SHOW_ROOT/apps/studio/.next"
+    say "أحاول next build …"
+    if ( set -a; . "$(env_file)"; set +a
+         cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/studio build ) >"$buildlog" 2>&1; then
+      say "✓ next build نجح — أشغّل next start."
+    else
+      mode="dev"
+      warn "next build فشل — راجع $buildlog. أرجع إلى next dev (أبطأ + hot reload)."
+      # اترك .next كما هو للتشخيص، dev لا يعتمد عليه
+    fi
+  fi
+
+  say "أشغّل Studio ($mode) على $STUDIO_PORT …"
+  if [[ "$mode" == "start" ]]; then
+    ( set -a; . "$(env_file)"; set +a
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  else
+    ( set -a; . "$(env_file)"; set +a
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next dev -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  fi
+  sleep 4
   kill -0 "$(cat "$pidf")" 2>/dev/null \
     || die "Studio فشل الإقلاع — راجع $logf"
 }
@@ -394,7 +418,7 @@ cmd_seed() {
   ensure_env_show
   say "أشغّل seed العرض يدويّاً …"
   ( set -a; . "$(env_file)"; set +a
-    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/api exec node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+    cd "$SHOW_ROOT" && node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
 }
 
 # ═════ dispatch ═════════════════════════════════════════════════════════════
