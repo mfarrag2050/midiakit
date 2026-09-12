@@ -44,6 +44,7 @@ import assetsFinalizeRoute from './routes/assets/finalize.js';
 import assetsListRoute from './routes/assets/list.js';
 import assetsGetRoute from './routes/assets/get.js';
 import assetsFontServeRoute from './routes/assets/font-serve.js';
+import readyRoute from './routes/ready.js';
 import assetsRefreshUrlRoute from './routes/assets/refresh-url.js';
 import assetsDeleteRoute from './routes/assets/delete.js';
 import assetsDetectFacesRoute from './routes/assets/detect-faces.js';
@@ -168,6 +169,7 @@ export async function buildServer() {
   // Routes
   await fastify.register(async (v1) => {
     await v1.register(healthRoute);
+    await v1.register(readyRoute);
     await v1.register(async (auth) => {
       await auth.register(signupRoute);
       await auth.register(loginRoute);
