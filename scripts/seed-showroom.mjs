@@ -34,7 +34,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const requireFromApi = createRequire(resolve(__dirname, '../apps/api/package.json'));
 const pg = requireFromApi('pg');
 
-const API_PORT = Number(process.env.PORT || 19060);
+const API_PORT = Number(process.env.PORT || 19070);
 const API_BASE = `http://127.0.0.1:${API_PORT}`;
 const OWNER_EMAIL = process.env.SHOWROOM_OWNER_EMAIL || 'mk@primeflow.co';
 // اتصالان:
@@ -153,30 +153,32 @@ async function ensureSampleProjects(client, tenantId, brandKitId, templateId, us
   );
   if (existing[0]) return 0;
 
-  // ثلاثة مشاريع عيّنة — عناوين مُختلَقة، بلا اسم مؤسّسة حقيقيّة.
+  // ثلاثة مشاريع عيّنة — كلّ اسم/جهة/مصدر مُختلَق بالكامل.
+  // قاعدة (_AMEND-SHOWROOM-PORTS §4): لا اسم مؤسّسة حقيقيّة، ولا مادّة
+  // تحريريّة لا نملك حقّ عرضها. الأسماء أدناه لا وجود لها في الواقع.
   const projects = [
     {
       name: 'حملة الافتتاح — بطاقة إعلان',
       content: {
-        title: 'انطلاق برنامج «الصباح الجديد» — مواعيد يوميّة',
+        title: 'انطلاق برنامج «صباحيّات المدينة» — مواعيد يوميّة',
         source: 'الوكالة',
-        tokens: [{ text: 'الصباح', bold: true }, { text: 'الجديد' }],
+        tokens: [{ text: 'صباحيّات', bold: true }, { text: 'المدينة' }],
       },
     },
     {
       name: 'تقرير موجز — خبر عاجل',
       content: {
-        title: 'وزارة الصحّة تُعلن نتائج المسح الوطنيّ',
-        source: 'مصدر طبي',
+        title: 'هيئة المدينة للخدمات تُعلن نتائج مسحٍ سنويّ',
+        source: 'هيئة المدينة',
         tokens: [{ text: 'نتائج' }, { text: 'المسح', accent: true }],
       },
     },
     {
       name: 'برومو حلقة — بطاقة مربّعة',
       content: {
-        title: 'حلقة الليلة: حوار مع الخبراء',
+        title: 'حلقة الليلة: حوار في شؤون المدينة',
         source: 'مراسلنا',
-        tokens: [{ text: 'حوار' }, { text: 'الخبراء', bold: true }],
+        tokens: [{ text: 'حوار' }, { text: 'المدينة', bold: true }],
       },
     },
   ];

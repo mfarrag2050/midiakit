@@ -5,7 +5,7 @@
 > اسم ثابت** — إن سأل «ماذا أنظر إليه الآن؟» فالجواب: `show-YYYYMMDD-N`.
 >
 > **النطاق المزمَع (لاحقاً، ليس اليوم):** `mk.primeflow.co`. اليوم:
-> `http://127.0.0.1:19061` على جهاز المالك فقط، بلا نفق ولا فتح منفذ.
+> `http://127.0.0.1:19071` على جهاز المالك فقط، بلا نفق ولا فتح منفذ.
 
 ---
 
@@ -21,13 +21,13 @@
 | Bucket تخزين | `mk-assets-dev` | **`mk-assets-show`** |
 | MinIO API | `:19043` | **`:19064`** |
 | MinIO console | `:19044` | **`:19065`** |
-| API HTTP | `:19040` | **`:19060`** |
-| Studio HTTP | `:19050` | **`:19061`** |
+| API HTTP | `:19040` | **`:19070`** |
+| Studio HTTP | `:19050` | **`:19071`** |
 | ملفّ الأسرار | `apps/api/.env` | **`.env.show`** (جذر الـworktree، خارج git) |
 | بادئة docker | `pf-mediakit-` | **`pf-mediakit-show-`** |
 
 **اختبار الفصل:** اكسر جدولاً في قاعدة التطوير (`DROP TABLE ...`) →
-تحقّق أنّ الشريك على `:19061` لم يتأثّر. إن تأثّر — الفصل مكسور.
+تحقّق أنّ الشريك على `:19071` لم يتأثّر. إن تأثّر — الفصل مكسور.
 
 ---
 
@@ -107,12 +107,22 @@ bin/mk show seed             # (يدويّاً) إعادة seed — يتخطّى
 - **كلمة المرور:** يولّدها `bin/mk show up` عشوائياً عند أوّل seed،
   **تُطبَع مرّةً واحدةً** في stdout لينسخها المالك ويغيّرها من الاستوديو.
   **لا تُلتزم لأيّ ملفّ**، ولا في seed مُلتزَم، ولا في تقرير.
-- **الأسرار الثلاثة** (`SESSION_JWT_SECRET · PLATFORM_JWT_SECRET ·
-  AI_KEY_ENCRYPTION_KEY`): تُولَّد بـ`openssl rand` في `bin/mk-show up`،
-  تُحفَظ في `.env.show` (`.gitignore`d عبر نمط `.env*`). خاصّة ببيئة
-  العرض وحدها — لا أسرار التطوير، ولا الإنتاج بحالٍ من الأحوال.
+- **الأسرار السبعة** (`SESSION_JWT_SECRET · PLATFORM_JWT_SECRET ·
+  AI_KEY_ENCRYPTION_KEY · POSTGRES_ROOT_PASSWORD · MIGRATION_USER_PASSWORD
+  · APP_USER_PASSWORD · CONTROL_PLANE_USER_PASSWORD`): تُولَّد بـ`openssl
+  rand` في `bin/mk-show up`، تُحفَظ في `.env.show` (`.gitignore`d عبر نمط
+  `.env*`). خاصّة ببيئة العرض وحدها — **لا كلمات dev/test/production
+  إطلاقاً**. أدوار قاعدة الشوروم تُنشأ في
+  `infra/postgres/init-show/01-roles.sh` بالكلمات المولَّدة (منفصل عن
+  `infra/postgres/init/` المشترك مع التطوير). قرار
+  `_AMEND-SHOWROOM-PORTS §3`.
 - **قائمة السماح:** يبدأ الحساب وحده. بريد الشريك يُضاف يدوياً من
   الاستوديو حين يعطيه المالك.
+- **preflight للمنافذ:** `bin/mk show up` يفحص المنافذ الستّة قبل ربطها.
+  إن كان أيّ منفذ مشغولاً (بأيّ عمليّة، dev أو غيره) يتوقّف برسالة تسمّي
+  المنفذ ومَن يشغله. **رفض صريح لا اصطدام صامت** (`_AMEND-SHOWROOM-PORTS §2`).
+- **`bin/mk show reset`:** يحذف `.env.show` + volumes لبدء نظيف — يُستعمل
+  عند upgrade من إصدار قديم من `.env.show`.
 
 ---
 
@@ -145,10 +155,10 @@ bin/mk show seed             # (يدويّاً) إعادة seed — يتخطّى
 قبل الاعتماد على البيئة، أثبت الحياة الثلاث:
 
 1. **إشعال** — `bin/mk show up` من وسمٍ على `main` ⇒ افتح
-   `http://127.0.0.1:19061` وسجّل الدخول.
+   `http://127.0.0.1:19071` وسجّل الدخول.
 2. **عزل** — احذف جدولاً في قاعدة التطوير (`docker exec
    pf-mediakit-postgres-dev psql -U postgres -d mediakit -c 'DROP TABLE
-   projects CASCADE'`) ⇒ تحقّق أنّ الشريك على `:19061` **لم يتأثّر**.
+   projects CASCADE'`) ⇒ تحقّق أنّ الشريك على `:19071` **لم يتأثّر**.
 3. **تراجع** — `bin/mk show promote <sha2>` ثمّ `bin/mk show
    rollback` ⇒ تحقّق أنّ الوسم الأوّل عاد كما هو.
 

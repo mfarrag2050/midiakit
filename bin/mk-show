@@ -8,16 +8,19 @@
 #   • لا نفق، لا فتح منفذ خارج الشبكة — 127.0.0.1 فقط.
 #
 # الأوامر:
-#   bin/mk show up [<tag>]      إشعال البيئة (containers + migrate + seed + API + Studio)
+#   bin/mk show up [<tag>]      إشعال البيئة (preflight + containers + migrate + seed + API + Studio)
 #   bin/mk show down            إطفاء (containers + processes) — القاعدة تبقى
+#   bin/mk show reset           حذف .env.show + volumes للبدء من نقطة صفر
 #   bin/mk show promote <sha>   وسم موقَّع على SHA من origin/main ونقل إليه
 #   bin/mk show status          الوسم الجاري · الالتزام · هل الخادمان حيّان
 #   bin/mk show rollback        العودة إلى الوسم السابق
 #   bin/mk show logs [api|studio]  متابعة سجلّات
 #   bin/mk show seed            (يدويّاً) إعادة تشغيل seed — يفشل إن كانت البذرة موجودة
 #
-# ما لا يفعله (بحسب §6 من تذكرة الـshowroom):
+# ما لا يفعله (بحسب §6 من تذكرة الـshowroom + _AMEND-SHOWROOM-PORTS):
 #   • لا cloudflared, لا تعديل جدار حماية, لا فتح منفذ خارج الشبكة.
+#   • لا مشاركة مقبس أو كلمة سرّ مع التطوير — منافذ مستقلّة + أدوار DB
+#     بكلماتٍ مولَّدةٍ للشوروم وحده.
 
 set -euo pipefail
 
@@ -29,14 +32,25 @@ COMPOSE_PROJECT="pf-mediakit-show"
 COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
 ENV_FILE_NAME=".env.show"
 STATE_DIR_NAME=".mk-show-state"          # داخل SHOW_ROOT: pids, tag pointer, previous tag
-API_PORT=19060
-STUDIO_PORT=19061
+
+# منافذ خاصّة بالشوروم — لا تُشارك التطوير (dev API 19040 · Studio 19050).
+# غُيّرت من 19060/19061 في _AMEND-SHOWROOM-PORTS بعد كشف mkau أنّ dev قد
+# يحجز نفس النطاق. **مصدر الحقيقة الوحيد للأرقام — إن غيّرتَ شيئاً، غيّره هنا فقط.**
+API_PORT=19070
+STUDIO_PORT=19071
 PG_PORT=19062
+REDIS_PORT=19063
+MINIO_PORT=19064
+MINIO_CONSOLE_PORT=19065
+
 PG_DB="mediakit_show"
-REDIS_URL="redis://127.0.0.1:19063/0"
-S3_ENDPOINT="http://127.0.0.1:19064"
+REDIS_URL="redis://127.0.0.1:${REDIS_PORT}/0"
+S3_ENDPOINT="http://127.0.0.1:${MINIO_PORT}"
 S3_BUCKET="mk-assets-show"
 OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
+
+# الإصدار المتوقَّع لـ.env.show — يُبطل الملفّات القديمة عند upgrade.
+ENV_SHOW_VERSION="2"
 
 # ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
 say()   { printf '[mk-show] %s\n' "$*"; }
@@ -61,9 +75,42 @@ require_docker_context() {
         docker context use $EXPECTED_DOCKER_CTX"
 }
 
+# ═════ preflight: رفضٌ صريح لا اصطدامٌ صامت (_AMEND-SHOWROOM-PORTS §2) ═══
+# قبل ربط أيّ منفذ نفحصه. إن كان مشغولاً نتوقّف باسم المنفذ ومَن يشغله.
+# lsof هو المعيار على macOS + Linux — يعمل من فحص جدول tcp للـkernel.
+check_port_free() {
+  local port="$1" label="$2"
+  local pid cmd
+  # lsof يُعيد exit=1 حين لا يجد → `|| true` يمنع set -e/pipefail من قتلنا.
+  # head -1 يستهلك أوّل سطر فقط → SIGPIPE على lsof → أيضاً `|| true`.
+  pid="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null || true)"
+  pid="$(printf '%s\n' "$pid" | head -1)"
+  if [[ -n "$pid" ]]; then
+    cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
+    cmd="$(printf '%s' "$cmd" | tr -d '\n' | cut -c1-120)"
+    die "المنفذ $port (المخصَّص لـ$label في الشوروم) مشغول.
+        PID $pid: $cmd
+        أطفئه أوّلاً (أو عيّن رقماً آخر) قبل bin/mk show up.
+        (رفض صريح — لا نربط على مقبس غيرنا. _AMEND-SHOWROOM-PORTS §2.)"
+  fi
+}
+
+preflight_ports() {
+  say "preflight: أفحص كلّ منفذ سأربطه …"
+  check_port_free "$PG_PORT"            "postgres"
+  check_port_free "$REDIS_PORT"         "redis"
+  check_port_free "$MINIO_PORT"         "minio S3"
+  check_port_free "$MINIO_CONSOLE_PORT" "minio console"
+  check_port_free "$API_PORT"           "API"
+  check_port_free "$STUDIO_PORT"        "Studio"
+  say "preflight: 6 منافذ حرّة."
+}
+
 # لا نستعمل bin/mk لأنّه يمرّر إلى -p pf-mediakit (dev). نستعمل docker compose مباشرةً.
+# --env-file يضمن أن compose interpolation ($MIGRATION_USER_PASSWORD إلخ)
+# يعثر على قيمها الموّلَّدة في .env.show.
 compose() {
-  ( cd "$SHOW_ROOT" && docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE_RELATIVE" "$@" )
+  ( cd "$SHOW_ROOT" && docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE_RELATIVE" --env-file "$(env_file)" "$@" )
 }
 
 state_dir() { printf '%s/%s' "$SHOW_ROOT" "$STATE_DIR_NAME"; }
@@ -84,30 +131,57 @@ ensure_state_dir() {
 ensure_env_show() {
   local ef; ef="$(env_file)"
   if [[ -f "$ef" ]]; then
-    say ".env.show موجود — أحترمه ولا أُعيد التوليد."
+    # تحقّق إصدار — الملفّات القديمة (v1: منافذ 19060/19061 · كلمات مشتركة)
+    # يجب أن تُطرَح مع volumes.
+    local cur_ver
+    cur_ver="$(grep -oE '^ENV_SHOW_VERSION=[0-9]+' "$ef" | cut -d= -f2 || true)"
+    if [[ "${cur_ver:-0}" != "$ENV_SHOW_VERSION" ]]; then
+      die ".env.show إصدار ${cur_ver:-قديم} — المتوقّع $ENV_SHOW_VERSION.
+        الملفّ القديم يشير إلى منافذ 19060/19061 أو كلمات DB مشتركة مع
+        التطوير. الحلّ: bin/mk show reset ثمّ bin/mk show up.
+        (reset يحذف .env.show + volumes للبدء من نقطة صفر.)"
+    fi
+    say ".env.show موجود (إصدار $ENV_SHOW_VERSION) — أحترمه ولا أُعيد التوليد."
     return
   fi
 
   say "أوّل تشغيل — أولّد الأسرار وأكتبها في $ENV_FILE_NAME (خارج git)."
   local session_jwt platform_jwt ai_key
+  local pg_postgres_pw pg_migration_pw pg_app_pw pg_ctrl_pw
   session_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
   platform_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
   ai_key="$(openssl rand -hex 32)"
+  # كلمات DB — url-safe (لا حاجة لتشفير في connection string). base64url.
+  pg_postgres_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_migration_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_app_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_ctrl_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
 
   umask 077
   cat > "$ef" <<ENV
 # .env.show — مولَّد تلقائياً بواسطة bin/mk-show.
 # لا يُلتزم (.gitignore يحجبه عبر النمط .env*).
 # إعادة التوليد يعني: إبطال كلّ الجلسات + عدم فكّ AI keys المحفوظة.
+ENV_SHOW_VERSION=$ENV_SHOW_VERSION
+
 NODE_ENV=development
 PORT=$API_PORT
 
-# قاعدة البيانات — نفس أدوار init/*.sql على قاعدة معزولة.
-DATABASE_URL=postgres://migration_user:dev_migration_pass@127.0.0.1:$PG_PORT/$PG_DB
-DATABASE_URL_APP=postgres://app_user:dev_app_pass@127.0.0.1:$PG_PORT/$PG_DB
-DATABASE_URL_PLATFORM=postgres://control_plane_user:dev_control_plane_pass@127.0.0.1:$PG_PORT/$PG_DB
+# ── كلمات DB مولَّدة للشوروم وحده (_AMEND-SHOWROOM-PORTS §3) ────────
+# postgres = دور bootstrap يشغّل init فقط، لا يستعمله التطبيق.
+# الثلاث الباقية = دور تشغيل، تظهر في DATABASE_URL_*.
+POSTGRES_ROOT_PASSWORD=$pg_postgres_pw
+MIGRATION_USER_PASSWORD=$pg_migration_pw
+APP_USER_PASSWORD=$pg_app_pw
+CONTROL_PLANE_USER_PASSWORD=$pg_ctrl_pw
 
-# أسرار مولَّدة — خاصّة ببيئة العرض وحدها. لا تُشارك dev أو production.
+# قاعدة البيانات — الأدوار تُنشأ في infra/postgres/init-show/*.sh
+# بالكلمات المولَّدة أعلاه.
+DATABASE_URL=postgres://migration_user:${pg_migration_pw}@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_APP=postgres://app_user:${pg_app_pw}@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_PLATFORM=postgres://control_plane_user:${pg_ctrl_pw}@127.0.0.1:$PG_PORT/$PG_DB
+
+# أسرار التطبيق — خاصّة ببيئة العرض وحدها. لا تُشارك dev أو production.
 SESSION_JWT_SECRET=$session_jwt
 PLATFORM_JWT_SECRET=$platform_jwt
 AI_KEY_ENCRYPTION_KEY=$ai_key
@@ -125,7 +199,7 @@ S3_ACCESS_KEY_ID=minioadmin
 S3_SECRET_ACCESS_KEY=minioadmin
 S3_PRESIGN_TTL_SECONDS=900
 
-# CORS — الاستوديو يخدم من 19061.
+# CORS — الاستوديو يخدم من $STUDIO_PORT.
 CORS_ORIGIN=http://127.0.0.1:$STUDIO_PORT
 
 # Studio → API.
@@ -143,6 +217,9 @@ cmd_up() {
   require_docker_context
   ensure_state_dir
   ensure_env_show
+
+  # 0) preflight — رفض صريح إن كان أيّ منفذ مشغولاً
+  preflight_ports
 
   # 1) الحاويات
   say "أشعِل postgres/redis/minio للعرض …"
@@ -275,6 +352,37 @@ stop_proc() {
   rm -f "$pidf"
 }
 
+# ═════ reset — حذف .env.show + volumes للبدء من صفر ═════════════════════════
+# يُستخدم عند upgrade من إصدار قديم (مثل v1 مع منافذ 19060/19061) لأنّ
+# volumes postgres تحوي أدواراً بكلمات قديمة، وإعادة init لا تُشغَّل إلّا
+# على data volume فارغ. الأمر تدميريّ — يطلب تأكيداً.
+cmd_reset() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+
+  echo "[mk-show] ⚠  reset يحذف:"
+  echo "  • $(env_file)"
+  echo "  • volumes: pf-mediakit-show-postgres-data + pf-mediakit-show-minio-data"
+  echo "  • pids + logs في $(state_dir)"
+  echo "  البيانات (الحساب · brand-kit · المشاريع) تُفقَد. لا رجعة."
+  echo -n "  اكتب 'reset' للتأكيد: "
+  local reply
+  read -r reply
+  [[ "$reply" == "reset" ]] || die "لم يُؤكَّد — لا تغيير."
+
+  stop_proc studio || true
+  stop_proc api || true
+  compose down -v 2>&1 | tail -6 || true
+
+  rm -f "$(env_file)"
+  rm -f "$(state_dir)/api.pid" "$(state_dir)/studio.pid"
+  rm -f "$(state_dir)/api.log" "$(state_dir)/studio.log" "$(state_dir)/studio-build.log"
+  rm -f "$(state_dir)/previous-tag" "$(state_dir)/current-tag" "$(state_dir)/promoted-at"
+
+  say "✓ reset اكتمل. bin/mk show up سيبدأ من صفر."
+}
+
 # ═════ down ═════════════════════════════════════════════════════════════════
 cmd_down() {
   require_show_worktree
@@ -315,8 +423,8 @@ cmd_status() {
   نُقل في      : $promoted_at
   الوسم السابق : $prev_tag
 
-  API (19060)   : $api_state
-  Studio (19061): $studio_state
+  API ($API_PORT)   : $api_state
+  Studio ($STUDIO_PORT): $studio_state
 
   الحاويات (pf-mediakit-show):
 STATUS
@@ -425,8 +533,9 @@ cmd_seed() {
 usage() {
   cat <<USAGE
 bin/mk-show — مدير بيئة العرض
-  up [<tag>]      إشعال (containers + migrate + seed + API + Studio)
+  up [<tag>]      إشعال (preflight + containers + migrate + seed + API + Studio)
   down            إطفاء (containers + processes) — القاعدة تبقى
+  reset           حذف .env.show + volumes للبدء من نقطة صفر (تدميريّ)
   promote <sha>   وسم جديد على SHA من origin/main ونقل إليه
   rollback        العودة إلى الوسم السابق
   status          الوسم · الالتزام · حالة الخوادم
@@ -445,6 +554,7 @@ shift || true
 case "$cmd" in
   up)       cmd_up "$@" ;;
   down)     cmd_down ;;
+  reset)    cmd_reset ;;
   promote)  cmd_promote "$@" ;;
   rollback) cmd_rollback ;;
   status)   cmd_status ;;

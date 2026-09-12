@@ -26,11 +26,19 @@ services:
     environment:
       POSTGRES_DB: mediakit_show
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: bootstrap_only_never_used_by_app
+      # كلمات مرور مولَّدة من bin/mk-show → .env.show → compose --env-file.
+      # POSTGRES_PASSWORD = bootstrap postgres user (init فقط، لا التطبيق).
+      # الثلاث الباقية تُقرأها init-show/01-roles.sh لإنشاء أدوار التطبيق.
+      POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD:?POSTGRES_ROOT_PASSWORD مطلوب — شغّل bin/mk show up}
+      MIGRATION_USER_PASSWORD: ${MIGRATION_USER_PASSWORD:?MIGRATION_USER_PASSWORD مطلوب}
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:?APP_USER_PASSWORD مطلوب}
+      CONTROL_PLANE_USER_PASSWORD: ${CONTROL_PLANE_USER_PASSWORD:?CONTROL_PLANE_USER_PASSWORD مطلوب}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
     volumes:
       - pf-mediakit-show-postgres-data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      # init-show/ **ليس** init/ — أدوار الشوروم بكلمات مستقلّة
+      # (_AMEND-SHOWROOM-PORTS §3). init/*.sql فيه كلمات dev المشتركة.
+      - ./postgres/init-show:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d mediakit_show"]
       interval: 5s
