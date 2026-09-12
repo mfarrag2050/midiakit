@@ -644,7 +644,7 @@ export default function ProjectEditorPage(): JSX.Element {
   ];
 
   if (loading) {
-    return <div className="p-8 text-fg-muted">…</div>;
+    return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
   }
   if (loadErrorKey) {
     return (

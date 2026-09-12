@@ -169,13 +169,18 @@ export async function request<T>(
     return request<T>(path, { ...opts, _isRetry: true });
   }
 
-  // 401 — جدّد access ثم كرّر (مرة واحدة).
+  // 401 — جدّد access ثم كرّر (مرة واحدة). إن فشل التجديد ⇒ الجلسة انتهت
+  // ⇒ تحويلة كاملة إلى /login كي لا يعلق المستخدم مع تنبيهٍ inline لا يهدي
+  // إلى فعل (220-EMPTY-AND-ERROR). التحويلة لا تحدث في SSR (لا window).
   if (res.status === 401 && !opts._isRetry && token) {
     try {
       await ensureRefresh();
       return request<T>(path, { ...opts, _isRetry: true });
     } catch {
       clearSession();
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login?reason=expired');
+      }
       throw parseApiError(res.status, await readBody(res));
     }
   }

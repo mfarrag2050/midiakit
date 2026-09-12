@@ -112,7 +112,7 @@ export default function BreakingComposerPage(): JSX.Element {
     ? 'pages.composer.breaking.reasons.noHeadline'
     : null;
 
-  if (loading) return <div className="p-8 text-fg-muted">…</div>;
+  if (loading) return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
   if (loadErrorKey) {
     return (
       <div className="space-y-4">

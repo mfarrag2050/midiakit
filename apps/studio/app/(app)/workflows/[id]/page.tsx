@@ -125,7 +125,7 @@ export default function WorkflowEditorPage(): JSX.Element {
     }
   }
 
-  if (loading) return <div className="p-8 text-fg-muted">…</div>;
+  if (loading) return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
   if (loadErrorKey) {
     return (
       <div className="space-y-4">

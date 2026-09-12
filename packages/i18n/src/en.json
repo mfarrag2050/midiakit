@@ -600,7 +600,8 @@
       "subtitle": "Enter your credentials to continue.",
       "submit": "Sign in",
       "needAccount": "No account? Create one",
-      "forgot": "Forgot your password?"
+      "forgot": "Forgot your password?",
+      "sessionExpiredBanner": "Your session has expired — log in again to continue."
     },
     "signup": {
       "title": "Create account",
@@ -644,6 +645,11 @@
   "table": {
     "empty": "No rows yet.",
     "loading": "Loading…"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadingList": "Fetching the list…",
+    "sessionExpiredCTA": "Log in again"
   },
   "errors": {
     "UNKNOWN": "Something went wrong.",

@@ -50,6 +50,8 @@ interface Props {
   readonly onSubmit?: (values: Record<string, string>) => Promise<void>;
   /** إن كان الفلاق النجاحي رسالة (forgot/reset) لا تحويلاً. */
   readonly successKey?: string;
+  /** شريط سياق (مثل «انتهت الجلسة») يظهر فوق النموذج بدل الخطأ (220). */
+  readonly bannerKey?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,6 +92,7 @@ export function AuthCard({
   footerLinks,
   onSubmit,
   successKey,
+  bannerKey,
 }: Props): JSX.Element {
   const { t } = useLocale();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -137,6 +140,12 @@ export function AuthCard({
         <h1 className="text-xl font-semibold">{t(titleKey)}</h1>
         <p className="text-sm text-fg-muted">{t(subtitleKey)}</p>
       </div>
+
+      {bannerKey && !showSuccess && !topErrorKey && (
+        <div className="mb-4">
+          <Alert kind="info" titleKey={bannerKey} />
+        </div>
+      )}
 
       {topErrorKey && !showSuccess && (
         <div className="mb-4">

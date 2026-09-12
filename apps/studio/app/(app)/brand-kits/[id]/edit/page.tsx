@@ -575,7 +575,7 @@ export default function BrandKitEditorPage(): JSX.Element {
   // §150-EXPORT-BUTTON: التصدير أصبح مغلَّفاً في `<ExportCardButton>`
   // (§160 §١ · مكوّن واحد لكلّ وظيفة). راجع JSX أدناه.
 
-  if (loading) return <div className="p-8 text-fg-muted">…</div>;
+  if (loading) return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
   if (loadErrorKey) {
     return (
       <div className="space-y-4">

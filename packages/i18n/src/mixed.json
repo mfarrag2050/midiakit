@@ -601,7 +601,8 @@
       "subtitle": "أدخل بيانات حسابك للمتابعة.",
       "submit": "تسجيل الدخول",
       "needAccount": "ليس لديك حساب؟ أنشئ واحداً",
-      "forgot": "نسيت كلمة السر؟"
+      "forgot": "نسيت كلمة السر؟",
+      "sessionExpiredBanner": "session انتهت — سجّل الدخول من جديد للمتابعة."
     },
     "signup": {
       "title": "إنشاء حساب",
@@ -645,6 +646,11 @@
   "table": {
     "empty": "No rows yet.",
     "loading": "جارٍ التحميل…"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "loadingList": "جارٍ جلب the list…",
+    "sessionExpiredCTA": "سجّل الدخول من جديد"
   },
   "errors": {
     "UNKNOWN": "حدث خطأ غير متوقّع.",
