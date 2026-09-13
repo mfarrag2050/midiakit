@@ -42,6 +42,10 @@
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
+    },
+    "mobile": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     }
   },
   "pages": {

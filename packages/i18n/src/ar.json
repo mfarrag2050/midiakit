@@ -42,6 +42,10 @@
     "user": {
       "placeholder": "الحساب",
       "signOut": "تسجيل الخروج"
+    },
+    "mobile": {
+      "openMenu": "فتح القائمة",
+      "closeMenu": "إغلاق القائمة"
     }
   },
   "pages": {

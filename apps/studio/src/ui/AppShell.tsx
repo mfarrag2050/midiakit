@@ -17,12 +17,10 @@ import {
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول.
 //
-// **S7 (بعد S6-FIX):** يقرأ tenant.name و user.email من الجلسة المخزَّنة
-// (localStorage بعد login/signup). login response صار يحمل
-// `tenant.{id,name,plan}` كاملاً بعد `410cc33` — الاستدعاء الإضافي
-// `GET /v1/tenant` عند mount **حُذف** (كان يعوّض عن نقص كان
-// مؤقّتاً في الاستجابة الأصلية).
-// **الحماية:** بلا access token = تحويل إلى `/login` مباشرةً.
+// **S7:** يقرأ tenant.name و user.email من الجلسة المخزَّنة.
+// **240-PHONE-WIDTH:** على <md (شاشات < 768px)، الشريط الجانبي يصبح
+// خزانة تُفتح بضغطة زرّ (hamburger) بدل احتلال 240px من 390px. على md
+// وأكبر يبقى كما كان.
 
 interface NavItem {
   readonly href: string;
@@ -49,24 +47,57 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
-    // بلا access token = بلا جلسة، حوّل إلى login.
     if (!getAccessToken()) {
       router.replace('/login');
       return;
     }
-    // اقرأ ما هو مخزَّن من login/signup — يحوي name + plan منذ 410cc33.
     setUser(getSessionUser());
     setTenant(getSessionTenant());
   }, [router]);
 
+  // إغلاق الخزانة عند تغيير المسار (بعد اختيار عنصر).
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
   const displayTenantName = tenant?.name ?? t('nav.user.placeholder');
   const displayUserEmail = user?.email ?? t('nav.user.placeholder');
 
+  const navList = (
+    <ul className="space-y-0.5">
+      {NAV.map((item) => {
+        const active =
+          pathname === item.href ||
+          (pathname?.startsWith(item.href + '/') ?? false);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className={
+                'flex items-center gap-3 rounded px-3 py-2 text-sm transition ' +
+                (active
+                  ? 'bg-surface-2 text-fg'
+                  : 'text-fg-muted hover:bg-surface-2 hover:text-fg')
+              }
+            >
+              <span aria-hidden className="w-4 text-center text-fg-subtle">
+                {item.icon}
+              </span>
+              <span>{t(item.labelKey)}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
-    <div className="grid min-h-screen grid-cols-[240px_1fr]">
-      <aside className="border-e border-border bg-surface">
+    <div className="grid min-h-screen md:grid-cols-[240px_1fr]">
+      {/* Sidebar — يظهر دائماً على md+، ويصبح خزانة على <md */}
+      <aside className="hidden border-e border-border bg-surface md:block">
         <div className="border-b border-border px-5 py-5">
           <div className="text-xs uppercase tracking-widest text-fg-subtle">
             {t('brand.tagline')}
@@ -75,48 +106,58 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
             {t('brand.name')}
           </div>
         </div>
-        <nav className="p-3">
-          <ul className="space-y-0.5">
-            {NAV.map((item) => {
-              const active =
-                pathname === item.href ||
-                (pathname?.startsWith(item.href + '/') ?? false);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={
-                      'flex items-center gap-3 rounded px-3 py-2 text-sm transition ' +
-                      (active
-                        ? 'bg-surface-2 text-fg'
-                        : 'text-fg-muted hover:bg-surface-2 hover:text-fg')
-                    }
-                  >
-                    <span aria-hidden className="w-4 text-center text-fg-subtle">
-                      {item.icon}
-                    </span>
-                    <span>{t(item.labelKey)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <nav className="p-3">{navList}</nav>
       </aside>
-      <div className="flex min-w-0 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-6">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-fg">
-              {displayTenantName}
+
+      {/* Mobile drawer — يفتح على <md فقط */}
+      {navOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            aria-label={t('nav.mobile.closeMenu')}
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setNavOpen(false)}
+          />
+          <aside className="absolute inset-y-0 end-0 w-64 overflow-y-auto border-s border-border bg-surface shadow-xl">
+            <div className="border-b border-border px-5 py-5">
+              <div className="text-xs uppercase tracking-widest text-fg-subtle">
+                {t('brand.tagline')}
+              </div>
+              <div className="mt-1 font-latin text-lg font-semibold tracking-tight">
+                {t('brand.name')}
+              </div>
             </div>
-            <div className="text-[10px] uppercase tracking-widest text-fg-subtle">
-              {t('nav.workspace')}
+            <nav className="p-3">{navList}</nav>
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-col">
+        <header className="flex h-14 items-center justify-between gap-3 border-b border-border bg-surface px-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            {/* Hamburger — على <md فقط */}
+            <button
+              type="button"
+              aria-label={t('nav.mobile.openMenu')}
+              aria-expanded={navOpen}
+              className="rounded p-2 text-fg-muted hover:bg-surface-2 md:hidden"
+              onClick={() => setNavOpen(true)}
+            >
+              <span aria-hidden className="text-lg leading-none">☰</span>
+            </button>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-fg">
+                {displayTenantName}
+              </div>
+              <div className="text-[10px] uppercase tracking-widest text-fg-subtle">
+                {t('nav.workspace')}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs text-fg-muted">
-            <LocaleSwitcher />
-            <span aria-hidden>·</span>
-            <span dir="ltr" className="truncate max-w-[180px]">
+          <div className="flex items-center gap-2 text-xs text-fg-muted md:gap-4">
+            <div className="hidden sm:block"><LocaleSwitcher /></div>
+            <span aria-hidden className="hidden md:inline">·</span>
+            <span dir="ltr" className="hidden max-w-[180px] truncate md:inline">
               {displayUserEmail}
             </span>
             <button
@@ -133,13 +174,13 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
                   router.replace('/login');
                 }
               }}
-              className="text-fg-muted hover:text-fg"
+              className="rounded px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
               {t('nav.user.signOut')}
             </button>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-auto p-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

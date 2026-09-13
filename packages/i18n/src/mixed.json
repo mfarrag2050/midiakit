@@ -43,6 +43,10 @@
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
+    },
+    "mobile": {
+      "openMenu": "فتح menu",
+      "closeMenu": "إغلاق menu"
     }
   },
   "pages": {
