@@ -186,10 +186,35 @@ async function doRequest<T>(
     method,
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : null,
+    // 330 · redirect:'manual' كي نلتقط تحويلة CF Access إلى
+    // *.cloudflareaccess.com بدل أن يتبعها المتصفّح صامتاً ونظنّ الردّ
+    // «تعذّر الوصول». opaqueredirect نُصنّفه صراحةً كـAUTH_SESSION_EXPIRED
+    // في الفحص التالي.
+    redirect: 'manual' as RequestRedirect,
     ...(opts.signal ? { signal: opts.signal } : {}),
   };
 
   const res = await fetch(url, init);
+
+  // 330 · CF Access · انتهاء جلسة النفق: `redirect:'manual'` يجعل أيّ 3xx
+  // يظهر بـ`type='opaqueredirect'` و`status=0`. mkapi لا يُعيد 3xx على
+  // `/v1/*` تصميميّاً؛ فأيّ opaqueredirect هنا = تحويلة خارجيّة (CF Access
+  // الأرجح · SSO الأرجح). الرسالة الصحيحة للمستخدم: انتهت جلسة النفق ⇒
+  // أعِد التحميل. لا «تعذّر الوصول».
+  if (res.type === 'opaqueredirect') {
+    // نُطلق حدثاً عامّاً كي يعرض `<AuthExpiredBanner>` overlay + reload button
+    // بلا اعتماد على catch كلّ صفحة. الحدث آمن حتّى في SSR (كتلة `if`).
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mk:auth-session-expired'));
+    }
+    throw new ApiError({
+      code: 'AUTH_SESSION_EXPIRED',
+      messageKey: 'errors.AUTH_SESSION_EXPIRED',
+      field: null,
+      requestId: null,
+      status: 302,
+    });
+  }
 
   // 429 — احترم Retry-After ثم أعد المحاولة **مرة واحدة**.
   if (res.status === 429 && !opts._isRetry) {

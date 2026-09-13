@@ -14,6 +14,7 @@ import {
   type Tenant,
   type User,
 } from '@/src/api';
+import { SHOW_DESIGN_SYSTEM_NAV } from '@/src/config/features';
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول.
 //
@@ -28,7 +29,10 @@ interface NavItem {
   readonly icon: string;
 }
 
-const NAV: readonly NavItem[] = [
+// 330 §3.3 · «/design» = معرض المكوّنات للمطوّرين. مخفيّ افتراضياً — يظهر
+// فقط حين `NEXT_PUBLIC_SHOW_DESIGN_SYSTEM=true`. المسار يبقى قابلاً
+// للوصول بالكتابة المباشرة (لا حراسة على الصفحة).
+const NAV_ALL: readonly NavItem[] = [
   { href: '/breaking', labelKey: 'nav.breaking', icon: '⚡' },
   { href: '/projects', labelKey: 'nav.projects', icon: '◫' },
   { href: '/brand-kits', labelKey: 'nav.brandKits', icon: '❋' },
@@ -41,6 +45,9 @@ const NAV: readonly NavItem[] = [
   { href: '/billing', labelKey: 'nav.billing', icon: '⌂' },
   { href: '/design', labelKey: 'nav.design', icon: '⌘' },
 ];
+const NAV: readonly NavItem[] = SHOW_DESIGN_SYSTEM_NAV
+  ? NAV_ALL
+  : NAV_ALL.filter((item) => item.href !== '/design');
 
 // 310-AUTH-FLASH · حالةٌ ثالثة صريحة قبل حسم الجلسة كي لا يومض المحتوى
 // المصادَق قبل التحويلة إلى /login. القاعدة: **لا يُصيَّر شيءٌ حقيقيّ

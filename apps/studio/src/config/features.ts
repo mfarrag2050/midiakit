@@ -24,3 +24,11 @@ export const TASHKEEL_UI_ENABLED = false;
  *
  * يعود مع `90-REEL-IMAGES` — علمٌ يُقلَب سطراً واحداً حين يجهز. */
 export const REEL_TEMPLATE_ENABLED = false;
+
+/** 330-THREE-LEAKS-AND-A-LIE §3.3 · «النظام» (/design) صفحةُ معرض
+ * مكوّنات للمطوّرين. لا معنى لها في القائمة الجانبية أمام العميل — تُخفى
+ * افتراضياً وتُظهَر بمتغيّر بيئة عند التطوير. المسار نفسه يبقى مفتوحاً
+ * بالكتابة المباشرة (لا تحقّق راية على الصفحة نفسها). */
+export const SHOW_DESIGN_SYSTEM_NAV =
+  typeof process !== 'undefined' &&
+  process.env.NEXT_PUBLIC_SHOW_DESIGN_SYSTEM === 'true';

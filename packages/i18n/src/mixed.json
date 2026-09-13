@@ -225,13 +225,13 @@
     },
     "workflows": {
       "title": "Workflows",
-      "subtitle": "States and transitions — data rules, not hard-coded.",
+      "subtitle": "حدِّد states و transitions المحتوى قبل النشر.",
       "empty": "No workflows yet",
-      "emptyBody": "Pick a preset to start your first workflow, or build from scratch.",
+      "emptyBody": "اختر preset لبدء أوّل workflow، أو أنشئه من الصفر.",
       "create": "New workflow",
       "createTitle": "Create workflow",
       "presets": {
-        "label": "Presets (sent via POST — no server-side seed)",
+        "label": "Presets",
         "individual": "Individual — writer submits, reviewer approves",
         "smallTeam": "Small team — writer/editor/reviewer/admin",
         "fullAgency": "Full agency — longer chain + archive"
@@ -636,6 +636,9 @@
     "checking": {
       "label": "التحقّق من session…"
     },
+    "expiredBanner": {
+      "reload": "Reload"
+    },
     "login": {
       "title": "تسجيل الدخول",
       "subtitle": "أدخل بيانات حسابك للمتابعة.",
@@ -732,6 +735,7 @@
     "RENDER_TIMEOUT": "export timed out — الرسم بدأ لكنّه لم يُنهَ في الوقت. أعد المحاولة.",
     "RENDER_QUEUE_STUCK": "render service لا تستجيب — الطلب في queue بلا worker. جرّب بعد قليل.",
     "SERVER_UNRESPONSIVE": "server لا يستجيب — الرد أخذ too long. جرّب reload، وإن استمرّ فالخدمة down.",
+    "AUTH_SESSION_EXPIRED": "session انتهت — أعِد reload للدخول من جديد.",
     "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
     "RATE_LIMITED": "too many requests — انتظر ثمّ أعد المحاولة.",
     "EXPORT_DOWNLOAD_FAILED": "the file was produced but download failed — تحقّق من الاتّصال.",
