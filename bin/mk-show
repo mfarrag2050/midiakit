@@ -433,6 +433,122 @@ STATUS
   fi
 }
 
+# ═════ gate <sha> → أربع فحوص · إجابة واحدة · exit ≠ 0 عند سقوط (140) ══════
+# القاعدة 30: البوّابة نفسها لا تُعفى من ما تُطبّقه. كلّ فحص يُطبع ما فعله،
+# لا مجرّد نتيجة نهائيّة. سبب سقوط لكلّ شرط سقط — لا واحد فقط.
+cmd_gate() {
+  local sha="${1:-}"
+  [[ -n "$sha" ]] || die "الاستعمال: bin/mk show gate <sha>
+        يفحص هل SHA صالحٌ للترقية إلى الشوروم. رمز خروج 0 إن نعم."
+
+  local sha_short
+  sha_short="$(git -C "$DEV_ROOT" rev-parse --short "$sha" 2>/dev/null || echo "$sha")"
+
+  echo "[gate] SHA: $sha_short — أفحص أربعة شروط …"
+  echo
+
+  local -a reasons=()
+
+  # ── فحص 1/4 · CI السلسلة كاملة خضراء على SHA بالذات ──────────────────
+  echo "[gate] 1/4 · CI check-runs على $sha_short …"
+  local nonpass runs_ok
+  runs_ok=1
+  # جرّب gh api. عند فشل الشبكة/الوصول نُبلغ صراحة، لا نعطي pass صامتاً.
+  if ! nonpass="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" \
+        --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped") | {name, conclusion}]' 2>/dev/null)"; then
+    reasons+=("1. تعذّر الاستعلام عن CI (gh api فشل — تحقّق من الاتّصال + المصادقة)")
+    runs_ok=0
+  fi
+  if [[ "$runs_ok" == "1" ]]; then
+    local nonpass_count
+    nonpass_count="$(printf '%s' "$nonpass" | jq 'length' 2>/dev/null || echo -1)"
+    if [[ "$nonpass_count" == "0" ]]; then
+      # تحقّق إضافيّ: هل يوجد check-run أصلاً على هذا SHA؟ صفر check-runs
+      # يعني CI لم يعمل عليه — لا يجوز pass صامت.
+      local total
+      total="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" --jq '.check_runs | length' 2>/dev/null || echo 0)"
+      if [[ "$total" == "0" ]]; then
+        reasons+=("1. لا check-runs على $sha_short — CI لم يعمل على هذا الالتزام")
+        echo "[gate]   ✗ لا check-runs."
+      else
+        echo "[gate]   ✓ $total check-run كلّها نجحت."
+      fi
+    elif [[ "$nonpass_count" == "-1" ]]; then
+      reasons+=("1. تعذّر تحليل استجابة check-runs (jq فشل)")
+      echo "[gate]   ✗ فشل تحليل استجابة check-runs."
+    else
+      local names
+      names="$(printf '%s' "$nonpass" | jq -r '.[] | "\(.name) [\(.conclusion // "pending")]"' 2>/dev/null | head -3 | tr '\n' '؛' | sed 's/؛$//')"
+      reasons+=("1. CI: $nonpass_count check-run لم تنجح — $names")
+      echo "[gate]   ✗ $nonpass_count check-run لم تنجح: $names"
+    fi
+  fi
+
+  # ── فحص 2/4 · SHA على origin/main (لا فرع جانبيّ) ─────────────────────
+  echo "[gate] 2/4 · هل $sha_short على origin/main …"
+  git -C "$DEV_ROOT" fetch --quiet origin main 2>/dev/null || warn "  fetch فشل — أستعمل origin/main المحلّيّ"
+  if git -C "$DEV_ROOT" merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then
+    echo "[gate]   ✓ ancestor لـorigin/main."
+  else
+    reasons+=("2. $sha_short ليس ancestor لـorigin/main — الالتزام على فرع جانبيّ (feat/* أو غيره)")
+    echo "[gate]   ✗ ليس على origin/main."
+  fi
+
+  # ── فحص 3/4 · مشية العرض (verify-demo-walk) ──────────────────────────
+  echo "[gate] 3/4 · مشية العرض (verify-demo-walk) …"
+  local demo_walk="$DEV_ROOT/scripts/verify-demo-walk.mjs"
+  if [[ -f "$demo_walk" ]]; then
+    if ( cd "$DEV_ROOT" && node "$demo_walk" --sha "$sha" ) >/dev/null 2>&1; then
+      echo "[gate]   ✓ مشية العرض تمرّ."
+    else
+      reasons+=("3. verify-demo-walk فشل على $sha_short")
+      echo "[gate]   ✗ مشية العرض فشلت."
+    fi
+  else
+    # مؤجَّل صريح — كما نصّت docs/SHOWROOM.md §3.ب حتّى تهبط mkst 120-DEMO-WALK.
+    # لا نُسقط الشرط. **لا pass صامت** — نُعلن التخطّي.
+    echo "[gate]   ⏭  الأداة scripts/verify-demo-walk.mjs غير موجودة — شرط مؤجَّل صريح (docs/SHOWROOM.md §3.ب). يمرّ."
+  fi
+
+  # ── فحص 4/4 · عطب معلوم في مسار العرض ─────────────────────────────────
+  echo "[gate] 4/4 · عطب معلوم في مسار العرض (docs/KNOWN-DEFECTS.md) …"
+  local defects_file="$DEV_ROOT/docs/KNOWN-DEFECTS.md"
+  if [[ ! -f "$defects_file" ]]; then
+    reasons+=("4. docs/KNOWN-DEFECTS.md غير موجود — لا مصدر لقائمة العطب المعلوم")
+    echo "[gate]   ✗ docs/KNOWN-DEFECTS.md مفقود."
+  else
+    # grep -c مع لا مطابقة يطبع "0" لكن يعود exit=1 → مع || echo 0 نجمع سطرَين.
+    # الحلّ: wc -l على grep بلا -c. wc -l يعود 0 دائماً حتّى مع 0 أسطر.
+    # وnull match على grep + pipefail لا يقتل لأنّ | wc يبتلع exit code.
+    local open_count
+    open_count="$(grep -E '^- \[ \]' "$defects_file" 2>/dev/null | wc -l | tr -d ' \n' || true)"
+    open_count="${open_count:-0}"
+    if [[ "$open_count" == "0" ]]; then
+      echo "[gate]   ✓ صفر عطب مفتوح."
+    else
+      # اطبع أوّل 3 أسطر عطب لتحديد الجاني — || true يحمي من SIGPIPE على grep
+      local first
+      first="$( { grep -E '^- \[ \]' "$defects_file" 2>/dev/null || true; } | head -3 | sed 's/^- \[ \] */    - /')"
+      reasons+=("4. $open_count عطب مفتوح في docs/KNOWN-DEFECTS.md")
+      echo "[gate]   ✗ $open_count عطب مفتوح:"
+      printf '%s\n' "$first"
+    fi
+  fi
+
+  # ── القرار ────────────────────────────────────────────────────────────
+  echo
+  if [[ ${#reasons[@]} -eq 0 ]]; then
+    echo "[gate] ═════ صالحٌ للترقية · $sha_short ═════"
+    return 0
+  else
+    echo "[gate] ═════ غير صالح · $sha_short ═════"
+    for r in "${reasons[@]}"; do
+      echo "[gate]   • $r"
+    done
+    return 1
+  fi
+}
+
 # ═════ promote <sha>  → وسم جديد وسجّل السابق ═══════════════════════════════
 cmd_promote() {
   local sha="${1:-}"
@@ -440,6 +556,27 @@ cmd_promote() {
         (sha من origin/main. مثال: bin/mk show promote 0b9cce9)"
   require_show_worktree
   ensure_state_dir
+
+  # ── بوّابة الترقية (140-PROMOTE-GATE §2) ──────────────────────────────
+  # لا تجاوُز صامت. علم صريح للتجاوز يطبع تحذيراً + يُسجَّل في bypass.log.
+  if [[ "${MK_SHOW_GATE_BYPASS:-0}" == "1" ]]; then
+    warn "MK_SHOW_GATE_BYPASS=1 — بوّابة الترقية متجاوَزة. أُسجّل التجاوز:"
+    local bypass_log="$(state_dir)/bypass.log"
+    printf '%s\tuser=%s\tsha=%s\thost=%s\treason=%s\n' \
+      "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+      "${USER:-?}" \
+      "$sha" \
+      "$(hostname 2>/dev/null || echo ?)" \
+      "${MK_SHOW_GATE_BYPASS_REASON:-غير مذكور}" \
+      >> "$bypass_log"
+    warn "  سجَّل في $bypass_log — راجعه قبل الوثوق بالترقية."
+  else
+    if ! cmd_gate "$sha"; then
+      die "الترقية مرفوضة — البوّابة رفضت $sha.
+        إن أردتَ تجاوزاً صريحاً:
+          MK_SHOW_GATE_BYPASS=1 MK_SHOW_GATE_BYPASS_REASON='سبب' bin/mk show promote $sha"
+    fi
+  fi
 
   # تحقّق أنّ SHA على origin/main (بدون --contains لأنّه بطيء — نستعمل merge-base)
   git -C "$DEV_ROOT" fetch --tags origin main >/dev/null 2>&1 || warn "fetch فشل — أتابع بمحلّيّ"
@@ -536,7 +673,8 @@ bin/mk-show — مدير بيئة العرض
   up [<tag>]      إشعال (preflight + containers + migrate + seed + API + Studio)
   down            إطفاء (containers + processes) — القاعدة تبقى
   reset           حذف .env.show + volumes للبدء من نقطة صفر (تدميريّ)
-  promote <sha>   وسم جديد على SHA من origin/main ونقل إليه
+  gate <sha>      يفحص 4 شروط للترقية (CI · main · demo-walk · defects) — 140
+  promote <sha>   وسم جديد على SHA من origin/main ونقل إليه (يستدعي gate)
   rollback        العودة إلى الوسم السابق
   status          الوسم · الالتزام · حالة الخوادم
   logs [api|studio]  متابعة سجلّ
@@ -546,6 +684,7 @@ bin/mk-show — مدير بيئة العرض
   SHOW_ROOT (=$SHOW_ROOT)
   DEV_ROOT  (=$DEV_ROOT)
   MK_SHOW_TAG_SIGN=1 → وسم موقَّع بـgpg
+  MK_SHOW_GATE_BYPASS=1 [+ MK_SHOW_GATE_BYPASS_REASON='...'] → تخطّي بوّابة promote (يُسجَّل)
 USAGE
 }
 
@@ -555,6 +694,7 @@ case "$cmd" in
   up)       cmd_up "$@" ;;
   down)     cmd_down ;;
   reset)    cmd_reset ;;
+  gate)     cmd_gate "$@" ;;
   promote)  cmd_promote "$@" ;;
   rollback) cmd_rollback ;;
   status)   cmd_status ;;
