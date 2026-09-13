@@ -118,7 +118,7 @@ beforeAll(async () => {
   const tplRow = await migQuery(tenantAId,
     `INSERT INTO templates(scope, tenant_id, kind, name, definition)
      VALUES ('tenant', $1, 'static', 'exp-tpl', $2::jsonb) RETURNING id`,
-    [tenantAId, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [] })]);
+    [tenantAId, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [{ type: 'solid', fill: '#000000' }] })]);
   const tplId = tplRow.rows[0].id;
   const prj = await migQuery(tenantAId,
     `INSERT INTO projects(tenant_id, brand_kit_id, template_id, name, state, created_by)

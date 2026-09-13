@@ -36,7 +36,7 @@ async function makeProject(content: Record<string, unknown>): Promise<string> {
   const tpl = await migQuery(tenantAId,
     `INSERT INTO templates(scope, tenant_id, kind, name, definition)
      VALUES ('tenant', $1, 'static', 'lim-tpl-${Math.random().toString(36).slice(2, 8)}', $2::jsonb) RETURNING id`,
-    [tenantAId, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [] })]);
+    [tenantAId, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [{ type: 'solid', fill: '#000000' }] })]);
   const prj = await migQuery(tenantAId,
     `INSERT INTO projects(tenant_id, brand_kit_id, template_id, name, state, content, created_by)
      VALUES ($1, $2, $3, 'lim-prj', 'draft', $4::jsonb, $5) RETURNING id`,
@@ -174,7 +174,7 @@ describe('240 · حدود التصدير', () => {
     const tpl = await migQuery(tidR,
       `INSERT INTO templates(scope, tenant_id, kind, name, definition)
        VALUES ('tenant', $1, 'static', 'r-tpl', $2::jsonb) RETURNING id`,
-      [tidR, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [] })]);
+      [tidR, JSON.stringify({ id: 't', name: 'n', kind: 'static', sizes: ['x'], layers: [{ type: 'solid', fill: '#000000' }] })]);
     const prjR = await migQuery(tidR,
       `INSERT INTO projects(tenant_id, brand_kit_id, template_id, name, state, content, created_by)
        VALUES ($1, $2, $3, 'r-prj', 'draft', '{}'::jsonb, $4) RETURNING id`,
