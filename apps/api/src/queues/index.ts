@@ -95,6 +95,25 @@ export async function enqueueRender(
   return { jobId: job.id!, queueName, priority: jobPriority };
 }
 
+/**
+ * getWorkerCounts — عدد العمّال المتّصلين لكل طابور (BullMQ Queue.getWorkers).
+ * يقرأ CLIENT LIST من Redis · لا يعتمد على متغيّر أو نبضة يدويّة.
+ * تُستعمل في `/v1/health` (260) — إن كان العدد 0 · العامل غير حيّ.
+ */
+export async function getWorkerCounts(): Promise<Record<QueueName, number>> {
+  const result: Partial<Record<QueueName, number>> = {};
+  for (const name of QUEUE_NAMES) {
+    const q = getQueue(name);
+    try {
+      const workers = await q.getWorkers();
+      result[name] = workers.length;
+    } catch {
+      result[name] = 0;
+    }
+  }
+  return result as Record<QueueName, number>;
+}
+
 /** إزالة job (للـcancel — إن كان queued أو delayed). */
 export async function removeRenderJob(renderId: string): Promise<boolean> {
   for (const name of QUEUE_NAMES) {

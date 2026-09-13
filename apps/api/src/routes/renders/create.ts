@@ -16,10 +16,12 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { enqueueRender } from '../../queues/index.js';
+import { validateTemplate, TemplateValidationError } from '@pf-mediakit/templates';
 import {
   NotFound, QuotaExceededRenders, QuotaExceededVideos,
   UnsupportedBrandHasExternalAssets,
   HeadlineTooLong, SourceTooLong, ExportsRateLimit,
+  TemplateSnapshotInvalid,
 } from '../../errors.js';
 
 // 240-EXPORT-LIMITS · ثوابت الحدود.
@@ -147,6 +149,21 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     if (tpl.rowCount === 0) throw NotFound();
     const template = tpl.rows[0]!.definition;
+
+    // 280-EMPTY-LAYERS-BURST: التحقّق من صلاحيّة templateSnapshot **هنا**
+    // قبل أيّ INSERT/enqueue. العامل كان يفشل بعد الوصول إلى الطابور —
+    // «شيءٌ يُبلغ عن نجاحٍ ولم يفعل». نفس التحقّق الذي يجريه العامل
+    // (`@pf-mediakit/templates:validateTemplate`) نُجريه في نقطة القرار.
+    // الرمز مسمّى · الحقل مسمّى (path من TemplateValidationError).
+    try {
+      validateTemplate(template);
+    } catch (err) {
+      if (err instanceof TemplateValidationError) {
+        req.log.warn({ templateId: proj.template_id, path: err.path, msg: err.message }, 'template snapshot rejected at creation');
+        throw TemplateSnapshotInvalid(err.path);
+      }
+      throw err;
+    }
 
     // 6. INSERT render مع snapshots (ذرّي — brand_kit تعديل لاحق لا يمسّها)
     const ins = await req.dbClient!.query<{ id: string; created_at: Date }>(
