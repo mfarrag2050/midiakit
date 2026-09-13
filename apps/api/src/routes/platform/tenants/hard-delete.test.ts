@@ -141,9 +141,12 @@ beforeAll(async () => {
   const prjId = prjRow.rows[0]!.id;
   renderKey = `${tenantId}/renders/t151-render/output.mp4`;
   await mc2.query(
+    // 360 · brand_snapshot يحمل fonts+colors — يمرّ trigger renders_snapshot_guard
+    // (160-SNAPSHOT-REPAIR · migration 20260912010000). قيم فارغة تكفي · الحارس
+    // يفحص وجود المفتاح لا مضمونه (jsonb ? key).
     `INSERT INTO renders(tenant_id, project_id, size, format, status,
                          output_storage_key, brand_snapshot, template_snapshot, requested_by)
-     VALUES ($1, $2, 'feed', 'mp4', 'succeeded', $3, '{}'::jsonb, '{}'::jsonb, $4)`,
+     VALUES ($1, $2, 'feed', 'mp4', 'succeeded', $3, '{"fonts":{},"colors":{}}'::jsonb, '{}'::jsonb, $4)`,
     [tenantId, prjId, renderKey, userId],
   );
   await mc2.query('COMMIT');

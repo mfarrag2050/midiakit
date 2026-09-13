@@ -84,6 +84,8 @@ export type ErrorCode =
   | 'HEADLINE_TOO_LONG'                            // 240 · content.headline > MAX (422)
   | 'SOURCE_TOO_LONG'                              // 240 · content.source > MAX (422)
   | 'EXPORTS_RATE_LIMIT'                           // 240 · rate/دقيقة/tenant (429)
+  | 'TENANT_DATA_EXPORT_FAILED'                    // 250 · فشل تدفّق النسخة الكاملة
+  | 'TEMPLATE_SNAPSHOT_INVALID'                    // 280 · لقطة template غير صالحة عند الإنشاء (422)
   // Revisions (§10)
   | 'REVISION_NOT_FOUND'                           // §10.3 (404)
   | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)
@@ -237,6 +239,10 @@ export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED
 export const HeadlineTooLong = () => new ApiError('HEADLINE_TOO_LONG', 422, 'content.headline');
 export const SourceTooLong = () => new ApiError('SOURCE_TOO_LONG', 422, 'content.source');
 export const ExportsRateLimit = () => new ApiError('EXPORTS_RATE_LIMIT', 429);
+// 250-TENANT-DATA-EXPORT · يُكتَب داخل الـstream كسطرَ NDJSON إن فشل بعد الـheaders
+export const TenantDataExportFailed = () => new ApiError('TENANT_DATA_EXPORT_FAILED', 500);
+// 280-EMPTY-LAYERS-BURST · يُرمى في POST /v1/renders قبل INSERT · بدل تأجيله للعامل
+export const TemplateSnapshotInvalid = (path: string) => new ApiError('TEMPLATE_SNAPSHOT_INVALID', 422, path);
 export const BrandSnapshotNotFound = () => new ApiError('BRAND_SNAPSHOT_NOT_FOUND', 404);
 export const TemplateSnapshotNotFound = () => new ApiError('TEMPLATE_SNAPSHOT_NOT_FOUND', 404);
 // Revisions (§10)

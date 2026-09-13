@@ -56,6 +56,11 @@ const envSchema = z
     // check-no-brand-url-fetch. S3 SDK يقبل bucket/key، لا URL حرّاً.
     STORAGE_DRIVER: z.enum(['s3', 'memory']).default('memory'),
     S3_ENDPOINT: z.string().url().optional(),
+    // 290-PRESIGN-PUBLIC-ENDPOINT · العنوان العامّ للـpresigned URLs (المتصفّح).
+    // يفصل «العنوان الذي يكتب به الخادم» (S3_ENDPOINT · داخليّ) عن
+    // «العنوان الذي يقرأ منه المتصفّح» (S3_PUBLIC_ENDPOINT · https public).
+    // إن غاب · presignDownload/presignUpload يستعملان S3_ENDPOINT (لا انحدار).
+    S3_PUBLIC_ENDPOINT: z.string().url().optional(),
     S3_REGION: z.string().default('us-east-1'),
     S3_BUCKET: z.string().default('mk-assets-dev'),
     S3_ACCESS_KEY_ID: z.string().optional(),

@@ -160,9 +160,10 @@ async function main() {
          VALUES ($1, $2, $3, 'sweep-prj', '{}'::jsonb, $4) RETURNING id`,
         [ctx.tenant.id, bk2.rows[0].id, tpl.rows[0].id, ctx.user.id]);
       await c.query(
+        // 360 · brand_snapshot يحمل fonts+colors + logo (trigger renders_snapshot_guard)
         `INSERT INTO renders(tenant_id, project_id, size, format, status, brand_snapshot, template_snapshot, requested_by)
          VALUES ($1, $2, 'x', 'png', 'succeeded', $3::jsonb, '{}'::jsonb, $4)`,
-        [ctx.tenant.id, prj.rows[0].id, JSON.stringify({ logo: { assetId: assetIds['linked-snap'] } }), ctx.user.id]);
+        [ctx.tenant.id, prj.rows[0].id, JSON.stringify({ logo: { assetId: assetIds['linked-snap'] }, fonts: {}, colors: {} }), ctx.user.id]);
 
       await c.query('COMMIT');
     } finally { c.release(); }

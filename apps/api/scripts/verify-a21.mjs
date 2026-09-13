@@ -251,9 +251,10 @@ async function main() {
       await cRenders.query('SELECT app_set_tenant($1::uuid)', [ctxA.tenant.id]);
       for (let i = 0; i < 5; i++) {
         await cRenders.query(
+          // 360 · brand_snapshot يحمل fonts+colors (trigger renders_snapshot_guard)
           `INSERT INTO renders(tenant_id, project_id, size, format, status,
                                 brand_snapshot, template_snapshot, requested_by)
-           VALUES ($1, $2, 'x', 'mp4', 'succeeded', '{}'::jsonb, '{}'::jsonb, $3)`,
+           VALUES ($1, $2, 'x', 'mp4', 'succeeded', '{"fonts":{},"colors":{}}'::jsonb, '{}'::jsonb, $3)`,
           [ctxA.tenant.id, pid, ctxA.user.id]);
       }
       await cRenders.query('COMMIT');

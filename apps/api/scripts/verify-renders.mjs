@@ -285,7 +285,8 @@ async function checkRbac(fastify, ctx) {
   else fail(`viewer GET: ${rV.statusCode}`);
 
   // DELETE — writer/editor → 403 (admin+ فقط)
-  await queryAs(ctx.a.tenant.id, `INSERT INTO renders(tenant_id, project_id, size, format, status) VALUES ($1, $2, 'x', 'png', 'succeeded') RETURNING id`, [ctx.a.tenant.id, ctx.prj]);
+  // 360 · brand_snapshot يحمل fonts+colors (trigger renders_snapshot_guard · 160-SNAPSHOT-REPAIR)
+  await queryAs(ctx.a.tenant.id, `INSERT INTO renders(tenant_id, project_id, size, format, status, brand_snapshot) VALUES ($1, $2, 'x', 'png', 'succeeded', '{"fonts":{},"colors":{}}'::jsonb) RETURNING id`, [ctx.a.tenant.id, ctx.prj]);
   const rid = (await queryAs(ctx.a.tenant.id, `SELECT id FROM renders WHERE tenant_id = $1 AND status='succeeded' LIMIT 1`, [ctx.a.tenant.id])).rows[0].id;
   const rD = await fastify.inject({
     method: 'DELETE', url: `/v1/renders/${rid}`, headers: H(ctx.roleUsers.writer.token),

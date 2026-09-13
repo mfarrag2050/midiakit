@@ -25,6 +25,7 @@ import forgotPasswordRoute from './routes/auth/forgot-password.js';
 import resetPasswordRoute from './routes/auth/reset-password.js';
 import tenantGetRoute from './routes/tenant/get.js';
 import tenantPatchRoute from './routes/tenant/patch.js';
+import tenantDataExportRoute from './routes/tenant/data-export.js';
 import usersListRoute from './routes/users/list.js';
 import usersGetRoute from './routes/users/get.js';
 import usersInviteRoute from './routes/users/invite.js';
@@ -203,6 +204,7 @@ export async function buildServer() {
     await v1.register(async (t) => {
       await t.register(tenantGetRoute);
       await t.register(tenantPatchRoute);
+      await t.register(tenantDataExportRoute);
     }, { prefix: '/tenant' });
 
     await v1.register(async (u) => {
