@@ -1,6 +1,6 @@
 {
   "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T11:22:18.790Z",
+  "generated": "2026-09-13T12:51:28.679Z",
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -166,49 +166,47 @@
   },
   "diacritics": {
     "method": "differential-ink-box",
-    "status": "zero-delta-marks-may-be-lost",
+    "statusVersion": "330-quaternary",
+    "status": "marks-inside-box",
     "measurements": [
       {
         "word": "منصّة",
         "fs": 80,
-        "withMarks": {
-          "topY": 94,
-          "aboveBaseline": 56
-        },
-        "withoutMarks": {
-          "topY": 94,
-          "aboveBaseline": 56
-        },
-        "delta": 0,
-        "inkClipped": false
+        "status": "marks-inside-box",
+        "diffCount": 198,
+        "inkWith": 2801,
+        "inkWithout": 2616,
+        "topWith": 94,
+        "topWithout": 94,
+        "deltaTop": 0,
+        "aboveBaselineWith": 56,
+        "aboveBaselineWithout": 56
       },
       {
         "word": "بدءاً",
         "fs": 80,
-        "withMarks": {
-          "topY": 63,
-          "aboveBaseline": 87
-        },
-        "withoutMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "delta": 27,
-        "inkClipped": false
+        "status": "marks-above-box",
+        "diffCount": 208,
+        "inkWith": 1770,
+        "inkWithout": 1577,
+        "topWith": 63,
+        "topWithout": 90,
+        "deltaTop": 27,
+        "aboveBaselineWith": 87,
+        "aboveBaselineWithout": 60
       },
       {
         "word": "الأوّل",
         "fs": 80,
-        "withMarks": {
-          "topY": 81,
-          "aboveBaseline": 69
-        },
-        "withoutMarks": {
-          "topY": 81,
-          "aboveBaseline": 69
-        },
-        "delta": 0,
-        "inkClipped": false
+        "status": "marks-inside-box",
+        "diffCount": 203,
+        "inkWith": 3223,
+        "inkWithout": 3027,
+        "topWith": 81,
+        "topWithout": 81,
+        "deltaTop": 0,
+        "aboveBaselineWith": 69,
+        "aboveBaselineWithout": 69
       }
     ]
   }

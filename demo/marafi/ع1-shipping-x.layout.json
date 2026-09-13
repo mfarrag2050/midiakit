@@ -1,6 +1,6 @@
 {
   "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T11:22:18.400Z",
+  "generated": "2026-09-13T12:51:28.235Z",
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -175,49 +175,47 @@
   },
   "diacritics": {
     "method": "differential-ink-box",
-    "status": "zero-delta-marks-may-be-lost",
+    "statusVersion": "330-quaternary",
+    "status": "marks-inside-box",
     "measurements": [
       {
         "word": "البحريّ",
         "fs": 80,
-        "withMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "withoutMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "delta": 0,
-        "inkClipped": false
+        "status": "marks-inside-box",
+        "diffCount": 205,
+        "inkWith": 3619,
+        "inkWithout": 3420,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
       },
       {
         "word": "الغذائيّة",
         "fs": 80,
-        "withMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "withoutMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "delta": 0,
-        "inkClipped": false
+        "status": "marks-inside-box",
+        "diffCount": 203,
+        "inkWith": 4229,
+        "inkWithout": 4033,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
       },
       {
         "word": "السنويّة",
         "fs": 80,
-        "withMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "withoutMarks": {
-          "topY": 90,
-          "aboveBaseline": 60
-        },
-        "delta": 0,
-        "inkClipped": false
+        "status": "marks-inside-box",
+        "diffCount": 205,
+        "inkWith": 3860,
+        "inkWithout": 3661,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
       }
     ]
   }
