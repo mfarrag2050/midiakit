@@ -413,6 +413,7 @@
           "dirtyBlocked": "cannot export with unsaved changes — save first.",
           "success": "تمّ التصدير · file downloaded.",
           "queuedStep": "queued…",
+          "waitingForWorkerStep": "انتظار render worker…",
           "runningStep": "rendering…",
           "downloadingStep": "downloading…"
         }
@@ -693,7 +694,9 @@
     "INVALID_FONT_METRICS": "font metrics missing — الخطّ المرفوع لم تُقَس أبعاده. شغّل `pnpm measure-font <path.ttf>` ثمّ أعِد الرفع.",
     "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1.",
     "RENDER_FAILED": "تعذّر إخراج البطاقة — أعد المحاولة.",
-    "RENDER_TIMEOUT": "export timed out — الشبكة بطيئة، أعد المحاولة.",
+    "RENDER_TIMEOUT": "export timed out — الرسم بدأ لكنّه لم يُنهَ في الوقت. أعد المحاولة.",
+    "RENDER_QUEUE_STUCK": "render service لا تستجيب — الطلب في queue بلا worker. جرّب بعد قليل.",
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
     "RATE_LIMITED": "too many requests — انتظر ثمّ أعد المحاولة.",
     "EXPORT_DOWNLOAD_FAILED": "the file was produced but download failed — تحقّق من الاتّصال.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",

@@ -412,6 +412,7 @@
           "dirtyBlocked": "Cannot export with unsaved changes — press Save first.",
           "success": "Exported · the file downloaded to your browser.",
           "queuedStep": "Queued…",
+          "waitingForWorkerStep": "Waiting for the render worker…",
           "runningStep": "Rendering…",
           "downloadingStep": "Downloading file…"
         }
@@ -692,7 +693,9 @@
     "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
     "INVALID_LOGO_DIMENSIONS": "Logo dimensions out of the accepted range — width and height must be between 40 and 2048 pixels, and the aspect ratio must be between 1:6 and 6:1. Pick another file or adjust it before uploading.",
     "RENDER_FAILED": "Could not export the card — try again; if it repeats, contact support.",
-    "RENDER_TIMEOUT": "Export timed out before completing — the network may be slow; try again.",
+    "RENDER_TIMEOUT": "Export timed out before completing — rendering started but didn't finish in the allowed window. Try again or contact support.",
+    "RENDER_QUEUE_STUCK": "The render service is not responding — your request stayed queued without a worker picking it up. Try again shortly.",
+    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
     "RATE_LIMITED": "Too many requests in a row — wait a moment then try again.",
     "EXPORT_DOWNLOAD_FAILED": "The file was produced but couldn't be downloaded — check your connection and try again.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",

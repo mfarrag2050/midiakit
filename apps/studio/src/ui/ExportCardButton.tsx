@@ -21,6 +21,43 @@ import { ApiError, projects, renders } from '@/src/api';
 // الحارس `savingRef-pattern` (§130 §٢) يمنع سباق الكتابة على الضغط
 // المزدوج داخل نفس microtask.
 
+// 250-RENDER-NEVER-HANGS — قِيَم مسمّاة للمهل + backoff أُسّي.
+//
+// **جدول الاستطلاع (exponential backoff من 500ms إلى 4000ms · مضاعف 1.5):**
+// 500ms · 750 · 1125 · 1687 · 2531 · 3796 · 4000 · 4000 · … (سقف 4s)
+// تراكميّاً: أوّل استجابة عند 500ms · 1250 · 2375 · 4062 · 6593 · 10389 · 14389 …
+//
+// **لماذا backoff؟** قِستُه في اختبار الحياة (شجرة `mkst`، mkapi على
+// 19040 بلا worker): استطلاع ثابت بـ500ms يفجّر rate-limiter افتراضيّ
+// @fastify/rate-limit ⇒ 12 استطلاعاً في 6s ⇒ 429 ⇒ سبات 30s من client.ts
+// (`Retry-After`) ⇒ الواجهة تظهر خطأً مضلِّلاً «تجاوزت حدّ المعدّل» بعد
+// 38s. backoff يُخفّض الحمل الكلّي (< 20 استطلاع في 60s = 20/min · هامش
+// كافٍ تحت أيّ حدّ افتراضيّ) بينما يبقي الاستجابة الأولى سريعة.
+//
+// **POLL_QUEUE_STUCK_MS = 10_000** — إن بقي `status = 'queued'` أكثر من هذا،
+// نفترض أنّ عامل الرندَر لا يعمل. مقاييسي (شجرة `mkst` · §230): حين يعمل
+// api-worker (شجرة `mkapi`)، الرندَر ينتقل إلى `running` قبل أوّل استطلاع
+// (< 2s ‏· «poll 1: succeeded»). عشر ثوانٍ سقفٌ متحفّظ يضاعف ذلك خمس
+// مرّات · كافٍ لاستيعاب تأخّر شبكة أو تدخّل fair-share.
+//
+// **POLL_TOTAL_TIMEOUT_MS = 60_000** — سقف كلّي إذا انتقل إلى `running`
+// لكنّ الرسم أخذ وقتاً طويلاً. مقاييسي (شجرة `mkst` · §230): رندَر ناجح
+// على mkapi's stub path (fillText) تمّ في أقلّ من ثانيتَين. **لكن لا
+// أعرف زمن renderFrame الكامل** (النصّ الحقيقيّ + الشعار + الخطّ) على
+// الإنتاج — لم يُقَس بعد لأنّ 109 لم يوصِل renderFrame أصلاً (§230).
+// ٦٠ ثانية اختيارٌ **متحفّظ صراحةً** حتّى يتوفّر رقم إنتاج.
+//
+// **حالتان في الواجهة** — نميّز بين `queued` و`running` من status الخادم:
+//  - queued  → step `waitingForWorkerStep` («انتظار عامل الرندَر…»)
+//  - running → step `runningStep` («الرسم قيد التنفيذ…»)
+// وإن بقي queued > 10s نُخرج `RENDER_QUEUE_STUCK` (خطأ مسمّى · client-only)
+// كي لا يظنّ المستخدم أنّ الشبكة بطيئة بينما الأمر أنّ الخدمة لا تستجيب.
+const POLL_INITIAL_MS = 500;
+const POLL_MAX_INTERVAL_MS = 4_000;
+const POLL_BACKOFF_FACTOR = 1.5;
+const POLL_QUEUE_STUCK_MS = 10_000;
+const POLL_TOTAL_TIMEOUT_MS = 60_000;
+
 export interface ExportCardButtonProps {
   readonly brandKitId: string;
   readonly brandKitName: string;
@@ -95,11 +132,15 @@ export function ExportCardButton({
         { project_id: proj.id, size: 'x', format: 'png' },
         idempotencyKey
       );
-      setStepKey('pages.brandKits.editor.export.runningStep');
-      // 3. استطلع.
+      // 3. استطلع — نميّز queued vs running · backoff أُسّي · مهلتان مسمّاتان.
+      setStepKey('pages.brandKits.editor.export.waitingForWorkerStep');
       let final: Awaited<ReturnType<typeof renders.get>> | null = null;
-      for (let i = 0; i < 60; i++) {
-        await new Promise((r) => setTimeout(r, 500));
+      const pollStartedAt = Date.now();
+      let queuedSince: number | null = pollStartedAt;
+      let interval = POLL_INITIAL_MS;
+      while (Date.now() - pollStartedAt < POLL_TOTAL_TIMEOUT_MS) {
+        await new Promise((r) => setTimeout(r, interval));
+        interval = Math.min(interval * POLL_BACKOFF_FACTOR, POLL_MAX_INTERVAL_MS);
         const row = await renders.get(rnd.id);
         if (row.status === 'succeeded') {
           final = row;
@@ -113,6 +154,23 @@ export function ExportCardButton({
             requestId: null,
             status: 500,
           });
+        }
+        // 250: تمييز `queued` (لم يبدأ العامل) عن `running` (يعمل الآن)
+        if (row.status === 'queued') {
+          setStepKey('pages.brandKits.editor.export.waitingForWorkerStep');
+          if (queuedSince !== null && Date.now() - queuedSince >= POLL_QUEUE_STUCK_MS) {
+            throw new ApiError({
+              code: 'RENDER_QUEUE_STUCK',
+              messageKey: 'errors.RENDER_QUEUE_STUCK',
+              field: null,
+              requestId: null,
+              status: 504,
+            });
+          }
+        } else {
+          // انتقل إلى running (أو غيره) — لم يعد queued، نصفّر queuedSince
+          queuedSince = null;
+          setStepKey('pages.brandKits.editor.export.runningStep');
         }
       }
       if (!final) {

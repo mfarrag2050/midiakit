@@ -129,7 +129,8 @@
     "FORBIDDEN",
     "NOT_FOUND",
     "VALIDATION_FAILED",
-    "INTERNAL_ERROR"
+    "INTERNAL_ERROR",
+    "TENANT_DATA_EXPORT_FAILED"
   ],
   "deferred": {
     "$note": "Declared in errors.ts but the endpoint that emits them isn't wired until A21. Dictionary entries required now so translations are ready.",
@@ -147,6 +148,7 @@
       "SERVICE_UNAVAILABLE",
       "RENDER_FAILED",
       "RENDER_TIMEOUT",
+      "RENDER_QUEUE_STUCK",
       "RATE_LIMITED",
       "EXPORT_DOWNLOAD_FAILED",
       "FONT_LOAD_CONFIG_MISSING",

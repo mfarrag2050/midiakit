@@ -1384,6 +1384,17 @@ export async function handleMock(
       if (!['png', 'mp4'].includes(format)) err(400, 'VALIDATION_FAILED', 'format');
       const id = `rnd_mock_${Date.now().toString(36)}`;
       const now = new Date().toISOString();
+      // 250-RENDER-NEVER-HANGS · اختبار حياة: أُتيح للاختبار (puppeteer)
+      // تعيين `window.__MK_FORCE_STUCK__ = true` قبل الضغطة كي يحاكي
+      // mock حالة «لا عامل يعمل» ⇒ queuedAt يبقى مستقبلاً ⇒ GET لا
+      // ينقل الحالة أبداً ⇒ ExportCardButton يُخرج RENDER_QUEUE_STUCK
+      // بعد `POLL_QUEUE_STUCK_MS` (10s). سلوك dev بحت، لا يُستَعمل في UI.
+      const forceStuck =
+        typeof window !== 'undefined' &&
+        (window as { __MK_FORCE_STUCK__?: unknown }).__MK_FORCE_STUCK__ === true;
+      const queuedAt = forceStuck
+        ? new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        : now;
       const rec: MockRender = {
         id,
         project_id: projectId,
@@ -1397,7 +1408,7 @@ export async function handleMock(
         createdAt: now,
         startedAt: null,
         completedAt: null,
-        queuedAt: now,
+        queuedAt,
       };
       MOCK_RENDERS.set(id, rec);
       p.hasRenders = true;
