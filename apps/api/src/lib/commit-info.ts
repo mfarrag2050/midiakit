@@ -18,6 +18,7 @@
  */
 import { execSync } from 'node:child_process';
 
+// L-46 marker: تعديل بلا وظيفة للتمييز بين شجرتين في اختبار حياة 260.
 let cached: string | null | undefined = undefined;
 
 export function getCommit(): string | null {
