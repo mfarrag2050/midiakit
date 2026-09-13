@@ -63,6 +63,14 @@ const excludeGlobs = cfg.excludeGlobs.map(globToRegex);
 const excludeLinePatterns = (cfg.excludeLinePatterns || []).map(
   (p) => new RegExp(p)
 );
+// classPatterns — أنماط regex لأصناف مؤسّسات سياديّة
+// (_AMEND-SHOWROOM-RESIDUE §3). يمنع الصنف لا الحالة.
+const classPatterns = (cfg.classPatterns || []).map((p) => ({
+  regex: new RegExp(p.pattern),
+  reason: p.reason,
+  example: p.example,
+  patternText: p.pattern,
+}));
 
 function isExcluded(relPath) {
   return excludeGlobs.some((rx) => rx.test(relPath));
@@ -104,7 +112,22 @@ for (const { abs, rel } of files) {
     if (excludeLinePatterns.some((rx) => rx.test(line))) continue;
     for (const { term, reason } of cfg.blocklist) {
       if (line.includes(term)) {
-        violations.push({ rel, line: i + 1, term, reason, text: line.trim() });
+        violations.push({ rel, line: i + 1, term, reason, text: line.trim(), kind: 'اسم مؤسّسة' });
+      }
+    }
+    // classPatterns — يمنع صنف المؤسّسات لا حالتها
+    for (const cp of classPatterns) {
+      const m = cp.regex.exec(line);
+      if (m) {
+        violations.push({
+          rel,
+          line: i + 1,
+          term: m[0],
+          reason: cp.reason,
+          text: line.trim(),
+          kind: `صنف /${cp.patternText}/`,
+          example: cp.example,
+        });
       }
     }
   }
@@ -115,10 +138,11 @@ if (violations.length === 0) {
   process.exit(0);
 }
 
-console.error(`\n✗ ${violations.length} تسرّب/تسرّبات — نصوص عيّنة تستعمل اسم مؤسسة حقيقية:\n`);
+console.error(`\n✗ ${violations.length} تسرّب/تسرّبات — نصوص عيّنة تستعمل اسم/صنف مؤسّسة حقيقيّة:\n`);
 for (const v of violations) {
-  console.error(`  ${v.rel}:${v.line} — «${v.term}» (${v.reason})`);
+  console.error(`  ${v.rel}:${v.line} — «${v.term}» [${v.kind}] (${v.reason})`);
   console.error(`    ${v.text.slice(0, 120)}${v.text.length > 120 ? '…' : ''}`);
+  if (v.example) console.error(`    مثال: ${v.example}`);
 }
 console.error(`\nالحلول:`);
 console.error(`  • استبدل بنصّ محايد («وكالات» · «مراسلنا» · «مصدر طبي» · «الوكالة»).`);

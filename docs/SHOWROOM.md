@@ -107,9 +107,10 @@ bin/mk show seed             # (يدويّاً) إعادة seed — يتخطّى
 - **كلمة المرور:** يولّدها `bin/mk show up` عشوائياً عند أوّل seed،
   **تُطبَع مرّةً واحدةً** في stdout لينسخها المالك ويغيّرها من الاستوديو.
   **لا تُلتزم لأيّ ملفّ**، ولا في seed مُلتزَم، ولا في تقرير.
-- **الأسرار السبعة** (`SESSION_JWT_SECRET · PLATFORM_JWT_SECRET ·
+- **الأسرار التسعة** (`SESSION_JWT_SECRET · PLATFORM_JWT_SECRET ·
   AI_KEY_ENCRYPTION_KEY · POSTGRES_ROOT_PASSWORD · MIGRATION_USER_PASSWORD
-  · APP_USER_PASSWORD · CONTROL_PLANE_USER_PASSWORD`): تُولَّد بـ`openssl
+  · APP_USER_PASSWORD · CONTROL_PLANE_USER_PASSWORD · MINIO_ROOT_USER
+  · MINIO_ROOT_PASSWORD`): تُولَّد بـ`openssl
   rand` في `bin/mk-show up`، تُحفَظ في `.env.show` (`.gitignore`d عبر نمط
   `.env*`). خاصّة ببيئة العرض وحدها — **لا كلمات dev/test/production
   إطلاقاً**. أدوار قاعدة الشوروم تُنشأ في

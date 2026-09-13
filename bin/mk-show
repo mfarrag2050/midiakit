@@ -50,7 +50,8 @@ S3_BUCKET="mk-assets-show"
 OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
 
 # الإصدار المتوقَّع لـ.env.show — يُبطل الملفّات القديمة عند upgrade.
-ENV_SHOW_VERSION="2"
+# v3: أضاف MINIO_ROOT_USER + MINIO_ROOT_PASSWORD (سابقاً minioadmin مشترك).
+ENV_SHOW_VERSION="3"
 
 # ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
 say()   { printf '[mk-show] %s\n' "$*"; }
@@ -148,6 +149,7 @@ ensure_env_show() {
   say "أوّل تشغيل — أولّد الأسرار وأكتبها في $ENV_FILE_NAME (خارج git)."
   local session_jwt platform_jwt ai_key
   local pg_postgres_pw pg_migration_pw pg_app_pw pg_ctrl_pw
+  local s3_access s3_secret
   session_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
   platform_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
   ai_key="$(openssl rand -hex 32)"
@@ -156,6 +158,10 @@ ensure_env_show() {
   pg_migration_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
   pg_app_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
   pg_ctrl_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  # اعتماد MinIO — MinIO يطلب ROOT_USER ≥3 حروف و ROOT_PASSWORD ≥8 حروف.
+  # نستعمل base64url alphanumeric — لا `/+=` تُشوّش S3 signature. length 32.
+  s3_access="mk_show_$(openssl rand -hex 8)"          # 8 حروف عشوائيّة تُميّزه
+  s3_secret="$(openssl rand -base64 32 | tr -d '\n=' | tr '/+' '_-' | head -c 40)"
 
   umask 077
   cat > "$ef" <<ENV
@@ -190,14 +196,20 @@ AI_KEY_ENCRYPTION_KEY=$ai_key
 REDIS_URL=$REDIS_URL
 BULLMQ_PREFIX=pf-mediakit-show
 
-# تخزين — MinIO محلّيّ معزول.
+# تخزين — MinIO محلّيّ معزول باعتماد مولَّد للشوروم وحده
+# (_AMEND-SHOWROOM-RESIDUE §1 — سابقاً كانت minioadmin:minioadmin مثل dev).
+# القيَم أدناه تُقرأ من compose (MINIO_ROOT_USER/PASSWORD) وتُمرَّر لـAPI
+# كـS3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY.
 STORAGE_DRIVER=s3
 S3_ENDPOINT=$S3_ENDPOINT
 S3_REGION=us-east-1
 S3_BUCKET=$S3_BUCKET
-S3_ACCESS_KEY_ID=minioadmin
-S3_SECRET_ACCESS_KEY=minioadmin
+S3_ACCESS_KEY_ID=$s3_access
+S3_SECRET_ACCESS_KEY=$s3_secret
 S3_PRESIGN_TTL_SECONDS=900
+# نفس القيَم لـMinIO server (compose interpolates إلى minio-show + minio-init).
+MINIO_ROOT_USER=$s3_access
+MINIO_ROOT_PASSWORD=$s3_secret
 
 # CORS — الاستوديو يخدم من $STUDIO_PORT.
 CORS_ORIGIN=http://127.0.0.1:$STUDIO_PORT
