@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `84e89a0` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `5c09a91` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -57,16 +57,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 300 | 1 |
-| `feat/api` | `d629f74` | 8 | 89 | 220 |
-| `feat/ci` | `d6473fd` | 31 | 58 | 274 |
-| `feat/dashboards` | `376077c` | 0 | 189 | 112 |
-| `feat/studio` | `cc5977c` | 10 | 66 | 245 |
-| `origin/aa-internal` | `ee178ca` | 0 | 300 | 1 |
-| `origin/feat/api` | `d629f74` | 8 | 89 | 220 |
-| `origin/feat/ci` | `d6473fd` | 31 | 58 | 274 |
-| `origin/feat/dashboards` | `376077c` | 0 | 189 | 112 |
-| `origin/feat/studio` | `cc5977c` | 10 | 66 | 245 |
+| `aa-internal` | `ee178ca` | 0 | 311 | 1 |
+| `feat/api` | `d629f74` | 8 | 100 | 220 |
+| `feat/ci` | `d6473fd` | 31 | 69 | 274 |
+| `feat/dashboards` | `376077c` | 0 | 200 | 112 |
+| `feat/studio` | `adcf3a8` | 11 | 77 | 246 |
+| `origin/aa-internal` | `ee178ca` | 0 | 311 | 1 |
+| `origin/feat/api` | `d629f74` | 8 | 100 | 220 |
+| `origin/feat/ci` | `d6473fd` | 31 | 69 | 274 |
+| `origin/feat/dashboards` | `376077c` | 0 | 200 | 112 |
+| `origin/feat/studio` | `adcf3a8` | 11 | 77 | 246 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
@@ -81,8 +81,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-77
-- **العدد الفريد:** 72 · **الإدخالات:** 72
+- **المدى:** L-1 → L-78
+- **العدد الفريد:** 73 · **الإدخالات:** 73
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
