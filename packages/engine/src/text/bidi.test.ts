@@ -63,20 +63,25 @@ describe('orderRuns (base=rtl)', () => {
 });
 
 describe('mapNumerals', () => {
-  it('يبدّل 2026 إلى ٢٠٢٦', () => {
+  it('يبدّل 2026 إلى ٢٠٢٦ في وضع arabic', () => {
     expect(mapNumerals('عام 2026', 'arabic')).toBe('عام ٢٠٢٦');
   });
 
-  it('يبدّل ٢٠٢٦ إلى 2026', () => {
-    expect(mapNumerals('عام ٢٠٢٦', 'latin')).toBe('عام 2026');
+  // 350 · سلوك جديد: 'latin' = pass-through (لا يعكس · لا يحوّل عربيّاً
+  // إلى لاتينيّ). المحرّر الذي يكتب ١٢٣ عمداً يبقى ١٢٣.
+  it('350 · latin = pass-through — يُبقي ٢٠٢٦ عربيّاً كما هي', () => {
+    expect(mapNumerals('عام ٢٠٢٦', 'latin')).toBe('عام ٢٠٢٦');
   });
 
-  it('العدد الحرفي (grapheme) يبقى ثابتاً — لا كسر للقياس', () => {
-    const src = 'التقرير 2026 عن الأسواق العربية';
+  it('350 · latin = pass-through — يُبقي 2026 لاتينيّاً كما هي', () => {
+    expect(mapNumerals('عام 2026', 'latin')).toBe('عام 2026');
+  });
+
+  it('العدد الحرفي (grapheme) يبقى ثابتاً في وضع arabic — لا كسر للقياس', () => {
+    const src = 'التقرير 2026 عن الأسواق';
     const arab = mapNumerals(src, 'arabic');
-    const back = mapNumerals(arab, 'latin');
     expect([...arab].length).toBe([...src].length);
-    expect(back).toBe(src);
+    // 350 · العكس عبر 'latin' لم يعد يحدث — العميل الذي يكتب ١٢٣ يبقى ١٢٣.
   });
 });
 
