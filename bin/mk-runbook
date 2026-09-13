@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# bin/mk-runbook — «ما الذي يعمل؟» و «مَن الغريب؟»
+#
+# قاعدة 170-RUNBOOK-WHO-RUNS-WHAT §5:
+#   «لا تُصلح الحال. الغرض أن تُرى الحال، لا أن تُغيَّر وهو نائم».
+# هذا السكربت **لا يقتل ولا يوقف شيئاً** — يعرض فقط.
+#
+# الأوامر:
+#   bin/mk-runbook status  — جدول حيّ: منفذ · PID · العمليّة · الشجرة · SHA · match origin/main
+#   bin/mk-runbook audit   — يسمّي العمليّات القائمة من شجرات ليست في الجدول
+#   bin/mk-runbook expected  — يطبع الجدول المرجعيّ (docs/RUNBOOK.md)
+
+set -euo pipefail
+
+# ═════ الجدول المرجعيّ — مصدر الحقيقة ═════════════════════════════════════════
+# صيغة: port|expected_worktree_prefix|service_label
+# expected_worktree_prefix = بداية cwd للعمليّة الشرعيّة. إن بدأت cwd
+# بأيّ من prefixes المعرَّفة، فالعمليّة «شرعيّة».
+#
+# ملاحظة: 6379 redis native على host (لا worktree — brew service).
+# منافذ الحاويات (19041-19044, 19062-19065) لا process host يستمع عليها،
+# بل ssh/docker forwarder — تُفرَز في status لكن لا تدخل audit.
+EXPECTED_TABLE=$(cat <<'TABLE'
+19040|/Users/mdervis/MediaKit/pf-mediakit-api|mk-api (dev)
+19050|/Users/mdervis/MediaKit/pf-mediakit-studio|mk-studio (dev)
+19070|/Users/mdervis/MediaKit/pf-mediakit-show|mk-api (show)
+19071|/Users/mdervis/MediaKit/pf-mediakit-show|mk-studio (show)
+19080|/Users/mdervis/MediaKit/pf-mediakit-studio|diacritizer (Python)
+19081|/Users/mdervis/MediaKit/pf-mediakit-studio|transcriber (Python)
+19082|/Users/mdervis/MediaKit/pf-mediakit-studio|face-detector (Python)
+TABLE
+)
+
+# منافذ docker forwarding (127.0.0.1:*→container) — تسمع من الحاوية.
+DOCKER_FORWARD_PORTS="19041 19042 19043 19044 19062 19063 19064 19065"
+
+# ═════ أدوات ══════════════════════════════════════════════════════════════════
+# lsof يرجع 1 على لا نتيجة → || true. head قد يقطع pipe → || true.
+listeners_on_190xx() {
+  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR>1 && $9 ~ /:19[0-9]{3}$/ {print $2, $9}' | sort -u
+}
+
+process_cwd() {
+  local pid="$1"
+  lsof -p "$pid" 2>/dev/null | awk '$4=="cwd"{print $NF; exit}'
+}
+
+process_cmd() {
+  local pid="$1"
+  ps -o command= -p "$pid" 2>/dev/null | cut -c1-70
+}
+
+worktree_sha() {
+  local dir="$1"
+  git -C "$dir" rev-parse --short HEAD 2>/dev/null || echo "?"
+}
+
+worktree_branch_or_ref() {
+  local dir="$1"
+  local br
+  br="$(git -C "$dir" branch --show-current 2>/dev/null || true)"
+  if [[ -n "$br" ]]; then
+    printf '%s' "$br"
+  else
+    printf 'detached@%s' "$(worktree_sha "$dir")"
+  fi
+}
+
+is_ancestor_of_origin_main() {
+  local dir="$1"
+  local sha
+  sha="$(worktree_sha "$dir")"
+  [[ "$sha" == "?" ]] && { echo "?"; return; }
+  if git -C "$dir" merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then
+    echo "نعم"
+  else
+    echo "لا"
+  fi
+}
+
+is_docker_forward() {
+  local port="$1"
+  [[ " $DOCKER_FORWARD_PORTS " == *" $port "* ]]
+}
+
+# ═════ status ═════════════════════════════════════════════════════════════════
+cmd_status() {
+  local ts; ts="$(date '+%Y-%m-%d %H:%M:%S')"
+  cat <<HEADER
+════════ mk-runbook status · $ts ════════
+
+  المنفذ  PID     العمليّة                        الشجرة                                    فرع/SHA           on-main?
+  ------  ------  ------------------------------  ----------------------------------------  ----------------  --------
+HEADER
+
+  local pid port_full port
+  local cmd cwd branch onmain
+
+  while IFS=' ' read -r pid port_full; do
+    [[ -z "$pid" ]] && continue
+    port="${port_full##*:}"
+    if is_docker_forward "$port"; then
+      # منفذ حاوية — نعرضه لكن نميّزه (لا cwd host)
+      printf '  %-6s  %-6s  %-30s  %-40s  %-16s  %s\n' \
+        "$port" "$pid" "docker-forward" "(حاوية pf-mediakit-*)" "-" "-"
+      continue
+    fi
+    cmd="$(process_cmd "$pid")"
+    cwd="$(process_cwd "$pid")"
+    branch="-"
+    onmain="-"
+    if [[ -n "$cwd" ]]; then
+      # ابحث عن جذر git للـcwd
+      local git_root
+      git_root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo '')"
+      if [[ -n "$git_root" ]]; then
+        branch="$(worktree_branch_or_ref "$git_root")"
+        onmain="$(is_ancestor_of_origin_main "$git_root")"
+      fi
+    fi
+    printf '  %-6s  %-6s  %-30s  %-40s  %-16s  %s\n' \
+      "$port" "$pid" "$(printf '%.30s' "$cmd")" "$(printf '%.40s' "${cwd:-?}")" "$(printf '%.16s' "$branch")" "$onmain"
+  done < <(listeners_on_190xx)
+
+  # redis native
+  local redis_pid
+  redis_pid="$(lsof -nP -iTCP:6379 -sTCP:LISTEN 2>/dev/null | awk 'NR>1{print $2; exit}')"
+  if [[ -n "$redis_pid" ]]; then
+    printf '  %-6s  %-6s  %-30s  %-40s  %-16s  %s\n' \
+      "6379" "$redis_pid" "redis-server (native)" "(brew service · لا worktree)" "-" "-"
+  fi
+
+  echo
+  echo "  ملاحظة: bin/mk-runbook audit لتسمية العمليّات من شجرات ليست في الجدول."
+}
+
+# ═════ audit ═════════════════════════════════════════════════════════════════
+cmd_audit() {
+  local ts; ts="$(date '+%Y-%m-%d %H:%M:%S')"
+  echo "════════ mk-runbook audit · $ts ════════"
+  echo
+  echo "  الجدول المرجعيّ (يجب أن تعمل الخدمات من هذه الشجرات فقط):"
+  printf '%s\n' "$EXPECTED_TABLE" | while IFS='|' read -r port prefix label; do
+    printf '    %-6s  →  %-45s  (%s)\n' "$port" "$prefix" "$label"
+  done
+  echo
+
+  local strangers=0
+  local pid port_full port cmd cwd expected_prefix
+  while IFS=' ' read -r pid port_full; do
+    [[ -z "$pid" ]] && continue
+    port="${port_full##*:}"
+    is_docker_forward "$port" && continue
+
+    expected_prefix="$(printf '%s\n' "$EXPECTED_TABLE" | awk -F'|' -v p="$port" '$1==p{print $2}')"
+    cwd="$(process_cwd "$pid")"
+    cmd="$(process_cmd "$pid")"
+
+    if [[ -z "$expected_prefix" ]]; then
+      # منفذ ليس في الجدول أصلاً
+      if [[ "$strangers" == "0" ]]; then
+        echo "  الغرباء (يُسمَّون فقط — لا يُقتَلون. القرار لمحمد):"
+        echo
+      fi
+      strangers=$((strangers + 1))
+      printf '    ✗ منفذ %s غير موجود في الجدول\n' "$port"
+      printf '        PID:      %s\n' "$pid"
+      printf '        العمليّة:  %s\n' "$cmd"
+      printf '        الشجرة:   %s\n' "${cwd:-?}"
+      echo
+    elif [[ -n "$cwd" && "$cwd" != "$expected_prefix"* ]]; then
+      # منفذ موجود في الجدول لكنّ الشجرة خطأ
+      if [[ "$strangers" == "0" ]]; then
+        echo "  الغرباء (يُسمَّون فقط — لا يُقتَلون. القرار لمحمد):"
+        echo
+      fi
+      strangers=$((strangers + 1))
+      printf '    ✗ منفذ %s يُخدَم من شجرة خطأ\n' "$port"
+      printf '        PID:              %s\n' "$pid"
+      printf '        العمليّة:          %s\n' "$cmd"
+      printf '        الشجرة الفعليّة:   %s\n' "$cwd"
+      printf '        الشجرة المطلوبة: %s...\n' "$expected_prefix"
+      echo
+    fi
+  done < <(listeners_on_190xx)
+
+  if [[ "$strangers" == "0" ]]; then
+    echo "  ✓ لا غرباء — كلّ منفذ 190xx يُخدَم من الشجرة الصحيحة."
+  else
+    echo "  المجموع: $strangers عمليّة غريبة."
+    echo "  محمد يقرّر ماذا يفعل بها (لا يقتلها هذا السكربت)."
+  fi
+}
+
+# ═════ expected ══════════════════════════════════════════════════════════════
+cmd_expected() {
+  echo "الجدول المرجعيّ (docs/RUNBOOK.md مصدر الحقيقة الكامل):"
+  echo
+  printf '%s\n' "$EXPECTED_TABLE" | while IFS='|' read -r port prefix label; do
+    printf '  %-6s  %-45s  %s\n' "$port" "$prefix" "$label"
+  done
+}
+
+# ═════ dispatch ══════════════════════════════════════════════════════════════
+case "${1:-}" in
+  status)   cmd_status ;;
+  audit)    cmd_audit ;;
+  expected) cmd_expected ;;
+  ""|-h|--help)
+    cat <<USAGE
+bin/mk-runbook — «ما الذي يعمل؟» و «مَن الغريب؟»
+  status    جدول حيّ للعمليّات على 190xx + 6379
+  audit     يسمّي العمليّات من شجرات ليست في الجدول (لا يقتل)
+  expected  يطبع الجدول المرجعيّ
+
+راجع docs/RUNBOOK.md لأوامر التشغيل الكاملة لكلّ خدمة.
+USAGE
+    ;;
+  *) echo "أمر غير معروف: $1" >&2; exit 1 ;;
+esac
