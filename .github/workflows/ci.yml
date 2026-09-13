@@ -159,6 +159,25 @@ jobs:
       - name: pnpm install (frozen)
         run: pnpm install --frozen-lockfile
 
+      # ── (5أ) تهيئة الأدوار + الامتدادات (260-THE-CLEAN-DATABASE-HAS-NO-ROLES) ─
+      # postgres service في GitHub Actions يُقلع بلا mount لـ
+      # docker-entrypoint-initdb.d — بخلاف dev (bin/mk) و bin/mk-ci اللذَين
+      # يمنتانه. الهجرات تفشل بـ«أدوار غائبة: app_user, auth_lookup,
+      # control_plane_user» (رأيتُه في run 34775175308).
+      #
+      # الحلّ (رسالة الفشل نفسها): `pnpm db:bootstrap` — يقرأ
+      # infra/postgres/init/*.sql (مصدر الأدوار الواحد الذي يستعمله dev).
+      # لا كتابة أدوار في ci.yml — نسخة ثانية من الحقيقة تشيخ بصمت.
+      #
+      # DATABASE_URL_ADMIN صريح — bootstrap يحتاج SUPERUSER (CREATE ROLE +
+      # CREATE EXTENSION). user = postgres مسبقاً في CI، فنستعمل نفس
+      # DATABASE_URL صراحةً لا استنباطاً (bootstrap.ts يبدّل الكلمة إلى
+      # 'postgres' حرفياً · CI يستعمل secret).
+      - name: تهيئة الأدوار + الامتدادات (bootstrap · قبل migrate)
+        env:
+          DATABASE_URL_ADMIN: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+        run: pnpm db:bootstrap
+
       # ── (5) تشغيل الهجرات على postgres ────────────────────
       # قد يفشل الآن على citext (mkau تعدّ في 150-FRESH-DB) — سيُحلّ دفعة
       # واحدة في هجرة بيد mkapi، لا هنا.
