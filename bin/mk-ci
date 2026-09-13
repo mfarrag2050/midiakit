@@ -39,6 +39,8 @@ VOLUME="pf-mediakit-ci-node-modules"
 CI_CONTAINER="pf-mediakit-ci"
 PG_CI_CONTAINER="pf-mediakit-ci-pg"
 PG_CI_PORT="19045"
+REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
+REDIS_CI_PORT="19046"
 CI_NETWORK="pf-mediakit-ci-net"
 
 # كلمات سرّ dev-only (تنتهي مع الحاوية)
@@ -56,8 +58,9 @@ fi
 cleanup() {
   local ec=$?
   echo ""
-  echo "[mk-ci · cleanup] هدم حاوية pg والشبكة (رمز الخروج=${ec})..."
+  echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
   docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
+  docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
   docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
   exit $ec
 }
@@ -65,6 +68,7 @@ trap cleanup EXIT INT TERM
 
 # ── تنظيف مُسبَق (بقايا من تشغيل فاشل سابق) ─────────
 docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
+docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
 
 # ── الشبكة ─────────────────────────────────────────
@@ -100,6 +104,30 @@ for i in $(seq 1 30); do
   fi
 done
 
+# ── redis ephemeral (BullMQ يشترطه لتشغيل tests و worker) ─────
+echo "[mk-ci] رفع redis ephemeral (${REDIS_CI_CONTAINER} · 127.0.0.1:${REDIS_CI_PORT})..."
+docker run -d --rm \
+  --name "${REDIS_CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -p "127.0.0.1:${REDIS_CI_PORT}:6379" \
+  redis:7-alpine > /dev/null
+
+echo -n "[mk-ci] انتظار redis ready"
+for i in $(seq 1 15); do
+  if docker exec "${REDIS_CI_CONTAINER}" redis-cli ping > /dev/null 2>&1; then
+    echo " ✓ (${i}×2ث)"
+    break
+  fi
+  echo -n "."
+  sleep 2
+  if [ "$i" = "15" ]; then
+    echo ""
+    echo "[mk-ci] ✗ redis لم تصبح ready خلال 30 ثانية"
+    exit 1
+  fi
+done
+
 # ── URLs · داخل الحاوية pg على ${PG_CI_CONTAINER}:5432 ─────
 # migration_user + app_user + control_plane_user يُنشأون تلقائيّاً
 # بواسطة init sql عند إقلاع pg (نفس السكربتات المستعملة في dev).
@@ -107,6 +135,8 @@ DB_URL_MIGRATION="postgres://migration_user:dev_migration_pass@${PG_CI_CONTAINER
 DB_URL_APP="postgres://app_user:dev_app_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
 DB_URL_ADMIN="postgres://postgres:${PG_ADMIN_PASS}@${PG_CI_CONTAINER}:5432/mediakit_ci"
 DB_URL_PLATFORM="postgres://control_plane_user:dev_control_plane_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
+# redis-ci · DB 3 (نمط مطابق لـdev: redis://127.0.0.1:6379/3)
+REDIS_URL_CI="redis://${REDIS_CI_CONTAINER}:6379/3"
 
 # سرّاً عشوائيّاً لكل تشغيل — لا يظهر في المخرَج
 AI_KEY=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
@@ -129,6 +159,7 @@ docker run --rm \
   -e DATABASE_URL_APP="${DB_URL_APP}" \
   -e DATABASE_URL_ADMIN="${DB_URL_ADMIN}" \
   -e DATABASE_URL_PLATFORM="${DB_URL_PLATFORM}" \
+  -e REDIS_URL="${REDIS_URL_CI}" \
   -e AI_KEY_ENCRYPTION_KEY="${AI_KEY}" \
   -e SESSION_JWT_SECRET="${JWT_SECRET}" \
   -e PLATFORM_JWT_SECRET="${PLATFORM_JWT}" \
