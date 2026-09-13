@@ -11,7 +11,7 @@ import {
   type Column,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
-import { ApiError, exports as exportsApi, renders } from '@/src/api';
+import { ApiError, exports as exportsApi, renders, templates } from '@/src/api';
 import type {
   ExportRow,
   ExportStatus,
@@ -77,9 +77,16 @@ export default function ExportsPage(): JSX.Element {
   const [offset, setOffset] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [listErrorKey, setListErrorKey] = useState<string | null>(null);
   const [downloadBusyId, setDownloadBusyId] = useState<string | null>(null);
   const [downloadErrorKey, setDownloadErrorKey] = useState<string | null>(null);
+  // 290-v3 · خريطة templateId → name من `templates.list` (نداءٌ واحد على mount).
+  // بيان يعود من الخادم (endpoint آخر) — إثراء لا اختراع.
+  // فشل جلب القوالب لا يمنع عرض السجلّ — نُواصل بـfallback إلى UUID.
+  const [templateNames, setTemplateNames] = useState<Map<string, string>>(
+    () => new Map()
+  );
 
   async function loadFirst(): Promise<void> {
     setLoading(true);
@@ -113,20 +120,52 @@ export default function ExportsPage(): JSX.Element {
     }
   }
 
+  async function refresh(): Promise<void> {
+    setRefreshing(true);
+    try { await loadFirst(); } finally { setRefreshing(false); }
+  }
+
+  // 290-v3 · جلب أسماء القوالب مرّةً على mount (نداءٌ واحد · بلا cache).
+  // ٱتّبع فشلاً صامتاً — السجلّ يظلّ صالحاً حتّى بلا أسماء (fallback إلى UUID).
+  async function loadTemplateNames(): Promise<void> {
+    try {
+      const page = await templates.list({ limit: 100 });
+      const m = new Map<string, string>();
+      for (const t of page.data) m.set(t.id, t.name);
+      setTemplateNames(m);
+    } catch {
+      // صامت مقصود — عمود القالب سيسقط على UUID · لا يُعطَّل السجلّ لأجل اسم.
+    }
+  }
+
   useEffect(() => {
     void loadFirst();
+    void loadTemplateNames();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 290-v3 · تنزيلٌ آمن على Safari/iOS: `window.open` بعد `await` يُحجَب لأنّ
+  // الحدث خرج من user gesture. الحلّ: عنصر `<a>` مؤقّت نضغطه — الضغطة تُعتبر
+  // ضمن سياق الحدث الأصليّ (على معظم المتصفّحات الحديثة). نُنشئه بعد وصول
+  // الـURL كي لا نفتح تبويباً فارغاً على الفشل.
   async function doDownload(row: ExportRow): Promise<void> {
     if (!row.storageKey) return;
     setDownloadBusyId(row.id);
     setDownloadErrorKey(null);
     try {
       const out = await renders.getOutput(row.renderId);
-      // نفتح الرابط في تبويب جديد — المتصفّح يتكفّل بالتنزيل.
-      if (typeof window !== 'undefined') {
-        window.open(out.url, '_blank', 'noopener,noreferrer');
+      if (typeof document !== 'undefined') {
+        const a = document.createElement('a');
+        a.href = out.url;
+        a.rel = 'noopener noreferrer';
+        a.target = '_blank';
+        // `download` attribute: يوجّه المتصفّح إلى تنزيل بدل عرض. اسم
+        // الملفّ نستخرجه من storageKey (آخر جزء بعد /).
+        const filename = row.storageKey.split('/').pop() ?? `export-${row.id}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     } catch (err) {
       setDownloadErrorKey(
@@ -146,11 +185,27 @@ export default function ExportsPage(): JSX.Element {
     {
       key: 'template',
       headerKey: 'pages.exports.col.template',
-      render: (r) => (
-        <span dir="ltr" className="font-mono text-xs">
-          {shortId(r.templateId)}
-        </span>
-      ),
+      render: (r) => {
+        // 290-v3 · اسم القالب من templates.list (بيان الخادم من endpoint آخر).
+        // fallback إلى UUID المختصر إن لم يُعثَر على الاسم (mkapi قد يعيد
+        // templateId لقالب حُذف · أو نداء templates.list فشل).
+        const name = r.templateId ? templateNames.get(r.templateId) : null;
+        if (name) {
+          return (
+            <div className="flex flex-col">
+              <span>{name}</span>
+              <span dir="ltr" className="font-mono text-[10px] text-fg-subtle">
+                {shortId(r.templateId)}
+              </span>
+            </div>
+          );
+        }
+        return (
+          <span dir="ltr" className="font-mono text-xs" title={r.templateId ?? ''}>
+            {shortId(r.templateId)}
+          </span>
+        );
+      },
     },
     {
       key: 'size',
@@ -227,6 +282,17 @@ export default function ExportsPage(): JSX.Element {
       <PageHeader
         titleKey="pages.exports.title"
         subtitleKey="pages.exports.subtitle"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={refreshing}
+            disabled={loading || refreshing}
+            onClick={() => void refresh()}
+          >
+            {t('pages.exports.refresh')}
+          </Button>
+        }
       />
 
       {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
