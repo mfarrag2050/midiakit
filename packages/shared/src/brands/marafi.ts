@@ -53,9 +53,15 @@ export const MARAFI_BRAND: BrandKit = {
   colors: {
     text: INK,
     accent: ACCENT,
+    // urgentBadge = لون البادج نفسه (الأحمر · محجوز لعاجل وحده).
     urgentBadge: URGENT,
-    urgentBg: URGENT,
-    urgentBgTint: URGENT,
+    // urgentBg = **خلفيّة قالب breaking عند غياب image asset** (fallback
+    // solid لطبقة image في breaking.json). ليس «لون عاجل» — اسمه مضلّل.
+    // الصحيح لهويّة مَرافئ: خلفيّة ورقيّة (surface). قاعدة owner (§٢):
+    // «الأحمر محجوز لعاجل وحده. إن وجدتَ الأحمر في غيرها فذلك عطب».
+    urgentBg: SURFACE,
+    // urgentBgTint = variant للـTint (يستعمله watermark في default). نفس surface.
+    urgentBgTint: SURFACE,
     locationBadge: MUTED,
     surface: SURFACE,
     // placeholder ورقيّ دافئ (متدرّج داخل السطح · لا رماديّ محايد)
@@ -122,7 +128,10 @@ export const MARAFI_BRAND: BrandKit = {
     },
     semanticBreaks: { enabled: true, useModel: 'never' },
     diacritics: { enabled: false, mode: 'full' },
-    bidi: { enabled: true, numerals: 'latin' },
+    // هويّة عربيّة — أرقام عربيّة (١٢٣) في المخرَج. owner رأى «25%» في
+    // لقطة سابقة وأشار إلى العطب. الحاكم في المخرَج هو brand.bidi.numerals
+    // (check:digit-style-isolation يفحص عزل زينة الواجهة فقط، لا هذا).
+    bidi: { enabled: true, numerals: 'arabic' },
     caption: {
       max: 68, min: 36, lineHeight: 1.28, boxWidth: 900,
       maxLines: 2, minLines: 1, preferredLines: 2,
