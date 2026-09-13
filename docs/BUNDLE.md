@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-13
-> **HEAD (main):** `5c09a91`
+> **HEAD (main):** `8c2f174`
 > **HEAD (origin/feat/api):** `d629f74`
 > **HEAD (origin/feat/studio):** `adcf3a8`
 
@@ -39,7 +39,7 @@
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 385 | `eca0f87cf7d1` | local |
+| `docs/SKILL-mediakit.md` | 385 | `21129fe22438` | local |
 | `PHASES.md` | 1563 | `37fedfeec5f4` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
@@ -10505,7 +10505,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `5c09a91` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `8c2f174` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10535,16 +10535,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 311 | 1 |
-| `feat/api` | `d629f74` | 8 | 100 | 220 |
-| `feat/ci` | `d6473fd` | 31 | 69 | 274 |
-| `feat/dashboards` | `376077c` | 0 | 200 | 112 |
-| `feat/studio` | `adcf3a8` | 11 | 77 | 246 |
-| `origin/aa-internal` | `ee178ca` | 0 | 311 | 1 |
-| `origin/feat/api` | `d629f74` | 8 | 100 | 220 |
-| `origin/feat/ci` | `d6473fd` | 31 | 69 | 274 |
-| `origin/feat/dashboards` | `376077c` | 0 | 200 | 112 |
-| `origin/feat/studio` | `adcf3a8` | 11 | 77 | 246 |
+| `aa-internal` | `ee178ca` | 0 | 313 | 1 |
+| `feat/api` | `d629f74` | 8 | 102 | 220 |
+| `feat/ci` | `d6473fd` | 31 | 71 | 274 |
+| `feat/dashboards` | `376077c` | 0 | 202 | 112 |
+| `feat/studio` | `adcf3a8` | 11 | 79 | 246 |
+| `origin/aa-internal` | `ee178ca` | 0 | 313 | 1 |
+| `origin/feat/api` | `d629f74` | 8 | 102 | 220 |
+| `origin/feat/ci` | `d6473fd` | 31 | 71 | 274 |
+| `origin/feat/dashboards` | `376077c` | 0 | 202 | 112 |
+| `origin/feat/studio` | `adcf3a8` | 11 | 79 | 246 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
