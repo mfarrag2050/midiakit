@@ -759,7 +759,9 @@
     "PREVIEW_UNKNOWN": "Preview failed — check template content or reload.",
     "HEADLINE_TOO_LONG": "Headline exceeds maximum length — shorten it or adjust the template's headline limit.",
     "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
-    "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly."
+    "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
+    "TEMPLATE_SNAPSHOT_INVALID": "Template snapshot for this export is invalid or incomplete.",
+    "TENANT_DATA_EXPORT_FAILED": "Tenant data export could not be completed — check the operation log."
   },
   "design": {
     "title": "Design System",
