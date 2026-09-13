@@ -33,7 +33,7 @@ echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (${IMAGE})"
 echo "[mk-ci] الحاوية: --rm · اسم ${CONTAINER_NAME} · volume ${VOLUME} لـnode_modules"
 echo ""
 
-exec docker run --rm \
+docker run --rm \
   --name "${CONTAINER_NAME}" \
   --platform linux/arm64 \
   -v "${ROOT}:/work" \
@@ -52,3 +52,10 @@ exec docker run --rm \
     echo "[mk-ci · حاوية] pnpm test …"
     pnpm test
   '
+MK_CI_EXIT=$?
+
+# §١ من 250 · دائماً وبلا شرط: أَعلِن ما لا تقيسه هذه البوّابة.
+# القائمة مشتقّة من ci.yml مباشرةً — لا قائمة يدويّة تشيخ بصمت.
+node "${ROOT}/scripts/ci-steps-diff.mjs" || true
+
+exit "$MK_CI_EXIT"

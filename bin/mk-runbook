@@ -132,6 +132,56 @@ HEADER
 
   echo
   echo "  ملاحظة: bin/mk-runbook audit لتسمية العمليّات من شجرات ليست في الجدول."
+
+  # ═════ عين GitHub CI (250 §٢) ═══════════════════════════════════════════════
+  # قاعدة 240: «ما يبقى أحمر يوماً كاملاً يصير غير مرئيّ» — نطبع دائماً حال
+  # آخر جريان + عدد الدفعات بلا خضرة. يفشل صريحاً إن gh غير مصادق (لا صمت).
+  echo
+  echo "  عين GitHub CI:"
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "    ✗ gh غير مثبَّت — لا يمكن قراءة حال CI. ثبّته: brew install gh"
+  elif ! gh auth status >/dev/null 2>&1; then
+    echo "    ✗ gh غير مصادق — شغّل: gh auth login"
+  else
+    for branch in feat/ci main; do
+      # آخر جريان
+      local last
+      last="$(gh run list --branch "$branch" --limit 1 --json conclusion,status,displayTitle,createdAt,databaseId 2>/dev/null || echo '[]')"
+      local total_seen no_green_count
+      total_seen="$(echo "$last" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(len(d))' 2>/dev/null || echo 0)"
+      if [[ "$total_seen" == "0" ]]; then
+        printf '    %-10s  ⚠  لا بوّابة GitHub — لا workflow يعمل على هذا الفرع\n' "$branch"
+        continue
+      fi
+      local concl id title
+      concl="$(echo "$last" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0].get("conclusion") or d[0].get("status") or "?")' 2>/dev/null)"
+      id="$(echo "$last" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0].get("databaseId","?"))' 2>/dev/null)"
+      title="$(echo "$last" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0].get("displayTitle","")[:50])' 2>/dev/null)"
+      # كم دفعة بلا خضرة
+      no_green_count="$(gh run list --branch "$branch" --limit 50 --json conclusion 2>/dev/null | python3 -c '
+import json, sys
+try:
+  runs = json.load(sys.stdin)
+  cnt = 0
+  for r in runs:
+    if r.get("conclusion") == "success": break
+    cnt += 1
+  print(cnt)
+except: print("?")
+' 2>/dev/null || echo "?")"
+      local marker
+      case "$concl" in
+        success)   marker="✓" ;;
+        failure)   marker="✗" ;;
+        cancelled) marker="⚠" ;;
+        *)         marker="?" ;;
+      esac
+      printf '    %-10s  %s %s  آخر جريان %s  «%s»\n' "$branch" "$marker" "$concl" "$id" "$title"
+      if [[ "$no_green_count" != "0" && "$no_green_count" != "?" ]]; then
+        printf '                 → %s دفعة بلا خضرة (قاعدة 240 · العدّ جزء من الحال)\n' "$no_green_count"
+      fi
+    done
+  fi
 }
 
 # ═════ audit ═════════════════════════════════════════════════════════════════
