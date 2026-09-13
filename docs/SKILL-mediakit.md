@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-12 · **HEAD:** `41819cb` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `2154973` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -58,15 +58,15 @@ description: |
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
 | `aa-internal` | `ee178ca` | 0 | 242 | 1 |
-| `feat/api` | `b671e67` | 28 | 59 | 212 |
-| `feat/ci` | `e1d887a` | 26 | 0 | 269 |
+| `feat/api` | `67eec04` | 29 | 59 | 213 |
+| `feat/ci` | `a376fbe` | 29 | 0 | 272 |
 | `feat/dashboards` | `376077c` | 0 | 131 | 112 |
-| `feat/studio` | `dd622f8` | 11 | 18 | 236 |
+| `feat/studio` | `27ba52f` | 14 | 18 | 239 |
 | `origin/aa-internal` | `ee178ca` | 0 | 242 | 1 |
-| `origin/feat/api` | `b671e67` | 28 | 59 | 212 |
-| `origin/feat/ci` | `e1d887a` | 26 | 0 | 269 |
+| `origin/feat/api` | `67eec04` | 29 | 59 | 213 |
+| `origin/feat/ci` | `a376fbe` | 29 | 0 | 272 |
 | `origin/feat/dashboards` | `376077c` | 0 | 131 | 112 |
-| `origin/feat/studio` | `dd622f8` | 11 | 18 | 236 |
+| `origin/feat/studio` | `27ba52f` | 14 | 18 | 239 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
@@ -195,6 +195,8 @@ description: |
 - `apps/api/src/routes/templates/list.ts`
 - `apps/api/src/routes/templates/shared/mapper.ts`
 - `apps/api/src/routes/templates/update.ts`
+- `apps/api/src/routes/tenant/data-export.test.ts`
+- `apps/api/src/routes/tenant/data-export.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
 - `apps/api/src/routes/usage/current.ts`
