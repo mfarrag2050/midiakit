@@ -195,7 +195,21 @@ jobs:
         # **لا تُعِد هذا إلى fail-fast ظنّاً أنّه تحسين.**
         if: always()
         env:
+          # ──── متطلَّبات apps/api/src/config.ts (271 §١) ────
+          # المتطلَّبات المطلوبة (بلا default): DATABASE_URL_APP · SESSION_JWT_SECRET
+          # · AI_KEY_ENCRYPTION_KEY. لها defaults غير صالحة في CI: DATABASE_URL_PLATFORM
+          # (يشير إلى 127.0.0.1:19041). **قيَم test-only معلَنة صراحةً · لا سرّ حقيقيّ ·
+          # لا اشتقاق من إنتاج · لا ترخيص فحص ليقبل الغياب** — نصّ 271 §١.
+          NODE_ENV: test
           DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          # قيَم test-only معلَنة — 32+ حرفاً · لا سرّ إنتاج (النصّ يقول ذلك صراحة).
+          SESSION_JWT_SECRET: ci_test_only_session_secret_min_32_chars_placeholder
+          PLATFORM_JWT_SECRET: ci_test_only_platform_secret_min_32_chars_placeholder
+          # AI key اختباريّ · 64 hex · ليس في قائمة placeholder المعروفة (superRefine
+          # يمنع أنماط ثلاثة معروفة في production · هذا NODE_ENV=test فلا يُفعَّل).
+          AI_KEY_ENCRYPTION_KEY: aabbccddeeff11223344556677889900aabbccddeeff11223344556677889900
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
         run: |
