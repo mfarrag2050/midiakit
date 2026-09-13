@@ -18,6 +18,7 @@
 | 10 | **transcriber** (Python) | `127.0.0.1:19081` | `~/MediaKit/pf-mediakit-studio/services/transcriber` | (نفسه) |
 | 11 | **face-detector** (Python) | `127.0.0.1:19082` | `~/MediaKit/pf-mediakit-studio/services/face-detector` | (نفسه) |
 | 12 | **Showroom stack (postgres/redis/minio/api/studio)** | `19062-19065 · 19070-19071` | `~/MediaKit/pf-mediakit-show` على وسم `show-YYYYMMDD-N` | `cd ~/MediaKit/pf-mediakit-dash && ./bin/mk show up` (راجع `docs/SHOWROOM.md`) |
+| 13 | **نفق العرض** (`mkdemo.primeflow.co` · خلف Cloudflare Access) | خارج · 443 (Cloudflare edge) → داخل: `19070/19071/19064` | لا شجرة (خدمة cloudflared) — التهيئة في `~/.cloudflared/mkdemo.yml` | `nohup cloudflared --config ~/.cloudflared/mkdemo.yml tunnel run <معرّف النفق> > /tmp/mkdemo-tunnel/tunnel.log 2>&1 &` — راجع §8 |
 
 **عامل الرندَر (#8) غاب طوال ليلة 490** — إن لم يظهر في `mk-runbook
 status`، لن يُنشَأ رندر حيّ لمحمد (BullMQ jobs تُضاف لكن لا مستهلك).
@@ -78,3 +79,103 @@ status`، لن يُنشَأ رندر حيّ لمحمد (BullMQ jobs تُضاف �
    ذلك، فإمّا الجدول ناقص، أو ثمّة خدمة يجب أن تُنقَل.
 3. **L-103:** أيّ رقم في هذا الملفّ ينبغي أن يُقاس، لا يُذكر من الذاكرة.
    `mk-runbook status` هو المصدر.
+
+## §8 · نفق العرض `mkdemo.primeflow.co` (Cloudflare Tunnel + Access)
+
+> **الغرض:** رابط واحد يفتحه شريك على الشوروم خلف Cloudflare Access.
+> نُقل من `claude/infra/mkdemo-tunnel.md` (أرض المالك) إلى هنا (أرض
+> `docs/`) كموضعه الدائم — `_AMEND-190-RECORD-IT`.
+
+**لا سرّ في هذا القسم.** الاسم والمعرّف والمسار والمضيف
+مُعرِّفات، لا اعتمادات. محتوى `.json` لا يُنسخ ولا يُطبع — يُشار إلى
+مساره فقط.
+
+### §8.أ · المُعرِّفات
+
+| المفتاح | القيمة |
+|---|---|
+| اسم النفق | `mediakit-mini` |
+| معرّف النفق | `06be8e42-efd0-43f5-8ab8-25ff74cf3a52` |
+| ملفّ الاعتماد (مسار · لا محتوى) | `~/.cloudflared/06be8e42-efd0-43f5-8ab8-25ff74cf3a52.json` |
+| ملفّ التهيئة | `~/.cloudflared/mkdemo.yml` |
+| المضيف | `mkdemo.primeflow.co` |
+| تطبيق Access | `mkdemo` (Self-hosted) |
+| سياسة Access | `MediaKit demo — Muhammed + partner` · Include = Emails (اثنان) |
+| مدّة الجلسة | ٢٤ ساعة |
+
+**قاعدة الاستدلال (`_AMEND-190i`):** كلّ أمر `cloudflared` لهذا النفق
+يستعمل **المعرّف** لا الاسم. مطابقة الأسماء في `cloudflared v2026.5.0`
+أخطأت مرّة — لا تُؤتمن مرّتين.
+
+### §8.ب · الأبواب الثلاثة (Ingress · الترتيب مُلزِم)
+
+| المسار | الوجهة الداخليّة | مصدر القياس |
+|---|---|---|
+| `/v1/*` | `127.0.0.1:19070` (API الشوروم) | **بادئة مؤكَّدة بالقياس (`_AMEND-190i §1`):** `curl 127.0.0.1:19060/health → 404` مقابل `.../v1/health → 200`. مصدر النصّ: `apps/api/src/server.ts` — كلّ المسارات تحت `prefix: '/v1'`. |
+| `/mk-assets-show/*` | `127.0.0.1:19064` (MinIO الشوروم) | `bin/mk-show:S3_BUCKET=mk-assets-show` + `storage/index.ts:forcePathStyle` — شكل الرابط `<endpoint>/<bucket>/<key>` |
+| `/*` (catch-all للمضيف) | `127.0.0.1:19071` (استوديو الشوروم) | `bin/mk-show:STUDIO_PORT` |
+| أيّ مضيف آخر | `http_status:404` | Ingress افتراضيّ |
+
+**الأخصّ أوّلاً**، وإلّا ابتلع `/*` كلّ شيء.
+
+**لماذا الباب الثاني (`/mk-assets-show/*`)?** زرّ التصدير يجلب الملفّ
+بالمتصفّح نفسه — الرابط الموقَّت مبنيّ على `S3_PUBLIC_ENDPOINT`.
+تفصيل في `docs/SHOWROOM.md` وتذكرة `290-PRESIGN-PUBLIC-ENDPOINT`.
+
+### §8.ج · الشرطان الحاكمان (`.env.show` — بلا قيَم هنا)
+
+- `NEXT_PUBLIC_API_URL=https://mkdemo.primeflow.co` — Studio يستدعي
+  API من متصفّح الشريك، لا من الميني. بلا هذا: صفحة تفتح ثمّ ينهار
+  كلّ فعل.
+- `S3_PUBLIC_ENDPOINT=https://mkdemo.primeflow.co` — presign للمتصفّح
+  فقط. `S3_ENDPOINT=http://127.0.0.1:19064` يبقى للـPUT الداخليّ.
+  بلا هذا: زرّ التصدير مكسور (mixed-content + 127.0.0.1 = جهاز
+  الشريك).
+
+### §8.د · القواعد الستّ — لا تُخرَق
+
+1. **لا نلمس `/etc/cloudflared/config.yml`** — يشغّل نفق
+   `primemind-mini` (SSH محمد + ويبهوك Zoom حقيقيّ). إعادة تشغيله قد
+   تُضيّع ويبهوكاً.
+2. **كلّ أمر لهذا النفق يحمل `--config` بمساره كاملاً.** يوجد
+   `~/.cloudflared/config.yml` ساكن لا يعمل — بلا `--config` صريح
+   يلتقطه cloudflared ويوجّه إلى خدمات PrimeMind.
+3. **الشوروم فقط خلف هذا النفق — لا التطوير.** dev فيه مستأجرات محمد
+   + `fixtures/` تحوي أسماء وكالات حقيقيّة.
+4. **loopback فقط.** لا `0.0.0.0` — النفق يصل من `127.0.0.1`.
+5. **لا ترقية `cloudflared` الآن** (2026.5.0 · الأحدث 2026.9.1) —
+   البرنامج نفسه يشغّل PrimeMind الحيّ.
+6. **سياستان منفصلتان.** لا تُرفَق `Mohammed only` بهذا التطبيق —
+   تعديلها لاحقاً لإضافة الشريك يفتح له باب SSH إلى الميني في اللحظة
+   نفسها.
+
+### §8.هـ · أوامر التشغيل
+
+```bash
+# validate (تجريبيّ · لا يُشغّل)
+cloudflared tunnel --config ~/.cloudflared/mkdemo.yml ingress validate
+
+# تشغيل في الخلفيّة + سجلّ
+mkdir -p /tmp/mkdemo-tunnel
+nohup cloudflared --config ~/.cloudflared/mkdemo.yml \
+  tunnel run 06be8e42-efd0-43f5-8ab8-25ff74cf3a52 \
+  > /tmp/mkdemo-tunnel/tunnel.log 2>&1 &
+echo $! > /tmp/mkdemo-tunnel/tunnel.pid
+
+# حال النفق (بالمعرّف · لا بالاسم)
+cloudflared tunnel info 06be8e42-efd0-43f5-8ab8-25ff74cf3a52
+
+# قياس حاسم (المتوقّع: 302 إلى primetunnel.cloudflareaccess.com)
+curl -sS -o /dev/null -D - --max-time 20 https://mkdemo.primeflow.co/v1/health
+```
+
+**تنبيه:** `route dns` كذلك بالمعرّف لا الاسم — `route dns
+<tunnel-id-uuid> mkdemo.primeflow.co`. الاسم أعطى نتيجةً خاطئةً مرّةً
+(`_AMEND-190i`).
+
+### §8.و · مصادر مرجعيّة
+
+- سجلّ الإنشاء الأصليّ (بيد المالك): `claude/infra/mkdemo-tunnel.md`.
+- التقارير الحرجة: `_AMEND-190d/e/f/g/h/i/j-*.md` (مسار الاكتشاف
+  والتصحيح · درس «لا تستنتج قبل القياس»).
+- شرط تصدير التخزين: `290-INTEGRATED-INTO-SHOW.md` (S3_PUBLIC_ENDPOINT).
