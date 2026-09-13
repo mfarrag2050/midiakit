@@ -558,7 +558,8 @@
       "totalLabel": "Total",
       "loadMore": "load more",
       "downloadFailed": "تعذّر جلب download link — أعد المحاولة.",
-      "envelopeNote": "server pagination offset-based — لا cursor مزوَّر."
+      "envelopeNote": "server pagination offset-based — لا cursor مزوَّر.",
+      "errorCodeHint": "server error code — انسخه لـsupport إن سألوا."
     },
     "billing": {
       "title": "Billing",

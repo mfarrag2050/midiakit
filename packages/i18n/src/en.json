@@ -557,7 +557,8 @@
       "totalLabel": "Total",
       "loadMore": "Load more",
       "downloadFailed": "Could not fetch the download link — try again.",
-      "envelopeNote": "Server pagination is offset-based — we don't fake a cursor."
+      "envelopeNote": "Server pagination is offset-based — we don't fake a cursor.",
+      "errorCodeHint": "Server error code — copy this for support if asked."
     },
     "billing": {
       "title": "Billing",

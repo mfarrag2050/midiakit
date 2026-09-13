@@ -557,7 +557,8 @@
       "totalLabel": "الإجمالي",
       "loadMore": "تحميل المزيد",
       "downloadFailed": "تعذّر جلب رابط التنزيل — أعد المحاولة.",
-      "envelopeNote": "الترقيم offset-based من الخادم — لا نُظهر cursor لا يملكه."
+      "envelopeNote": "الترقيم offset-based من الخادم — لا نُظهر cursor لا يملكه.",
+      "errorCodeHint": "رمز الخطأ من الخادم — انسخه للدعم إن سألوا."
     },
     "billing": {
       "title": "الاشتراك",

@@ -45,6 +45,18 @@ function shortId(id: string | null): string {
   return id.slice(0, 8);
 }
 
+// 290-v2 · حجم مقروء من `sizeBytes` (يعود من الخادم string). لا نخترع
+// حين null (تصدير فشل أو لم يُرفع) — نُظهر «—».
+function fmtBytes(sb: string | null): string {
+  if (sb === null || sb === '') return '—';
+  const n = Number(sb);
+  if (!Number.isFinite(n) || n <= 0) return '—';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 function fmtDate(iso: string, locale: string): string {
   const d = new Date(iso);
   try {
@@ -159,7 +171,24 @@ export default function ExportsPage(): JSX.Element {
         // إن لم يوجد مفتاح للحالة (خادم أرسل قيمة جديدة) نعرضها كما هي —
         // §1 من التذكرة: لا نخترع، ولا نُخفي.
         const label = t(key) === key ? r.status : t(key);
-        return <Badge tone={tone}>{label}</Badge>;
+        // 290-v2: إن كان status='failed' وعاد errorCode من الخادم نعرضه سطراً
+        // ثانياً أسفل الشارة كي يفهم المستخدم لماذا فشل — بيان يعود من
+        // الخادم لا اختراع. نعرض الرمز كما هو (لم أُضِف قاموس رموز الرندَر
+        // إلى i18n بعد — الرمز nudge للمستخدم/الدعم لا للترجمة).
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <Badge tone={tone}>{label}</Badge>
+            {r.status === 'failed' && r.errorCode && (
+              <span
+                dir="ltr"
+                className="font-mono text-[10px] leading-none text-fg-subtle"
+                title={t('pages.exports.errorCodeHint')}
+              >
+                {r.errorCode}
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -168,16 +197,25 @@ export default function ExportsPage(): JSX.Element {
       align: 'center',
       render: (r) =>
         r.storageKey ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={downloadBusyId === r.id}
-            onClick={() => void doDownload(r)}
-          >
-            {downloadBusyId === r.id
-              ? t('pages.exports.downloading')
-              : t('pages.exports.download')}
-          </Button>
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={downloadBusyId === r.id}
+              onClick={() => void doDownload(r)}
+            >
+              {downloadBusyId === r.id
+                ? t('pages.exports.downloading')
+                : t('pages.exports.download')}
+            </Button>
+            {/* 290-v2: حجم الملفّ من `sizeBytes` — الخادم يعيده string, نُظهره
+                مقروءاً. لا نخترع حين null. */}
+            {r.sizeBytes && (
+              <span dir="ltr" className="text-[10px] text-fg-subtle">
+                {fmtBytes(r.sizeBytes)}
+              </span>
+            )}
+          </div>
         ) : (
           <span className="text-fg-subtle">{t('pages.exports.noFile')}</span>
         ),
