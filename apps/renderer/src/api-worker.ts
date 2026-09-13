@@ -148,16 +148,16 @@ async function downloadAsset(storageKey: string): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// IMAGE-VERTICAL: يستخلص أسماء حقول الصور من طبقات template.card و template.video،
-// ثم يقاطع بمحتوى المستخدم — أيّ حقل content[field] كسلسلة غير فارغة يُطلَب.
+// IMAGE-VERTICAL: يستخلص أسماء حقول الصور من `template.layers` مباشرة —
+// نفس ما يقرأه `renderFrame` (packages/engine/src/render.ts:1152). العقد
+// في `packages/templates/src/types.ts:297` يعرّف `layers: readonly Layer[]`
+// على المستوى الأعلى. القراءة السابقة من `t.card.layers ∪ t.video.layers`
+// كانت ميّتة عمليّاً — الحقلان غير موجودَين في العقد (420 §1.2).
 // **يسقط بصوت** إن لم يجد المفتاح في content مقابلاً حقيقياً في DB.
 function extractImageFieldsFromTemplate(templateSnapshot: unknown): Set<string> {
   const fields = new Set<string>();
-  const t = templateSnapshot as { card?: { layers?: unknown[] }; video?: { layers?: unknown[] } };
-  const layers = [
-    ...(Array.isArray(t?.card?.layers) ? t.card.layers : []),
-    ...(Array.isArray(t?.video?.layers) ? t.video.layers : []),
-  ];
+  const t = templateSnapshot as { layers?: unknown[] };
+  const layers = Array.isArray(t?.layers) ? t.layers : [];
   for (const l of layers) {
     const layer = l as { type?: string; field?: string };
     if (layer?.type === 'image') fields.add(layer.field ?? 'image');
@@ -273,6 +273,23 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     const imageAssets = await resolveImageAssetsOrThrow(tenantId, templateSnapshot, content, tmpDir);
 
     // 5. Render — MP4 via renderVideo (+ FFmpeg) OR PNG via renderFrame (still)
+    //
+    // حارس عقد الرندر — من العقد لا من الخيال (types.ts:291-303):
+    //   • كلّ قالب يحمل `layers` (schema-required) — renderFrame يعمل عليها.
+    //   • `video?: TemplateVideo` **اختياريّ** — renderVideo يحتاجه للحركة.
+    //   • `kind` تصريحٌ دلاليّ لا حاكمٌ فنيّ — لا يُشتقّ منه منعُ تصدير.
+    //
+    // لذلك: PNG يعمل على أيّ قالبٍ فيه layers (وكلّها كذلك بحكم schema).
+    // MP4 يشترط video block فقط — لا يمكن تصنيع حركةٍ من عدم.
+    //
+    // الحارس القديم (`!template.card`) بُني على تعليقٍ خاطئ عن renderFrame —
+    // راجع 420 §1.3 و 108 §1.
+    const t = template as { id?: string; video?: unknown };
+    if (format === 'mp4' && !t.video) {
+      throw new Error(
+        `MP4_UNSUPPORTED_TEMPLATE: قالب "${t.id}" لا يحمل video block — لا حركة معرَّفة، غير قابل للتصدير كفيديو`
+      );
+    }
     const outPath = join(tmpDir, `output.${format}`);
     if (format === 'mp4') {
       await renderVideo({
@@ -281,12 +298,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
       });
     } else {
       // PNG-EXPORT: مرّ بالمحرك بنفس assets — لا شكل ثانٍ للأصول، لا stub.
-      // renderFrame يستعمل template.card (البطاقة الثابتة)؛ يفشل بصوت إن غاب
-      // (القالب بلا card branch لا يمكن رسمه كصورة ثابتة).
       const { renderFrame } = await import('@pf-mediakit/engine');
-      if (!(template as { card?: unknown }).card) {
-        throw new Error(`PNG_UNSUPPORTED_TEMPLATE: template ${(template as { id?: string }).id} has no card branch`);
-      }
       const canvas = new Canvas(dims.w, dims.h);
       const ctx = canvas.getContext('2d');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
