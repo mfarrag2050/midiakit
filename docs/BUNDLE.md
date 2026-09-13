@@ -9,9 +9,9 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-13
-> **HEAD (main):** `2154973`
-> **HEAD (origin/feat/api):** `67eec04`
-> **HEAD (origin/feat/studio):** `27ba52f`
+> **HEAD (main):** `eb8f02e`
+> **HEAD (origin/feat/api):** `2864f75`
+> **HEAD (origin/feat/studio):** `55edb22`
 
 ## الفهرس
 
@@ -39,7 +39,7 @@
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 383 | `c7bba8cd7cc5` | local |
+| `docs/SKILL-mediakit.md` | 384 | `ae60efe90fea` | local |
 | `PHASES.md` | 1563 | `37fedfeec5f4` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
@@ -10476,7 +10476,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `2154973` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `eb8f02e` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10506,16 +10506,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 242 | 1 |
-| `feat/api` | `67eec04` | 29 | 59 | 213 |
-| `feat/ci` | `a376fbe` | 29 | 0 | 272 |
-| `feat/dashboards` | `376077c` | 0 | 131 | 112 |
-| `feat/studio` | `27ba52f` | 14 | 18 | 239 |
-| `origin/aa-internal` | `ee178ca` | 0 | 242 | 1 |
-| `origin/feat/api` | `67eec04` | 29 | 59 | 213 |
-| `origin/feat/ci` | `a376fbe` | 29 | 0 | 272 |
-| `origin/feat/dashboards` | `376077c` | 0 | 131 | 112 |
-| `origin/feat/studio` | `27ba52f` | 14 | 18 | 239 |
+| `aa-internal` | `ee178ca` | 0 | 300 | 1 |
+| `feat/api` | `737036d` | 5 | 89 | 217 |
+| `feat/ci` | `a981d15` | 30 | 58 | 273 |
+| `feat/dashboards` | `376077c` | 0 | 189 | 112 |
+| `feat/studio` | `55edb22` | 7 | 66 | 242 |
+| `origin/aa-internal` | `ee178ca` | 0 | 300 | 1 |
+| `origin/feat/api` | `2864f75` | 4 | 89 | 216 |
+| `origin/feat/ci` | `a981d15` | 30 | 58 | 273 |
+| `origin/feat/dashboards` | `376077c` | 0 | 189 | 112 |
+| `origin/feat/studio` | `55edb22` | 7 | 66 | 242 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
@@ -10577,6 +10577,7 @@ description: |
 - `apps/api/src/routes/brand-kits/update.ts`
 - `apps/api/src/routes/exports/list.test.ts`
 - `apps/api/src/routes/exports/list.ts`
+- `apps/api/src/routes/health.test.ts`
 - `apps/api/src/routes/health.ts`
 - `apps/api/src/routes/platform/auth/login.ts`
 - `apps/api/src/routes/platform/auth/logout.ts`
@@ -10668,7 +10669,7 @@ description: |
 ### محتويات المستودع — من main (`ls`)
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
-- **`demo/`:** 17 ملف
+- **`demo/`:** 18 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- END:GENERATED -->
