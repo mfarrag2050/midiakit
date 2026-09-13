@@ -47,6 +47,11 @@ const route: FastifyPluginAsync = async (fastify) => {
         errorCode: r.error_code,
         createdAt: r.created_at.toISOString(),
       })),
+      // nextCursor: null — هذا endpoint offset-based (يقبل ?limit=&offset=).
+      // §1.5 يشترط الغلاف {data, nextCursor, hasMore}؛ نوفي بالشكل بلا كذبة
+      // دلاليّة (cursor لا معنى له مع offset). المستهلك يُصفّح بـ`offset += limit`.
+      // توحيد الترقيم إلى cursor فعليّاً قرار عقد منفصل — تذكرة لـmkapi.
+      nextCursor: null,
       total: Number(total.rows[0]!.n),
       limit: q.limit,
       offset: q.offset,
