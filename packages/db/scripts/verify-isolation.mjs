@@ -96,6 +96,10 @@ const APP_USER_EXPECTED_GRANTS = {
   // DEBT-1 §3: license_acks — سجلّ إقرار ترخيص append-only.
   // INSERT + SELECT فقط — لا UPDATE ولا DELETE (المُقرّ لا يستطيع تزوير إقراره).
   license_acks:          'INSERT,SELECT',
+  // 240 · exports — سجلّ تصدير tenant-scoped. المهاجرة 20260912020000
+  // تُصرّح: «app_user + control_plane_user لهما SELECT · لا INSERT/UPDATE/DELETE
+  // (السجلّ يُكتب فقط من trigger)». الـtrigger يعمل بامتيازات migration_user.
+  exports:               'SELECT',
   // pgmigrations: بلا منح (SEC-1 fix) — لا يظهر
 };
 
