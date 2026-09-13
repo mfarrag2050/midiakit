@@ -36,6 +36,7 @@
     "templates": "Templates",
     "assets": "Assets",
     "renders": "Renders",
+    "exports": "سجلّ exports",
     "design": "Design",
     "workflows": "Workflows",
     "aiSettings": "AI",
@@ -529,6 +530,35 @@
       "brandSnapshot": "Brand snapshot used",
       "brandSnapshotHint": "لقطة مُجمَّدة عند POST — لا تتأثّر بتعديل الهوية بعدها.",
       "quotaExceeded": "استُنفدت حصّة التصديرات في هذه الباقة — رقّها من صفحة الاشتراك."
+    },
+    "exports": {
+      "title": "سجلّ exports",
+      "subtitle": "ما صدّرته وكالتك: date · template · size · status · file.",
+      "empty": "لا exports بعد",
+      "emptyBody": "أوّل export من breaking composer أو brand-kit editor يظهر هنا.",
+      "col": {
+        "date": "Date",
+        "template": "Template",
+        "size": "Size",
+        "format": "Format",
+        "status": "Status",
+        "file": "File"
+      },
+      "status": {
+        "succeeded": "Done",
+        "failed": "فشل",
+        "queued": "queued",
+        "running": "running",
+        "cancelled": "cancelled"
+      },
+      "download": "تنزيل",
+      "downloading": "جارٍ التنزيل…",
+      "noFile": "—",
+      "unknownTemplate": "unknown template",
+      "totalLabel": "Total",
+      "loadMore": "load more",
+      "downloadFailed": "تعذّر جلب download link — أعد المحاولة.",
+      "envelopeNote": "server pagination offset-based — لا cursor مزوَّر."
     },
     "billing": {
       "title": "Billing",

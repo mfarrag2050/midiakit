@@ -35,6 +35,7 @@
     "templates": "Templates",
     "assets": "Assets",
     "renders": "Renders",
+    "exports": "Exports history",
     "design": "Design",
     "workflows": "Workflows",
     "aiSettings": "AI",
@@ -528,6 +529,35 @@
       "brandSnapshot": "Brand snapshot used",
       "brandSnapshotHint": "Frozen at POST — not affected by later brand edits.",
       "quotaExceeded": "Render quota exhausted on this plan — upgrade from the Billing page."
+    },
+    "exports": {
+      "title": "Exports history",
+      "subtitle": "What your agency exported: date · template · size · status · file.",
+      "empty": "No exports yet",
+      "emptyBody": "Your first export from the breaking composer or the brand-kit editor will appear here. The file downloads to you; the log stays here.",
+      "col": {
+        "date": "Date",
+        "template": "Template",
+        "size": "Size",
+        "format": "Format",
+        "status": "Status",
+        "file": "File"
+      },
+      "status": {
+        "succeeded": "Done",
+        "failed": "Failed",
+        "queued": "Queued",
+        "running": "Running",
+        "cancelled": "Cancelled"
+      },
+      "download": "Download",
+      "downloading": "Fetching…",
+      "noFile": "—",
+      "unknownTemplate": "Unknown template",
+      "totalLabel": "Total",
+      "loadMore": "Load more",
+      "downloadFailed": "Could not fetch the download link — try again.",
+      "envelopeNote": "Server pagination is offset-based — we don't fake a cursor."
     },
     "billing": {
       "title": "Billing",

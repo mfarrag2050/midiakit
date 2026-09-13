@@ -449,6 +449,61 @@ const MOCK_RENDERS = new Map<string, MockRender>();
   });
 }
 
+// ── 290-EXPORTS-SCREEN — سجلّ تصديرات (offset-based) ───────
+// شكلٌ مطابق لـ`origin/feat/api:apps/api/src/routes/exports/list.ts`.
+// `nextCursor: null` دائماً · `total/limit/offset/hasMore` هي عقد الترقيم.
+
+interface MockExportRow {
+  id: string; renderId: string; userId: string | null;
+  brandKitId: string | null; templateId: string | null;
+  size: string; format: string;
+  storageKey: string | null; sizeBytes: string | null;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
+  errorCode: string | null; createdAt: string;
+}
+
+const MOCK_EXPORTS: MockExportRow[] = (() => {
+  const now = Date.now();
+  const hour = 3_600_000;
+  return [
+    {
+      id: 'exp_seed_1', renderId: 'rnd_mock_export1', userId: 'usr_mock',
+      brandKitId: 'bk_mock_default', templateId: 'tpl_seed_breaking',
+      size: 'x', format: 'png', storageKey: 'tnt_mock/renders/rnd_mock_export1/output.png',
+      sizeBytes: '156821', status: 'succeeded', errorCode: null,
+      createdAt: new Date(now - 2 * hour).toISOString(),
+    },
+    {
+      id: 'exp_seed_2', renderId: 'rnd_mock_export2', userId: 'usr_mock',
+      brandKitId: 'bk_mock_default', templateId: 'tpl_seed_breaking',
+      size: 'feed', format: 'mp4', storageKey: 'tnt_mock/renders/rnd_mock_export2/output.mp4',
+      sizeBytes: '32104', status: 'succeeded', errorCode: null,
+      createdAt: new Date(now - 5 * hour).toISOString(),
+    },
+    {
+      id: 'exp_seed_3', renderId: 'rnd_mock_export3', userId: 'usr_mock',
+      brandKitId: 'bk_mock_default', templateId: 'tpl_seed_breaking',
+      size: 'x', format: 'png', storageKey: null, sizeBytes: null,
+      status: 'failed', errorCode: 'PNG_UNSUPPORTED_TEMPLATE',
+      createdAt: new Date(now - 8 * hour).toISOString(),
+    },
+    {
+      id: 'exp_seed_4', renderId: 'rnd_mock_export4', userId: 'usr_mock',
+      brandKitId: 'bk_mock_arabic', templateId: 'tpl_seed_breaking',
+      size: 'x', format: 'png', storageKey: 'tnt_mock/renders/rnd_mock_export4/output.png',
+      sizeBytes: '184320', status: 'succeeded', errorCode: null,
+      createdAt: new Date(now - 26 * hour).toISOString(),
+    },
+    {
+      id: 'exp_seed_5', renderId: 'rnd_mock_export5', userId: 'usr_mock',
+      brandKitId: 'bk_mock_external', templateId: 'tpl_seed_breaking',
+      size: 'instagram', format: 'png', storageKey: 'tnt_mock/renders/rnd_mock_export5/output.png',
+      sizeBytes: '198445', status: 'succeeded', errorCode: null,
+      createdAt: new Date(now - 48 * hour).toISOString(),
+    },
+  ];
+})();
+
 // ── §13 Subscription + §14 Usage — mock stores ───────────
 // حدود ثابتة كما لو كنّا على باقة `starter`. quotas.videos.limit تحوّل
 // إلى 'unlimited' إن أُريد تجريب مسار PLAN_LIMIT.
@@ -1434,6 +1489,27 @@ export async function handleMock(
         z.createdAt > a.createdAt ? 1 : -1
       );
       return ok(200, { data: rows.map((r) => ({ ...r })), nextCursor: null, hasMore: false });
+    }
+
+    // ── 290-EXPORTS-SCREEN — GET /v1/exports (offset-based) ──
+    // مطابق شكلاً لـ`origin/main:apps/api/src/routes/exports/list.ts`:
+    // { data, nextCursor: null, total, limit, offset, hasMore }
+    // اختبار حياة: `window.__MK_EXPORTS_EMPTY__=true` يجعل الاستجابة فارغة.
+    // mock's handleMock لا يفكّ query فنُعيد الكلّ ونضع hasMore=false —
+    // ترقيم واقعيّ يبقى على mkapi الحقيقيّ.
+    case 'GET /v1/exports': {
+      const forceEmpty =
+        typeof window !== 'undefined' &&
+        (window as { __MK_EXPORTS_EMPTY__?: unknown }).__MK_EXPORTS_EMPTY__ === true;
+      const source = forceEmpty ? [] : MOCK_EXPORTS;
+      return ok(200, {
+        data: source.map((r) => ({ ...r })),
+        nextCursor: null,
+        total: source.length,
+        limit: source.length,
+        offset: 0,
+        hasMore: false,
+      });
     }
 
     // ── §13 GET /v1/subscription ──────────────────────────

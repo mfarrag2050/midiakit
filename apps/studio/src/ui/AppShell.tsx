@@ -35,6 +35,7 @@ const NAV: readonly NavItem[] = [
   { href: '/templates', labelKey: 'nav.templates', icon: '▤' },
   { href: '/assets', labelKey: 'nav.assets', icon: '◈' },
   { href: '/renders', labelKey: 'nav.renders', icon: '↗' },
+  { href: '/exports', labelKey: 'nav.exports', icon: '⇩' },
   { href: '/workflows', labelKey: 'nav.workflows', icon: '⇢' },
   { href: '/ai-settings', labelKey: 'nav.aiSettings', icon: '✱' },
   { href: '/billing', labelKey: 'nav.billing', icon: '⌂' },
