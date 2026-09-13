@@ -101,10 +101,12 @@ for i in $(seq 1 30); do
 done
 
 # ── URLs · داخل الحاوية pg على ${PG_CI_CONTAINER}:5432 ─────
-# migration_user + app_user يُنشئان تلقائيّاً بواسطة 01-roles.sql
+# migration_user + app_user + control_plane_user يُنشأون تلقائيّاً
+# بواسطة init sql عند إقلاع pg (نفس السكربتات المستعملة في dev).
 DB_URL_MIGRATION="postgres://migration_user:dev_migration_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
 DB_URL_APP="postgres://app_user:dev_app_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
 DB_URL_ADMIN="postgres://postgres:${PG_ADMIN_PASS}@${PG_CI_CONTAINER}:5432/mediakit_ci"
+DB_URL_PLATFORM="postgres://control_plane_user:dev_control_plane_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
 
 # سرّاً عشوائيّاً لكل تشغيل — لا يظهر في المخرَج
 AI_KEY=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
@@ -126,6 +128,7 @@ docker run --rm \
   -e DATABASE_URL="${DB_URL_MIGRATION}" \
   -e DATABASE_URL_APP="${DB_URL_APP}" \
   -e DATABASE_URL_ADMIN="${DB_URL_ADMIN}" \
+  -e DATABASE_URL_PLATFORM="${DB_URL_PLATFORM}" \
   -e AI_KEY_ENCRYPTION_KEY="${AI_KEY}" \
   -e SESSION_JWT_SECRET="${JWT_SECRET}" \
   -e PLATFORM_JWT_SECRET="${PLATFORM_JWT}" \
