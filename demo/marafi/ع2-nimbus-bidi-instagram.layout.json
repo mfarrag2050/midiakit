@@ -1,0 +1,170 @@
+{
+  "$schema": "310-typography-layout-v1",
+  "generated": "2026-09-13T10:38:18.216Z",
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "instagram",
+    "w": 1080,
+    "h": 1440
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1440
+  },
+  "input": {
+    "headline": "منصّة Nimbus تعلن خفض رسوم التخزين 25% بدءاً من الربع الأوّل",
+    "source": "مَرافئ",
+    "purpose": "ثنائيّ الاتّجاه وأرقام. Nimbus مُختلَقة. حالة L-102 (BiDi أخطأتُ في قراءتها الليلة)."
+  },
+  "headline": {
+    "fontSize": 80,
+    "lineHeight": 114,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "منصّة Nimbus تعلن",
+        "wordCount": 3,
+        "break": {
+          "after": "تعلن",
+          "beforeNextLine": "خفض"
+        },
+        "runs": [
+          {
+            "text": "منصّة",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 839,
+            "width": 170,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "Nimbus",
+            "dir": "ltr",
+            "xEnd": 820,
+            "xStart": 542,
+            "width": 277,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "تعلن",
+            "dir": "rtl",
+            "xEnd": 524,
+            "xStart": 383,
+            "width": 141,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      },
+      {
+        "index": 1,
+        "text": "خفض رسوم التخزين",
+        "wordCount": 3,
+        "break": {
+          "after": "التخزين",
+          "beforeNextLine": "25%"
+        },
+        "runs": [
+          {
+            "text": "خفض",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 823,
+            "width": 186,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "رسوم",
+            "dir": "rtl",
+            "xEnd": 804,
+            "xStart": 642,
+            "width": 162,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "التخزين",
+            "dir": "rtl",
+            "xEnd": 623,
+            "xStart": 396,
+            "width": 227,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      },
+      {
+        "index": 2,
+        "text": "25% بدءاً من الربع الأوّل",
+        "wordCount": 5,
+        "break": null,
+        "runs": [
+          {
+            "text": "25%",
+            "dir": "ltr",
+            "xEnd": 1009,
+            "xStart": 839,
+            "width": 170,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "بدءاً",
+            "dir": "rtl",
+            "xEnd": 820,
+            "xStart": 708,
+            "width": 112,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "من",
+            "dir": "rtl",
+            "xEnd": 689,
+            "xStart": 594,
+            "width": 96,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الربع",
+            "dir": "rtl",
+            "xEnd": 575,
+            "xStart": 441,
+            "width": 134,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الأوّل",
+            "dir": "rtl",
+            "xEnd": 422,
+            "xStart": 274,
+            "width": 148,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      }
+    ]
+  },
+  "diacritics": {
+    "status": "unmeasured",
+    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+  }
+}

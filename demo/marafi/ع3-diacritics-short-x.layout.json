@@ -1,0 +1,95 @@
+{
+  "$schema": "310-typography-layout-v1",
+  "generated": "2026-09-13T10:38:18.416Z",
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "x",
+    "w": 1080,
+    "h": 1080
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1080
+  },
+  "input": {
+    "headline": "قَرارٌ مُفاجِئ بتَعليقِ الرِّحلات",
+    "source": "مَرافئ",
+    "purpose": "التشكيل وقِصَر السطر. علاماتٌ متراكمة (شدّة · همزة على كرسيّ · تنوين). قصيرٌ عمداً — ضبط العناوين الطويلة يكسر القصيرة كثيراً."
+  },
+  "headline": {
+    "fontSize": 49,
+    "lineHeight": 70,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "قَرارٌ مُفاجِئ",
+        "wordCount": 2,
+        "break": {
+          "after": "مُفاجِئ",
+          "beforeNextLine": "بتَعليقِ"
+        },
+        "runs": [
+          {
+            "text": "قَرارٌ",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 947,
+            "width": 62,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مُفاجِئ",
+            "dir": "rtl",
+            "xEnd": 936,
+            "xStart": 813,
+            "width": 123,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      },
+      {
+        "index": 1,
+        "text": "بتَعليقِ الرِّحلات",
+        "wordCount": 2,
+        "break": null,
+        "runs": [
+          {
+            "text": "بتَعليقِ",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 893,
+            "width": 116,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الرِّحلات",
+            "dir": "rtl",
+            "xEnd": 881,
+            "xStart": 743,
+            "width": 138,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      }
+    ]
+  },
+  "diacritics": {
+    "status": "unmeasured",
+    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+  }
+}

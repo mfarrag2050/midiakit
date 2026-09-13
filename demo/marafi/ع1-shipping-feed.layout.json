@@ -1,0 +1,179 @@
+{
+  "$schema": "310-typography-layout-v1",
+  "generated": "2026-09-13T10:38:17.960Z",
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "feed",
+    "w": 1080,
+    "h": 1350
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1350
+  },
+  "input": {
+    "headline": "ارتفاع أسعار الشحن البحريّ يدفع مستوردي المواد الغذائيّة إلى مراجعة عقودهم السنويّة",
+    "source": "مَرافئ",
+    "purpose": "الكسر الدلاليّ والكشيدة — حالة 107 نفسها. الكسر الساذج يشطر «مستوردي المواد الغذائيّة» (إضافة) أو يُيتّم «إلى»."
+  },
+  "headline": {
+    "fontSize": 80,
+    "lineHeight": 114,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "ارتفاع أسعار الشحن البحريّ",
+        "wordCount": 4,
+        "break": {
+          "after": "البحريّ",
+          "beforeNextLine": "يدفع"
+        },
+        "runs": [
+          {
+            "text": "ارتفاع",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 845,
+            "width": 164,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "أسعار",
+            "dir": "rtl",
+            "xEnd": 826,
+            "xStart": 667,
+            "width": 159,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الشحن",
+            "dir": "rtl",
+            "xEnd": 648,
+            "xStart": 433,
+            "width": 216,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "البحريّ",
+            "dir": "rtl",
+            "xEnd": 414,
+            "xStart": 213,
+            "width": 201,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      },
+      {
+        "index": 1,
+        "text": "يدفع مستوردي المواد الغذائيّة",
+        "wordCount": 4,
+        "break": {
+          "after": "الغذائيّة",
+          "beforeNextLine": "إلى"
+        },
+        "runs": [
+          {
+            "text": "يدفع",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 864,
+            "width": 145,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مستوردي",
+            "dir": "rtl",
+            "xEnd": 846,
+            "xStart": 563,
+            "width": 282,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "المواد",
+            "dir": "rtl",
+            "xEnd": 544,
+            "xStart": 372,
+            "width": 173,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الغذائيّة",
+            "dir": "rtl",
+            "xEnd": 353,
+            "xStart": 132,
+            "width": 221,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      },
+      {
+        "index": 2,
+        "text": "إلى مراجعة عقودهم السنويّة",
+        "wordCount": 4,
+        "break": null,
+        "runs": [
+          {
+            "text": "إلى",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 933,
+            "width": 76,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مراجعة",
+            "dir": "rtl",
+            "xEnd": 914,
+            "xStart": 705,
+            "width": 209,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "عقودهم",
+            "dir": "rtl",
+            "xEnd": 686,
+            "xStart": 437,
+            "width": 249,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "السنويّة",
+            "dir": "rtl",
+            "xEnd": 418,
+            "xStart": 193,
+            "width": 226,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": []
+      }
+    ]
+  },
+  "diacritics": {
+    "status": "unmeasured",
+    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+  }
+}
