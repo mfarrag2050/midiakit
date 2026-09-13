@@ -26,6 +26,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // packages/db/scripts/check-template-sync.mjs → packages/templates/src/templates
@@ -47,21 +48,13 @@ function canonicalHash(obj) {
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
-// **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** غياب المتغيّر ⇒ فشل صريح.
-// السلوك السابق («يُتخطّى · exit 0») كان صنف «تخطّت نفسها بصمت» — بوابة
-// تُعلن فحصاً وتخرج بصفر بلا أن تفحص. القاعدة الآن: من لا يستطيع أن يفحص
-// يقول ذلك ويفشل. لا `CI=true` ولا أيّ شرط بيئيّ — منفذ هروب جديد باسم
-// جديد هو نفس المنفذ القديم.
+// 142-SKIP-IS-NOT-PASS — لا `exit 0` صامتاً حين يغيب المورد.
 if (!DB_URL) {
-  console.error('[check-template-sync] ✗ DATABASE_URL غير مضبوطة — البوابة لا تستطيع أن تفحص.');
-  console.error('  ما لم يُفحَص: تطابق hash القوالب في `templates WHERE scope=global`');
-  console.error('  مع sha256 canonical لكل ملفٍّ في packages/templates/src/templates/*.json.');
-  console.error('  الأثر: أيّ انحراف بين ملفّ وصفّه يعبر بلا إنذار.');
-  console.error('  الحلّ:');
-  console.error('    • محلّياً: `pnpm db:up && pnpm db:migrate` ثمّ صدِّر DATABASE_URL');
-  console.error('      (راجع packages/db/.env.example).');
-  console.error('    • في CI: مرِّر DATABASE_URL كسرّ إلى خدمة postgres.');
-  process.exit(1);
+  skipMissingResource({
+    scriptName: 'check-template-sync',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 const pool = new pg.Pool({ connectionString: DB_URL, max: 1 });
@@ -77,14 +70,13 @@ try {
   );
   rows = r.rows;
 } catch (err) {
-  // **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** فشل الاتصال ⇒ فشل صريح.
-  // اتصال DATABASE_URL موجود لكنّ الخادم لا يستجيب أو الجدول مفقود ⇒ لم
-  // يُفحَص أيّ ملفٍّ، فلا يُدَّعى الفحص.
-  console.error(`[check-template-sync] ✗ تعذّر الاتصال بـDB (${err.code || err.message}).`);
-  console.error('  ما لم يُفحَص: تطابق hash القوالب مع صفوف `templates`.');
-  console.error('  الحلّ: تأكّد أنّ postgres يعمل وأنّ الهجرات مُطبَّقة.');
+  // 142-SKIP-IS-NOT-PASS — تعذّر الاتصال = مورد غائب · ليس نجاح فحص.
   await pool.end();
-  process.exit(1);
+  skipMissingResource({
+    scriptName: 'check-template-sync',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 } finally {
   // pool يُغلَق في نهاية النجاح أيضاً — نتأكّد لاحقاً.
 }

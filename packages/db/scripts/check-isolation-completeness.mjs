@@ -19,12 +19,17 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
+// 142-SKIP-IS-NOT-PASS
 if (!DB_URL) {
-  console.log('[check-isolation-completeness] لا DATABASE_URL — يُتخطّى (dev بلا قاعدة).');
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-isolation-completeness',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 // جداول لا تخصّ عزل المستأجرين (نظام أو منصّة أو مرجعية عامة):
@@ -40,6 +45,11 @@ const NOT_ISOLATED = new Set([
   'platform_users',
   'platform_sessions',
   'plan_revisions',
+  // tenant_deletion_log — سجلّ منصّة (audit hard-delete). النيّة معلَنة
+  // صراحة في migration 20260912000000: «app_user لا يمسّه — بيانات منصّة».
+  // يحمل tenant_id لكن بلا FK إلى tenants (يبقى بعد حذف المستأجر · شرط
+  // سياسة الاحتفاظ).
+  'tenant_deletion_log',
 ]);
 
 // نقرأ APP_USER_EXPECTED_GRANTS من verify-isolation.mjs بـregex بسيط.
@@ -68,9 +78,13 @@ try {
   `);
   allTables = r.rows.map((row) => row.tablename);
 } catch (err) {
-  console.log(`[check-isolation-completeness] تعذّر الاتصال (${err.code || err.message}) — يُتخطّى.`);
+  // 142-SKIP-IS-NOT-PASS
   await pool.end();
-  process.exit(0);
+  skipMissingResource({
+    scriptName: 'check-isolation-completeness',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 }
 await pool.end();
 

@@ -35,6 +35,7 @@ const MK_CI_COVERS = [
   'corepack pnpm',                          // ✓
   'تخبئة متجر pnpm',                        // ~ (node_modules volume — بديل)
   'pnpm install (frozen)',                  // ✓
+  'تشغيل الهجرات على postgres',            // ✓ (bin/mk-ci يرفع pg ephemeral + pnpm db:migrate بعد دمج 250)
   'pnpm test (31 بوابة',                    // ✓
 ];
 

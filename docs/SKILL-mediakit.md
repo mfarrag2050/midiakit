@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-12 · **HEAD:** `fa67467` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `6e6519e` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -57,21 +57,21 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 191 | 1 |
-| `feat/api` | `2010046` | 11 | 8 | 195 |
-| `feat/ci` | `8901ed8` | 22 | 3 | 211 |
-| `feat/dashboards` | `376077c` | 0 | 80 | 112 |
-| `feat/studio` | `fe0f71e` | 43 | 10 | 225 |
-| `origin/aa-internal` | `ee178ca` | 0 | 191 | 1 |
-| `origin/feat/api` | `2010046` | 11 | 8 | 195 |
-| `origin/feat/ci` | `8901ed8` | 22 | 3 | 211 |
-| `origin/feat/dashboards` | `376077c` | 0 | 80 | 112 |
-| `origin/feat/studio` | `fe0f71e` | 43 | 10 | 225 |
+| `aa-internal` | `ee178ca` | 0 | 315 | 1 |
+| `feat/api` | `d629f74` | 8 | 104 | 220 |
+| `feat/ci` | `135806d` | 32 | 73 | 275 |
+| `feat/dashboards` | `376077c` | 0 | 204 | 112 |
+| `feat/studio` | `2b12dd1` | 13 | 81 | 248 |
+| `origin/aa-internal` | `ee178ca` | 0 | 315 | 1 |
+| `origin/feat/api` | `d629f74` | 8 | 104 | 220 |
+| `origin/feat/ci` | `135806d` | 32 | 73 | 275 |
+| `origin/feat/dashboards` | `376077c` | 0 | 204 | 112 |
+| `origin/feat/studio` | `2b12dd1` | 13 | 81 | 248 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (72):** `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/api (63):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:isolation-completeness` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **main (79):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:isolation-completeness` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (67):** `check:auth-coverage` · `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-mirror` · `check:isolation-completeness` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (70):** `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
@@ -81,8 +81,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-77
-- **العدد الفريد:** 72 · **الإدخالات:** 72
+- **المدى:** L-1 → L-78
+- **العدد الفريد:** 73 · **الإدخالات:** 73
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -101,12 +101,15 @@ description: |
 - `apps/api/src/routes/assets/delete.ts`
 - `apps/api/src/routes/assets/detect-faces.ts`
 - `apps/api/src/routes/assets/finalize.ts`
+- `apps/api/src/routes/assets/font-serve.test.ts`
+- `apps/api/src/routes/assets/font-serve.ts`
 - `apps/api/src/routes/assets/get.ts`
 - `apps/api/src/routes/assets/list.ts`
 - `apps/api/src/routes/assets/patch-faces.ts`
 - `apps/api/src/routes/assets/refresh-url.ts`
 - `apps/api/src/routes/assets/shared/kind-rules.ts`
 - `apps/api/src/routes/assets/shared/mapper.ts`
+- `apps/api/src/routes/assets/tenant-isolation.test.ts`
 - `apps/api/src/routes/assets/upload-url.ts`
 - `apps/api/src/routes/auth/forgot-password.ts`
 - `apps/api/src/routes/auth/login.ts`
@@ -123,6 +126,9 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/patch-content-type.test.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
+- `apps/api/src/routes/exports/list.test.ts`
+- `apps/api/src/routes/exports/list.ts`
+- `apps/api/src/routes/health.test.ts`
 - `apps/api/src/routes/health.ts`
 - `apps/api/src/routes/platform/auth/login.ts`
 - `apps/api/src/routes/platform/auth/logout.ts`
@@ -139,6 +145,8 @@ description: |
 - `apps/api/src/routes/platform/plans/update.ts`
 - `apps/api/src/routes/platform/shared/role-guard.ts`
 - `apps/api/src/routes/platform/tenants/get.ts`
+- `apps/api/src/routes/platform/tenants/hard-delete.test.ts`
+- `apps/api/src/routes/platform/tenants/hard-delete.ts`
 - `apps/api/src/routes/platform/tenants/list.ts`
 - `apps/api/src/routes/platform/tenants/update.ts`
 - `apps/api/src/routes/platform/users/create.ts`
@@ -159,14 +167,23 @@ description: |
 - `apps/api/src/routes/projects/state.ts`
 - `apps/api/src/routes/projects/transitions.ts`
 - `apps/api/src/routes/projects/update.ts`
+- `apps/api/src/routes/public-routes.ts`
+- `apps/api/src/routes/ready.test.ts`
+- `apps/api/src/routes/ready.ts`
 - `apps/api/src/routes/renders/brand-snapshot.ts`
 - `apps/api/src/routes/renders/cancel.ts`
 - `apps/api/src/routes/renders/create.ts`
 - `apps/api/src/routes/renders/delete.ts`
+- `apps/api/src/routes/renders/empty-layers.test.ts`
+- `apps/api/src/routes/renders/export-e2e.test.ts`
+- `apps/api/src/routes/renders/export-flow.test.ts`
+- `apps/api/src/routes/renders/export-limits.test.ts`
 - `apps/api/src/routes/renders/get.ts`
 - `apps/api/src/routes/renders/list.ts`
 - `apps/api/src/routes/renders/output.ts`
+- `apps/api/src/routes/renders/render-parity.test.ts`
 - `apps/api/src/routes/renders/shared/mapper.ts`
+- `apps/api/src/routes/renders/snapshot-guard.test.ts`
 - `apps/api/src/routes/renders/template-snapshot.ts`
 - `apps/api/src/routes/revisions/factory.ts`
 - `apps/api/src/routes/subscription/cancel.ts`
@@ -180,6 +197,8 @@ description: |
 - `apps/api/src/routes/templates/list.ts`
 - `apps/api/src/routes/templates/shared/mapper.ts`
 - `apps/api/src/routes/templates/update.ts`
+- `apps/api/src/routes/tenant/data-export.test.ts`
+- `apps/api/src/routes/tenant/data-export.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
 - `apps/api/src/routes/usage/current.ts`
@@ -202,7 +221,7 @@ description: |
 ### محتويات المستودع — من main (`ls`)
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
-- **`demo/`:** 17 ملف
+- **`demo/`:** 18 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- END:GENERATED -->

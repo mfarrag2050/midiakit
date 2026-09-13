@@ -1,0 +1,243 @@
+{
+  "$schema": "340-typography-layout-v2",
+  "generated": "2026-09-13T15:03:48.212Z",
+  "pipelineCoverage": {
+    "preprocessBidi": "called",
+    "parseTokens": "called",
+    "computeBreakPenalties": "called",
+    "wrapOptimal": "called",
+    "justifyLine": "called",
+    "normalizeHeadlineFont": "not-called",
+    "computeHeadlineLayout": "not-called",
+    "drawHeadlineLine": "not-applicable"
+  },
+  "pipelineCoverageNotes": {
+    "normalizeHeadlineFont": "قواعد اشتقاق fs/lineHeight · إن أضاف engine قاعدة جديدة الأداة تفوّتها",
+    "computeHeadlineLayout": "dynamic lineHeightMode لا يُستعمل هنا (brand.typography.lineHeightMode=fixed)",
+    "drawHeadlineLine": "الرسم الفعليّ + استهلاك font metrics · الأداة تقيس الطول لا البكسل"
+  },
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "reel",
+    "w": 1080,
+    "h": 1920
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1920
+  },
+  "input": {
+    "headline": "منصّة Nimbus تعلن خفض رسوم التخزين 25% بدءاً من الربع الأوّل",
+    "headlineProcessed": "منصّة Nimbus تعلن خفض رسوم التخزين ٢٥% بدءاً من الربع الأوّل",
+    "source": "مَرافئ",
+    "purpose": "ثنائيّ الاتّجاه وأرقام. Nimbus مُختلَقة. حالة L-102 (BiDi أخطأتُ في قراءتها الليلة)."
+  },
+  "headline": {
+    "fontSize": 80,
+    "lineHeight": 114,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "منصّة Nimbus تعلن",
+        "wordCount": 3,
+        "break": {
+          "after": "تعلن",
+          "beforeNextLine": "خفض"
+        },
+        "runs": [
+          {
+            "text": "منصّة",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 839,
+            "width": 170,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "Nimbus",
+            "dir": "ltr",
+            "xEnd": 820,
+            "xStart": 542,
+            "width": 277,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "تعلن",
+            "dir": "rtl",
+            "xEnd": 524,
+            "xStart": 383,
+            "width": 141,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      },
+      {
+        "index": 1,
+        "text": "خفض رسوم التخزين",
+        "wordCount": 3,
+        "break": {
+          "after": "التخزين",
+          "beforeNextLine": "٢٥%"
+        },
+        "runs": [
+          {
+            "text": "خفض",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 823,
+            "width": 186,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "رسوم",
+            "dir": "rtl",
+            "xEnd": 804,
+            "xStart": 642,
+            "width": 162,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "التخزين",
+            "dir": "rtl",
+            "xEnd": 623,
+            "xStart": 396,
+            "width": 227,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      },
+      {
+        "index": 2,
+        "text": "٢٥% بدءاً من الربع الأوّل",
+        "wordCount": 5,
+        "break": null,
+        "runs": [
+          {
+            "text": "٢٥%",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 854,
+            "width": 155,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "بدءاً",
+            "dir": "rtl",
+            "xEnd": 835,
+            "xStart": 723,
+            "width": 112,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "من",
+            "dir": "rtl",
+            "xEnd": 705,
+            "xStart": 609,
+            "width": 96,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الربع",
+            "dir": "rtl",
+            "xEnd": 590,
+            "xStart": 456,
+            "width": 134,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الأوّل",
+            "dir": "rtl",
+            "xEnd": 437,
+            "xStart": 289,
+            "width": 148,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      }
+    ]
+  },
+  "diacritics": {
+    "method": "differential-ink-box",
+    "statusVersion": "330-quaternary",
+    "status": "marks-inside-box",
+    "measurements": [
+      {
+        "word": "منصّة",
+        "fs": 80,
+        "status": "marks-inside-box",
+        "diffCount": 198,
+        "inkWith": 2801,
+        "inkWithout": 2616,
+        "topWith": 94,
+        "topWithout": 94,
+        "deltaTop": 0,
+        "aboveBaselineWith": 56,
+        "aboveBaselineWithout": 56
+      },
+      {
+        "word": "بدءاً",
+        "fs": 80,
+        "status": "marks-above-box",
+        "diffCount": 208,
+        "inkWith": 1770,
+        "inkWithout": 1577,
+        "topWith": 63,
+        "topWithout": 90,
+        "deltaTop": 27,
+        "aboveBaselineWith": 87,
+        "aboveBaselineWithout": 60
+      },
+      {
+        "word": "الأوّل",
+        "fs": 80,
+        "status": "marks-inside-box",
+        "diffCount": 203,
+        "inkWith": 3223,
+        "inkWithout": 3027,
+        "topWith": 81,
+        "topWithout": 81,
+        "deltaTop": 0,
+        "aboveBaselineWith": 69,
+        "aboveBaselineWithout": 69
+      }
+    ]
+  }
+}

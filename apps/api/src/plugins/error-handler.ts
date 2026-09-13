@@ -43,6 +43,20 @@ const plugin: FastifyPluginAsync = async (fastify) => {
       return;
     }
 
+    // 160-SNAPSHOT-REPAIR — trigger renders_snapshot_guard يرمي بـSQLSTATE
+    // 54K01 حين status='succeeded' + snapshot ناقص. نترجم إلى 422 مسمّى.
+    if ((err as { code?: string }).code === '54K01') {
+      reply.status(422).send({
+        error: {
+          code: 'RENDER_SNAPSHOT_INCOMPLETE',
+          message: 'errors.RENDER_SNAPSHOT_INCOMPLETE',
+          field: 'brand_snapshot',
+          requestId,
+        },
+      });
+      return;
+    }
+
     req.log.error({ err, requestId }, 'unhandled error');
     reply.status(500).send({
       error: {

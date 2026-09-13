@@ -24,7 +24,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { mergePatch, findBlockedPath, type JsonObject, type JsonValue } from '../../shared/json-merge-patch.js';
 import { toFull, type DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
-import { ImmutableField, NotFound, ValidationFailed } from '../../errors.js';
+import { ImmutableField, NotFound, ValidationFailed, InvalidFontMetrics } from '../../errors.js';
+import type { PoolClient } from 'pg';
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
@@ -108,6 +109,11 @@ const route: FastifyPluginAsync = async (fastify) => {
 
     const mergedConfig = mergePatch(row.config as JsonValue, patchForConfig as JsonValue);
 
+    // FONT-METRICS-UPLOAD (90) — حين يُقدَّم assetId لخطّ في الPATCH،
+    // نجلب metrics من assets.metadata.metrics (المُقاسة عند finalize) ونحقنها
+    // في نفس الوزن. الغياب ⇒ 422 INVALID_FONT_METRICS (الخطّ غير مقيس).
+    await injectFontMetricsFromAssets(req.dbClient!, patchForConfig as JsonObject, mergedConfig as JsonObject);
+
     // 3. UPDATE (RLS يحمي — نفس المستأجر)
     const updated = await req.dbClient!.query<DbBrandKitRow>(
       `UPDATE brand_kits
@@ -119,5 +125,83 @@ const route: FastifyPluginAsync = async (fastify) => {
     return toFull(updated.rows[0]!);
   });
 };
+
+/**
+ * FONT-METRICS-UPLOAD (90) — إن ذكر PATCH `assetId` لأيّ وزن خطّ، نجلب
+ * الأصل ونحقن metrics من `assets.metadata.metrics` في `mergedConfig`.
+ * يمرّ عبر `req.dbClient` (RLS — لا نقرأ أصولاً لمستأجر آخر).
+ *
+ * السلوك:
+ *   • assetId في patch + asset له metrics ⇒ حقن (override أيّ قيمة عميل)
+ *   • assetId في patch + asset بلا metrics ⇒ 422 INVALID_FONT_METRICS
+ *   • assetId في patch + asset غير موجود ⇒ 422 INVALID_FONT_METRICS
+ *     (نتجنّب 404 حتى لا نكشف وجود/غياب أصول مستأجرين آخرين)
+ *   • لا assetId في patch ⇒ لا فعل
+ */
+async function injectFontMetricsFromAssets(
+  db: PoolClient,
+  patch: JsonObject,
+  merged: JsonObject,
+): Promise<void> {
+  const patchFonts = patch['fonts'];
+  if (!patchFonts || typeof patchFonts !== 'object' || Array.isArray(patchFonts)) return;
+
+  const familyKeys = ['primary'] as const;
+  // نمرّ على primary أوّلاً، ثم على byLocale.<group> إن وُجدت
+  const patchFamilies: [string[], JsonObject][] = [];
+  for (const k of familyKeys) {
+    const f = (patchFonts as JsonObject)[k];
+    if (f && typeof f === 'object' && !Array.isArray(f)) patchFamilies.push([['fonts', k], f as JsonObject]);
+  }
+  const patchByLocale = (patchFonts as JsonObject)['byLocale'];
+  if (patchByLocale && typeof patchByLocale === 'object' && !Array.isArray(patchByLocale)) {
+    for (const group of Object.keys(patchByLocale as JsonObject)) {
+      const f = (patchByLocale as JsonObject)[group];
+      if (f && typeof f === 'object' && !Array.isArray(f)) patchFamilies.push([['fonts', 'byLocale', group], f as JsonObject]);
+    }
+  }
+
+  for (const [famPath, famPatch] of patchFamilies) {
+    const weights = famPatch['weights'];
+    if (!weights || typeof weights !== 'object' || Array.isArray(weights)) continue;
+    for (const weightKey of Object.keys(weights as JsonObject)) {
+      const w = (weights as JsonObject)[weightKey];
+      if (!w || typeof w !== 'object' || Array.isArray(w)) continue;
+      const assetId = (w as JsonObject)['assetId'];
+      if (typeof assetId !== 'string') continue;
+
+      const r = await db.query<{ metadata: Record<string, unknown> | null }>(
+        `SELECT metadata FROM assets WHERE id = $1 AND kind = 'font'`,
+        [assetId],
+      );
+      if (r.rowCount === 0) throw InvalidFontMetrics();
+      const meta = r.rows[0]!.metadata;
+      const metrics = meta && typeof meta === 'object' ? (meta['metrics'] as unknown) : undefined;
+      if (!metrics || typeof metrics !== 'object') throw InvalidFontMetrics();
+      const m = metrics as Record<string, unknown>;
+      if (typeof m['ascent'] !== 'number' || typeof m['descent'] !== 'number' || typeof m['unitsPerEm'] !== 'number') {
+        throw InvalidFontMetrics();
+      }
+
+      // حقن في mergedConfig — نضمن وجود المسار (mergePatch أنشأه من patch)
+      let cursor: JsonObject = merged;
+      for (const seg of famPath) {
+        if (!cursor[seg] || typeof cursor[seg] !== 'object' || Array.isArray(cursor[seg])) {
+          cursor[seg] = {};
+        }
+        cursor = cursor[seg] as JsonObject;
+      }
+      if (!cursor['weights'] || typeof cursor['weights'] !== 'object' || Array.isArray(cursor['weights'])) {
+        cursor['weights'] = {};
+      }
+      const weightsMerged = cursor['weights'] as JsonObject;
+      if (!weightsMerged[weightKey] || typeof weightsMerged[weightKey] !== 'object' || Array.isArray(weightsMerged[weightKey])) {
+        weightsMerged[weightKey] = {};
+      }
+      const wMerged = weightsMerged[weightKey] as JsonObject;
+      wMerged['metrics'] = { ascent: m['ascent'], descent: m['descent'], unitsPerEm: m['unitsPerEm'] };
+    }
+  }
+}
 
 export default route;

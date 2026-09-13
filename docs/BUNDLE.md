@@ -8,10 +8,10 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-12
-> **HEAD (main):** `fa67467`
-> **HEAD (origin/feat/api):** `2010046`
-> **HEAD (origin/feat/studio):** `fe0f71e`
+> **تاريخ التوليد:** 2026-09-13
+> **HEAD (main):** `6e6519e`
+> **HEAD (origin/feat/api):** `d629f74`
+> **HEAD (origin/feat/studio):** `2b12dd1`
 
 ## الفهرس
 
@@ -19,7 +19,7 @@
 |---|---:|:---|:---|
 | `docs/01-product.md` | 94 | `e052dd8d96b9` | local |
 | `docs/02-architecture.md` | 418 | `5350e2e4e3c5` | local |
-| `docs/03-brand-kit-spec.md` | 438 | `49860feac409` | local |
+| `docs/03-brand-kit-spec.md` | 448 | `381efb08c286` | local |
 | `docs/04-template-spec.md` | 295 | `05baffe71130` | local |
 | `docs/05-engine-api.md` | 360 | `fb6c8717a10c` | local |
 | `docs/06-roadmap.md` | 179 | `f9022e8013a3` | local |
@@ -35,11 +35,11 @@
 | `docs/16-api-contract.md` | 1702 | `560b518765bd` | local |
 | `docs/17-phase4-plan.md` | 1120 | `2ff47d5bd093` | local |
 | `docs/INVENTORY.md` | 174 | `52330c4e5048` | local |
-| `docs/LESSONS.md` | 2726 | `f6629bc5cea9` | local |
+| `docs/LESSONS.md` | 2755 | `a93d00afa7bc` | local |
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
-| `docs/SKILL-mediakit.md` | 366 | `a807cb1fb7c5` | local |
+| `docs/SKILL-mediakit.md` | 385 | `9a9da7ce4e2a` | local |
 | `PHASES.md` | 1563 | `37fedfeec5f4` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
@@ -1008,6 +1008,16 @@ Free Music Archive (قسم CC0 فقط) · ccMixter (Public Domain) · Musopen (�
   — الشعار يبقى في «زاوية البداية» بصرياً.
 - `false` (الافتراضي): الأنكور كما هو — يتيح للعميل خياراً.
 - **العمودي لا ينعكس** — `top`/`bottom` مستقل عن اللغة.
+
+### `align` لأنكور بنيويّ (99G · 2026-09-12)
+
+حين يكون الأنكور بنيويّاً (مشتقّ من طبقة أخرى — حاليّاً `SourceLayer`
+بأنكور `'below-headline'`)، المحاذاة الأفقيّة لا تُشتَقّ من `anchor`
+الشاشيّ بل من حقلٍ منفصل `align` على نفس `PlacementSpec`. الأنكور الشاشيّ
+يبقى للحالة غير البنيويّة، والمحاذاة تكفي البنيويّة. **الافتراضي على
+`placement.source`: `'left'`** (أسلوب البيت: سطر الوكالة يحاذي الحافّة
+اليسرى لكتلة العنوان، لا حافّة اللوحة). لكلّ عميل تخصيصه — القيم:
+`'left' | 'center' | 'right'`.
 
 ═══════════════════════════════════════════════════════════════
 # docs/04-template-spec.md
@@ -9762,9 +9772,38 @@ studio. البوّابة سقطت هنا لأنّ هنا فقط كانت قاد�
 تعني «بعد دمج الفرعَين»، والبوّابة صحيحة تُشغَّل عند التلاقي لا
 عند الإنشاء.
 
+## L-78 — أداة القياس التي لا تعكس مسار الإنتاج تخترع عطباً وهميّاً وتُخفي الحقيقيّ
+
+**الشاهد التاريخيّ (2026-09-13 · تذكرة 320):** كتبتُ سكربت
+`scripts/300-emit-layout.mjs` لينتج `.layout.json` بجانب لقطات مَرافئ.
+استخرجتُ tokens بـ`parseTokens(c.headline)` مباشرة · نسيتُ استدعاء
+`preprocessBidi` الذي يستدعيه `renderFrame` في `render.ts:583` قبل
+parseTokens. النتيجة: `layout.json` عرض «25%» بينما اللقطات PNG رسمت
+«٢٥%». اتّهمتُ المحرّك في التقرير الأوّل («brand.bidi.numerals=arabic
+بلا أثر»)، ورفعتُ التذكرة للمالك. المالك بدوره نقل الاتّهام قبل
+التحقّق. القياس اخترع عطباً لم يكن. مسار المحرّك سليم — سكربت
+التشخيص هو الناقص.
+
+**كيف يُطبَّق:**
+- **قبل أن تُصدّق أداة قياس، أثبت أنّها تمرّ بنفس ما يمرّ به الإنتاج.**
+- أدوات التشخيص تستدعي **نفس الدوالّ العامّة** التي يستدعيها المحرّك
+  في مسار الرسم — لا اختصار، لا استئناف من منتصف الأنبوب.
+- **قبل تفسير مخرَج قياس**، شغّل «سيناريو معروف الجواب» (النصّ يجب أن
+  يحوي ٢٥ بعد التحويل · اللقطة يجب أن تحوي «مَرافئ»). إن أخطأت الأداة
+  في الجواب المعروف، أخطأت في المجهول.
+- كلّ سكربت يزعم قياس مسار رسم يذكر صراحة أيّ دوال engine استدعاها
+  ولأيّ خطوة — تعليق `// يعكس renderFrame:583-590` مثلاً.
+
+**قرار مرتبط:** L-46 (اختبار حياة أحمر ثمّ أخضر) — L-78 يُوسّع: أداة
+القياس نفسها تحتاج L-46 على مثال معروف الجواب قبل الاعتماد عليها ·
+L-41 (اختلاف مقياسَين — افحص ما يقيسه كلّ واحد) — L-78 يُتَمِّم: أحياناً
+الفرق أنّ أحدهما لا يمرّ بالتحويل الذي يمرّ به الآخر · L-71 (سكربت بلا
+مفتاح ليس بوّابة) — L-78 يوسّع إلى القياس: قياس بلا اتّصال بمسار
+الإنتاج يقيس فراغاً.
+
 قبل بدء مهمة جوهرية:
 1. اقرأ هذا الملف كاملاً — تحت 6 دقائق.
-2. اسأل: أيّ درس مرشّح للتكرار في هذه المهمة؟ (L-01 عند نقل من الأصل، L-02 عند كتابة عتبة، L-03 عند تغيير بصري، L-04 عند حدود نظام، L-05 عند إضافة رقم، L-06 عند تحدّي مواصفة، L-07 عند حلقة إطارات/زمن، L-08 عند قاعدة نحوية، L-09 عند بناء تحسين، L-10 عند بوابة تفترض ثمناً، L-11 عند «نسبة غير مصنّفة» غير مفسَّرة، L-12 عند إضافة مكوّن غير-JS، L-14 عند تصميم دالة على مجموعة، L-15 عند تغيير قرار معماري متأخر، L-16 عند بناء بوابة كمّية لمخرج بصري، L-17 قبل إعلان نجاح بوابة تُنتج صورة/فيديو، L-18 عند حساب صيغة زمن على نظام متوازٍ، L-19 عند تعداد BullMQ 5، L-20 عند بناء Next.js app جديد يستهلك workspace ESM، L-21 عند تصميم «حالة نظام»، L-22 عند رسائل API متعددة اللغات، L-23 عند مركّب رقمي في RTL، L-24 عند تصميم قاعدة i18n للخلط، L-25 بعد أي عمل لغوي/بصري، L-26 قبل تخطيط مرحلة كبيرة أو منتج جديد، L-27 قبل تثبيت أي تصنيف «مؤجَّل/مرفوض» ودورياً على المسبق منها، L-28 عند اقتراح أيّ أصل يمثّل علامة تجارية — فَحص رخصتَين لا واحدة، L-29 عند إضافة مصدر خارجي — صمّم تجميد إصدار قبل الحاجة، L-30 عند تصميم منتج B2B — اسأل «مستخدم واحد أم فريق؟»، L-31 عند بدء مواصفة — اسأل «كيف يعمل العمل يومياً؟» لا «ما الميزات المطلوبة؟»، L-32 قبل أيّ فعل بعد تعليمة توقّف — لا تجتهد، توسّع النطاق لا تضيّقه، L-33 عند تناقض التوجيه مع فحص أجريتَه — اعرض التناقض واطلب تأكيداً لا ترجّح، L-34 قبل كتابة أيّ رقم في مادة تسويقية — لكل رقم مصدر قياس، وإلا حُذف، L-35 عند اختلاف رقمَين — شغّل القياس وأرسل الناتج، لا تشرح الفرق سردياً، L-36 عند قياس أثر ميزة انتقائية — قسّم إلى «تدخّلت/لم تتدخّل» وقس على الأولى، L-40 عند استلام مهمة جديدة — إن لم تلمس packages/ ⇒ فرع مستقل، L-41 عند تعارض مقياسين — افحص ما يقيسه كل واحد + استعن باللقطة البصرية، L-42 قبل تشغيل قياس دقة — طابق العيّنة لحالة الاستخدام الفعلية، لا للسهلة الوصول، L-46 قبل كتابة اختبار ثبات — اكتب اختبار وجود أولاً، وإلا حرست فراغاً، L-47 قبل الاعتماد على قيد نصّي مطلق — ابنِ بوابة آلية تفحصه، لأن التلوث يعود من نصوص الاختبار لا من الكود، L-48 قبل الإحالة من وثيقة إلى مسار — تأكّد أنه ليس في مجلد مؤقّت؛ المخرج الذي يُعرض لا يعيش في out/، L-49 قبل أيّ افتراض عن «لغة العميل» — ميّز بين لغة الواجهة ولغة الرسائل ولغة المحتوى، وحدَها الثالثة تُحدّد سلوك المحرك، L-50 قبل أيّ حساب تخطيطي يعتمد على measureText — تحقّق من combining marks (تشكيل عربي)؛ عند وجودها، القياس البكسلي هو الوحيد الموثوق، L-51 عند نفي كل الفرضيات المطروحة — لا تتوقّف، اقرأ المخرج الخام؛ الفرضية الصحيحة قد تكون خامسة لم تُذكر، L-52 عند تصحيح المالك لاسم مكوّن — ابحث قبل الافتراض؛ التصحيح لا يُثبت الوجود، فقط القصد، L-53 عند إعلان إنجاز مركّب — تحقّق من كل بند بمسار ملف أو أمر؛ الفجوة في تسلسل مرقَّم مؤشر مجاني على عمل غير منجَز، L-54 بعد كل قاعدة تشغيلية — ابنِ سكربتاً يفشل عند مخالفتها وإلا فهي توصية، L-55 المخرج المعروض يعيش في demo/ لا out/ · فحص آلي يمنع الإحالة من وثيقة إلى مؤقت، L-56 التسجيل فور الإقرار لا بعد اكتمال المهمة — الدرس المؤجَّل يضيع، L-57 git log + git status + git push في تقرير الإنجاز قبل إعلان الإتمام، L-58 الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق، L-59 سجل التدقيق يُكتب من trigger لا من app_user، L-60 تقرير الإنجاز يفتتح بـgit log · الخطة تفتتح بنفي التنفيذ — العنوان وحده لا يُصدَّق، L-61 RLS: سياستان منفصلتان USING و WITH CHECK — الأولى وحدها تُخفي بدل أن تمنع، L-62 UNIQUE مع عمود nullable ليس قيداً — أضف UNIQUE INDEX WHERE ... IS NULL، L-63 قسم «أين نحن» يُصاغ من tail LESSONS.md + ls scripts/ + git log · لا من ذاكرة المحادثة — التوصيف يخرج من الفحص، L-64 عند تعارض تعليمة متأخرة مع قيد سابق من نفس المالك — توقّف واعرض التعارض؛ الإلغاء الضمني ليس إلغاءً، L-65 قبل إعلان بوابة — صنّف الاختبار (وجود / ثبات / سلبي) واسأل ما نطاق المدخلات؛ اختبار الحالة النموذجية دليل ثبات لا وجود، L-66 عند تعارض كود ووثيقة — صنّف المصادر إلى مقرِّر ومنفِّذ؛ الأدنى المخالف انحراف يُصحَّح لا خلاف يُحسم، L-67 قبل محاكاة عطل يمسّ حالة مشتركة — .git ملك جلسات أخرى؛ عدّل السكربت لا المراجع، والحارس check-no-git-internals يمنع الكتابة على .git الداخلية، L-68 حين تبني حارساً على فرع بينما الكود على فرع آخر — النقل جزء من إنجاز البوابة لا خطوة تالية، L-69 قبل قرار بنيوي على واجهة مستهلَكة في Timeline v2 — افحص مسار الاستهلاك لا البناء وحده؛ verify:snapshot يفحص الرسم، verify:render-video-all-templates يفحص التوصيل، L-70 verify:snapshot يُثبت أنّ الرسم لم يتغيّر لا أنّ خطّ إنتاج MP4 صحيح — أضف فاحصاً لكل مسار، L-71 سكربت بلا مفتاح ليس بوابة ولو حمل ✓ ورقماً في وثيقة — الحارس غير الموصول يشتري طمأنينة كاذبة، L-72 بادئة `_` على وسيط دالة تُلغي حراسة النوع على مرتبته — أنشئ اختبار وجود يوفّر المدخل كاملاً لكل مسار في المحرك، L-73 نوعٌ اختياريّ يبلّغ أماناً بلا أن يؤمّن — «حاضر دائماً في التشغيل + fail-loud» بديلاً عن الإلزام في النوع حين المصدر jsonb بلا CHECK، L-74 موافقة على خيار «لا تسأل ثانيةً» تمنح إذناً أوسع من الأمر المسؤول — احكم على الأمر أوّلاً ثمّ اختر الخيار، L-75 كاشفٌ مربوط بلغة لا يرى ما أُنشئ ليراه — الشكل قبل الكلمات، والحالات ثلاث لا اثنتان (تعمل · عالقة عند سؤال · ساكنة)، L-76 نصّ متروك في مجرى الإدخال يلتصق بالجواب — امسح السطر قبل أيّ إرسال نصّيّ · جواب الرقم آمن، L-77 بوّابة تفشل حصراً عند الدمج ليست متأخّرة بل في موضعها الوحيد الممكن — لا تُخرِس بوّابة كي تمرّ · CI على كلّ PR يُقدِّم اللحظة لا الموضع).
+2. اسأل: أيّ درس مرشّح للتكرار في هذه المهمة؟ (L-01 عند نقل من الأصل، L-02 عند كتابة عتبة، L-03 عند تغيير بصري، L-04 عند حدود نظام، L-05 عند إضافة رقم، L-06 عند تحدّي مواصفة، L-07 عند حلقة إطارات/زمن، L-08 عند قاعدة نحوية، L-09 عند بناء تحسين، L-10 عند بوابة تفترض ثمناً، L-11 عند «نسبة غير مصنّفة» غير مفسَّرة، L-12 عند إضافة مكوّن غير-JS، L-14 عند تصميم دالة على مجموعة، L-15 عند تغيير قرار معماري متأخر، L-16 عند بناء بوابة كمّية لمخرج بصري، L-17 قبل إعلان نجاح بوابة تُنتج صورة/فيديو، L-18 عند حساب صيغة زمن على نظام متوازٍ، L-19 عند تعداد BullMQ 5، L-20 عند بناء Next.js app جديد يستهلك workspace ESM، L-21 عند تصميم «حالة نظام»، L-22 عند رسائل API متعددة اللغات، L-23 عند مركّب رقمي في RTL، L-24 عند تصميم قاعدة i18n للخلط، L-25 بعد أي عمل لغوي/بصري، L-26 قبل تخطيط مرحلة كبيرة أو منتج جديد، L-27 قبل تثبيت أي تصنيف «مؤجَّل/مرفوض» ودورياً على المسبق منها، L-28 عند اقتراح أيّ أصل يمثّل علامة تجارية — فَحص رخصتَين لا واحدة، L-29 عند إضافة مصدر خارجي — صمّم تجميد إصدار قبل الحاجة، L-30 عند تصميم منتج B2B — اسأل «مستخدم واحد أم فريق؟»، L-31 عند بدء مواصفة — اسأل «كيف يعمل العمل يومياً؟» لا «ما الميزات المطلوبة؟»، L-32 قبل أيّ فعل بعد تعليمة توقّف — لا تجتهد، توسّع النطاق لا تضيّقه، L-33 عند تناقض التوجيه مع فحص أجريتَه — اعرض التناقض واطلب تأكيداً لا ترجّح، L-34 قبل كتابة أيّ رقم في مادة تسويقية — لكل رقم مصدر قياس، وإلا حُذف، L-35 عند اختلاف رقمَين — شغّل القياس وأرسل الناتج، لا تشرح الفرق سردياً، L-36 عند قياس أثر ميزة انتقائية — قسّم إلى «تدخّلت/لم تتدخّل» وقس على الأولى، L-40 عند استلام مهمة جديدة — إن لم تلمس packages/ ⇒ فرع مستقل، L-41 عند تعارض مقياسين — افحص ما يقيسه كل واحد + استعن باللقطة البصرية، L-42 قبل تشغيل قياس دقة — طابق العيّنة لحالة الاستخدام الفعلية، لا للسهلة الوصول، L-46 قبل كتابة اختبار ثبات — اكتب اختبار وجود أولاً، وإلا حرست فراغاً، L-47 قبل الاعتماد على قيد نصّي مطلق — ابنِ بوابة آلية تفحصه، لأن التلوث يعود من نصوص الاختبار لا من الكود، L-48 قبل الإحالة من وثيقة إلى مسار — تأكّد أنه ليس في مجلد مؤقّت؛ المخرج الذي يُعرض لا يعيش في out/، L-49 قبل أيّ افتراض عن «لغة العميل» — ميّز بين لغة الواجهة ولغة الرسائل ولغة المحتوى، وحدَها الثالثة تُحدّد سلوك المحرك، L-50 قبل أيّ حساب تخطيطي يعتمد على measureText — تحقّق من combining marks (تشكيل عربي)؛ عند وجودها، القياس البكسلي هو الوحيد الموثوق، L-51 عند نفي كل الفرضيات المطروحة — لا تتوقّف، اقرأ المخرج الخام؛ الفرضية الصحيحة قد تكون خامسة لم تُذكر، L-52 عند تصحيح المالك لاسم مكوّن — ابحث قبل الافتراض؛ التصحيح لا يُثبت الوجود، فقط القصد، L-53 عند إعلان إنجاز مركّب — تحقّق من كل بند بمسار ملف أو أمر؛ الفجوة في تسلسل مرقَّم مؤشر مجاني على عمل غير منجَز، L-54 بعد كل قاعدة تشغيلية — ابنِ سكربتاً يفشل عند مخالفتها وإلا فهي توصية، L-55 المخرج المعروض يعيش في demo/ لا out/ · فحص آلي يمنع الإحالة من وثيقة إلى مؤقت، L-56 التسجيل فور الإقرار لا بعد اكتمال المهمة — الدرس المؤجَّل يضيع، L-57 git log + git status + git push في تقرير الإنجاز قبل إعلان الإتمام، L-58 الاستثناء الأمني الموثَّق يبقى ثغرة — REVOKE بدل التعليق، L-59 سجل التدقيق يُكتب من trigger لا من app_user، L-60 تقرير الإنجاز يفتتح بـgit log · الخطة تفتتح بنفي التنفيذ — العنوان وحده لا يُصدَّق، L-61 RLS: سياستان منفصلتان USING و WITH CHECK — الأولى وحدها تُخفي بدل أن تمنع، L-62 UNIQUE مع عمود nullable ليس قيداً — أضف UNIQUE INDEX WHERE ... IS NULL، L-63 قسم «أين نحن» يُصاغ من tail LESSONS.md + ls scripts/ + git log · لا من ذاكرة المحادثة — التوصيف يخرج من الفحص، L-64 عند تعارض تعليمة متأخرة مع قيد سابق من نفس المالك — توقّف واعرض التعارض؛ الإلغاء الضمني ليس إلغاءً، L-65 قبل إعلان بوابة — صنّف الاختبار (وجود / ثبات / سلبي) واسأل ما نطاق المدخلات؛ اختبار الحالة النموذجية دليل ثبات لا وجود، L-66 عند تعارض كود ووثيقة — صنّف المصادر إلى مقرِّر ومنفِّذ؛ الأدنى المخالف انحراف يُصحَّح لا خلاف يُحسم، L-67 قبل محاكاة عطل يمسّ حالة مشتركة — .git ملك جلسات أخرى؛ عدّل السكربت لا المراجع، والحارس check-no-git-internals يمنع الكتابة على .git الداخلية، L-68 حين تبني حارساً على فرع بينما الكود على فرع آخر — النقل جزء من إنجاز البوابة لا خطوة تالية، L-69 قبل قرار بنيوي على واجهة مستهلَكة في Timeline v2 — افحص مسار الاستهلاك لا البناء وحده؛ verify:snapshot يفحص الرسم، verify:render-video-all-templates يفحص التوصيل، L-70 verify:snapshot يُثبت أنّ الرسم لم يتغيّر لا أنّ خطّ إنتاج MP4 صحيح — أضف فاحصاً لكل مسار، L-71 سكربت بلا مفتاح ليس بوابة ولو حمل ✓ ورقماً في وثيقة — الحارس غير الموصول يشتري طمأنينة كاذبة، L-72 بادئة `_` على وسيط دالة تُلغي حراسة النوع على مرتبته — أنشئ اختبار وجود يوفّر المدخل كاملاً لكل مسار في المحرك، L-73 نوعٌ اختياريّ يبلّغ أماناً بلا أن يؤمّن — «حاضر دائماً في التشغيل + fail-loud» بديلاً عن الإلزام في النوع حين المصدر jsonb بلا CHECK، L-74 موافقة على خيار «لا تسأل ثانيةً» تمنح إذناً أوسع من الأمر المسؤول — احكم على الأمر أوّلاً ثمّ اختر الخيار، L-75 كاشفٌ مربوط بلغة لا يرى ما أُنشئ ليراه — الشكل قبل الكلمات، والحالات ثلاث لا اثنتان (تعمل · عالقة عند سؤال · ساكنة)، L-76 نصّ متروك في مجرى الإدخال يلتصق بالجواب — امسح السطر قبل أيّ إرسال نصّيّ · جواب الرقم آمن، L-77 بوّابة تفشل حصراً عند الدمج ليست متأخّرة بل في موضعها الوحيد الممكن — لا تُخرِس بوّابة كي تمرّ · CI على كلّ PR يُقدِّم اللحظة لا الموضع، L-78 أداة القياس التي لا تعكس مسار الإنتاج تخترع عطباً وهميّاً وتُخفي الحقيقيّ — قبل تصديق قياس، شغّل سيناريو معروف الجواب).
 3. إن ظهر خلل، وقبل النقض، افحص: هل خالفت درساً؟
 
 بعد مهمة أنتجت درساً جديداً: أضف قسماً جديداً بنفس البنية (شاهد + كيف يُطبَّق + قرارات مرتبطة). لا تختصر.
@@ -10466,7 +10505,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-12 · **HEAD:** `fa67467` (`main`)
+> **تاريخ التوليد:** 2026-09-13 · **HEAD:** `6e6519e` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
@@ -10496,21 +10535,21 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 191 | 1 |
-| `feat/api` | `2010046` | 11 | 8 | 195 |
-| `feat/ci` | `8901ed8` | 22 | 3 | 211 |
-| `feat/dashboards` | `376077c` | 0 | 80 | 112 |
-| `feat/studio` | `fe0f71e` | 43 | 10 | 225 |
-| `origin/aa-internal` | `ee178ca` | 0 | 191 | 1 |
-| `origin/feat/api` | `2010046` | 11 | 8 | 195 |
-| `origin/feat/ci` | `8901ed8` | 22 | 3 | 211 |
-| `origin/feat/dashboards` | `376077c` | 0 | 80 | 112 |
-| `origin/feat/studio` | `fe0f71e` | 43 | 10 | 225 |
+| `aa-internal` | `ee178ca` | 0 | 315 | 1 |
+| `feat/api` | `d629f74` | 8 | 104 | 220 |
+| `feat/ci` | `135806d` | 32 | 73 | 275 |
+| `feat/dashboards` | `376077c` | 0 | 204 | 112 |
+| `feat/studio` | `2b12dd1` | 13 | 81 | 248 |
+| `origin/aa-internal` | `ee178ca` | 0 | 315 | 1 |
+| `origin/feat/api` | `d629f74` | 8 | 104 | 220 |
+| `origin/feat/ci` | `135806d` | 32 | 73 | 275 |
+| `origin/feat/dashboards` | `376077c` | 0 | 204 | 112 |
+| `origin/feat/studio` | `2b12dd1` | 13 | 81 | 248 |
 
 ### الفحوص الآلية — عبر الفروع (`package.json` الجذر)
 
-- **main (72):** `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
-- **feat/api (63):** `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:isolation-completeness` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **main (79):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:isolation-completeness` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (67):** `check:auth-coverage` · `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-mirror` · `check:isolation-completeness` · `check:lessons-sequence` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (70):** `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-sync` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 
 ### حالة المرحلة 4 — عبر الفروع (`PHASES-api.md` · `PHASES-studio.md`)
@@ -10520,8 +10559,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-77
-- **العدد الفريد:** 72 · **الإدخالات:** 72
+- **المدى:** L-1 → L-78
+- **العدد الفريد:** 73 · **الإدخالات:** 73
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -10540,12 +10579,15 @@ description: |
 - `apps/api/src/routes/assets/delete.ts`
 - `apps/api/src/routes/assets/detect-faces.ts`
 - `apps/api/src/routes/assets/finalize.ts`
+- `apps/api/src/routes/assets/font-serve.test.ts`
+- `apps/api/src/routes/assets/font-serve.ts`
 - `apps/api/src/routes/assets/get.ts`
 - `apps/api/src/routes/assets/list.ts`
 - `apps/api/src/routes/assets/patch-faces.ts`
 - `apps/api/src/routes/assets/refresh-url.ts`
 - `apps/api/src/routes/assets/shared/kind-rules.ts`
 - `apps/api/src/routes/assets/shared/mapper.ts`
+- `apps/api/src/routes/assets/tenant-isolation.test.ts`
 - `apps/api/src/routes/assets/upload-url.ts`
 - `apps/api/src/routes/auth/forgot-password.ts`
 - `apps/api/src/routes/auth/login.ts`
@@ -10562,6 +10604,9 @@ description: |
 - `apps/api/src/routes/brand-kits/logo-ack.ts`
 - `apps/api/src/routes/brand-kits/patch-content-type.test.ts`
 - `apps/api/src/routes/brand-kits/update.ts`
+- `apps/api/src/routes/exports/list.test.ts`
+- `apps/api/src/routes/exports/list.ts`
+- `apps/api/src/routes/health.test.ts`
 - `apps/api/src/routes/health.ts`
 - `apps/api/src/routes/platform/auth/login.ts`
 - `apps/api/src/routes/platform/auth/logout.ts`
@@ -10578,6 +10623,8 @@ description: |
 - `apps/api/src/routes/platform/plans/update.ts`
 - `apps/api/src/routes/platform/shared/role-guard.ts`
 - `apps/api/src/routes/platform/tenants/get.ts`
+- `apps/api/src/routes/platform/tenants/hard-delete.test.ts`
+- `apps/api/src/routes/platform/tenants/hard-delete.ts`
 - `apps/api/src/routes/platform/tenants/list.ts`
 - `apps/api/src/routes/platform/tenants/update.ts`
 - `apps/api/src/routes/platform/users/create.ts`
@@ -10598,14 +10645,23 @@ description: |
 - `apps/api/src/routes/projects/state.ts`
 - `apps/api/src/routes/projects/transitions.ts`
 - `apps/api/src/routes/projects/update.ts`
+- `apps/api/src/routes/public-routes.ts`
+- `apps/api/src/routes/ready.test.ts`
+- `apps/api/src/routes/ready.ts`
 - `apps/api/src/routes/renders/brand-snapshot.ts`
 - `apps/api/src/routes/renders/cancel.ts`
 - `apps/api/src/routes/renders/create.ts`
 - `apps/api/src/routes/renders/delete.ts`
+- `apps/api/src/routes/renders/empty-layers.test.ts`
+- `apps/api/src/routes/renders/export-e2e.test.ts`
+- `apps/api/src/routes/renders/export-flow.test.ts`
+- `apps/api/src/routes/renders/export-limits.test.ts`
 - `apps/api/src/routes/renders/get.ts`
 - `apps/api/src/routes/renders/list.ts`
 - `apps/api/src/routes/renders/output.ts`
+- `apps/api/src/routes/renders/render-parity.test.ts`
 - `apps/api/src/routes/renders/shared/mapper.ts`
+- `apps/api/src/routes/renders/snapshot-guard.test.ts`
 - `apps/api/src/routes/renders/template-snapshot.ts`
 - `apps/api/src/routes/revisions/factory.ts`
 - `apps/api/src/routes/subscription/cancel.ts`
@@ -10619,6 +10675,8 @@ description: |
 - `apps/api/src/routes/templates/list.ts`
 - `apps/api/src/routes/templates/shared/mapper.ts`
 - `apps/api/src/routes/templates/update.ts`
+- `apps/api/src/routes/tenant/data-export.test.ts`
+- `apps/api/src/routes/tenant/data-export.ts`
 - `apps/api/src/routes/tenant/get.ts`
 - `apps/api/src/routes/tenant/patch.ts`
 - `apps/api/src/routes/usage/current.ts`
@@ -10641,7 +10699,7 @@ description: |
 ### محتويات المستودع — من main (`ls`)
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
-- **`demo/`:** 17 ملف
+- **`demo/`:** 18 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- END:GENERATED -->

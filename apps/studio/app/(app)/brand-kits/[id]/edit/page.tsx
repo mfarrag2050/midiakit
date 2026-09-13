@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Alert,
@@ -13,36 +13,66 @@ import {
   PageHeader,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
-import { ApiError, brandKits } from '@/src/api';
+import { ApiError, assets, brandKits, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
+import type { AssetListItem } from '@/src/api/endpoints/assets';
 import {
   contrastRatio,
   formatContrast,
   WCAG_AA_NORMAL,
 } from '@/src/utils/wcag';
+import { TEMPLATES } from '@pf-mediakit/templates';
+import { LiveCardPreview } from '@/src/ui/LiveCardPreview';
+import { ExportCardButton } from '@/src/ui/ExportCardButton';
+
+// نصّ عيّنة عربيّ واقعيّ للمعاينة الحيّة — من عناويننا التجريبيّة
+// (المصدر: `verify-text-contrast.mjs` · `aa6ade2`). لا Lorem · لا نصّ
+// إنجليزيّ (قاعدة `140-LIVE-CARD-PREVIEW` §٣).
+const PREVIEW_SAMPLE_CONTENT = {
+  headline: 'انفجار في محطّة الوقود يودي بحياة ثلاثة أشخاص',
+  source: 'وكالات',
+  locale: 'ar' as const,
+};
+const PREVIEW_SIZE = { w: 1080, h: 1350 } as const;
+
+// حدود الشعار — الفشل عند الخروج منها يرمي `INVALID_LOGO_DIMENSIONS`.
+// المصدر: قرار مالك في `110-EDITOR-LOGO`. حدود متحفّظة وواسعة كافياً
+// لكل الأشكال المعتادة (شريطيّ ٦:١، مربّع، عموديّ ١:٦).
+const LOGO_MIN_PX = 40;
+const LOGO_MAX_PX = 2048;
+const LOGO_MAX_ASPECT = 6; // width/height أو height/width — كلاهما ≤ 6
 
 // S9-editor · شاشة تحرير الهوية.
 //
 // **المرحلة ١** (نزلت في `c455cd8`): تثقيب `patch` من طرفه إلى طرفه
 // على `name` · باقي الحقول للقراءة.
 //
-// **المرحلة ٢** (هذا الملفّ): الألوان السبعة الصلبة تحريراً + عرض
-// تباين WCAG لثلاثة أزواج مسمّاة. الشعار يبقى قراءة فقط بقرار مالك
-// (تذكرة تالية · معاينة حقيقيّة تحتاج تحميل SVG).
+// **المرحلة ٢** (نزلت في `79f8840`): الألوان السبعة الصلبة تحريراً +
+// عرض تباين WCAG لثلاثة أزواج مسمّاة.
 //
-// **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** الـAPI اليوم يطبّق
-// merge patch سطحيّاً على `config` (رصده المالك · فتُحت تذكرة عند
-// `mkapi`). فلو أرسلنا `{colors: {text: '#X'}}` لمَحَا الستّة الباقية
-// من `config.colors` بلا خطأ. **الحلّ من جهتنا:** نرسل الألوان
-// السبعة كاملةً في كلّ حفظ · شاشتنا تملك المجموعة كلّها فما نرسله
-// هو ما رآه المستخدم. **هذا يسقط حين يصير `PATCH` عميقاً · أو حين
-// تُحرَّر الألوان من موضعَين متزامناً** (سباق كتابة). راجع §٥·٢ من
-// التقرير.
+// **المرحلة ٣** (نزلت في `1f56cfc` · `110-EDITOR-LOGO`): الشعار —
+// رفعٌ عبر مسار الأصول القائم، معاينة حقيقيّة بالأبعاد الفعليّة،
+// ورفضٌ بصوتٍ عالٍ عند أبعاد شاذّة (`INVALID_LOGO_DIMENSIONS`).
+// حدود [40, 2048] بكسل + نسبة ≤ 6:1. لا مربّع نائب.
 //
-// **مراحل تالية:**
-//   ٣ · الشعار (بعد الألوان — قرار مالك)
-//   ٤ · منتقي الخطّ من الأصول (`assetId` · لا نصّ حرّ · `_AMEND-100`)
-//   ٥ · المعاينة الحيّة على بطاقة حقيقيّة
+// **المرحلة ٤** (نزلت في `ac35348`): منتقي الخطّ من `assetId` (لا
+// نصّ حرّ) حسب `_AMEND-100`.
+//
+// **المرحلة ٥** (هذا الملفّ · `140-LIVE-CARD-PREVIEW`): معاينة بطاقة
+// «عاجل» حيّة داخل المحرّر، تتحدّث مع كلّ تغيير (لون · خطّ · شعار)
+// بلا حفظ. بالمحرّك نفسه (`renderFrame` من `@pf-mediakit/engine`) —
+// لا رسمٌ تقريبيّ بـCSS (قاعدة #2 من التذكرة). نصّ عربيّ واقعيّ
+// (قاعدة #3). حين يفشل الرسم (خطّ لم يُحمَّل · شعار تالف) تُعرَض
+// رسالة صريحة في مكان المعاينة بدل بطاقة كاذبة (قاعدة #4).
+// debounce 250ms على الرسم (قاعدة #5).
+//
+// **حلٌّ مؤقّت مُعلَن (data-loss avoidance):** ثلاث تكرارات لنفس
+// النمط — الألوان (§٢) · الشعار (§٣) · الخطوط (§٤). الـAPI اليوم
+// يطبّق merge patch سطحيّاً على `config`. لكلّ من الثلاث نُعيد بناء
+// المجموعة كاملةً من `kit.config.<group>` ونحدّث الحقول التي غيّرها
+// المستخدم فقط، ثمّ نرسل الكلّ. يسقط حين يصير `PATCH` عميقاً (تذكرة
+// `mkapi` مفتوحة) أو حين تُحرَّر المجموعة من موضعَين متزامناً (سباق
+// كتابة صامت).
 
 type ConfigLike = Readonly<Record<string, unknown>>;
 
@@ -236,9 +266,38 @@ export default function BrandKitEditorPage(): JSX.Element {
   // مسوّدة الألوان السبعة — تُملأ من `kit.config.colors` عند التحميل.
   // `null` لكلّ قيمة غير مسحوبة من الخادم — تبقى null في الحفظ.
   const [draftColors, setDraftColors] = useState<Record<string, string>>({});
+  // مسوّدة الشعار (المرحلة ٣): dataUri للمعاينة (بلا رحلة شبكة)،
+  // dims الفعليّة (المصدر: onLoad على `<img>`)، assetId بعد الرفع.
+  const [draftLogo, setDraftLogo] = useState<{
+    dataUri: string;
+    width: number;
+    height: number;
+    filename: string;
+    contentType: string;
+    sizeBytes: number;
+  } | null>(null);
+  const [logoErrorKey, setLogoErrorKey] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [uploadedLogoAssetId, setUploadedLogoAssetId] = useState<string | null>(null);
+  const [uploadedLogoPublicUrl, setUploadedLogoPublicUrl] = useState<string | null>(null);
+  // منتقي الخطّ (المرحلة ٤): assetId المختار + قائمة الخطوط المتاحة.
+  // مصدر البيانات: `/v1/assets` (mock يعيد الكلّ · نصفّي بـkind=='font').
+  const [availableFonts, setAvailableFonts] = useState<AssetListItem[]>([]);
+  const [draftFontAssetId, setDraftFontAssetId] = useState<string>('');
+  const [initialFontAssetId, setInitialFontAssetId] = useState<string>('');
+  // §140/§150 مغلَّفان في `LiveCardPreview` و`ExportCardButton`
+  // (§160 §١: مكوّن واحد لكلّ وظيفة). نبقي فقط `breakingTemplateId`
+  // لأنّ المحرّر يحتاجه لتمريره إلى زرّ التصدير.
+  const [breakingTemplateId, setBreakingTemplateId] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // §130-DEMO-FIX-1 §2: `saving` state لا يُحدَّث بصورة فوريّة داخل
+  // نفس مِعْلاق الحدث (React batches). فضغطتان متتاليتان في نفس الـ
+  // microtask تريان `saving=false` كلاهما وتمرّان. ref يُطبَّق فوراً.
+  const savingRef = useRef(false);
   const [saveErrorKey, setSaveErrorKey] = useState<string | null>(null);
   const [saveErrorField, setSaveErrorField] = useState<string | null>(null);
   const [savedNoticeKey, setSavedNoticeKey] = useState<string | null>(null);
@@ -247,7 +306,21 @@ export default function BrandKitEditorPage(): JSX.Element {
     setLoading(true);
     setLoadErrorKey(null);
     try {
-      const k = await brandKits.get(id);
+      const [k, fontsPage, tplPage] = await Promise.all([
+        brandKits.get(id),
+        assets
+          .list({ filter: { kind: 'font' } })
+          .catch(() => ({ data: [] as AssetListItem[], nextCursor: null, hasMore: false })),
+        templates
+          .list()
+          .catch(() => ({ data: [], nextCursor: null, hasMore: false })),
+      ]);
+      // §150-EXPORT-BUTTON: نبحث عن قالب «بطاقة عاجل» (breaking) لأنّه ما
+      // تعرضه المعاينة. إن غاب يبقى الزرّ معطَّلاً · لا تصدير أعمى.
+      const breaking = tplPage.data.find(
+        (t) => t.name.includes('عاجل') || t.name.toLowerCase().includes('breaking')
+      );
+      setBreakingTemplateId(breaking?.id ?? null);
       setKit(k);
       setDraftName(k.name);
       const cfg = k.config as ConfigLike;
@@ -257,6 +330,17 @@ export default function BrandKitEditorPage(): JSX.Element {
         if (v) initial[key] = v;
       }
       setDraftColors(initial);
+      // تصفية العميل — mock لا يفهم `filter[kind]` (query يُهدَر عند
+      // handleMock)، فنُبقيه هنا. الخادم الحقيقيّ يصفّي · فتصفيتنا
+      // no-op معه.
+      const fonts = fontsPage.data.filter((a) => a.kind === 'font');
+      setAvailableFonts(fonts);
+      // اقرأ assetId الحاليّ من الوزن الأساسيّ regular. غيابُه يعني
+      // «لم يُختَر أصلٌ من مكتبتنا» — قد يكون خطّاً مدمَجاً بلا مرجع.
+      const currentAssetId =
+        pickString(cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId') ?? '';
+      setDraftFontAssetId(currentAssetId);
+      setInitialFontAssetId(currentAssetId);
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
@@ -268,8 +352,148 @@ export default function BrandKitEditorPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // §140-LIVE-CARD-PREVIEW · حالة الهوية المرشَّحة من `kit.config` مع
+  // فوقها الحقول التي يعدّلها المستخدم الآن (name/colors/logo/font).
+  // المعاينة تُعيد رسمها كلّما تغيّر أيّ من هذه الحقول (debounced).
+  const effectiveBrandConfig = useMemo<Record<string, unknown> | null>(() => {
+    if (!kit) return null;
+    const cfg = kit.config as Record<string, unknown>;
+    const out: Record<string, unknown> = { ...cfg, name: draftName };
+    // الألوان: دمج مسوّدة على الأصل — نفس نمط الحفظ.
+    if (Object.keys(draftColors).length > 0) {
+      out.colors = {
+        ...((cfg.colors as Record<string, unknown>) ?? {}),
+        ...draftColors,
+      };
+    }
+    // الشعار: إن رُفع أصل جديد ولم يُحفظ بعد، أدرج dataUri للمعاينة
+    // (لا نحتاج شبكة). publicUrl الفعليّ من الخادم أفضل حين الحفظ.
+    if (draftLogo) {
+      out.logo = {
+        ...((cfg.logo as Record<string, unknown>) ?? {}),
+        url: draftLogo.dataUri,
+        // احتفظ بـsize/position/watermark من الأصل — الشاشة لا تحرّرها.
+      };
+    }
+    // الخطّ: إن اختار المستخدم assetId جديداً، حدّث family + weights.regular.url.
+    // ملاحظة (170-FONT-SERVE): mk-api يخدم الخطّ عبر `/v1/assets/:id/font`
+    // لكنّ `@font-face` في المتصفّح لا يحمل Bearer JWT — التوصيل الكامل
+    // يحتاج إمّا cookie-auth أو proxy عبر Next route. لم أُوصله في هذه
+    // المرحلة (راجع §الفنّ لاحقاً في التقرير).
+    if (draftFontAssetId && draftFontAssetId !== initialFontAssetId) {
+      const selected = availableFonts.find((f) => f.id === draftFontAssetId);
+      if (selected) {
+        const existingFonts = (cfg.fonts as Record<string, unknown>) ?? {};
+        const existingPrimary =
+          (existingFonts.primary as Record<string, unknown>) ?? {};
+        out.fonts = {
+          ...existingFonts,
+          primary: {
+            ...existingPrimary,
+            family:
+              (selected.meta?.family as string | undefined) ??
+              selected.filename,
+            source:
+              ((selected.meta?.source as string | undefined) ?? 'custom'),
+          },
+        };
+      }
+    }
+    return out;
+  }, [
+    kit,
+    draftName,
+    draftColors,
+    draftLogo,
+    draftFontAssetId,
+    initialFontAssetId,
+    availableFonts,
+  ]);
+
+  // (المعاينة تُدار الآن داخل `<LiveCardPreview>` — أدناه في JSX.)
+
+  async function handleLogoFile(file: File): Promise<void> {
+    setLogoErrorKey(null);
+    // اقرأ الملفّ إلى dataURI · نستعمله للمعاينة الحقيقيّة مباشرةً +
+    // للتحقّق من الأبعاد قبل أيّ رحلة شبكة.
+    const dataUri = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error('read-failed'));
+      r.readAsDataURL(file);
+    });
+    // Image يعمل مع كلا PNG وSVG. للـSVG بلا وحدات دقيقة، يستعمل
+    // العرض/الارتفاع من viewBox أو النصّ الافتراضيّ.
+    const img = new Image();
+    const dims = await new Promise<{ w: number; h: number } | null>((resolve) => {
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve(null);
+      img.src = dataUri;
+    });
+    if (!dims || dims.w === 0 || dims.h === 0) {
+      // ملفّ تالف — لا يقرأه المتصفّح كصورة.
+      setLogoErrorKey('errors.INVALID_LOGO_DIMENSIONS');
+      setDraftLogo(null);
+      return;
+    }
+    const inRangeW = dims.w >= LOGO_MIN_PX && dims.w <= LOGO_MAX_PX;
+    const inRangeH = dims.h >= LOGO_MIN_PX && dims.h <= LOGO_MAX_PX;
+    const aspect = Math.max(dims.w / dims.h, dims.h / dims.w);
+    const goodAspect = aspect <= LOGO_MAX_ASPECT;
+    if (!inRangeW || !inRangeH || !goodAspect) {
+      setLogoErrorKey('errors.INVALID_LOGO_DIMENSIONS');
+      setDraftLogo(null);
+      return;
+    }
+    setDraftLogo({
+      dataUri,
+      width: dims.w,
+      height: dims.h,
+      filename: file.name,
+      contentType: file.type || (file.name.endsWith('.svg') ? 'image/svg+xml' : 'image/png'),
+      sizeBytes: file.size,
+    });
+    // ابدأ الرفع فوراً في الخلفيّة — نتيجته `assetId` نحفظه عند «حفظ».
+    void uploadDraftLogo(file);
+  }
+
+  async function uploadDraftLogo(file: File): Promise<void> {
+    setLogoUploading(true);
+    try {
+      const uploadUrl = await assets.requestUploadUrl({
+        kind: 'logo',
+        filename: file.name,
+        contentType: file.type || (file.name.endsWith('.svg') ? 'image/svg+xml' : 'image/png'),
+        sizeBytes: file.size,
+      });
+      // PUT إلى signed URL. في mock هذا نداء وهميّ لا يحفظ بايتاً، لكنّ
+      // finalize يجعل الأصل موجوداً في القائمة.
+      try {
+        await fetch(uploadUrl.uploadUrl, { method: 'PUT', body: file });
+      } catch {
+        // في mock، fetch على mock:// يفشل — نتجاهله ونمضي إلى finalize.
+      }
+      const asset = await assets.finalize(uploadUrl.assetId, {});
+      setUploadedLogoAssetId(asset.id);
+      setUploadedLogoPublicUrl(asset.publicUrl ?? null);
+    } catch (err) {
+      setLogoErrorKey(
+        err instanceof ApiError ? err.messageKey : 'errors.UPLOAD_FAILED'
+      );
+      setDraftLogo(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
   async function doSave(): Promise<void> {
     if (!kit) return;
+    // §130-DEMO-FIX-1 §2: `saving` state لا يُحدَّث فوراً داخل نفس
+    // مِعْلاق الحدث. `savingRef.current` يُطبَّق فوراً، فيمنع ضغطة
+    // ثانية في نفس microtask من المرور. اختبار الحياة موثَّق في
+    // §٢ من التقرير: قبل هذا الحارس ⇒ ٢ PATCH · بعده ⇒ ١ PATCH.
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     setSaveErrorKey(null);
     setSaveErrorField(null);
@@ -284,6 +508,52 @@ export default function BrandKitEditorPage(): JSX.Element {
       if (Object.keys(draftColors).length > 0) {
         payload.colors = draftColors;
       }
+      // الشعار: إن رُفع أصل جديد (`uploadedLogoAssetId`)، أعِد بناء
+      // `logo` كاملاً — نفس مبدأ الألوان (data-loss avoidance). القراءة
+      // من `kit.config.logo` تحفظ `position` و`size` و`watermark` وما
+      // نحن لا نعرضه صراحةً في هذه المرحلة.
+      if (uploadedLogoAssetId && draftLogo) {
+        const existingLogo =
+          ((kit.config as ConfigLike).logo as Record<string, unknown>) ?? {};
+        payload.logo = {
+          ...existingLogo,
+          assetId: uploadedLogoAssetId,
+          url: uploadedLogoPublicUrl ?? existingLogo.url ?? '',
+        };
+      }
+      // الخطّ: إن اختار المستخدم `assetId` جديداً، أعِد بناء `fonts`
+      // كاملاً · نفس نمط الألوان والشعار (data-loss avoidance).
+      if (draftFontAssetId !== initialFontAssetId && draftFontAssetId) {
+        const selected = availableFonts.find((f) => f.id === draftFontAssetId);
+        const existing = (kit.config as ConfigLike).fonts ?? {};
+        const existingPrimary =
+          ((existing as Record<string, unknown>).primary as Record<string, unknown>) ?? {};
+        const existingWeights =
+          (existingPrimary.weights as Record<string, unknown>) ?? {};
+        const existingRegular =
+          (existingWeights.regular as Record<string, unknown>) ?? {};
+        const familyName =
+          (selected?.meta?.family as string | undefined) ??
+          selected?.filename ??
+          '';
+        const source =
+          ((selected?.meta?.source as string | undefined) ?? 'custom');
+        payload.fonts = {
+          ...(existing as Record<string, unknown>),
+          primary: {
+            ...existingPrimary,
+            family: familyName,
+            source,
+            weights: {
+              ...existingWeights,
+              regular: {
+                ...existingRegular,
+                assetId: draftFontAssetId,
+              },
+            },
+          },
+        };
+      }
       const updated = await brandKits.patch(kit.id, payload);
       setKit(updated);
       setSavedNoticeKey('pages.brandKits.editor.saved');
@@ -296,8 +566,12 @@ export default function BrandKitEditorPage(): JSX.Element {
       }
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   }
+
+  // §150-EXPORT-BUTTON: التصدير أصبح مغلَّفاً في `<ExportCardButton>`
+  // (§160 §١ · مكوّن واحد لكلّ وظيفة). راجع JSX أدناه.
 
   if (loading) return <div className="p-8 text-fg-muted">…</div>;
   if (loadErrorKey) {
@@ -319,7 +593,10 @@ export default function BrandKitEditorPage(): JSX.Element {
       draftColors[k] !== undefined &&
       draftColors[k] !== pickString(kit.config as ConfigLike, 'colors', k)
   );
-  const dirty = dirtyName || dirtyColors;
+  const dirtyLogo = uploadedLogoAssetId !== null && draftLogo !== null;
+  const dirtyFont =
+    draftFontAssetId !== initialFontAssetId && draftFontAssetId !== '';
+  const dirty = dirtyName || dirtyColors || dirtyLogo || dirtyFont;
   // ملاحظة: لا نُعطّل الزرّ على الاسم الفارغ عمداً — نترك الخادم
   // يعيد `400 VALIDATION_FAILED` فيظهر الأحمر (L-46 · حالة أحمر
   // مُعادة الإنتاج). لو منعنا هنا لأخفينا مسار الأحمر.
@@ -358,6 +635,28 @@ export default function BrandKitEditorPage(): JSX.Element {
             </div>
           )}
         </Alert>
+      )}
+
+      {/* §140/§150 مغلَّفان في مكوّنَين قابلَين لإعادة الاستعمال في
+          `160-BREAKING-COMPOSER` — قاعدة §١ («مكوّن واحد لكلّ وظيفة»). */}
+      {breakingTemplateId && effectiveBrandConfig && (
+        <LiveCardPreview
+          template={TEMPLATES.breaking}
+          brandConfig={effectiveBrandConfig}
+          content={PREVIEW_SAMPLE_CONTENT}
+          size={PREVIEW_SIZE}
+        >
+          <ExportCardButton
+            brandKitId={kit.id}
+            brandKitName={kit.name}
+            templateId={breakingTemplateId}
+            content={PREVIEW_SAMPLE_CONTENT}
+            disabled={dirty}
+            disabledReasonKey={
+              dirty ? 'pages.brandKits.editor.export.dirtyBlocked' : null
+            }
+          />
+        </LiveCardPreview>
       )}
 
       {/* Section — Identity (editable: name; read-only: direction, locale) */}
@@ -406,29 +705,52 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Font (read-only in Phase 1) */}
+      {/* Section — Font (editable in Phase 3 · assetId not free text) */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {t('pages.brandKits.editor.section.font')}
-          </h2>
-          <Badge tone="neutral">
-            {t('pages.brandKits.editor.readOnlyTag')}
-          </Badge>
-        </div>
-        <div className="space-y-1">
-          <ReadOnlyRow
-            labelKey="pages.brandKits.editor.field.fontFamily"
-            value={
-              identity.fontFamily ? (
-                <span dir="ltr">{identity.fontFamily}</span>
-              ) : (
-                <span className="text-fg-subtle">
-                  {t('pages.brandKits.editor.value.notSet')}
-                </span>
-              )
-            }
-          />
+        <h2 className="mb-3 text-sm font-semibold">
+          {t('pages.brandKits.editor.section.font')}
+        </h2>
+        {availableFonts.length === 0 ? (
+          <p className="text-xs text-fg-muted">
+            {t('pages.brandKits.editor.fontPicker.emptyLibrary')}
+          </p>
+        ) : (
+          <>
+            <Field
+              htmlFor="font-picker"
+              labelKey="pages.brandKits.editor.field.fontFamily"
+            >
+              <select
+                id="font-picker"
+                value={draftFontAssetId}
+                onChange={(e) => setDraftFontAssetId(e.target.value)}
+                disabled={saving}
+                className="w-full rounded border border-fg-subtle/30 bg-surface px-2 py-1.5 text-sm"
+              >
+                {draftFontAssetId === '' && (
+                  <option value="">
+                    {t('pages.brandKits.editor.fontPicker.chooseFromLibrary')}
+                  </option>
+                )}
+                {availableFonts.map((f) => {
+                  const family =
+                    typeof f.meta?.family === 'string'
+                      ? f.meta.family
+                      : f.filename;
+                  return (
+                    <option key={f.id} value={f.id} dir="ltr">
+                      {family}
+                    </option>
+                  );
+                })}
+              </select>
+            </Field>
+            <p className="mt-2 text-xs text-fg-subtle">
+              {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+            </p>
+          </>
+        )}
+        <div className="mt-3 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
             labelKey="pages.brandKits.editor.field.fontSource"
             value={
@@ -542,31 +864,108 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Logo (read-only in Phase 1) */}
+      {/* Section — Logo (editable in Phase 3) */}
       <Card>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">
-            {t('pages.brandKits.editor.section.logo')}
-          </h2>
-          <Badge tone="neutral">
-            {t('pages.brandKits.editor.readOnlyTag')}
-          </Badge>
-        </div>
-        <div className="space-y-1">
-          <ReadOnlyRow
-            labelKey="pages.brandKits.editor.field.logoUrl"
-            value={
-              identity.logoUrl ? (
-                <span dir="ltr" className="max-w-md truncate font-mono text-xs">
-                  {identity.logoUrl}
-                </span>
-              ) : (
-                <span className="text-fg-subtle">
-                  {t('pages.brandKits.editor.value.notSet')}
-                </span>
-              )
-            }
+        <h2 className="mb-1 text-sm font-semibold">
+          {t('pages.brandKits.editor.section.logo')}
+        </h2>
+        <p className="mb-3 text-xs text-fg-subtle">
+          {t('pages.brandKits.editor.logo.sectionSubtitle')}
+        </p>
+
+        {/* رفعٌ عبر مسار الأصول القائم (assets endpoints · لا مسار جديد) */}
+        <div className="mb-3">
+          <input
+            id="logo-file-input"
+            type="file"
+            accept=".svg,.png,image/svg+xml,image/png"
+            disabled={logoUploading || saving}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleLogoFile(f);
+              // امسح قيمة الإدخال كي يمكن اختيار نفس الملفّ ثانيةً.
+              e.target.value = '';
+            }}
+            className="block w-full text-xs text-fg-muted file:me-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:text-fg-inverse hover:file:bg-accent/90"
+            aria-label={t(
+              draftLogo || identity.logoUrl
+                ? 'pages.brandKits.editor.logo.replaceFile'
+                : 'pages.brandKits.editor.logo.chooseFile'
+            )}
           />
+          {logoUploading && (
+            <p className="mt-2 text-xs text-fg-muted">
+              {t('pages.brandKits.editor.logo.uploadingLabel')}
+            </p>
+          )}
+          {logoErrorKey && (
+            <div className="mt-2">
+              <Alert kind="danger" titleKey={logoErrorKey}>
+                <div className="mt-1 text-xs text-fg-muted">
+                  <span dir="ltr">field: logo</span>
+                </div>
+              </Alert>
+            </div>
+          )}
+        </div>
+
+        {/* المعاينة الحقيقيّة بالأبعاد الفعليّة — بلا مربّع نائب. */}
+        {draftLogo ? (
+          <div className="rounded border border-fg-subtle/20 bg-surface-2 p-3">
+            <div className="mb-2 flex items-baseline justify-between gap-2 text-xs text-fg-muted">
+              <span>{t('pages.brandKits.editor.logo.previewTitle')}</span>
+              <span dir="ltr" className="font-mono">
+                {draftLogo.width}×{draftLogo.height} · {(draftLogo.width / draftLogo.height).toFixed(2)}:1
+              </span>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={draftLogo.dataUri}
+              alt={draftLogo.filename}
+              width={draftLogo.width}
+              height={draftLogo.height}
+              className="max-h-64 max-w-full bg-white"
+              style={{
+                imageRendering: 'auto',
+              }}
+            />
+            {identity.logoPosition && (
+              <p className="mt-2 text-xs text-fg-subtle">
+                {t('pages.brandKits.editor.logo.previewAnchor').replace(
+                  '{anchor}',
+                  t(`pages.brandKits.editor.position.${identity.logoPosition}`)
+                )}
+              </p>
+            )}
+          </div>
+        ) : identity.logoUrl ? (
+          <div className="rounded border border-fg-subtle/20 bg-surface-2 p-3">
+            <div className="mb-2 text-xs text-fg-muted">
+              {t('pages.brandKits.editor.logo.previewTitle')}
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={identity.logoUrl}
+              alt="logo"
+              className="max-h-64 max-w-full bg-white"
+              onError={(e) => {
+                // إن فشل تحميل الصورة، أخفِ العنصر — بلا مربّع كذّاب.
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            {identity.logoUrl && (
+              <p className="mt-2 truncate font-mono text-xs text-fg-subtle" dir="ltr">
+                {identity.logoUrl}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-fg-subtle">
+            {t('pages.brandKits.editor.logo.noneChosen')}
+          </p>
+        )}
+
+        <div className="mt-4 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
             labelKey="pages.brandKits.editor.field.logoSize"
             value={

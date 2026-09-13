@@ -29,6 +29,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",
     "templates": "Templates",
@@ -44,6 +45,27 @@
     }
   },
   "pages": {
+    "composer": {
+      "breaking": {
+        "title": "Compose breaking card",
+        "subtitle": "Pick the brand, write the headline and source, then export — the card is rendered with the same engine.",
+        "kitLabel": "Brand kit",
+        "noKits": "No brand kits yet — create one from the Brand Kits page.",
+        "headlineLabel": "Headline",
+        "headlinePlaceholder": "Type the news headline here.",
+        "sourceLabel": "Source / agency",
+        "sourcePlaceholder": "e.g. Reuters.",
+        "exportHint": "Rendered server-side with the export engine · the file carries the brand name and date.",
+        "section": {
+          "inputs": "Inputs"
+        },
+        "reasons": {
+          "noKit": "Pick a brand kit first.",
+          "noTemplate": "The 'breaking' template is not available — check the Templates page.",
+          "noHeadline": "Type a headline first — no export without a headline."
+        }
+      }
+    },
     "projects": {
       "title": "Projects",
       "subtitle": "Your cards, videos, and in-flight work.",
@@ -51,6 +73,7 @@
       "emptyBody": "Start a project from a brand kit and template.",
       "create": "New project",
       "createTitle": "Create a new project",
+      "createConfirm": "Create project",
       "titleLabel": "Project title",
       "brandKitLabel": "Brand kit",
       "templateLabel": "Template",
@@ -252,10 +275,10 @@
       },
       "fontAck": {
         "title": "Acknowledge font license",
-        "body": "Uploaded fonts require an acknowledgement of usage rights. 'builtin' fonts do not.",
+        "body": "Before using a font you uploaded yourself, record here that you legally hold the right to use it in this brand's outputs. The acknowledgement is stored with your name and timestamp — one time per font. Built-in fonts are already licensed and don't need this step.",
         "family": "Font family",
         "notes": "Notes (optional)",
-        "checkbox": "I acknowledge the license.",
+        "checkbox": "I confirm I hold the right to use this font.",
         "submit": "Save acknowledgement",
         "ackedBy": "Acknowledged by",
         "ackedAt": "Acknowledged at"
@@ -355,7 +378,38 @@
             "locationBadgeOnSurface": "Location badge on surface"
           }
         },
-        "unsavedChanges": "unsaved changes"
+        "unsavedChanges": "unsaved changes",
+        "logo": {
+          "sectionSubtitle": "SVG or PNG · between 40 and 2048 pixels · ratio between 1:6 and 6:1.",
+          "chooseFile": "Choose logo file",
+          "replaceFile": "Replace logo",
+          "uploadingLabel": "Uploading…",
+          "previewTitle": "Preview — actual dimensions",
+          "previewDimensions": "{w}×{h} px · ratio {ratio}",
+          "previewAnchor": "Anchor: {anchor}",
+          "noneChosen": "No logo — choose a file",
+          "cardMockup": "Position preview on the card"
+        },
+        "fontPicker": {
+          "emptyLibrary": "No fonts in your library — upload one from the Assets page and it will appear here.",
+          "chooseFromLibrary": "Choose a font from the library",
+          "assetIdHint": "The saved value is the asset id — the name is display only. Prevents \"unregistered font family\" (ticket §2.1 + _AMEND-100)."
+        },
+        "preview": {
+          "title": "Live preview · Breaking card",
+          "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
+          "durationHint": "Render duration — every keystroke reschedules"
+        },
+        "export": {
+          "button": "Export card",
+          "busy": "Exporting…",
+          "hint": "Rendered server-side with the export engine · save changes before exporting so they appear in the file.",
+          "dirtyBlocked": "Cannot export with unsaved changes — press Save first.",
+          "success": "Exported · the file downloaded to your browser.",
+          "queuedStep": "Queued…",
+          "runningStep": "Rendering…",
+          "downloadingStep": "Downloading file…"
+        }
       }
     },
     "templates": {
@@ -623,6 +677,11 @@
     "UPLOAD_NOT_COMPLETED": "Upload did not complete — retry.",
     "INVALID_FONT_FILE": "Font file is invalid.",
     "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
+    "INVALID_LOGO_DIMENSIONS": "Logo dimensions out of the accepted range — width and height must be between 40 and 2048 pixels, and the aspect ratio must be between 1:6 and 6:1. Pick another file or adjust it before uploading.",
+    "RENDER_FAILED": "Could not export the card — try again; if it repeats, contact support.",
+    "RENDER_TIMEOUT": "Export timed out before completing — the network may be slow; try again.",
+    "RATE_LIMITED": "Too many requests in a row — wait a moment then try again.",
+    "EXPORT_DOWNLOAD_FAILED": "The file was produced but couldn't be downloaded — check your connection and try again.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
     "INVALID_SVG_WITH_TEXT_WARNING": "SVG contains text not converted to paths — acknowledge to continue.",
     "INVALID_FILTER_FIELD": "Unknown filter field.",
@@ -697,7 +756,10 @@
     "ASSET_LOAD_FAILED": "Could not load the selected image — reupload or pick another.",
     "ASSET_ID_EMPTY": "Image field is empty — pick an image from assets.",
     "CANVAS_NO_CONTEXT": "Browser cannot render the card — try a newer browser.",
-    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload."
+    "PREVIEW_UNKNOWN": "Preview failed — check template content or reload.",
+    "HEADLINE_TOO_LONG": "Headline exceeds maximum length — shorten it or adjust the template's headline limit.",
+    "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
+    "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly."
   },
   "design": {
     "title": "Design System",

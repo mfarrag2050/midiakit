@@ -99,6 +99,26 @@ MOCK_ASSETS.set('ast_seed_image', {
   createdAt: new Date().toISOString(),
 });
 
+// FONT-PICKER (§3 من 100-BRAND-KIT-EDITOR): seed خطَّان كي يظهر
+// المنتقي بخيارات حقيقيّة على mock. `meta.family` هي القيمة المعروضة
+// للمستخدم; `assetId` هو ما يُحفَظ في patch كما اشترط `_AMEND-100`.
+MOCK_ASSETS.set('ast_seed_font_ibm', {
+  id: 'ast_seed_font_ibm',
+  kind: 'font',
+  filename: 'IBMPlexSansArabic-Regular.ttf',
+  sizeBytes: 234000,
+  createdAt: new Date().toISOString(),
+  meta: { family: 'IBM Plex Sans Arabic', source: 'builtin' },
+});
+MOCK_ASSETS.set('ast_seed_font_almarai', {
+  id: 'ast_seed_font_almarai',
+  kind: 'font',
+  filename: 'Almarai-Regular.ttf',
+  sizeBytes: 189000,
+  createdAt: new Date().toISOString(),
+  meta: { family: 'Almarai', source: 'custom' },
+});
+
 interface MockTemplate {
   id: string;
   scope: 'global' | 'tenant';
@@ -215,7 +235,15 @@ MOCK_BRAND_KITS.set('bk_mock_default', {
   config: {
     direction: 'rtl',
     locale: 'ar',
-    fonts: { primary: { family: 'IBM Plex Sans Arabic', source: 'builtin' } },
+    fonts: {
+      primary: {
+        family: 'IBM Plex Sans Arabic',
+        source: 'builtin',
+        weights: {
+          regular: { assetId: 'ast_seed_font_ibm', value: 400, url: '' },
+        },
+      },
+    },
     colors: {
       text: '#111111',
       accent: '#B78D2E',
@@ -640,6 +668,11 @@ export async function handleMock(
   const bkPatch = /^PATCH \/v1\/brand-kits\/([^/]+)$/.exec(key);
   if (bkPatch) {
     const id = bkPatch[1] ?? '';
+    // Observability لـ`130-DEMO-FIX-1` §2 · تُقرَأ من puppeteer عبر
+    // `page.on('console', …)`. لا أثر على الإنتاج لأنّ `handleMock`
+    // لا يُستدعى إلاّ حين `NEXT_PUBLIC_API_MOCK=true`.
+    // eslint-disable-next-line no-console
+    console.log('[mock:PATCH:bk]', id, new Date().toISOString());
     const k = MOCK_BRAND_KITS.get(id);
     if (!k) err(404, 'NOT_FOUND');
     // §5.4 blocked paths: يمنع تعديل assets.version + fonts.primary.licenseAck.
@@ -1043,7 +1076,10 @@ export async function handleMock(
       r.status = 'succeeded';
       r.completedAt = new Date().toISOString();
       r.duration_ms = 1800;
-      r.output_url = `mock://output/${r.id}.${r.format}`;
+      // §150-EXPORT-BUTTON: output_url يشير إلى مسار قابل للتحميل في
+      // المتصفّح (كان `mock://` غير قابل للتنزيل). نُعيد استعمال مصدر
+      // الصورة الاختباريّة كي يعمل التنزيل في mock ⇒ متصفّح ⇒ blob.
+      r.output_url = `/dev/mock-image/${r.id}`;
     }
     // نسخة سطحية — كي يرى React مرجعاً جديداً عبر polling (وإلا setState
     // على نفس المرجع = لا re-render).

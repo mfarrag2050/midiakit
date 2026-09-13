@@ -163,7 +163,7 @@ if (live.sources !== undefined) {
     const s = live.sources[i];
     if (s === '' || s === null || s === undefined) continue;  // اختياريّ بالفعل — لا مصدر
     if (typeof s !== 'string') {
-      throw new Error(`[demo-live] sources[${i}] ليس سلسلة نصّيّة (اسم المصدر مثل "رويترز" أو "" لتخطّي).`);
+      throw new Error(`[demo-live] sources[${i}] ليس سلسلة نصّيّة (اسم المصدر مثل "مَرافئ" أو "" لتخطّي).`);
     }
     sourceTexts[i] = s;
   }

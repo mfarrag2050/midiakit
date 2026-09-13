@@ -150,7 +150,12 @@ const ARABIC_INDIC_ZERO = 0x0660;
 const LATIN_ZERO = 0x0030;
 
 /**
- * يبدّل الأرقام العشرية بين اللاتينية (0-9) والعربية الهندية (٠-٩).
+ * 350 · تحويل صريح فقط في وضع 'arabic'. 'latin' = pass-through (لا يعكس).
+ *
+ * قرار المالك (2026-09-13 · تذكرة 350): الأرقام اللاتينيّة هي الديفولت ·
+ * العربيّة خيار صريح. `mapNumerals(text, 'latin')` يُعيد النصّ كما هو —
+ * لا يحوّل [٠-٩] إلى [0-9]. المحرّر الذي يكتب ١٢٣ عمداً يبقى ١٢٣.
+ *
  * كل رقم يقابله grapheme واحد ⇒ لا تغيير في العرض المُقاس.
  */
 export function mapNumerals(text: string, style: NumeralStyle): string {
@@ -159,9 +164,8 @@ export function mapNumerals(text: string, style: NumeralStyle): string {
       String.fromCodePoint(ARABIC_INDIC_ZERO + (d.codePointAt(0)! - LATIN_ZERO))
     );
   }
-  return text.replace(/[٠-٩]/g, (d) =>
-    String.fromCodePoint(LATIN_ZERO + (d.codePointAt(0)! - ARABIC_INDIC_ZERO))
-  );
+  // 'latin' — pass-through (لا يعكس · لا يحوّل عربيّاً إلى لاتينيّ)
+  return text;
 }
 
 // ── preprocessBidi ──────────────────────────────────

@@ -20,6 +20,7 @@ import { resolveBrand } from '@pf-mediakit/engine';
 import { FontLibrary } from 'skia-canvas';
 
 import { renderVideo } from './index.js';
+import { applyRuntimeFontIdentity } from './lib/font-identity.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // نقفز إلى جذر المستودع (apps/renderer/src/ → ../../..).
@@ -67,9 +68,10 @@ const cli = parseArgs();
 const brandRaw = await loadBrandRaw(cli.brand);
 // نستعمل resolveBrand من الـpackage — الأنواع الديناميكية للـJSON مقبولة.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const brand = resolveBrand(brandRaw as any);
+const brand = applyRuntimeFontIdentity(resolveBrand(brandRaw as any));
 
 // تسجيل الخط ديناميكياً — نفس منطق preview.mjs (تراجع IBM Plex إن غاب).
+// 141: brand.fonts.primary.family بعد applyRuntimeFontIdentity = mk-<slug|assetId>.
 const FONTS_DIR = join(ROOT, 'assets/fonts');
 const IBM_PLEX_FALLBACK = [
   join(FONTS_DIR, 'IBMPlexSansArabic-Light.ttf'),

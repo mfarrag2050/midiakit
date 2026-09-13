@@ -14,22 +14,18 @@
  * ⇒ الحارس يسقط. أعِد السياسة ⇒ يمرّ.
  */
 import pg from 'pg';
+import { skipMissingResource } from './_lib/skip-guard.mjs';
 
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
 
-// **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** غياب المتغيّر ⇒ فشل صريح.
-// راجع check-template-sync.mjs للسبب البنيويّ. لا شرط بيئيّ.
+// 142-SKIP-IS-NOT-PASS
 if (!DB_URL) {
-  console.error('[check-control-plane-policies] ✗ DATABASE_URL غير مضبوطة — البوابة لا تستطيع أن تفحص.');
-  console.error('  ما لم يُفحَص: وجود سياسة `<table>_control_plane_all` (أو');
-  console.error('  `plans_control_plane_write`) على كلّ جدول من EXPECTED_TABLES.');
-  console.error('  الأثر: جدول جديد بلا سياسة ⇒ control_plane_user يرى 0 صفوف صمتاً.');
-  console.error('  الحلّ:');
-  console.error('    • محلّياً: `pnpm db:up && pnpm db:migrate` ثمّ صدِّر DATABASE_URL');
-  console.error('      (راجع packages/db/.env.example).');
-  console.error('    • في CI: مرِّر DATABASE_URL كسرّ إلى خدمة postgres.');
-  process.exit(1);
+  skipMissingResource({
+    scriptName: 'check-control-plane-policies',
+    missing: 'DATABASE_URL',
+    hint: 'شغّل `bin/mk up` (dev postgres) أو ضع DATABASE_URL يدوياً.',
+  });
 }
 
 // الجداول التي **يجب** أن تحمل سياسة control_plane.
@@ -44,10 +40,12 @@ const EXPECTED_TABLES = [
   // ai_integrations موجود من A2 — control_plane_all موجودة
   'plan_revisions',                    // A28 — تدقيق تحرير plans
   'license_acks',                      // DEBT-1 §3 — سجلّ إقرار ترخيص append-only
+  'exports',                           // 240-EXPORT-LIMITS — سجلّ التصديرات (rate + counter)
   // Reference data
   'plans',
-  // Platform-scoped (2)
+  // Platform-scoped (3 — 151 أضاف سجلّ الحذف)
   'platform_users', 'platform_sessions',
+  'tenant_deletion_log',               // 151-TENANT-DELETE-BUILD — سجلّ حذف المستأجرين (بلا FK إلى tenants)
 ];
 
 // جداول مستثناة صراحةً من الفحص:
@@ -70,12 +68,13 @@ try {
   `);
   policies = new Set(p.rows.map((r) => r.tablename));
 } catch (err) {
-  // **L-71 (شُدِّد 2026-09-11 · 20-CI-BUILD §1):** فشل الاتصال ⇒ فشل صريح.
-  console.error(`[check-control-plane-policies] ✗ تعذّر الاتصال (${err.code || err.message}).`);
-  console.error('  ما لم يُفحَص: تغطية سياسات control_plane لجداول public.');
-  console.error('  الحلّ: تأكّد أنّ postgres يعمل وأنّ الهجرات مُطبَّقة.');
+  // 142-SKIP-IS-NOT-PASS
   await pool.end();
-  process.exit(1);
+  skipMissingResource({
+    scriptName: 'check-control-plane-policies',
+    missing: `DB reachable (${err.code || err.message})`,
+    hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
+  });
 }
 
 const errors = [];
