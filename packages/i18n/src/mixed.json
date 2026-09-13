@@ -28,6 +28,15 @@
     "usage": "Usage",
     "lastRender": "Last render"
   },
+  "roles": {
+    "owner":    { "name": "مالك الحساب",     "hint": "صاحب اشتراك الوكالة — واحدٌ فقط، لا يُحذَف ولا يُغيَّر دوره." },
+    "admin":    { "name": "المدير",           "hint": "يُدير النظام: يُضيف الأدوار، يُعطّل حساباً، يُنفّذ الأرشفة." },
+    "writer":   { "name": "الكاتب",           "hint": "يكتب المسودّة الأولى ويُرسلها إلى التحرير." },
+    "editor":   { "name": "المحرِّر",          "hint": "يُحرِّر المسودّة قبل عرضها على المُراجِع — يقرأ ويُعدِّل." },
+    "reviewer": { "name": "المُراجِع",         "hint": "يُقرِّر إن كانت المسودّة تصلح للنشر — يعتمد أو يُعيد." },
+    "approver": { "name": "المُعتمِد النهائيّ", "hint": "يُوقِّع المسودّة قبل النشر — خطوة أعلى من المُراجِع." },
+    "viewer":   { "name": "قارئ فقط",         "hint": "يرى المسودّات ولا يكتب — دور المشاهدة." }
+  },
   "nav": {
     "workspace": "Workspace",
     "breaking": "Compose breaking",
@@ -200,7 +209,6 @@
         "assignSelf": "Assign to me",
         "unassign": "Unassign",
         "roleHint": "Current user role",
-        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
         "transitionReasonInline": "هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.",
         "transitionRoleRequired": "دورك لا يسمح — الدور المطلوب: {role}."
       },
@@ -232,9 +240,9 @@
       "createTitle": "Create workflow",
       "presets": {
         "label": "Presets",
-        "individual": "Individual — writer submits, reviewer approves",
-        "smallTeam": "Small team — writer/editor/reviewer/admin",
-        "fullAgency": "Full agency — longer chain + archive"
+        "individual": "Individual — الكاتب يُرسل، المُراجِع يعتمد",
+        "smallTeam": "Small team — الكاتب، المحرِّر، المُراجِع، المدير",
+        "fullAgency": "Full agency — سلسلة أطول مع أرشفة"
       },
       "nameLabel": "Name",
       "isDefault": "Default",

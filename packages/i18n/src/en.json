@@ -27,6 +27,15 @@
     "usage": "Usage",
     "lastRender": "Last render"
   },
+  "roles": {
+    "owner":    { "name": "Account owner",  "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned." },
+    "admin":    { "name": "Administrator",  "hint": "Manages the system: adds roles, disables accounts, runs archival." },
+    "writer":   { "name": "Writer",         "hint": "Writes the first draft and sends it for editing." },
+    "editor":   { "name": "Editor",         "hint": "Edits the draft before it goes to review — reads and revises." },
+    "reviewer": { "name": "Reviewer",       "hint": "Decides whether the draft is ready to publish — approves or returns." },
+    "approver": { "name": "Final approver", "hint": "Signs off before publication — a step above the reviewer." },
+    "viewer":   { "name": "Viewer",         "hint": "Sees drafts but doesn't write — read-only role." }
+  },
   "nav": {
     "workspace": "Workspace",
     "breaking": "Compose breaking",
@@ -199,7 +208,6 @@
         "assignSelf": "Assign to me",
         "unassign": "Unassign",
         "roleHint": "Current user role",
-        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
         "transitionReasonInline": "This transition requires a reason — enter it and retry.",
         "transitionRoleRequired": "Your role isn't allowed — required role: {role}."
       },
@@ -231,9 +239,9 @@
       "createTitle": "Create workflow",
       "presets": {
         "label": "Presets",
-        "individual": "Individual — writer submits, reviewer approves",
-        "smallTeam": "Small team — writer/editor/reviewer/admin",
-        "fullAgency": "Full agency — longer chain + archive"
+        "individual": "Individual — the writer submits, the reviewer approves",
+        "smallTeam": "Small team — writer, editor, reviewer, administrator",
+        "fullAgency": "Full agency — longer chain with archive"
       },
       "nameLabel": "Name",
       "isDefault": "Default",

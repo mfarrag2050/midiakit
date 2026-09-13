@@ -13,6 +13,7 @@ import {
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, workflows } from '@/src/api';
+import { roleName } from '@/src/lib/role-names';
 import type {
   WorkflowFull,
   WorkflowState,
@@ -377,7 +378,7 @@ export default function WorkflowEditorPage(): JSX.Element {
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>
-                        {r}
+                        {roleName(t, r)}
                       </option>
                     ))}
                   </select>

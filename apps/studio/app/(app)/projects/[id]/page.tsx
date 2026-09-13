@@ -39,6 +39,7 @@ import {
   drawPreview,
 } from '@/src/preview/live';
 import { TASHKEEL_UI_ENABLED } from '@/src/config/features';
+import { roleName } from '@/src/lib/role-names';
 import { AssetPicker } from '@/src/ui/AssetPicker';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
 
@@ -1054,7 +1055,7 @@ export default function ProjectEditorPage(): JSX.Element {
                     <Alert kind="danger" titleKey="errors.TRANSITION_ROLE_REQUIRED">
                       <p className="text-xs text-fg-muted">
                         {t('pages.projects.editor2.transitionRoleRequired', {
-                          role: trnErr.requiredRole,
+                          role: roleName(t, trnErr.requiredRole),
                         })}
                       </p>
                     </Alert>
