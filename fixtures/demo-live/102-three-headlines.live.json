@@ -1,0 +1,25 @@
+{
+  "_comment": "102-THREE-HEADLINES · عناوين مُختلَقة كاملاً (لا مؤسّسة حقيقيّة ولا خبر حقيقيّ). طويل + قصير + مختلط (رقم لاتينيّة).",
+  "brandName": "102-عناوين",
+  "colors": {
+    "primary": "#C1012F",
+    "accent": "#F5A623",
+    "text": "#FFFFFF"
+  },
+  "logo": "fixtures/demo-live/test-sample-logo.png",
+  "headlines": [
+    "تصريحاتٌ رسميّةٌ من مصادرَ متعدّدة تشيرُ إلى مسارٍ تفاوضيٍّ جديدٍ يستكشفُ إمكانيّة تفاهمٍ إقليميٍّ أوسع خلال الأسابيع القادمة",
+    "انتهت المفاوضات",
+    "إعلانٌ رسميٌّ عن دفعةٍ ثانية بقيمة 250 مليون Euro قبل الربع الرابع"
+  ],
+  "images": [
+    "fixtures/demo-live/scene-warm.png",
+    "fixtures/demo-live/scene-linen.png",
+    "fixtures/demo-live/scene-geometry.png"
+  ],
+  "sources": [
+    "وكالة محلّية",
+    "مصدر مطّلع",
+    "ثلاثة مصادر"
+  ]
+}
