@@ -1,6 +1,21 @@
 {
-  "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T12:51:29.100Z",
+  "$schema": "340-typography-layout-v2",
+  "generated": "2026-09-13T13:51:51.711Z",
+  "pipelineCoverage": {
+    "preprocessBidi": "called",
+    "parseTokens": "called",
+    "computeBreakPenalties": "called",
+    "wrapOptimal": "called",
+    "justifyLine": "called",
+    "normalizeHeadlineFont": "not-called",
+    "computeHeadlineLayout": "not-called",
+    "drawHeadlineLine": "not-applicable"
+  },
+  "pipelineCoverageNotes": {
+    "normalizeHeadlineFont": "قواعد اشتقاق fs/lineHeight · إن أضاف engine قاعدة جديدة الأداة تفوّتها",
+    "computeHeadlineLayout": "dynamic lineHeightMode لا يُستعمل هنا (brand.typography.lineHeightMode=fixed)",
+    "drawHeadlineLine": "الرسم الفعليّ + استهلاك font metrics · الأداة تقيس الطول لا البكسل"
+  },
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -58,7 +73,12 @@
             "accent": false
           }
         ],
-        "kashida": []
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
       },
       {
         "index": 1,
@@ -85,7 +105,12 @@
             "accent": false
           }
         ],
-        "kashida": []
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
       }
     ]
   },

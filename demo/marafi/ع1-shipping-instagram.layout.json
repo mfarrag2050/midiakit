@@ -1,6 +1,21 @@
 {
-  "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T12:51:28.371Z",
+  "$schema": "340-typography-layout-v2",
+  "generated": "2026-09-13T13:51:50.979Z",
+  "pipelineCoverage": {
+    "preprocessBidi": "called",
+    "parseTokens": "called",
+    "computeBreakPenalties": "called",
+    "wrapOptimal": "called",
+    "justifyLine": "called",
+    "normalizeHeadlineFont": "not-called",
+    "computeHeadlineLayout": "not-called",
+    "drawHeadlineLine": "not-applicable"
+  },
+  "pipelineCoverageNotes": {
+    "normalizeHeadlineFont": "قواعد اشتقاق fs/lineHeight · إن أضاف engine قاعدة جديدة الأداة تفوّتها",
+    "computeHeadlineLayout": "dynamic lineHeightMode لا يُستعمل هنا (brand.typography.lineHeightMode=fixed)",
+    "drawHeadlineLine": "الرسم الفعليّ + استهلاك font metrics · الأداة تقيس الطول لا البكسل"
+  },
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -32,55 +47,73 @@
     "lines": [
       {
         "index": 0,
-        "text": "ارتفاع أسعار الشحن البحريّ",
+        "text": "ارتفـــاع أسعـــار الشـــحن البحريّ",
         "wordCount": 4,
         "break": {
           "after": "البحريّ",
-          "beforeNextLine": "يدفع"
+          "beforeNextLine": "يـــدفع"
         },
         "runs": [
           {
-            "text": "ارتفاع",
+            "text": "ارتفـــاع",
             "dir": "rtl",
             "xEnd": 1009,
-            "xStart": 845,
-            "width": 164,
+            "xStart": 819,
+            "width": 190,
             "bold": false,
             "accent": false
           },
           {
-            "text": "أسعار",
+            "text": "أسعـــار",
             "dir": "rtl",
-            "xEnd": 826,
-            "xStart": 667,
-            "width": 159,
+            "xEnd": 800,
+            "xStart": 616,
+            "width": 185,
             "bold": false,
             "accent": false
           },
           {
-            "text": "الشحن",
+            "text": "الشـــحن",
             "dir": "rtl",
-            "xEnd": 648,
-            "xStart": 433,
-            "width": 216,
+            "xEnd": 597,
+            "xStart": 356,
+            "width": 241,
             "bold": false,
             "accent": false
           },
           {
             "text": "البحريّ",
             "dir": "rtl",
-            "xEnd": 414,
-            "xStart": 213,
+            "xEnd": 337,
+            "xStart": 136,
             "width": 201,
             "bold": false,
             "accent": false
           }
         ],
-        "kashida": []
+        "kashida": {
+          "words": [
+            {
+              "word": "ارتفـــاع",
+              "tatweelCount": 3
+            },
+            {
+              "word": "أسعـــار",
+              "tatweelCount": 3
+            },
+            {
+              "word": "الشـــحن",
+              "tatweelCount": 3
+            }
+          ],
+          "tatweelBefore": 0,
+          "tatweelAfter": 9,
+          "tatweelInsertedByJustify": 9
+        }
       },
       {
         "index": 1,
-        "text": "يدفع مستوردي المواد الغذائيّة",
+        "text": "يـــدفع مســـتوردي المــواد الغذائيّة",
         "wordCount": 4,
         "break": {
           "after": "الغذائيّة",
@@ -88,43 +121,61 @@
         },
         "runs": [
           {
-            "text": "يدفع",
+            "text": "يـــدفع",
             "dir": "rtl",
             "xEnd": 1009,
-            "xStart": 864,
-            "width": 145,
+            "xStart": 839,
+            "width": 170,
             "bold": false,
             "accent": false
           },
           {
-            "text": "مستوردي",
+            "text": "مســـتوردي",
             "dir": "rtl",
-            "xEnd": 846,
-            "xStart": 563,
-            "width": 282,
+            "xEnd": 820,
+            "xStart": 512,
+            "width": 308,
             "bold": false,
             "accent": false
           },
           {
-            "text": "المواد",
+            "text": "المــواد",
             "dir": "rtl",
-            "xEnd": 544,
-            "xStart": 372,
-            "width": 173,
+            "xEnd": 493,
+            "xStart": 303,
+            "width": 190,
             "bold": false,
             "accent": false
           },
           {
             "text": "الغذائيّة",
             "dir": "rtl",
-            "xEnd": 353,
-            "xStart": 132,
+            "xEnd": 284,
+            "xStart": 63,
             "width": 221,
             "bold": false,
             "accent": false
           }
         ],
-        "kashida": []
+        "kashida": {
+          "words": [
+            {
+              "word": "يـــدفع",
+              "tatweelCount": 3
+            },
+            {
+              "word": "مســـتوردي",
+              "tatweelCount": 3
+            },
+            {
+              "word": "المــواد",
+              "tatweelCount": 2
+            }
+          ],
+          "tatweelBefore": 0,
+          "tatweelAfter": 8,
+          "tatweelInsertedByJustify": 8
+        }
       },
       {
         "index": 2,
@@ -169,7 +220,12 @@
             "accent": false
           }
         ],
-        "kashida": []
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
       }
     ]
   },
