@@ -112,5 +112,37 @@
     "WORKFLOW_IN_USE_IMMUTABLE_FIELD",
     "WORKFLOW_NOT_FOUND",
     "WORKFLOW_SCHEMA_VIOLATION"
-  ]
+  ],
+  "deferred": {
+    "$note": "Declared in errors.ts but the endpoint that emits them isn't wired until A21. Dictionary entries required now so translations are ready.",
+    "codes": [
+      "SEATS_EXHAUSTED",
+      "ACCOUNT_SUSPENDED"
+    ]
+  },
+  "clientOnlyCodes": {
+    "$note": "Not from mk-api — UI-side fallbacks. Excluded from mirror-vs-errors.ts diff, but must exist in dictionaries.",
+    "codes": [
+      "UNKNOWN",
+      "UNAUTHENTICATED",
+      "NETWORK_ERROR",
+      "URL_EXPIRED",
+      "UPLOAD_FAILED",
+      "UPLOAD_ABORTED",
+      "SERVICE_UNAVAILABLE",
+      "RENDER_FAILED",
+      "RENDER_TIMEOUT",
+      "RATE_LIMITED",
+      "EXPORT_DOWNLOAD_FAILED",
+      "FONT_LOAD_CONFIG_MISSING",
+      "FONT_LOAD_NO_SOURCE",
+      "FONT_LOAD_FAILED",
+      "ASSET_NO_PUBLIC_URL",
+      "ASSET_LOAD_FAILED",
+      "ASSET_ID_EMPTY",
+      "CANVAS_NO_CONTEXT",
+      "PREVIEW_UNKNOWN",
+      "INVALID_LOGO_DIMENSIONS"
+    ]
+  }
 }
