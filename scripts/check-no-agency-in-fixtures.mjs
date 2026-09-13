@@ -7,10 +7,9 @@
 // هذا الفاحص حرس بيئة عيّنات محلّيّ، لا بديل لـblocklist الرسميّ.)
 //
 // **الاستثناءات المُعلَنة (رفض تمرير أخرى بلا إعلان):**
-//   • fixtures/audio/** — «الأناضول» نموذج WER مقصود (README §استثناء القاعدة 10)
-//   • scripts/brand-blocklist.json — يذكر الأسماء بحقّ (قائمة الحظر نفسها)
+//   • fixtures/audio/** — نموذج WER مقصود (README §استثناء القاعدة 10)
+//   • scripts/brand-blocklist.json — القائمة الرسميّة نفسها
 //   • scripts/check-no-brand-leak.mjs · scripts/build-skill.mjs — وثائق تاريخيّة موثّقة
-//   • هذا السكربت نفسه (يذكر الأسماء ليصفها)
 //
 // **الاستعمال:** `node scripts/check-no-agency-in-fixtures.mjs`
 // **الخروج:** 0 نظيف · 1 عند أيّ تسرّب.
