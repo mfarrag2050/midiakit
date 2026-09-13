@@ -42,21 +42,36 @@ const NAV: readonly NavItem[] = [
   { href: '/design', labelKey: 'nav.design', icon: '⌘' },
 ];
 
+// 310-AUTH-FLASH · حالةٌ ثالثة صريحة قبل حسم الجلسة كي لا يومض المحتوى
+// المصادَق قبل التحويلة إلى /login. القاعدة: **لا يُصيَّر شيءٌ حقيقيّ
+// قبل حسم الجلسة** — فقط splash هادئ بهويّة المنتج.
+//
+// **قبل الإصلاح:** `useEffect` يفحص التوكن بعد أوّل رسم كامل — الشريك يرى
+// الشريط الجانبيّ + الرأس + هيكل الصفحة ثمّ يُقذَف إلى /login (FOAC).
+//
+// **بعد الإصلاح:** authState = 'checking' | 'authed' | 'unauthed'.
+// 'checking' هو الحال الأوّليّة (React state initial) ⇒ splash فقط · لا nav
+// ولا header ولا children. `useEffect` يحسم في نفس tick البدايّة تقريباً.
+type AuthState = 'checking' | 'authed' | 'unauthed';
+
 export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const { t } = useLocale();
   const pathname = usePathname();
   const router = useRouter();
+  const [authState, setAuthState] = useState<AuthState>('checking');
   const [user, setUser] = useState<User | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     if (!getAccessToken()) {
+      setAuthState('unauthed');
       router.replace('/login');
       return;
     }
     setUser(getSessionUser());
     setTenant(getSessionTenant());
+    setAuthState('authed');
   }, [router]);
 
   // إغلاق الخزانة عند تغيير المسار (بعد اختيار عنصر).
@@ -94,6 +109,28 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
       })}
     </ul>
   );
+
+  // 310-AUTH-FLASH · حين authState = 'checking' نُصيّر splash فقط. لا nav
+  // ولا header ولا children. حين 'unauthed' نُصيّر splash فارغ حتّى تكتمل
+  // التحويلة إلى /login (لتفادي وميضٍ ثانٍ لـshell قبل الانتقال).
+  if (authState !== 'authed') {
+    return (
+      <div
+        role="status"
+        aria-label={t('auth.checking.label')}
+        className="grid min-h-screen place-items-center bg-surface"
+      >
+        <div className="text-center">
+          <div className="text-xs uppercase tracking-widest text-fg-subtle">
+            {t('brand.tagline')}
+          </div>
+          <div className="mt-1 font-latin text-lg font-semibold tracking-tight">
+            {t('brand.name')}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen md:grid-cols-[240px_1fr]">

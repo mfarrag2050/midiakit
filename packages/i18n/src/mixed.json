@@ -559,7 +559,8 @@
       "loadMore": "load more",
       "downloadFailed": "تعذّر جلب download link — أعد المحاولة.",
       "envelopeNote": "server pagination offset-based — لا cursor مزوَّر.",
-      "errorCodeHint": "server error code — انسخه لـsupport إن سألوا."
+      "errorCodeHint": "server error code — انسخه لـsupport إن سألوا.",
+      "refresh": "Refresh"
     },
     "billing": {
       "title": "Billing",
@@ -632,6 +633,9 @@
     }
   },
   "auth": {
+    "checking": {
+      "label": "التحقّق من session…"
+    },
     "login": {
       "title": "تسجيل الدخول",
       "subtitle": "أدخل بيانات حسابك للمتابعة.",
