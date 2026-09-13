@@ -1,6 +1,6 @@
 {
   "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T10:38:17.880Z",
+  "generated": "2026-09-13T11:22:18.519Z",
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -18,6 +18,7 @@
   },
   "input": {
     "headline": "ارتفاع أسعار الشحن البحريّ يدفع مستوردي المواد الغذائيّة إلى مراجعة عقودهم السنويّة",
+    "headlineProcessed": "ارتفاع أسعار الشحن البحريّ يدفع مستوردي المواد الغذائيّة إلى مراجعة عقودهم السنويّة",
     "source": "مَرافئ",
     "purpose": "الكسر الدلاليّ والكشيدة — حالة 107 نفسها. الكسر الساذج يشطر «مستوردي المواد الغذائيّة» (إضافة) أو يُيتّم «إلى»."
   },
@@ -173,7 +174,51 @@
     ]
   },
   "diacritics": {
-    "status": "unmeasured",
-    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+    "method": "differential-ink-box",
+    "status": "zero-delta-marks-may-be-lost",
+    "measurements": [
+      {
+        "word": "البحريّ",
+        "fs": 80,
+        "withMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "withoutMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "delta": 0,
+        "inkClipped": false
+      },
+      {
+        "word": "الغذائيّة",
+        "fs": 80,
+        "withMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "withoutMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "delta": 0,
+        "inkClipped": false
+      },
+      {
+        "word": "السنويّة",
+        "fs": 80,
+        "withMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "withoutMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "delta": 0,
+        "inkClipped": false
+      }
+    ]
   }
 }

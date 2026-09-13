@@ -1,6 +1,6 @@
 {
   "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T10:38:18.391Z",
+  "generated": "2026-09-13T11:22:19.078Z",
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -18,6 +18,7 @@
   },
   "input": {
     "headline": "منصّة Nimbus تعلن خفض رسوم التخزين 25% بدءاً من الربع الأوّل",
+    "headlineProcessed": "منصّة Nimbus تعلن خفض رسوم التخزين ٢٥% بدءاً من الربع الأوّل",
     "source": "مَرافئ",
     "purpose": "ثنائيّ الاتّجاه وأرقام. Nimbus مُختلَقة. حالة L-102 (BiDi أخطأتُ في قراءتها الليلة)."
   },
@@ -74,7 +75,7 @@
         "wordCount": 3,
         "break": {
           "after": "التخزين",
-          "beforeNextLine": "25%"
+          "beforeNextLine": "٢٥%"
         },
         "runs": [
           {
@@ -109,24 +110,24 @@
       },
       {
         "index": 2,
-        "text": "25% بدءاً من الربع الأوّل",
+        "text": "٢٥% بدءاً من الربع الأوّل",
         "wordCount": 5,
         "break": null,
         "runs": [
           {
-            "text": "25%",
-            "dir": "ltr",
+            "text": "٢٥%",
+            "dir": "rtl",
             "xEnd": 1009,
-            "xStart": 839,
-            "width": 170,
+            "xStart": 854,
+            "width": 155,
             "bold": false,
             "accent": false
           },
           {
             "text": "بدءاً",
             "dir": "rtl",
-            "xEnd": 820,
-            "xStart": 708,
+            "xEnd": 835,
+            "xStart": 723,
             "width": 112,
             "bold": false,
             "accent": false
@@ -134,8 +135,8 @@
           {
             "text": "من",
             "dir": "rtl",
-            "xEnd": 689,
-            "xStart": 594,
+            "xEnd": 705,
+            "xStart": 609,
             "width": 96,
             "bold": false,
             "accent": false
@@ -143,8 +144,8 @@
           {
             "text": "الربع",
             "dir": "rtl",
-            "xEnd": 575,
-            "xStart": 441,
+            "xEnd": 590,
+            "xStart": 456,
             "width": 134,
             "bold": false,
             "accent": false
@@ -152,8 +153,8 @@
           {
             "text": "الأوّل",
             "dir": "rtl",
-            "xEnd": 422,
-            "xStart": 274,
+            "xEnd": 437,
+            "xStart": 289,
             "width": 148,
             "bold": false,
             "accent": false
@@ -164,7 +165,51 @@
     ]
   },
   "diacritics": {
-    "status": "unmeasured",
-    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+    "method": "differential-ink-box",
+    "status": "zero-delta-marks-may-be-lost",
+    "measurements": [
+      {
+        "word": "منصّة",
+        "fs": 80,
+        "withMarks": {
+          "topY": 94,
+          "aboveBaseline": 56
+        },
+        "withoutMarks": {
+          "topY": 94,
+          "aboveBaseline": 56
+        },
+        "delta": 0,
+        "inkClipped": false
+      },
+      {
+        "word": "بدءاً",
+        "fs": 80,
+        "withMarks": {
+          "topY": 63,
+          "aboveBaseline": 87
+        },
+        "withoutMarks": {
+          "topY": 90,
+          "aboveBaseline": 60
+        },
+        "delta": 27,
+        "inkClipped": false
+      },
+      {
+        "word": "الأوّل",
+        "fs": 80,
+        "withMarks": {
+          "topY": 81,
+          "aboveBaseline": 69
+        },
+        "withoutMarks": {
+          "topY": 81,
+          "aboveBaseline": 69
+        },
+        "delta": 0,
+        "inkClipped": false
+      }
+    ]
   }
 }

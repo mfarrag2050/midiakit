@@ -1,6 +1,6 @@
 {
   "$schema": "310-typography-layout-v1",
-  "generated": "2026-09-13T10:38:18.440Z",
+  "generated": "2026-09-13T11:22:19.139Z",
   "engine": {
     "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
     "drawLineRTL": "packages/engine/src/text/draw-line.ts"
@@ -18,6 +18,7 @@
   },
   "input": {
     "headline": "قَرارٌ مُفاجِئ بتَعليقِ الرِّحلات",
+    "headlineProcessed": "قَرارٌ مُفاجِئ بتَعليقِ الرِّحلات",
     "source": "مَرافئ",
     "purpose": "التشكيل وقِصَر السطر. علاماتٌ متراكمة (شدّة · همزة على كرسيّ · تنوين). قصيرٌ عمداً — ضبط العناوين الطويلة يكسر القصيرة كثيراً."
   },
@@ -89,7 +90,65 @@
     ]
   },
   "diacritics": {
-    "status": "unmeasured",
-    "reason": "صناديق التشكيل (combining marks) غير محسوبة في المحرّك · canvas.fillText يرسمها كجزء من glyph بلا bounding boxes منفصلة. الإخراج يقتضي تغيير سلوك حساب (§٢ · قِفتُ · owner قرار)."
+    "method": "differential-ink-box",
+    "status": "zero-delta-marks-may-be-lost",
+    "measurements": [
+      {
+        "word": "قَرارٌ",
+        "fs": 49,
+        "withMarks": {
+          "topY": 43,
+          "aboveBaseline": 49
+        },
+        "withoutMarks": {
+          "topY": 54,
+          "aboveBaseline": 38
+        },
+        "delta": 11,
+        "inkClipped": false
+      },
+      {
+        "word": "مُفاجِئ",
+        "fs": 49,
+        "withMarks": {
+          "topY": 55,
+          "aboveBaseline": 37
+        },
+        "withoutMarks": {
+          "topY": 55,
+          "aboveBaseline": 37
+        },
+        "delta": 0,
+        "inkClipped": false
+      },
+      {
+        "word": "بتَعليقِ",
+        "fs": 49,
+        "withMarks": {
+          "topY": 54,
+          "aboveBaseline": 38
+        },
+        "withoutMarks": {
+          "topY": 55,
+          "aboveBaseline": 37
+        },
+        "delta": 1,
+        "inkClipped": false
+      },
+      {
+        "word": "الرِّحلات",
+        "fs": 49,
+        "withMarks": {
+          "topY": 55,
+          "aboveBaseline": 37
+        },
+        "withoutMarks": {
+          "topY": 55,
+          "aboveBaseline": 37
+        },
+        "delta": 0,
+        "inkClipped": false
+      }
+    ]
   }
 }
