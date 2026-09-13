@@ -123,6 +123,36 @@ export async function request<T>(
   path: string,
   opts: RequestOptions = {}
 ): Promise<T> {
+  // 270-WHAT-HE-SEES-AT-DAWN — سباق مهلة عامّ على كلّ نداءٍ (mock أو real).
+  // إن لم يُجب الخادم خلال REQUEST_TIMEOUT_MS، نُخرج ApiError مسمّى
+  // `SERVER_UNRESPONSIVE` بدل ترك الواجهة تدور «جارٍ التحميل…» أبديّاً.
+  //
+  // **20 ثانية اختيار متحفّظ:** نداء API محليّ سريع (< 200ms قِستُه في mock).
+  // نداء إنتاج معقول (< 3s). 20s ≈ 7-100× ذلك — يستوعب 3G/شبكة سيّئة
+  // بلا تشغيل السقف على استعمال طبيعيّ. أقلّ من 30s كي لا يشتبك مع
+  // إعادات retry في الشبكات الوسيطة.
+  return Promise.race([
+    doRequest<T>(path, opts),
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new ApiError({
+          code: 'SERVER_UNRESPONSIVE',
+          messageKey: 'errors.SERVER_UNRESPONSIVE',
+          field: null,
+          requestId: null,
+          status: 504,
+        }));
+      }, REQUEST_TIMEOUT_MS);
+    }),
+  ]);
+}
+
+const REQUEST_TIMEOUT_MS = 20_000;
+
+async function doRequest<T>(
+  path: string,
+  opts: RequestOptions
+): Promise<T> {
   const method = opts.method ?? 'GET';
 
   // Mock switch — يعمل قبل fetch كي لا تحتاج NEXT_PUBLIC_API_URL.

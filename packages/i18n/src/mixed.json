@@ -696,6 +696,7 @@
     "RENDER_FAILED": "تعذّر إخراج البطاقة — أعد المحاولة.",
     "RENDER_TIMEOUT": "export timed out — الرسم بدأ لكنّه لم يُنهَ في الوقت. أعد المحاولة.",
     "RENDER_QUEUE_STUCK": "render service لا تستجيب — الطلب في queue بلا worker. جرّب بعد قليل.",
+    "SERVER_UNRESPONSIVE": "server لا يستجيب — الرد أخذ too long. جرّب reload، وإن استمرّ فالخدمة down.",
     "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
     "RATE_LIMITED": "too many requests — انتظر ثمّ أعد المحاولة.",
     "EXPORT_DOWNLOAD_FAILED": "the file was produced but download failed — تحقّق من الاتّصال.",

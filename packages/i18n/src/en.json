@@ -695,6 +695,7 @@
     "RENDER_FAILED": "Could not export the card — try again; if it repeats, contact support.",
     "RENDER_TIMEOUT": "Export timed out before completing — rendering started but didn't finish in the allowed window. Try again or contact support.",
     "RENDER_QUEUE_STUCK": "The render service is not responding — your request stayed queued without a worker picking it up. Try again shortly.",
+    "SERVER_UNRESPONSIVE": "The server isn't responding — the reply took too long. Try reloading; if the wait continues, the service is likely down.",
     "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
     "RATE_LIMITED": "Too many requests in a row — wait a moment then try again.",
     "EXPORT_DOWNLOAD_FAILED": "The file was produced but couldn't be downloaded — check your connection and try again.",

@@ -564,6 +564,13 @@ export async function handleMock(
   body: unknown,
   headers?: Readonly<Record<string, string>>
 ): Promise<MockResult> {
+  // 270-WHAT-HE-SEES-AT-DAWN · اختبار حياة: إن ضُبط
+  // `window.__MK_HANG_ALL__ = true` قبل الطلب، لا نجيب أبداً — نحاكي
+  // «الخادم لا يستجيب» محلّياً بلا لمس أيّ نداءٍ أو خدمة. سلوك dev بحت.
+  if (typeof window !== 'undefined' &&
+      (window as { __MK_HANG_ALL__?: unknown }).__MK_HANG_ALL__ === true) {
+    await new Promise(() => {}); // never resolves
+  }
   // تأخير 200ms لمحاكاة زمن الشبكة — كي تُرى حالة loading في المتصفح.
   await delay(200);
 
