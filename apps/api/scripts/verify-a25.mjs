@@ -160,9 +160,10 @@ async function main() {
         await c.query('BEGIN');
         await c.query('SELECT app_set_tenant($1::uuid)', [a.tenant.id]);
         await c.query(
+          // 360 · brand_snapshot يحمل fonts+colors (trigger renders_snapshot_guard)
           `INSERT INTO renders(tenant_id, project_id, size, format, status,
                                 brand_snapshot, template_snapshot, requested_by)
-           VALUES ($1, $2, 'x', 'png', 'succeeded', '{}'::jsonb, '{}'::jsonb, $3)`,
+           VALUES ($1, $2, 'x', 'png', 'succeeded', '{"fonts":{},"colors":{}}'::jsonb, '{}'::jsonb, $3)`,
           [a.tenant.id, pid, a.user.id]);
         await c.query('COMMIT');
       } finally { c.release(); }
