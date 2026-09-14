@@ -23,6 +23,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -147,15 +148,27 @@ async function ensureBrandKit(client, tenantId) {
   return rows[0].id;
 }
 
-async function pickDefaultTemplate(client) {
+// _AMEND-390 §أ · اقرأ ملفّ القالب واستخرج fields[].key حرفيّاً — لا تخمين.
+// المفاتيح التي يعرفها القالب هي مصدر الحقيقة الوحيد. الاستوديو يقرأها
+// عبر extractFields · العامل/renderFrame يقرأها عبر layer.field. البذرة
+// **يجب** أن تكتب بنفسها لا بمفاتيح مؤلّفة.
+function readTemplateFields(sourceRef) {
+  const rel = sourceRef.replace('@pf-mediakit/templates/', 'packages/templates/src/templates/');
+  const full = resolve(__dirname, '..', rel);
+  const tpl = JSON.parse(readFileSync(full, 'utf-8'));
+  return (tpl.fields ?? []).map((f) => f.key);
+}
+
+async function pickTemplateBySourceRef(client, sourceRef) {
   const { rows } = await client.query(
-    `SELECT id FROM templates WHERE scope = 'global' ORDER BY name LIMIT 1`,
+    `SELECT id FROM templates WHERE scope = 'global' AND source_ref = $1 LIMIT 1`,
+    [sourceRef],
   );
-  if (!rows[0]) throw new Error('لا قوالب عامّة — تأكّد أنّ migrations اكتملت.');
+  if (!rows[0]) throw new Error(`لا قالب scope=global لـ${sourceRef} — migrations أو seed_templates ناقص.`);
   return rows[0].id;
 }
 
-async function ensureSampleProjects(client, tenantId, brandKitId, templateId, userId) {
+async function ensureSampleProjects(client, tenantId, brandKitId, userId) {
   const { rows: existing } = await client.query(
     'SELECT id FROM projects WHERE tenant_id = $1 LIMIT 1',
     [tenantId],
@@ -165,39 +178,61 @@ async function ensureSampleProjects(client, tenantId, brandKitId, templateId, us
   // ثلاثة مشاريع عيّنة — كلّ اسم/جهة/مصدر مُختلَق بالكامل.
   // قاعدة (_AMEND-SHOWROOM-PORTS §4): لا اسم مؤسّسة حقيقيّة، ولا مادّة
   // تحريريّة لا نملك حقّ عرضها. الأسماء أدناه لا وجود لها في الواقع.
+  //
+  // _AMEND-390 §أ · pool = مفاتيح احتماليّة. content النهائيّ يُرشَّح إلى
+  // ما يصرّح به القالب فقط (readTemplateFields). كل مشروع يحمل template_ref
+  // خاصّاً به · نصّه يُعبّأ في المفاتيح المُصرّح بها فقط.
   const projects = [
     {
       name: 'حملة الافتتاح — بطاقة إعلان',
-      content: {
-        title: 'انطلاق برنامج «صباحيّات المدينة» — مواعيد يوميّة',
+      template_ref: '@pf-mediakit/templates/card-bottom.json',
+      pool: {
+        headline: 'انطلاق برنامج «صباحيّات المدينة» — مواعيد يوميّة',
         source: 'الوكالة',
-        tokens: [{ text: 'صباحيّات', bold: true }, { text: 'المدينة' }],
+        sourceHandle: '@morning_show',
+        sourceName: 'وكالة العرض',
       },
     },
     {
       name: 'تقرير موجز — خبر عاجل',
-      content: {
-        title: 'هيئة المدينة للخدمات تُعلن نتائج مسحٍ سنويّ',
+      template_ref: '@pf-mediakit/templates/breaking.json',
+      pool: {
+        headline: 'هيئة المدينة للخدمات تُعلن نتائج مسحٍ سنويّ',
         source: 'هيئة المدينة',
-        tokens: [{ text: 'نتائج' }, { text: 'المسح', accent: true }],
+        sourceHandle: '@city_agency',
+        sourceName: 'وكالة المدينة',
       },
     },
     {
       name: 'برومو حلقة — بطاقة مربّعة',
-      content: {
-        title: 'حلقة الليلة: حوار في شؤون المدينة',
+      template_ref: '@pf-mediakit/templates/card-centered.json',
+      pool: {
+        headline: 'حلقة الليلة: حوار في شؤون المدينة',
         source: 'مراسلنا',
-        tokens: [{ text: 'حوار' }, { text: 'المدينة', bold: true }],
+        sourceHandle: '@episode',
+        sourceName: 'استوديو العرض',
+      },
+    },
+    {
+      name: 'ملاحظة تحريريّة — بطاقة بسيطة',
+      template_ref: '@pf-mediakit/templates/plain.json',
+      pool: {
+        headline: 'قراءة موجزة في مصطلحات التغطية الميدانيّة',
       },
     },
   ];
 
   for (const p of projects) {
+    const templateId = await pickTemplateBySourceRef(client, p.template_ref);
+    const declaredKeys = readTemplateFields(p.template_ref);
+    const content = Object.fromEntries(
+      declaredKeys.filter((k) => k in p.pool).map((k) => [k, p.pool[k]]),
+    );
     await client.query(
       `INSERT INTO projects
          (tenant_id, brand_kit_id, template_id, name, content, created_by, state, locale)
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, 'draft', 'ar')`,
-      [tenantId, brandKitId, templateId, p.name, JSON.stringify(p.content), userId],
+      [tenantId, brandKitId, templateId, p.name, JSON.stringify(content), userId],
     );
   }
   return projects.length;
@@ -231,8 +266,8 @@ async function main() {
   const brandKitId = await ensureBrandKit(mig, tenantId);
   console.log(`[seed] brand_kit=${brandKitId.slice(0, 8)}…`);
 
-  const templateId = await pickDefaultTemplate(mig);
-  const added = await ensureSampleProjects(mig, tenantId, brandKitId, templateId, userId);
+  // _AMEND-390 §أ · لكل مشروع template_ref خاصّ · لا template افتراضيّ موحّد.
+  const added = await ensureSampleProjects(mig, tenantId, brandKitId, userId);
   if (added > 0) console.log(`[seed] ✓ أضفتُ ${added} مشاريع تجريبيّة.`);
   else console.log(`[seed] ⏭  مشاريع تجريبيّة موجودة مسبقاً.`);
 
