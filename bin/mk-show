@@ -262,7 +262,7 @@ cmd_up() {
   # 4) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
   say "أشغّل seed العرض (يتخطّى إن كانت البذرة موجودة) …"
   ( set -a; . "$(env_file)"; set +a
-    cd "$SHOW_ROOT" && node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+    cd "$SHOW_ROOT" && node --import tsx "$SHOW_ROOT/scripts/seed-showroom.mjs" )
 
   # 5) Studio — يحاول next build (إنتاج) ثمّ يرجع إلى next dev إن فشل.
   #    فشل build لا يُسقط الشووروم — API + seed أهمّ. تُبلَّغ الحال في stdout.
@@ -680,7 +680,7 @@ cmd_seed() {
   ensure_env_show
   say "أشغّل seed العرض يدويّاً …"
   ( set -a; . "$(env_file)"; set +a
-    cd "$SHOW_ROOT" && node "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+    cd "$SHOW_ROOT" && node --import tsx "$SHOW_ROOT/scripts/seed-showroom.mjs" )
 }
 
 # ═════ dispatch ═════════════════════════════════════════════════════════════
