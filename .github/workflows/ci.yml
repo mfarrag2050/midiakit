@@ -74,17 +74,18 @@ jobs:
       # 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر — بدون هذه الخدمة، STORAGE_DRIVER
       # الافتراضي = memory يولّد `mem://download/...` · undici يرمي `unknown scheme`.
       #
-      # اختير `bitnami/minio` لا `minio/minio` الرسمي: services في GH Actions لا
-      # تدعم توجيه `command:` — والـimage الرسميّة تتطلّب `server /data` كوسيط.
-      # bitnami/minio تحوي default entrypoint يشغّل server · وتنشئ الدلو تلقائيّاً
-      # عبر `MINIO_DEFAULT_BUCKETS` — فلا حاجة لخطوة init منفصلة.
+      # اختير `bitnamilegacy/minio` (bitnami/minio بعد نقل Broadcom 2025) لا
+      # `minio/minio` الرسمي: services في GH Actions لا تدعم توجيه `command:` —
+      # والـimage الرسميّة تتطلّب `server /data` كوسيط. bitnami image تحوي default
+      # entrypoint يشغّل server · وتنشئ الدلو تلقائيّاً عبر `MINIO_DEFAULT_BUCKETS`
+      # — فلا حاجة لخطوة init منفصلة.
       #
       # الاعتمادات test-only معلَنة (نفس نمط SESSION_JWT_SECRET · 271 §١) — services
       # env في GH Actions يُقلع قبل أيّ step فلا يمكن توليد قيَم عشوائيّة له.
       # bin/mk-ci محلّياً يستعمل قيَماً عشوائيّة لأنّه يتحكّم في تسلسل الأوامر.
       # هذه القيَم ليست سرّاً · لا مشتقّة من إنتاج · لا تُستعمل خارج CI.
       minio:
-        image: bitnami/minio:2024.12.18
+        image: bitnamilegacy/minio:2025.7.23-debian-12-r5
         env:
           MINIO_ROOT_USER: ci_test_only_minio_user
           MINIO_ROOT_PASSWORD: ci_test_only_minio_password_placeholder_min_20_chars
