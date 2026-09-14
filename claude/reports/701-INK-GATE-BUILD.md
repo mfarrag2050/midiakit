@@ -21,18 +21,29 @@
 
 ## § ٢ · الأرقامُ الأربعةُ التي اشتُقّ منها الحدّ
 
-مقياسٌ حيٌّ من `fixtures/ink-gate/` (Rec.709 luma · جار: يسار أو أعلى):
+**الأربعةُ بأسمائها الأصليّة** (كما هي في `Claude outputs/proof-20260914*/`) عند `T=8`:
 
-| ملف | حجم | T=8 | T=16 | T=24 | T=32 |
-|-----|-----|-----|------|------|------|
-| `empty-flat.png` (أبيض مسطّح) | 9470B | 0.000% | 0.000% | 0.000% | 0.000% |
-| `empty-gradient.png` (تدرّج) | 10012B | 0.000% | 0.000% | 0.000% | 0.000% |
-| `inked-plain.png` (مملوء) | 26883B | **0.436%** | 0.417% | 0.400% | 0.377% |
-| `inked-breaking.png` (مملوء عاجل) | 58856B | 1.230% | 1.084% | 0.919% | 0.754% |
+```
+card-kicker.png         (فارغ · مسطّح · 9470B · 1080×1440)    ratio = 0.000%
+card-bottom.png         (فارغ · تدرّج · 10012B · 1080×1440)   ratio = 0.000%   ← الامتحان
+seeded-plain-after.png  (مملوء · 26883B · 1080×1440)          ratio = 0.436%
+breaking-seedbrand.png  (مملوء · 58856B · 1080×1350)          ratio = 1.230%
+```
 
 **الفجوة:** من صفرٍ حرفيّ إلى ≥ 0.436٪. أيّ حدٍّ ∈ (0, 0.436%) يفصل.
 
 **المختار:** `T=8 · حدّ 0.05٪` — هامشُ 4× تحت أرخصِ مملوءٍ قِسناه، هامشٌ غيرُ محدود فوق الفارغ.
+
+**نُسِخت الأربعةُ حرفيّاً إلى `fixtures/ink-gate/`** بأسماءٍ وصفيّة (`empty-flat.png` ← `card-kicker.png` · `empty-gradient.png` ← `card-bottom.png` · `inked-plain.png` ← `seeded-plain-after.png` · `inked-breaking.png` ← `breaking-seedbrand.png`) — الأصولُ محفوظةٌ خارج المستودع، والفهرس في `fixtures/ink-gate/README.md`.
+
+**الشكل الكامل عبر T** (يُظهر أنّ الاختيار قويّ لأيّ T ∈ {8..32}):
+
+| ملف | T=8 | T=16 | T=24 | T=32 |
+|-----|-----|------|------|------|
+| card-kicker.png | 0.000% | 0.000% | 0.000% | 0.000% |
+| card-bottom.png | 0.000% | 0.000% | 0.000% | 0.000% |
+| seeded-plain-after.png | **0.436%** | 0.417% | 0.400% | 0.377% |
+| breaking-seedbrand.png | 1.230% | 1.084% | 0.919% | 0.754% |
 
 ---
 
@@ -58,21 +69,27 @@
 
 ## § ٥ · L-46 · أحمرُ ثمّ أخضرُ مقيسٌ حيّاً
 
-**أحمر** (رفعتُ العتبةَ في `ink-gate.ts` مؤقّتاً إلى 2٪ لأثبتَ أنّ الاختبارات تُميّز حقّاً):
+**ما الذي عطّلتُه بالضبط في اختبار الطفرة:** تعديلٌ لحرفٍ واحد على القيمة الافتراضيّة للعتبة في `apps/renderer/src/ink-gate.ts` — من `threshold = 0.0005` (المختار 0.05٪) إلى `threshold = 0.02` (٢٪). الخوارزميّةُ لم تُلمَس؛ نقطةُ الفصل وحدها انزلقت. الأثر:
+- **المملوءان يسقطان تحت العتبة الجديدة** (`0.436% < 2%` و `1.230% < 2%`) ⇒ `hasInk` ينقلب إلى `false` ⇒ الاختباران اللذان يؤكّدان `hasInk=true` يفشلان.
+- **الفارغان يبقيان محقَّقَين** (`0% < 2%` كما `0% < 0.05%`) ⇒ الاختباران اللذان يؤكّدان `hasInk=false` يمرّان.
+- **اختبارُ الفجوة يمرّ** (لا يعتمد على `hasInk`، يقيس `topEmpty` مقابل `bottomInked`).
+- **اختبارات الحدود والصياغة تمرّ** (لا تعتمد على القيمة الافتراضيّة).
+
+فالنتيجة: **2/9 أحمر · 7/9 أخضر** — تُثبِت أنّ الاختبارَ لا يمرّ بالصدفة، بل يقيس بالفعل ما يزعم أن يقيسه: الأربعةُ الحقيقيّةُ تفصل، والحدُّ 0.05٪ ليس عريضاً بلا هدف.
+
 ```
-Test Files  1 failed (1)
-Tests  2 failed | 7 passed (9)
-   > inked-plain: نصّ ⇒ hasInk=true (يجب أن يمرّ)   AssertionError: expected false to be true
-   > inked-breaking: نصّ عاجل ⇒ hasInk=true (يجب أن يمرّ)   AssertionError: expected false to be true
+[RED]  vitest run apps/renderer/src/ink-gate.test.ts
+       Test Files  1 failed (1)
+       Tests  2 failed | 7 passed (9)
+         > inked-plain: نصّ ⇒ hasInk=true (يجب أن يمرّ)  AssertionError: expected false to be true
+         > inked-breaking: نصّ عاجل ⇒ hasInk=true (يجب أن يمرّ)  AssertionError: expected false to be true
+
+[GREEN — بعد استعادة الحرف]
+       Test Files  1 passed (1)
+       Tests  9 passed (9)
 ```
 
-**أخضر** (بعد استعادة العتبةِ إلى 0.05٪):
-```
-Test Files  1 passed (1)
-Tests  9 passed (9)
-```
-
-**استحضارُ الأحمر لاحقاً:** `sed -i.tmp 's/threshold = 0.0005,/threshold = 0.02,/' apps/renderer/src/ink-gate.ts && pnpm vitest run apps/renderer/src/ink-gate.test.ts` — يُنتج فشلَين حرفيَّين. الاستعادة: git checkout.
+**استحضارُ الأحمر لاحقاً:** `sed -i.tmp 's/threshold = 0.0005,/threshold = 0.02,/' apps/renderer/src/ink-gate.ts && pnpm vitest run apps/renderer/src/ink-gate.test.ts` — يُنتج فشلَين حرفيَّين. الاستعادة: `git checkout apps/renderer/src/ink-gate.ts`.
 
 ---
 
@@ -84,7 +101,11 @@ Tests  9 passed (9)
 
 ---
 
-## § ٧ · حدودٌ لم أَقِسها
+## § ٧ · دَينٌ على أرض mediakit (سطرٌ واحد لأُسجّل)
+
+`pnpm --filter @pf-mediakit/renderer typecheck` يفشل بـ**١٢ خطأ TSC pre-existing على `feat/api` HEAD** في `packages/engine/src/timeline/` (تحقّقتُ بـstash + إعادة تشغيل — قبل تغييري وبعده متطابق): `plan.ts` (`bounds` قد يكون undefined ×4 · L207–210) · `template-adapter.ts` (`push` على `readonly` ×4 · L155/160/261/268) · `text-effects.ts` (`firstBaseline` قد يكون undefined ×3 · L51/96/177) · `draw-timeline-at.ts` (L218 · HeadlineBounds \| undefined). كلُّها في أرضٍ مقفولةٍ لـmediakit — لم أقترب.
+
+## § ٨ · حدودٌ لم أَقِسها
 
 - **تكلفةُ الحارس في الإنتاج:** لم أُشغّل benchmark. القياسُ الوحيد: `pnpm vitest run apps/renderer/src/ink-gate.test.ts` كامل (٩ اختبارات + تحميل ٤ PNGs + رسم على canvas × ٥ + الفحص) = 154ms. الفحصُ وحده لكلّ رندرٍ حيّ: `getImageData(0,0,w,h)` نسخ ≈ 5.8MB + مرورٌ خطيّ حسبةً — رتبةُ عشراتِ الميليثانية على 1080×1350. لم أُثبِته بستوبواتش.
 - **توزيعُ الإنتاج:** الحدُّ 0.05٪ مشتقٌّ من ٤ عيّنات فقط. إن انفتحت البوّابة على ما لم أَتوقّعه، اللوغُ (شرط ١) سيكشفه.
