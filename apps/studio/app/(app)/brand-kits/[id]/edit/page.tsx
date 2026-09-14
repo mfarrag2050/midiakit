@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Alert,
   Badge,
@@ -16,6 +16,7 @@ import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, assets, brandKits, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
+import { BUILTIN_FONTS, BUILTIN_FONT_FAMILIES } from '@/src/lib/builtin-fonts';
 import {
   contrastRatio,
   formatContrast,
@@ -280,11 +281,21 @@ export default function BrandKitEditorPage(): JSX.Element {
   const [logoUploading, setLogoUploading] = useState(false);
   const [uploadedLogoAssetId, setUploadedLogoAssetId] = useState<string | null>(null);
   const [uploadedLogoPublicUrl, setUploadedLogoPublicUrl] = useState<string | null>(null);
-  // منتقي الخطّ (المرحلة ٤): assetId المختار + قائمة الخطوط المتاحة.
-  // مصدر البيانات: `/v1/assets` (mock يعيد الكلّ · نصفّي بـkind=='font').
+  // منتقي الخطّ (المرحلة ٤ · مُوسَّع في 360b-بعد الموعد):
+  //   - قبل: assetId من مكتبة الأصول فقط · شاشة فارغة حين لا خطوط مرفوعة.
+  //   - بعد: draftFontChoice = { kind: 'unset' | 'builtin' | 'asset', value }
+  //     مصدر البيانات:
+  //       · builtin  ← @/src/lib/builtin-fonts (مصدر واحد للحقيقة)
+  //       · asset    ← /v1/assets (mock يعيد الكلّ · نصفّي بـkind=='font')
+  //   Mutual exclusive · تعيين واحد يمسح الآخر.
   const [availableFonts, setAvailableFonts] = useState<AssetListItem[]>([]);
-  const [draftFontAssetId, setDraftFontAssetId] = useState<string>('');
-  const [initialFontAssetId, setInitialFontAssetId] = useState<string>('');
+  type FontChoice =
+    | { readonly kind: 'unset' }
+    | { readonly kind: 'builtin'; readonly family: string }
+    | { readonly kind: 'asset'; readonly id: string };
+  const [draftFontChoice, setDraftFontChoice] = useState<FontChoice>({ kind: 'unset' });
+  const [initialFontChoice, setInitialFontChoice] = useState<FontChoice>({ kind: 'unset' });
+  const router = useRouter();
   // §140/§150 مغلَّفان في `LiveCardPreview` و`ExportCardButton`
   // (§160 §١: مكوّن واحد لكلّ وظيفة). نبقي فقط `breakingTemplateId`
   // لأنّ المحرّر يحتاجه لتمريره إلى زرّ التصدير.
@@ -337,12 +348,23 @@ export default function BrandKitEditorPage(): JSX.Element {
       // no-op معه.
       const fonts = fontsPage.data.filter((a) => a.kind === 'font');
       setAvailableFonts(fonts);
-      // اقرأ assetId الحاليّ من الوزن الأساسيّ regular. غيابُه يعني
-      // «لم يُختَر أصلٌ من مكتبتنا» — قد يكون خطّاً مدمَجاً بلا مرجع.
-      const currentAssetId =
-        pickString(cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId') ?? '';
-      setDraftFontAssetId(currentAssetId);
-      setInitialFontAssetId(currentAssetId);
+      // 360b · اقرأ الاختيار الحاليّ من config:
+      //  1) إن كان source='builtin' + family معلومة ⇒ خط مدمَج.
+      //  2) وإلّا إن كان weights.regular.assetId موجوداً ⇒ خط مرفوع.
+      //  3) وإلّا ⇒ غير محدَّد (يعرض placeholder «اختر خطّاً»).
+      const cfgSource = pickString(cfg, 'fonts', 'primary', 'source');
+      const cfgFamily = pickString(cfg, 'fonts', 'primary', 'family');
+      const cfgAssetId = pickString(
+        cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId'
+      );
+      let initial: FontChoice = { kind: 'unset' };
+      if (cfgSource === 'builtin' && cfgFamily && BUILTIN_FONT_FAMILIES.includes(cfgFamily)) {
+        initial = { kind: 'builtin', family: cfgFamily };
+      } else if (cfgAssetId) {
+        initial = { kind: 'asset', id: cfgAssetId };
+      }
+      setDraftFontChoice(initial);
+      setInitialFontChoice(initial);
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
@@ -377,28 +399,42 @@ export default function BrandKitEditorPage(): JSX.Element {
         // احتفظ بـsize/position/watermark من الأصل — الشاشة لا تحرّرها.
       };
     }
-    // الخطّ: إن اختار المستخدم assetId جديداً، حدّث family + weights.regular.url.
+    // الخطّ · 360b (بعد الموعد) · فرعان:
+    //  · builtin: family = المُختارة، source = 'builtin'، لا assetId.
+    //  · asset:   family = من selected.meta.family (أو filename)، source =
+    //             'custom'، مع assetId في weights.regular.
     // ملاحظة (170-FONT-SERVE): mk-api يخدم الخطّ عبر `/v1/assets/:id/font`
     // لكنّ `@font-face` في المتصفّح لا يحمل Bearer JWT — التوصيل الكامل
     // يحتاج إمّا cookie-auth أو proxy عبر Next route. لم أُوصله في هذه
     // المرحلة (راجع §الفنّ لاحقاً في التقرير).
-    if (draftFontAssetId && draftFontAssetId !== initialFontAssetId) {
-      const selected = availableFonts.find((f) => f.id === draftFontAssetId);
-      if (selected) {
-        const existingFonts = (cfg.fonts as Record<string, unknown>) ?? {};
-        const existingPrimary =
-          (existingFonts.primary as Record<string, unknown>) ?? {};
+    if (draftFontChoice.kind !== 'unset') {
+      const existingFonts = (cfg.fonts as Record<string, unknown>) ?? {};
+      const existingPrimary =
+        (existingFonts.primary as Record<string, unknown>) ?? {};
+      if (draftFontChoice.kind === 'builtin') {
         out.fonts = {
           ...existingFonts,
           primary: {
             ...existingPrimary,
-            family:
-              (selected.meta?.family as string | undefined) ??
-              selected.filename,
-            source:
-              ((selected.meta?.source as string | undefined) ?? 'custom'),
+            family: draftFontChoice.family,
+            source: 'builtin',
           },
         };
+      } else {
+        const selected = availableFonts.find((f) => f.id === draftFontChoice.id);
+        if (selected) {
+          out.fonts = {
+            ...existingFonts,
+            primary: {
+              ...existingPrimary,
+              family:
+                (selected.meta?.family as string | undefined) ??
+                selected.filename,
+              source:
+                ((selected.meta?.source as string | undefined) ?? 'custom'),
+            },
+          };
+        }
       }
     }
     return out;
@@ -407,8 +443,7 @@ export default function BrandKitEditorPage(): JSX.Element {
     draftName,
     draftColors,
     draftLogo,
-    draftFontAssetId,
-    initialFontAssetId,
+    draftFontChoice,
     availableFonts,
   ]);
 
@@ -523,10 +558,38 @@ export default function BrandKitEditorPage(): JSX.Element {
           url: uploadedLogoPublicUrl ?? existingLogo.url ?? '',
         };
       }
-      // الخطّ: إن اختار المستخدم `assetId` جديداً، أعِد بناء `fonts`
-      // كاملاً · نفس نمط الألوان والشعار (data-loss avoidance).
-      if (draftFontAssetId !== initialFontAssetId && draftFontAssetId) {
-        const selected = availableFonts.find((f) => f.id === draftFontAssetId);
+      // الخطّ · 360b (بعد الموعد) · فرعان لخيار مُغيَّر:
+      //  · builtin ⇒ family + source='builtin' + weights.regular.assetId=null
+      //    (JSON Merge Patch RFC 7396 · null يحذف الحقل — يزيل ربطاً قديماً
+      //     بأصلٍ مرفوع).
+      //  · asset   ⇒ سلوك المرحلة ٤ الأصليّ (family+source+assetId).
+      const fontChanged =
+        JSON.stringify(draftFontChoice) !== JSON.stringify(initialFontChoice);
+      if (fontChanged && draftFontChoice.kind === 'builtin') {
+        const existing = (kit.config as ConfigLike).fonts ?? {};
+        const existingPrimary =
+          ((existing as Record<string, unknown>).primary as Record<string, unknown>) ?? {};
+        const existingWeights =
+          (existingPrimary.weights as Record<string, unknown>) ?? {};
+        const existingRegular =
+          (existingWeights.regular as Record<string, unknown>) ?? {};
+        payload.fonts = {
+          ...(existing as Record<string, unknown>),
+          primary: {
+            ...existingPrimary,
+            family: draftFontChoice.family,
+            source: 'builtin',
+            weights: {
+              ...existingWeights,
+              regular: {
+                ...existingRegular,
+                assetId: null,
+              },
+            },
+          },
+        };
+      } else if (fontChanged && draftFontChoice.kind === 'asset') {
+        const selected = availableFonts.find((f) => f.id === draftFontChoice.id);
         const existing = (kit.config as ConfigLike).fonts ?? {};
         const existingPrimary =
           ((existing as Record<string, unknown>).primary as Record<string, unknown>) ?? {};
@@ -550,7 +613,7 @@ export default function BrandKitEditorPage(): JSX.Element {
               ...existingWeights,
               regular: {
                 ...existingRegular,
-                assetId: draftFontAssetId,
+                assetId: draftFontChoice.id,
               },
             },
           },
@@ -597,7 +660,8 @@ export default function BrandKitEditorPage(): JSX.Element {
   );
   const dirtyLogo = uploadedLogoAssetId !== null && draftLogo !== null;
   const dirtyFont =
-    draftFontAssetId !== initialFontAssetId && draftFontAssetId !== '';
+    draftFontChoice.kind !== 'unset' &&
+    JSON.stringify(draftFontChoice) !== JSON.stringify(initialFontChoice);
   const dirty = dirtyName || dirtyColors || dirtyLogo || dirtyFont;
   // ملاحظة: لا نُعطّل الزرّ على الاسم الفارغ عمداً — نترك الخادم
   // يعيد `400 VALIDATION_FAILED` فيظهر الأحمر (L-46 · حالة أحمر
@@ -709,50 +773,86 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Font (editable in Phase 3 · assetId not free text) */}
+      {/* Section — Font · 360b (بعد الموعد) · اختيار لا إملاء:
+          مدمَجة (من @/src/lib/builtin-fonts) + مرفوعة + «ارفع خطّي…» */}
       <Card>
         <h2 className="mb-3 text-sm font-semibold">
           {t('pages.brandKits.editor.section.font')}
         </h2>
-        {availableFonts.length === 0 ? (
-          <p className="text-xs text-fg-muted">
-            {t('pages.brandKits.editor.fontPicker.emptyLibrary')}
-          </p>
-        ) : (
-          <>
-            <Field
-              htmlFor="font-picker"
-              labelKey="pages.brandKits.editor.field.fontFamily"
+        <>
+          <Field
+            htmlFor="font-picker"
+            labelKey="pages.brandKits.editor.field.fontFamily"
+          >
+            <select
+              id="font-picker"
+              value={
+                draftFontChoice.kind === 'builtin'
+                  ? `builtin:${draftFontChoice.family}`
+                  : draftFontChoice.kind === 'asset'
+                  ? `asset:${draftFontChoice.id}`
+                  : ''
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'upload') {
+                  // «ارفع خطّي…» — تحويلة إلى مسار الرفع القائم.
+                  // لا نعدّل الاختيار الحاليّ · المستخدم يعود ويختار من
+                  // القائمة بعد الرفع.
+                  router.push('/assets');
+                  return;
+                }
+                if (v.startsWith('builtin:')) {
+                  setDraftFontChoice({ kind: 'builtin', family: v.slice(8) });
+                } else if (v.startsWith('asset:')) {
+                  setDraftFontChoice({ kind: 'asset', id: v.slice(6) });
+                } else {
+                  setDraftFontChoice({ kind: 'unset' });
+                }
+              }}
+              disabled={saving}
+              className="w-full rounded border border-fg-subtle/30 bg-surface px-2 py-1.5 text-sm"
             >
-              <select
-                id="font-picker"
-                value={draftFontAssetId}
-                onChange={(e) => setDraftFontAssetId(e.target.value)}
-                disabled={saving}
-                className="w-full rounded border border-fg-subtle/30 bg-surface px-2 py-1.5 text-sm"
-              >
-                {draftFontAssetId === '' && (
-                  <option value="">
-                    {t('pages.brandKits.editor.fontPicker.chooseFromLibrary')}
+              {draftFontChoice.kind === 'unset' && (
+                <option value="">
+                  {t('pages.brandKits.editor.fontPicker.chooseAFont')}
+                </option>
+              )}
+              <optgroup label={t('pages.brandKits.editor.fontPicker.builtinGroup')}>
+                {BUILTIN_FONTS.map((f) => (
+                  <option
+                    key={`builtin:${f.family}`}
+                    value={`builtin:${f.family}`}
+                    dir="ltr"
+                  >
+                    {f.family}
                   </option>
-                )}
-                {availableFonts.map((f) => {
-                  const family =
-                    typeof f.meta?.family === 'string'
-                      ? f.meta.family
-                      : f.filename;
-                  return (
-                    <option key={f.id} value={f.id} dir="ltr">
-                      {family}
-                    </option>
-                  );
-                })}
-              </select>
-            </Field>
-            <p className="mt-2 text-xs text-fg-subtle">
-              {t('pages.brandKits.editor.fontPicker.assetIdHint')}
-            </p>
-          </>
+                ))}
+              </optgroup>
+              {availableFonts.length > 0 && (
+                <optgroup label={t('pages.brandKits.editor.fontPicker.uploadedGroup')}>
+                  {availableFonts.map((f) => {
+                    const family =
+                      typeof f.meta?.family === 'string'
+                        ? f.meta.family
+                        : f.filename;
+                    return (
+                      <option key={`asset:${f.id}`} value={`asset:${f.id}`} dir="ltr">
+                        {family}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
+              <option value="upload">
+                {t('pages.brandKits.editor.fontPicker.uploadOwn')}
+              </option>
+            </select>
+          </Field>
+          <p className="mt-2 text-xs text-fg-subtle">
+            {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+          </p>
+        </>
         )}
         <div className="mt-3 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
