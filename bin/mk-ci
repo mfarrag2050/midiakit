@@ -206,6 +206,8 @@ docker run --rm \
   -v "${VOLUME}:/work/node_modules" \
   -e DATABASE_URL="${DB_URL_MIGRATION}" \
   -e DATABASE_URL_APP="${DB_URL_APP}" \
+  -e DATABASE_URL_TEST="${DB_URL_MIGRATION}" \
+  -e DATABASE_URL_TEST_APP="${DB_URL_APP}" \
   -e DATABASE_URL_ADMIN="${DB_URL_ADMIN}" \
   -e DATABASE_URL_PLATFORM="${DB_URL_PLATFORM}" \
   -e REDIS_URL="${REDIS_URL_CI}" \
@@ -229,6 +231,10 @@ docker run --rm \
     corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
     echo "[mk-ci · حاوية] pnpm install --frozen-lockfile …"
     pnpm install --frozen-lockfile 2>&1 | tail -3
+    # 276-THE-GATE-RUNS-AS-THE-WRONG-USER §٣ · التوزيع الصحيح المُقاس:
+    #   DATABASE_URL      = migration_user (لـscaffolding الفاحصات mjs · لـmigrate)
+    #   DATABASE_URL_APP  = app_user       (اتّصال المنتج · api / vitest fastify inject)
+    # فاحصات mjs تخضّر 8/9 بهذا التوزيع (§٤). vitest يخضّر 40/40 (§٢ ب).
     echo "[mk-ci · حاوية] pnpm db:migrate …"
     pnpm db:migrate 2>&1 | tail -20
     echo "[mk-ci · حاوية] pnpm test …"

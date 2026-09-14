@@ -205,9 +205,13 @@ jobs:
       # ── (5) تشغيل الهجرات على postgres ────────────────────
       # قد يفشل الآن على citext (mkau تعدّ في 150-FRESH-DB) — سيُحلّ دفعة
       # واحدة في هجرة بيد mkapi، لا هنا.
+      #
+      # 276 §٣ · migrate يستعمل migration_user (لا SUPERUSER). الأدوار
+      # مُنشأة في خطوة bootstrap السابقة عبر infra/postgres/init/01-roles.sql.
+      # كلمة السرّ dev_migration_pass ثابتة في init.sql — لا سرّ حقيقيّ.
       - name: تشغيل الهجرات على postgres
         env:
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
         run: pnpm db:migrate
 
       # ── (7) pnpm test (31 بوابة · حلقة جمع الإخفاقات) ─────
@@ -225,9 +229,19 @@ jobs:
           # (يشير إلى 127.0.0.1:19041). **قيَم test-only معلَنة صراحةً · لا سرّ حقيقيّ ·
           # لا اشتقاق من إنتاج · لا ترخيص فحص ليقبل الغياب** — نصّ 271 §١.
           NODE_ENV: test
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          # 276 §٣ · اتّصال المنتج (api / vitest fastify inject) = app_user
+          # حصراً (NOSUPERUSER · محكوم بـRLS + FORCE ROW LEVEL SECURITY).
+          # قياس (أ) بـsuperuser أعطى 6 test failed. قياس (ب) بـapp_user
+          # في DATABASE_URL_APP أعطى 40 passed / 40. تفاصيل في
+          # claude/reports/276-*.md.
+          #
+          # DATABASE_URL يبقى migration_user لأنّ pnpm test يحتوي على
+          # سكربتات (verify:snapshot · verify:breaking-video · إلخ) لا تلمس
+          # DB · وvitest يقرأ DATABASE_URL_APP مباشرة. توزيع موحّد مع
+          # خطوة 20 verifier أدناه.
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
           # قيَم test-only معلَنة — 32+ حرفاً · لا سرّ إنتاج (النصّ يقول ذلك صراحة).
           SESSION_JWT_SECRET: ci_test_only_session_secret_min_32_chars_placeholder
           PLATFORM_JWT_SECRET: ci_test_only_platform_secret_min_32_chars_placeholder
@@ -287,11 +301,16 @@ jobs:
       - name: "20 verifier خارج pnpm test (60-ORPHAN جدول · بلا perf/alerts-wire)"
         if: always()
         env:
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_TEST: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_TEST_APP: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
-          DATABASE_URL_PLATFORM: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          # 276 §٣ · فاحصات mjs تستعمل DATABASE_URL مباشرة لـscaffolding
+          # (CREATE/INSERT على جداول تحتاج migration_user). لكنّ api الذي
+          # تستدعيه (fastify inject) يقرأ DATABASE_URL_APP. توزيع مقيس
+          # بـ§٤: 8/9 verifiers خضراء بهذا التوزيع (المتبقّي يكشف جذراً
+          # منفصلاً — FORCE ROW LEVEL SECURITY على templates/revisions).
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_TEST: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_TEST_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
           SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
