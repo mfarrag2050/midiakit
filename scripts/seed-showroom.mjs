@@ -27,6 +27,11 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+// _AMEND-390d §٣: البذرة لا تؤلّف هويّةً من رأسها. تبدأ من الافتراض
+// الذي يستعمله المنتج (DEFAULT_BRAND · شكل BrandKit كامل)، ثمّ تُبدّل
+// منه ما يحتاجه العرض (ألوان مَرافئ وشعارها من MARAFI_BRAND).
+// tsx loader يعالج .ts imports من .mjs — pattern مُثبَت في 5 scripts أخرى.
+import { DEFAULT_BRAND, MARAFI_BRAND } from '@pf-mediakit/shared';
 
 // pg تُحلّ من apps/api/node_modules — السكربت في scripts/ لا يملك pg.
 // createRequire من مسار apps/api/package.json → يفتح شجرة node_modules الصحيحة.
@@ -120,13 +125,17 @@ async function ensureBrandKit(client, tenantId) {
   );
   if (existing.rows[0]) return existing.rows[0].id;
 
-  // config افتراضيّ بحدّه الأدنى — العميل يعدّله من الاستوديو.
-  // القيم شبيهة بـpackages/templates/src/brand-kit-defaults (إن وُجد).
+  // _AMEND-390d §٣ · التركيب: DEFAULT_BRAND (شكل كامل) ⇐ overlay مَرافئ.
+  // spread أوّلاً DEFAULT ثمّ MARAFI ⇒ أيّ مفتاح جديد في DEFAULT مستقبلاً
+  // يبقى في البذرة تلقائيّاً · وأيّ مفتاح تُخصّصه مَرافئ يتغلّب.
+  // ألوان + fonts + logo دمج مفتاح-بمفتاح · بقيّة الحقول (typography ·
+  // direction · locale · capabilities …) تأتي كاملة من MARAFI ثمّ DEFAULT.
   const config = {
-    colors: { primary: '#0A2540', accent: '#F5A623', bg: '#FFFFFF', fg: '#111111' },
-    fonts: { arabic: 'Almarai', latin: 'Inter' },
-    margins: { top: 96, bottom: 96, start: 80, end: 80 },
-    numerals: 'arabic',
+    ...DEFAULT_BRAND,
+    ...MARAFI_BRAND,
+    colors: { ...DEFAULT_BRAND.colors, ...MARAFI_BRAND.colors },
+    fonts: { ...DEFAULT_BRAND.fonts, ...MARAFI_BRAND.fonts },
+    logo: { ...DEFAULT_BRAND.logo, ...MARAFI_BRAND.logo },
   };
 
   const { rows } = await client.query(
