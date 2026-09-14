@@ -134,8 +134,9 @@ export class ApiError extends Error {
   public readonly httpStatus: number;
   public readonly field: string | null;
 
-  constructor(code: ErrorCode, httpStatus: number, field: string | null = null) {
-    super(code);
+  constructor(code: ErrorCode, httpStatus: number, field: string | null = null, cause?: unknown) {
+    // 317: ES2022 Error options — cause يُحفظ للتشخيص · لا يُسرَّب في toBody.
+    super(code, cause !== undefined ? { cause } : undefined);
     this.code = code;
     this.httpStatus = httpStatus;
     this.field = field;
@@ -160,7 +161,8 @@ export class ApiError extends Error {
 export const InvalidCredentials = () => new ApiError('INVALID_CREDENTIALS', 401);
 export const AccountDisabled = () => new ApiError('ACCOUNT_DISABLED', 403);
 export const TokenExpired = () => new ApiError('TOKEN_EXPIRED', 401);
-export const TokenInvalid = () => new ApiError('TOKEN_INVALID', 401);
+// 317: TokenInvalid يقبل cause · يُحفظ في err.cause للتشخيص في error-handler.
+export const TokenInvalid = (cause?: unknown) => new ApiError('TOKEN_INVALID', 401, null, cause);
 export const SessionRevoked = () => new ApiError('SESSION_REVOKED', 401);
 export const RefreshTokenInvalid = () => new ApiError('REFRESH_TOKEN_INVALID', 401);
 export const PasswordTooWeak = () => new ApiError('PASSWORD_TOO_WEAK', 400, 'password');

@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# bin/mk-worker — أمرٌ واحد لعامل الرندر (316-ONE-COMMAND-FOR-THE-WORKER).
+#
+# **لماذا:** الليلة أوقِف/أُعيد العامل ٣ مرّات بأمرٍ يُكتب من الرأس في كلّ
+# مرّة. مرّةً أُعيد أثناء بوّابة تقيس · فَسَد قياس كامل. الحلّ: أمرٌ واحد
+# مسمّى · يعرف موضع العامل · يسجّل نفسه · يرفض التكرار.
+#
+# **الملكيّة (315):** أرض mediakit (العامل + بوّابة الدمج). mkapi يبني ·
+# mediakit تستعمل. mkapi تستعمل بعد رفع التجميد.
+#
+# **الأفعال:**
+#   status   — يقرأ الحال · لا يغيّر شيئاً · آمن من أيّ جلسة (لا سطر ledger).
+#   start    — يبدأ إن غاب. **يرفض إن حيّ** (عاملان أسوأ من صفر · شرط §٢·٣).
+#   stop     — يوقف إن حيّ. يقول «موقوف بالفعل» إن غاب.
+#   restart  — stop ثم start.
+#
+# **_worker.md ledger:** يُلحق سطر عند كل فعل يغيّر الحال (start/stop/restart)
+# بالصيغة القائمة. `status` لا يكتب.
+#
+# **من طلب الفعل:** env `MK_SESSION` أو وسيط `--by=<name>` أو `unknown`.
+# **موضع العامل:** env `MK_WORKER_DIR` بقيمة افتراضيّة معلنة أدناه — شرط §٢·٤.
+
+set -euo pipefail
+
+# ── ثوابت وحيدة (شرط §٢·٤ · موضع واحد معلَن) ────────────────
+WORKER_DIR="${MK_WORKER_DIR:-/private/tmp/160-main-tree/apps/renderer}"
+WORKER_CMD="node --import tsx src/api-worker.ts"
+LEDGER_PATH="${MK_LEDGER_PATH:-/Users/mdervis/MediaKit/pf-mediakit/claude/reports/_worker.md}"
+REDIS_DB="${MK_REDIS_DB:-3}"
+SESSION="${MK_SESSION:-unknown}"
+
+# ── وسيط --by=<name> يتجاوز env ─────────────────────────────
+for arg in "$@"; do
+  case "$arg" in
+    --by=*) SESSION="${arg#--by=}" ;;
+  esac
+done
+
+# ── مساعِدات ───────────────────────────────────────────────
+find_pid() {
+  # نستعمل pgrep -f بدقّة عالية: نمط يتضمّن مسار src/api-worker.ts.
+  pgrep -f "${WORKER_CMD}$" 2>/dev/null | head -1 || true
+}
+
+get_ppid() {
+  ps -o ppid= -p "$1" 2>/dev/null | tr -d ' ' || echo "?"
+}
+
+get_etime() {
+  ps -o etime= -p "$1" 2>/dev/null | tr -d ' ' || echo "?"
+}
+
+count_redis_clients() {
+  redis-cli -n "$REDIS_DB" CLIENT LIST 2>/dev/null | wc -l | tr -d ' '
+}
+
+worker_connected_redis() {
+  local pid="$1"
+  lsof -p "$pid" -i -a 2>/dev/null | grep -c ":6379.*ESTABLISHED" || echo 0
+}
+
+now_iso() {
+  date "+%Y-%m-%d %H:%M:%S %z" | sed 's/\([+-]\)\([0-9][0-9]\)\([0-9][0-9]\)/\1\2/'
+}
+
+append_ledger() {
+  local action="$1" pid="$2" ppid="$3"
+  local clients
+  clients=$(count_redis_clients)
+  local line
+  line="$(now_iso) · PID ${pid} (PPID ${ppid}) · ${action}-by: ${SESSION} · cwd ${WORKER_DIR} · Redis DB/${REDIS_DB} (${clients} clients)."
+  echo "$line" >> "$LEDGER_PATH"
+}
+
+# ── الأفعال ────────────────────────────────────────────────
+cmd_status() {
+  local pid ppid etime clients rc
+  pid=$(find_pid)
+  clients=$(count_redis_clients)
+  if [ -z "$pid" ]; then
+    echo "[mk-worker] status: DOWN · لا process يطابق '${WORKER_CMD}'."
+    echo "  cwd (would-be): ${WORKER_DIR}"
+    echo "  Redis DB/${REDIS_DB}: ${clients} clients (لا يشمل العامل)."
+    return 1
+  fi
+  ppid=$(get_ppid "$pid")
+  etime=$(get_etime "$pid")
+  rc=$(worker_connected_redis "$pid")
+  echo "[mk-worker] status: UP · PID ${pid} (PPID ${ppid}) · uptime ${etime}."
+  echo "  cwd: ${WORKER_DIR}"
+  echo "  Redis DB/${REDIS_DB}: ${clients} total clients · ${rc} من العامل."
+  return 0
+}
+
+cmd_start() {
+  local pid
+  pid=$(find_pid)
+  if [ -n "$pid" ]; then
+    # شرط §٢·٣: عاملان أسوأ من صفر · نرفض التكرار.
+    echo "[mk-worker] start: REJECTED · العامل حيّ بالفعل (PID ${pid} · PPID $(get_ppid "$pid"))."
+    echo "  لن أُنشئ ثانياً — عاملان على الطابور يستهلكان الـjobs مرّتين."
+    echo "  للإعادة (kill + start): استعمل 'mk-worker restart'."
+    return 1
+  fi
+  if [ ! -d "$WORKER_DIR" ]; then
+    echo "[mk-worker] start: FAILED · WORKER_DIR غير موجود: ${WORKER_DIR}"
+    return 2
+  fi
+  if [ ! -f "${WORKER_DIR}/src/api-worker.ts" ]; then
+    echo "[mk-worker] start: FAILED · src/api-worker.ts غير موجود في ${WORKER_DIR}"
+    return 2
+  fi
+  echo "[mk-worker] start: launching from ${WORKER_DIR} ..."
+  local log_path="${MK_WORKER_LOG:-/tmp/mk-worker.log}"
+  (
+    cd "$WORKER_DIR"
+    nohup ${WORKER_CMD} > "$log_path" 2>&1 &
+    disown 2>/dev/null || true
+  )
+  sleep 4
+  pid=$(find_pid)
+  if [ -z "$pid" ]; then
+    echo "[mk-worker] start: FAILED · العامل لم يبدأ (تحقّق ${log_path})."
+    return 3
+  fi
+  local ppid
+  ppid=$(get_ppid "$pid")
+  echo "[mk-worker] start: OK · PID ${pid} (PPID ${ppid}) · log: ${log_path}"
+  append_ledger "start" "$pid" "$ppid"
+  return 0
+}
+
+cmd_stop() {
+  local pid ppid
+  pid=$(find_pid)
+  if [ -z "$pid" ]; then
+    echo "[mk-worker] stop: SKIP · موقوف بالفعل (لا process يطابق)."
+    return 0
+  fi
+  ppid=$(get_ppid "$pid")
+  echo "[mk-worker] stop: killing PID ${pid} (PPID ${ppid}) ..."
+  kill "$pid" 2>/dev/null || true
+  # انتظر حتّى 5 ثوان
+  local i=0
+  while [ $i -lt 5 ] && [ -n "$(find_pid)" ]; do
+    sleep 1; i=$((i + 1))
+  done
+  if [ -n "$(find_pid)" ]; then
+    echo "[mk-worker] stop: escalating (SIGKILL على $pid) ..."
+    kill -9 "$pid" 2>/dev/null || true
+    sleep 1
+  fi
+  if [ -n "$(find_pid)" ]; then
+    echo "[mk-worker] stop: FAILED · process لا يزال حيّاً"
+    return 4
+  fi
+  echo "[mk-worker] stop: OK · PID ${pid} انتهى."
+  append_ledger "stop" "$pid" "$ppid"
+  return 0
+}
+
+cmd_restart() {
+  cmd_stop
+  cmd_start
+}
+
+# ── dispatcher ─────────────────────────────────────────────
+case "${1:-}" in
+  status)  cmd_status ;;
+  start)   cmd_start ;;
+  stop)    cmd_stop ;;
+  restart) cmd_restart ;;
+  ""|help|-h|--help)
+    cat <<EOF
+Usage: mk-worker <action> [--by=<session>]
+
+Actions:
+  status   — يقرأ الحال · لا يغيّر شيئاً · لا يكتب ledger.
+  start    — يبدأ العامل إن غاب. يرفض إن حيّ (عاملان أسوأ من صفر).
+  stop     — يوقف العامل إن حيّ.
+  restart  — stop ثم start.
+
+Env:
+  MK_WORKER_DIR    مسار العامل (default: ${WORKER_DIR}).
+  MK_LEDGER_PATH   مسار _worker.md (default: ${LEDGER_PATH}).
+  MK_REDIS_DB      رقم Redis DB (default: ${REDIS_DB}).
+  MK_SESSION       اسم الجلسة الطالبة (default: ${SESSION}).
+  MK_WORKER_LOG    مسار log (default: /tmp/mk-worker.log).
+
+Session (لأجل ledger):
+  MK_SESSION=mkapi mk-worker start
+  mk-worker start --by=mkapi
+EOF
+    ;;
+  *)
+    echo "[mk-worker] unknown action: $1" >&2
+    echo "  استعمل: status · start · stop · restart · help" >&2
+    exit 64
+    ;;
+esac

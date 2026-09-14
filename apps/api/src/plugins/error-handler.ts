@@ -13,6 +13,28 @@ const plugin: FastifyPluginAsync = async (fastify) => {
     const requestId = req.id;
 
     if (err instanceof ApiError) {
+      // 317-A-REFUSAL-THAT-LEAVES-NO-TRACE · سطر تشخيص بمستوى warn لكل ApiError
+      // **إلّا 404 NOT_FOUND** (ضجيج bots/typos · اقتراح في تقرير 317 §٤).
+      // نُخرج: code · httpStatus · field · requestId · causeCode · causeMsg (مقصوصة).
+      // **لا نُخرج**: err.stack كاملاً · req.body · req.headers.authorization ·
+      // ولا أيّ محتوى token/secret. cause من jose لا يحمل payload المُوقَّع.
+      if (err.code !== 'NOT_FOUND') {
+        const cause = (err as { cause?: unknown }).cause;
+        const causeCode = cause && typeof cause === 'object' && 'code' in cause
+          ? (cause as { code: unknown }).code
+          : undefined;
+        const causeMsg = cause instanceof Error
+          ? cause.message.slice(0, 200)
+          : undefined;
+        req.log.warn({
+          code: err.code,
+          httpStatus: err.httpStatus,
+          field: err.field,
+          requestId,
+          ...(causeCode !== undefined ? { causeCode } : {}),
+          ...(causeMsg !== undefined ? { causeMsg } : {}),
+        }, 'api error');
+      }
       reply.status(err.httpStatus).send(err.toBody(requestId));
       return;
     }

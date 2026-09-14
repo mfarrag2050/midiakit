@@ -119,8 +119,10 @@ import aiInvokeRoute from './routes/ai/invoke.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
-export async function buildServer() {
-  const loggerConfig = config.NODE_ENV === 'production'
+// 317: `loggerOverride` يسمح للـtests بحقن pino instance يكتب إلى Writable
+// stream لاستخراج السطور · لا مسّ لسلوك الإنتاج (default كما هو حين لا override).
+export async function buildServer(loggerOverride?: unknown) {
+  const loggerConfig = loggerOverride ?? (config.NODE_ENV === 'production'
     ? { level: 'info' }
     : {
         level: 'debug',
@@ -128,12 +130,14 @@ export async function buildServer() {
           target: 'pino-pretty',
           options: { colorize: true, translateTime: 'HH:MM:ss.l' },
         },
-      };
+      });
   // 221-AUTH-COVERAGE-GATE — نجمع routes عبر onRoute hook · للفاحص.
   const collectedRoutes: Array<{ method: string; path: string; hasPreHandler: boolean; preHandlerNames: string[] }> = [];
 
   const fastify = Fastify({
-    logger: loggerConfig,
+    // 317: cast لأنّ loggerConfig قد يكون pino instance (test override) أو config object.
+    // Fastify يقبل الاثنين runtime.
+    logger: loggerConfig as never,
     trustProxy: true,
   });
 
