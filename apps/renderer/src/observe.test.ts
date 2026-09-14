@@ -14,7 +14,10 @@ import { Queue } from 'bullmq';
 import { getConnection, BULLMQ_PREFIX, closeQueues } from './queues.js';
 import { queueDepth, tenantJobs } from './observe.js';
 
-const TEST_PREFIX = `${BULLMQ_PREFIX}:__test_observe__`;
+// 314: BULLMQ_PREFIX هنا يأتي من env عبر queues.ts · وvitest.setup.ts
+// يضبطه إلى `pf-mediakit-test-<pid>-<ts>` — العزل عن real api-worker
+// يحدث بنيويّاً (نفس النطاق الذي يستعمله inline Worker/Queue أدناه).
+// TEST_PREFIX القديم كان مُعرَّفاً ولا يُستعمَل (314 §١) — أُزيل.
 const TEST_QUEUE = 'render-urgent'; // يجب أن يطابق تسمية queues.ts
 
 async function cleanTestKeys(): Promise<void> {

@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+# bin/mk-ci — يشغّل السلسلة داخل حاوية Linux (90-LINUX-REFERENCE + توسعة 110).
+#
+# **سببان لوجود هذه الحاوية:**
+#   1. البصريّة (verify:snapshot · verify:plan-values · verify:breaking-video):
+#      مرجعها مُوَلَّد داخل Linux — فرق ~2px في `measureText` بين macOS و Linux
+#      يكسر بايت-مطابقة (PLATFORM-2).
+#   2. الفواحص المعتمدة على DB (check:template-sync · check:isolation-completeness
+#      · check:control-plane-policies · check:plan-sync · check:auth-coverage):
+#      كانت تُتخطّى بـexit=78 (EX_CONFIG · 142-SKIP-IS-NOT-PASS) لغياب
+#      DATABASE_URL. الحاوية الآن تُوفّرها عبر postgres ephemeral.
+#
+# **الاستعمال:**
+#   ./bin/mk-ci              — يشغّل pnpm test كاملاً داخل الحاوية
+#   ./bin/mk-ci --regen-refs — لاحقاً: يعيد توليد المرجع (بعد قرار مالك)
+#
+# **قيود صارمة (110-REAL-RENDER-PATH):**
+#   • حاوية pg عابرة (--rm · بلا volume للبيانات) — اسم pf-mediakit-ci-pg،
+#     منفذ 19045 (منفصل عن dev 19041 · test 19042).
+#   • trap على EXIT/INT/TERM يهدم pg + الشبكة حتّى مع فشل السلسلة.
+#   • **لا تُلمَس** قاعدة dev (postgres-dev · 19041) ولا الشوروم ولا بياناتهما.
+#   • **لا سرّ في المخرَج** — كلمات السرّ dev-only معلَنة، والمولّدة عشوائيّاً
+#     لا تُطبع، والمستهلكون يقرؤونها من env في الحاوية فقط.
+#
+# **النظافة:**
+#   • حاوية الاختبار --rm — تُحذف بعد الانتهاء.
+#   • حاوية pg --rm — تُحذف عبر trap.
+#   • الشبكة تُحذف عبر trap.
+#   • node_modules في docker volume `pf-mediakit-ci-node-modules` — يبقى بين
+#     التشغيلات لتسريع (bind-mount overhead عالٍ في Docker Desktop for Mac).
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+IMAGE="node:20.18.1-bookworm-slim"
+VOLUME="pf-mediakit-ci-node-modules"
+
+# أسماء ومنافذ فريدة — لا تعارض dev/test/showroom
+CI_CONTAINER="pf-mediakit-ci"
+PG_CI_CONTAINER="pf-mediakit-ci-pg"
+PG_CI_PORT="19045"
+REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
+REDIS_CI_PORT="19046"
+CI_NETWORK="pf-mediakit-ci-net"
+
+# كلمات سرّ dev-only (تنتهي مع الحاوية)
+PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
+# migration_user / app_user كلماتهما من infra/postgres/init/01-roles.sql
+# (dev_migration_pass / dev_app_pass) — نفس السكربت يُنشئهما عبر init mount.
+
+if [[ "${1:-}" == "--regen-refs" ]]; then
+  echo "[mk-ci] --regen-refs غير مُنفَّذ بعد — راجع scripts/generate-plan-golden.mjs يدوياً."
+  echo "        سيُضاف عند أوّل حاجة توليد بعد قرار مالك بتحسين مرجع."
+  exit 1
+fi
+
+# ── trap · تنظيف بلا استثناء ───────────────────────
+cleanup() {
+  local ec=$?
+  echo ""
+  echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
+  docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
+  docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+  docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
+  exit $ec
+}
+trap cleanup EXIT INT TERM
+
+# ── تنظيف مُسبَق (بقايا من تشغيل فاشل سابق) ─────────
+docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
+docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
+
+# ── الشبكة ─────────────────────────────────────────
+docker network create "${CI_NETWORK}" > /dev/null
+
+# ── postgres ephemeral (init sql تُطبَّق تلقائيّاً على أوّل تشغيل) ───
+echo "[mk-ci] رفع pg ephemeral (${PG_CI_CONTAINER} · 127.0.0.1:${PG_CI_PORT})..."
+docker run -d --rm \
+  --name "${PG_CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -p "127.0.0.1:${PG_CI_PORT}:5432" \
+  -v "${ROOT}/infra/postgres/init:/docker-entrypoint-initdb.d:ro" \
+  -e POSTGRES_DB=mediakit_ci \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD="${PG_ADMIN_PASS}" \
+  -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --locale=C" \
+  postgres:16-alpine > /dev/null
+
+# انتظار pg_isready — 60 ثانية سقف
+echo -n "[mk-ci] انتظار pg ready"
+for i in $(seq 1 30); do
+  if docker exec "${PG_CI_CONTAINER}" pg_isready -U postgres -d mediakit_ci > /dev/null 2>&1; then
+    echo " ✓ (${i}×2ث)"
+    break
+  fi
+  echo -n "."
+  sleep 2
+  if [ "$i" = "30" ]; then
+    echo ""
+    echo "[mk-ci] ✗ pg لم تصبح ready خلال 60 ثانية"
+    exit 1
+  fi
+done
+
+# ── redis ephemeral (BullMQ يشترطه لتشغيل tests و worker) ─────
+echo "[mk-ci] رفع redis ephemeral (${REDIS_CI_CONTAINER} · 127.0.0.1:${REDIS_CI_PORT})..."
+docker run -d --rm \
+  --name "${REDIS_CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -p "127.0.0.1:${REDIS_CI_PORT}:6379" \
+  redis:7-alpine > /dev/null
+
+echo -n "[mk-ci] انتظار redis ready"
+for i in $(seq 1 15); do
+  if docker exec "${REDIS_CI_CONTAINER}" redis-cli ping > /dev/null 2>&1; then
+    echo " ✓ (${i}×2ث)"
+    break
+  fi
+  echo -n "."
+  sleep 2
+  if [ "$i" = "15" ]; then
+    echo ""
+    echo "[mk-ci] ✗ redis لم تصبح ready خلال 30 ثانية"
+    exit 1
+  fi
+done
+
+# ── URLs · داخل الحاوية pg على ${PG_CI_CONTAINER}:5432 ─────
+# migration_user + app_user + control_plane_user يُنشأون تلقائيّاً
+# بواسطة init sql عند إقلاع pg (نفس السكربتات المستعملة في dev).
+DB_URL_MIGRATION="postgres://migration_user:dev_migration_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
+DB_URL_APP="postgres://app_user:dev_app_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
+DB_URL_ADMIN="postgres://postgres:${PG_ADMIN_PASS}@${PG_CI_CONTAINER}:5432/mediakit_ci"
+DB_URL_PLATFORM="postgres://control_plane_user:dev_control_plane_pass@${PG_CI_CONTAINER}:5432/mediakit_ci"
+# redis-ci · DB 3 (نمط مطابق لـdev: redis://127.0.0.1:6379/3)
+REDIS_URL_CI="redis://${REDIS_CI_CONTAINER}:6379/3"
+
+# سرّاً عشوائيّاً لكل تشغيل — لا يظهر في المخرَج
+AI_KEY=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
+JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
+PLATFORM_JWT=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
+
+echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (${IMAGE})"
+echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · volume ${VOLUME} لـnode_modules"
+echo ""
+
+# ── حاوية الاختبار ──────────────────────────────────
+# لا exec — نحتاج trap ليعمل بعد انتهاء docker run
+docker run --rm \
+  --name "${CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -v "${ROOT}:/work" \
+  -v "${VOLUME}:/work/node_modules" \
+  -e DATABASE_URL="${DB_URL_MIGRATION}" \
+  -e DATABASE_URL_APP="${DB_URL_APP}" \
+  -e DATABASE_URL_ADMIN="${DB_URL_ADMIN}" \
+  -e DATABASE_URL_PLATFORM="${DB_URL_PLATFORM}" \
+  -e REDIS_URL="${REDIS_URL_CI}" \
+  -e AI_KEY_ENCRYPTION_KEY="${AI_KEY}" \
+  -e SESSION_JWT_SECRET="${JWT_SECRET}" \
+  -e PLATFORM_JWT_SECRET="${PLATFORM_JWT}" \
+  -w /work \
+  "${IMAGE}" \
+  bash -c '
+    set -e
+    echo "[mk-ci · حاوية] apt install …"
+    apt-get update -qq > /dev/null 2>&1
+    apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+    corepack enable > /dev/null 2>&1
+    corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+    echo "[mk-ci · حاوية] pnpm install --frozen-lockfile …"
+    pnpm install --frozen-lockfile 2>&1 | tail -3
+    echo "[mk-ci · حاوية] pnpm db:migrate …"
+    pnpm db:migrate 2>&1 | tail -20
+    echo "[mk-ci · حاوية] pnpm test …"
+    pnpm test
+  '

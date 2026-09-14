@@ -65,10 +65,17 @@ export async function runOrphanSweep(
         UPDATE assets
         SET orphan_marked_at = now()
         WHERE tenant_id = $1
-          AND finalized_at IS NOT NULL
+          AND (
+            -- (١) أصول مُنتَهية غير مربوطة: نمط LIMITS-1 الأصليّ
+            (finalized_at IS NOT NULL AND id NOT IN (SELECT asset_id FROM linked_assets WHERE asset_id IS NOT NULL))
+            OR
+            -- (٢) drafts معلَّقة: upload-url تمّ لكن finalize لم يُستدعَ أو فشل
+            -- (130-UPLOAD-HARDENING CASE 1 + CASE 6). لا فحص linked — draft
+            -- لا يُربَط أصلاً قبل finalize. نفس نافذة الأمان 24h + purge بعد 7 أيّام.
+            finalized_at IS NULL
+          )
           AND created_at < now() - interval '24 hours'
           AND orphan_marked_at IS NULL
-          AND id NOT IN (SELECT asset_id FROM linked_assets WHERE asset_id IS NOT NULL)
         RETURNING id
       `, [tenantId]);
       result.assetsMarked += marked.rowCount ?? 0;
@@ -95,8 +102,9 @@ export async function runOrphanSweep(
             continue;
           }
         }
-        await c.query(`DELETE FROM assets WHERE id = $1`, [row.id]);
-        result.assetsPurged++;
+        const del = await c.query(`DELETE FROM assets WHERE id = $1`, [row.id]);
+        if ((del.rowCount ?? 0) === 1) result.assetsPurged++;
+        else console.warn(`[orphan-sweep] DELETE rowCount=${del.rowCount} for asset ${row.id} — counter not incremented`);
       }
 
       await c.query('COMMIT');

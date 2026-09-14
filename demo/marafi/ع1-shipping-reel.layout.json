@@ -1,0 +1,278 @@
+{
+  "$schema": "340-typography-layout-v2",
+  "generated": "2026-09-13T15:03:47.788Z",
+  "pipelineCoverage": {
+    "preprocessBidi": "called",
+    "parseTokens": "called",
+    "computeBreakPenalties": "called",
+    "wrapOptimal": "called",
+    "justifyLine": "called",
+    "normalizeHeadlineFont": "not-called",
+    "computeHeadlineLayout": "not-called",
+    "drawHeadlineLine": "not-applicable"
+  },
+  "pipelineCoverageNotes": {
+    "normalizeHeadlineFont": "قواعد اشتقاق fs/lineHeight · إن أضاف engine قاعدة جديدة الأداة تفوّتها",
+    "computeHeadlineLayout": "dynamic lineHeightMode لا يُستعمل هنا (brand.typography.lineHeightMode=fixed)",
+    "drawHeadlineLine": "الرسم الفعليّ + استهلاك font metrics · الأداة تقيس الطول لا البكسل"
+  },
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "reel",
+    "w": 1080,
+    "h": 1920
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1920
+  },
+  "input": {
+    "headline": "ارتفاع أسعار الشحن البحريّ يدفع مستوردي المواد الغذائيّة إلى مراجعة عقودهم السنويّة",
+    "headlineProcessed": "ارتفاع أسعار الشحن البحريّ يدفع مستوردي المواد الغذائيّة إلى مراجعة عقودهم السنويّة",
+    "source": "مَرافئ",
+    "purpose": "الكسر الدلاليّ والكشيدة — حالة 107 نفسها. الكسر الساذج يشطر «مستوردي المواد الغذائيّة» (إضافة) أو يُيتّم «إلى»."
+  },
+  "headline": {
+    "fontSize": 80,
+    "lineHeight": 114,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "ارتفـــاع أسعـــار الشـــحن البحريّ",
+        "wordCount": 4,
+        "break": {
+          "after": "البحريّ",
+          "beforeNextLine": "يـــدفع"
+        },
+        "runs": [
+          {
+            "text": "ارتفـــاع",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 819,
+            "width": 190,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "أسعـــار",
+            "dir": "rtl",
+            "xEnd": 800,
+            "xStart": 616,
+            "width": 185,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الشـــحن",
+            "dir": "rtl",
+            "xEnd": 597,
+            "xStart": 356,
+            "width": 241,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "البحريّ",
+            "dir": "rtl",
+            "xEnd": 337,
+            "xStart": 136,
+            "width": 201,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [
+            {
+              "word": "ارتفـــاع",
+              "tatweelCount": 3
+            },
+            {
+              "word": "أسعـــار",
+              "tatweelCount": 3
+            },
+            {
+              "word": "الشـــحن",
+              "tatweelCount": 3
+            }
+          ],
+          "tatweelBefore": 0,
+          "tatweelAfter": 9,
+          "tatweelInsertedByJustify": 9
+        }
+      },
+      {
+        "index": 1,
+        "text": "يـــدفع مســـتوردي المــواد الغذائيّة",
+        "wordCount": 4,
+        "break": {
+          "after": "الغذائيّة",
+          "beforeNextLine": "إلى"
+        },
+        "runs": [
+          {
+            "text": "يـــدفع",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 839,
+            "width": 170,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مســـتوردي",
+            "dir": "rtl",
+            "xEnd": 820,
+            "xStart": 512,
+            "width": 308,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "المــواد",
+            "dir": "rtl",
+            "xEnd": 493,
+            "xStart": 303,
+            "width": 190,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الغذائيّة",
+            "dir": "rtl",
+            "xEnd": 284,
+            "xStart": 63,
+            "width": 221,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [
+            {
+              "word": "يـــدفع",
+              "tatweelCount": 3
+            },
+            {
+              "word": "مســـتوردي",
+              "tatweelCount": 3
+            },
+            {
+              "word": "المــواد",
+              "tatweelCount": 2
+            }
+          ],
+          "tatweelBefore": 0,
+          "tatweelAfter": 8,
+          "tatweelInsertedByJustify": 8
+        }
+      },
+      {
+        "index": 2,
+        "text": "إلى مراجعة عقودهم السنويّة",
+        "wordCount": 4,
+        "break": null,
+        "runs": [
+          {
+            "text": "إلى",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 933,
+            "width": 76,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مراجعة",
+            "dir": "rtl",
+            "xEnd": 914,
+            "xStart": 705,
+            "width": 209,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "عقودهم",
+            "dir": "rtl",
+            "xEnd": 686,
+            "xStart": 437,
+            "width": 249,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "السنويّة",
+            "dir": "rtl",
+            "xEnd": 418,
+            "xStart": 193,
+            "width": 226,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      }
+    ]
+  },
+  "diacritics": {
+    "method": "differential-ink-box",
+    "statusVersion": "330-quaternary",
+    "status": "marks-inside-box",
+    "measurements": [
+      {
+        "word": "البحريّ",
+        "fs": 80,
+        "status": "marks-inside-box",
+        "diffCount": 205,
+        "inkWith": 3619,
+        "inkWithout": 3420,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
+      },
+      {
+        "word": "الغذائيّة",
+        "fs": 80,
+        "status": "marks-inside-box",
+        "diffCount": 203,
+        "inkWith": 4229,
+        "inkWithout": 4033,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
+      },
+      {
+        "word": "السنويّة",
+        "fs": 80,
+        "status": "marks-inside-box",
+        "diffCount": 205,
+        "inkWith": 3860,
+        "inkWithout": 3661,
+        "topWith": 90,
+        "topWithout": 90,
+        "deltaTop": 0,
+        "aboveBaselineWith": 60,
+        "aboveBaselineWithout": 60
+      }
+    ]
+  }
+}

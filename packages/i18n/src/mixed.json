@@ -824,7 +824,9 @@
     "PREVIEW_UNKNOWN": "preview failed — راجع القالب.",
     "HEADLINE_TOO_LONG": "headline طويل — قصِّره أو غيّر maximum length في القالب.",
     "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
-    "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل."
+    "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل.",
+    "TEMPLATE_SNAPSHOT_INVALID": "template snapshot معطوبة أو ناقصة لهذا التصدير.",
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم."
   },
   "design": {
     "title": "Design System",

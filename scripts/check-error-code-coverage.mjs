@@ -1,29 +1,33 @@
 #!/usr/bin/env node
-// check-error-code-coverage — يفرض حلقتين:
+// check-error-code-coverage — يفرض اتّساقاً داخليّاً في شجرة العمل:
 //
-//   (1) المرآة ↔ mk-api (منذ S6-SYNC · 2026-09-05):
-//       يقرأ `origin/feat/api:apps/api/src/errors.ts` مباشرةً عبر
-//       `git show` (لا checkout، لا نسخة محلّية)، يستخرج قائمة
-//       الأكواد من نوع `ErrorCode` union type، ويقارنها بالمرآة في
-//       `scripts/mk-api-error-codes.json`. أيّ رمز على mk-api غائب
-//       من المرآة، أو العكس، ⇒ فشل. **يضمن أن المرآة لا تتقادم
-//       صامتةً** (L-63).
-//       إن تعذّرت قراءة origin/feat/api (الفرع غير مجلوب مثلاً)
-//       يسقط الفحص بخطأ مسمّى، لا يمرّ صامتاً.
+//   (1) المرآة ↔ errors.ts (**من الشجرة المحلّيّة**):
+//       يقرأ `apps/api/src/errors.ts` من نفس الشجرة التي يعمل عليها
+//       الفاحص، يستخرج قائمة الأكواد من نوع `ErrorCode` union، ويقارنها
+//       بالمرآة `scripts/mk-api-error-codes.json`. أيّ رمز في الملفّ
+//       غائب من المرآة، أو العكس، ⇒ فشل.
 //
 //   (2) المرآة ↔ القواميس:
 //       كل رمز في المرآة يجب أن يحمل مفتاحاً `errors.<CODE>` في
 //       القواميس الثلاثة، ولا زوائد (باستثناء `clientOnlyCodes`).
 //
-// **مصدر الحقيقة النهائي:** `errors.ts` على `origin/feat/api`.
-// المرآة موجودة فقط لأنها مصدر مستقرّ على فرع studio (لا نستورد
-// من فروع أخرى في وقت التشغيل).
+// ── لماذا محلّيّاً لا `origin/feat/api` (تصحيح نطاق · 2026-09-13) ────
+// الإصدار السابق كان يقرأ `git show origin/feat/api:apps/api/src/errors.ts`
+// ويقارنه بمرآة main. النتيجة: **خضرة main رهينةَ آخر دفعةٍ من mkapi
+// على feat/api** — كل push جديد لرمز خطأ ينكسر عليه main، حتّى قبل الدمج.
+// الفاحص كان يقيس «هل main تلاحق feat/api؟» — سؤال خاطئ للسياق. السؤال
+// الصحيح: «هل الشجرة الحاليّة متّسقة مع نفسها؟».
+//
+// - على main بعد الدمج: يفحص main-vs-main. تباعدٌ حقيقيّ لا خيال.
+// - على feat/api قبل الدمج: يفحص feat/api-vs-feat/api. مؤلّف الميزة يرى
+//   الفشل في PR/pre-push فور تعديل errors.ts بلا تحديث المرآة (الحلّ الصحيح
+//   بنيويّاً — بوّابة على مصدر التعديل).
 //
 // **الاستخدام:** `node scripts/check-error-code-coverage.mjs`
 // **الخروج:** 0 نظيف · 1 عند أيّ تباعد.
 
 import { readFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,28 +37,22 @@ const CANON = join(__dirname, 'mk-api-error-codes.json');
 const I18N = join(ROOT, 'packages', 'i18n', 'src');
 const LOCALES = ['ar', 'mixed', 'en'];
 
-const REF = 'origin/feat/api';
-const REMOTE_PATH = 'apps/api/src/errors.ts';
+const ERRORS_TS_PATH = 'apps/api/src/errors.ts';
 
 /**
- * يقرأ محتوى errors.ts من الفرع البعيد عبر `git show`. يفشل بوضوح
- * إن كان الفرع غير مجلوب أو الملف مفقود.
+ * يقرأ محتوى errors.ts من الشجرة المحلّيّة. يفشل بوضوح إن كان الملفّ
+ * غائباً (يعني apps/api لم يُدمَج بعد في هذا الفرع — إعلانٌ لا صمت).
  */
-function readErrorsTsFromRemote() {
+function readErrorsTsFromLocal() {
   try {
-    const out = execFileSync('git', ['show', `${REF}:${REMOTE_PATH}`], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return out;
+    return readFileSync(join(ROOT, ERRORS_TS_PATH), 'utf8');
   } catch (err) {
     console.error(
-      `[check-error-code-coverage] ✗ تعذّر قراءة \`${REF}:${REMOTE_PATH}\``
+      `[check-error-code-coverage] ✗ تعذّر قراءة \`${ERRORS_TS_PATH}\` محلّيّاً`
     );
     console.error('  السبب المحتمل:');
-    console.error('    · الفرع غير مجلوب. جرِّب: git fetch origin feat/api');
-    console.error('    · الملف نُقل/حُذف على mk-api. أعلن أوّلاً، لا تُصلح صامتاً.');
+    console.error('    · apps/api غير مدموج بعد في هذا الفرع (فرع UI مثلاً).');
+    console.error('    · الملفّ نُقل/حُذف. أعلن أوّلاً، لا تُصلح صامتاً.');
     console.error('  الخطأ الأصلي:', err.message);
     process.exit(1);
   }
@@ -74,35 +72,35 @@ function parseErrorCodes(src) {
   return codes;
 }
 
-// ── (1) المرآة ↔ mk-api ─────────────────────────────────────
+// ── (1) المرآة ↔ errors.ts (المحلّيّة) ─────────────────────
 console.log('[check-error-code-coverage]');
-console.log(`  (1) المرآة ↔ ${REF}:${REMOTE_PATH}`);
+console.log(`  (1) المرآة ↔ ${ERRORS_TS_PATH} (شجرة محلّيّة)`);
 
-const remoteSrc = readErrorsTsFromRemote();
-const remoteCodes = parseErrorCodes(remoteSrc);
+const localSrc = readErrorsTsFromLocal();
+const localCodes = parseErrorCodes(localSrc);
 
 const canon = JSON.parse(await readFile(CANON, 'utf8'));
 const mirrorCodes = new Set(canon.codes);
 
-const missingInMirror = [...remoteCodes].filter((c) => !mirrorCodes.has(c));
-const extraInMirror = [...mirrorCodes].filter((c) => !remoteCodes.has(c));
+const missingInMirror = [...localCodes].filter((c) => !mirrorCodes.has(c));
+const extraInMirror = [...mirrorCodes].filter((c) => !localCodes.has(c));
 
-console.log(`    mk-api: ${remoteCodes.size} رمز · المرآة: ${mirrorCodes.size} رمز`);
+console.log(`    errors.ts: ${localCodes.size} رمز · المرآة: ${mirrorCodes.size} رمز`);
 
 let failed = false;
 
 if (missingInMirror.length > 0) {
-  console.error(`  ✗ (1) ${missingInMirror.length} رمز على mk-api غائب من المرآة:`);
+  console.error(`  ✗ (1) ${missingInMirror.length} رمز في errors.ts غائب من المرآة:`);
   for (const c of missingInMirror) console.error(`      · ${c}`);
   failed = true;
 }
 if (extraInMirror.length > 0) {
-  console.error(`  ✗ (1) ${extraInMirror.length} رمز في المرآة لا يوجد على mk-api:`);
+  console.error(`  ✗ (1) ${extraInMirror.length} رمز في المرآة لا يوجد في errors.ts:`);
   for (const c of extraInMirror) console.error(`      · ${c}`);
   failed = true;
 }
 if (!failed) {
-  console.log('    ✓ المرآة مطابقة لـerrors.ts على mk-api.');
+  console.log('    ✓ المرآة مطابقة لـerrors.ts (اتّساق داخليّ · هذا الفرع).');
 }
 
 // ── (2) المرآة ↔ القواميس ───────────────────────────────────

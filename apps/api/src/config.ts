@@ -11,6 +11,10 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(19040),
+    // _AMEND-180-HOST — عنوان الاستماع يُقرأ من البيئة. الافتراض 127.0.0.1
+    // (لا فتح للشبكة افتراضاً · قرار تشغيل لا شيفرة). للنشر على 0.0.0.0
+    // مثلاً · تُضبَط API_HOST في env بالبيئة المستهدفة.
+    API_HOST: z.string().min(1).default('127.0.0.1'),
 
     DATABASE_URL_APP: z
       .string()
@@ -52,6 +56,11 @@ const envSchema = z
     // check-no-brand-url-fetch. S3 SDK يقبل bucket/key، لا URL حرّاً.
     STORAGE_DRIVER: z.enum(['s3', 'memory']).default('memory'),
     S3_ENDPOINT: z.string().url().optional(),
+    // 290-PRESIGN-PUBLIC-ENDPOINT · العنوان العامّ للـpresigned URLs (المتصفّح).
+    // يفصل «العنوان الذي يكتب به الخادم» (S3_ENDPOINT · داخليّ) عن
+    // «العنوان الذي يقرأ منه المتصفّح» (S3_PUBLIC_ENDPOINT · https public).
+    // إن غاب · presignDownload/presignUpload يستعملان S3_ENDPOINT (لا انحدار).
+    S3_PUBLIC_ENDPOINT: z.string().url().optional(),
     S3_REGION: z.string().default('us-east-1'),
     S3_BUCKET: z.string().default('mk-assets-dev'),
     S3_ACCESS_KEY_ID: z.string().optional(),

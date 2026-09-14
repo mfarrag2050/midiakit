@@ -16,10 +16,18 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { enqueueRender } from '../../queues/index.js';
+import { validateTemplate, TemplateValidationError } from '@pf-mediakit/templates';
 import {
   NotFound, QuotaExceededRenders, QuotaExceededVideos,
   UnsupportedBrandHasExternalAssets,
+  HeadlineTooLong, SourceTooLong, ExportsRateLimit,
+  TemplateSnapshotInvalid,
 } from '../../errors.js';
+
+// 240-EXPORT-LIMITS · ثوابت الحدود.
+const HEADLINE_MAX_CHARS = 200;
+const SOURCE_MAX_CHARS = 100;
+const EXPORTS_PER_MINUTE = 20;
 import { getEffectiveLimits } from '../../config/effective-limits.js';
 
 const bodySchema = z.object({
@@ -85,6 +93,22 @@ const route: FastifyPluginAsync = async (fastify) => {
       }
     }
 
+    // 240-EXPORT-LIMITS · فحص حدود المحتوى قبل أيّ عمل DB إضافيّ.
+    const content = proj.content ?? {};
+    const headline = typeof content['headline'] === 'string' ? content['headline'] : null;
+    const source = typeof content['source'] === 'string' ? content['source'] : null;
+    if (headline && [...headline].length > HEADLINE_MAX_CHARS) throw HeadlineTooLong();
+    if (source && [...source].length > SOURCE_MAX_CHARS) throw SourceTooLong();
+
+    // 240-EXPORT-LIMITS · rate limit: عدد تصديرات المستأجر في الدقيقة الماضية.
+    // منفصل عن concurrent_renders_limit (حصّة plan · currently active).
+    const recent = await req.dbClient!.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM renders
+       WHERE tenant_id = $1 AND created_at > now() - interval '1 minute'`,
+      [req.auth!.tenantId],
+    );
+    if ((recent.rows[0]?.n ?? 0) >= EXPORTS_PER_MINUTE) throw ExportsRateLimit();
+
     // A21 — الحدّان من plan (كانا ثابتين في config).
     const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
 
@@ -125,6 +149,21 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     if (tpl.rowCount === 0) throw NotFound();
     const template = tpl.rows[0]!.definition;
+
+    // 280-EMPTY-LAYERS-BURST: التحقّق من صلاحيّة templateSnapshot **هنا**
+    // قبل أيّ INSERT/enqueue. العامل كان يفشل بعد الوصول إلى الطابور —
+    // «شيءٌ يُبلغ عن نجاحٍ ولم يفعل». نفس التحقّق الذي يجريه العامل
+    // (`@pf-mediakit/templates:validateTemplate`) نُجريه في نقطة القرار.
+    // الرمز مسمّى · الحقل مسمّى (path من TemplateValidationError).
+    try {
+      validateTemplate(template);
+    } catch (err) {
+      if (err instanceof TemplateValidationError) {
+        req.log.warn({ templateId: proj.template_id, path: err.path, msg: err.message }, 'template snapshot rejected at creation');
+        throw TemplateSnapshotInvalid(err.path);
+      }
+      throw err;
+    }
 
     // 6. INSERT render مع snapshots (ذرّي — brand_kit تعديل لاحق لا يمسّها)
     const ins = await req.dbClient!.query<{ id: string; created_at: Date }>(

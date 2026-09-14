@@ -241,8 +241,15 @@ function runImage(
   return true;
 }
 
-function runLogo(_layer: LogoLayer, args: RenderFrameArgs): void {
-  drawLogo(args.ctx, args.size, args.brand, {});
+function runLogo(layer: LogoLayer, args: RenderFrameArgs): void {
+  // 95-CARD-COMPLETE (2026-09-11): كان يمرّر `{}` — الشعار لا يُرسَم أبداً
+  // حتى لو مُرِّر `assets.images.logo`. نفس صنف L-72 (بادئة `_` أخفت
+  // مرتبة الوسيط وأنتجت تخطٍّ صامت). الآن نستخرج الأصل من `assets`
+  // (بمفتاح `layer.from ?? 'logo'` — نفس نمط `runImage`) ونمرّره.
+  // إن لم يُمرَّر — `drawLogo` يتخطّى صامتاً كما كان (سلوك بايت-بايت
+  // مطابق للسلوك السابق حين لا يُمرَّر الأصل).
+  const image = args.assets?.images?.[layer.from ?? 'logo'];
+  drawLogo(args.ctx, args.size, args.brand, image ? { image } : {});
 }
 
 /**
@@ -632,17 +639,35 @@ export function computeHeadlineLayout(
   const dynamicActive =
     brand.typography.lineHeightMode === 'dynamic' ||
     brand.typography.diacritics.enabled;
-  const family = `"${brand.fonts.primary.family}", ${brand.fonts.fallback}`;
-  const finalLineHeight = dynamicActive
-    ? measuredLineHeight(
-        ctx,
-        linesJustified,
-        wrap.fontSize,
-        family,
-        false,
-        wrap.lineHeight
-      )
-    : wrap.lineHeight;
+  // BASELINE-A · 2026-09-11 · AMEND-55 · L-73: مصدر الأعداد صار متريكات
+  // رأس الخطّ (`brand.fonts.primary.weights.*.metrics`) بدل `ctx.measureText`.
+  // الطرفان (Chrome + skia) يحسبان نفس lineHeight من نفس المدخل.
+  //
+  // **لا ارتداد إلى measureText** (AMEND-55 §٢). إن غابت المتريكات نسقط
+  // بصوت — الرسالة تسمّي الهويّة والعائلة. غياب هنا خللٌ في التركيب
+  // (`fillIn` لم يعمل، أو `brand_snapshot` وصل raw بلا مرور بـfillIn —
+  // راجع تذكرة `RENDERER-BRAND-SNAPSHOT-FILLIN` المقترَحة).
+  let finalLineHeight: number;
+  if (dynamicActive) {
+    const primary = brand.fonts.primary;
+    const metrics =
+      primary.weights.regular.metrics ??
+      primary.weights.bold.metrics ??
+      primary.weights.light.metrics;
+    if (!metrics) {
+      throw new Error(
+        `[measuredLineHeight] هويّة «${brand.id}» — عائلة «${primary.family}»: ` +
+        `لا FontMetrics على أيّ وزن (light/regular/bold). ` +
+        `الإصلاح: أضف metrics عبر \`pnpm measure-font <path.ttf>\` وضعها ` +
+        `تحت كل وزن. أو تأكّد أن fillIn من DEFAULT_BRAND يعمل على مسار ` +
+        `تحميل الهويّة (toFull() في apps/api/src/shared/brand-kit-mapper.ts، ` +
+        `أو fillIn جديد قبل استهلاك brand_snapshot في apps/renderer).`
+      );
+    }
+    finalLineHeight = measuredLineHeight(metrics, wrap.fontSize, wrap.lineHeight);
+  } else {
+    finalLineHeight = wrap.lineHeight;
+  }
 
   return {
     fontSize: wrap.fontSize,
@@ -953,9 +978,22 @@ function runSource(
     }
     const gapPx = bounds.fontSize * (layer.gapFsRatio ?? 1.4);
     const baseline = bounds.bottom + gapPx;
-    args.ctx.textAlign = 'right';
+    // 99G · 2026-09-12: المحاذاة الأفقيّة تُقرأ من الهويّة، لا مثبَّتة.
+    // الأنكور بنيويّ (رأسيّاً من العنوان)، والمحاذاة الأفقيّة من
+    // `brand.placement.source.align`. الافتراضي `'left'` بحسب أسلوب
+    // البيت. راجع docs/03 §placement.
+    const align = args.brand.placement?.source?.align ?? 'left';
     args.ctx.direction = 'rtl';
-    args.ctx.fillText(text, bounds.right, baseline);
+    if (align === 'right') {
+      args.ctx.textAlign = 'right';
+      args.ctx.fillText(text, bounds.right, baseline);
+    } else if (align === 'center') {
+      args.ctx.textAlign = 'center';
+      args.ctx.fillText(text, (bounds.left + bounds.right) / 2, baseline);
+    } else {
+      args.ctx.textAlign = 'left';
+      args.ctx.fillText(text, bounds.left, baseline);
+    }
     return;
   }
 

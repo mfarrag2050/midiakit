@@ -45,6 +45,11 @@ export interface Storage {
   headObject(key: string): Promise<HeadResult>;
   deleteObject(key: string): Promise<void>;
   getObjectText(key: string): Promise<string>;
+  /**
+   * قراءة بايتات خام — لأصول ثنائية (خطّ، صورة، فيديو …). يرمي إن غاب المفتاح.
+   * أُضيف في FONT-METRICS-UPLOAD لقراءة ملفّات الخطّ عند finalize.
+   */
+  getObjectBuffer(key: string): Promise<Buffer>;
 
   /**
    * dev/test helper — يستعمله verify-assets ليحاكي رفع العميل قبل
@@ -94,6 +99,12 @@ class MemoryStorage implements Storage {
     return e.body.toString('utf-8');
   }
 
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const e = this.store.get(key);
+    if (!e) throw new Error(`memory storage: key not found: ${key}`);
+    return e.body;
+  }
+
   async putObjectRaw(key: string, body: Buffer | string, contentType: string): Promise<void> {
     const buf = typeof body === 'string' ? Buffer.from(body, 'utf-8') : body;
     this.store.set(key, { body: buf, contentType });
@@ -101,35 +112,52 @@ class MemoryStorage implements Storage {
 }
 
 // ── S3 driver ────────────────────────────────────────────────────────
+// 290-PRESIGN-PUBLIC-ENDPOINT · عميلان:
+//   • client — على S3_ENDPOINT · لكلّ ما يفعله الخادم/العامل بنفسه (put·head·copy).
+//   • presignClient — على S3_PUBLIC_ENDPOINT || S3_ENDPOINT · لتوقيع الروابط
+//     التي يفتحها المتصفّح. توقيع SigV4 يغطّي host + path + query · لا يغطّي
+//     المخطَّط · فيصحّ التوقيع طالما cloudflared يمرّر `Host` كما هو.
+// عندما يغيب S3_PUBLIC_ENDPOINT · الاثنان نفسهما — لا انحدار على أحد.
 class S3Storage implements Storage {
   private readonly client: S3Client;
+  private readonly presignClient: S3Client;
   private readonly bucket: string;
 
   constructor() {
     this.bucket = config.S3_BUCKET;
+    const credentials = config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY
+      ? {
+          credentials: {
+            accessKeyId: config.S3_ACCESS_KEY_ID,
+            secretAccessKey: config.S3_SECRET_ACCESS_KEY,
+          },
+        }
+      : {};
     this.client = new S3Client({
       region: config.S3_REGION,
       ...(config.S3_ENDPOINT ? { endpoint: config.S3_ENDPOINT, forcePathStyle: true } : {}),
-      ...(config.S3_ACCESS_KEY_ID && config.S3_SECRET_ACCESS_KEY
-        ? {
-            credentials: {
-              accessKeyId: config.S3_ACCESS_KEY_ID,
-              secretAccessKey: config.S3_SECRET_ACCESS_KEY,
-            },
-          }
-        : {}),
+      ...credentials,
     });
+    const publicEndpoint = config.S3_PUBLIC_ENDPOINT ?? config.S3_ENDPOINT;
+    this.presignClient = publicEndpoint === config.S3_ENDPOINT
+      ? this.client
+      : new S3Client({
+          region: config.S3_REGION,
+          endpoint: publicEndpoint,
+          forcePathStyle: true,
+          ...credentials,
+        });
   }
 
   async presignUpload(key: string, contentType: string, _sizeBytes: number, ttlSeconds: number): Promise<UploadPresign> {
     const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
-    const url = await getSignedUrl(this.client, cmd, { expiresIn: ttlSeconds });
+    const url = await getSignedUrl(this.presignClient, cmd, { expiresIn: ttlSeconds });
     return { uploadUrl: url, expiresAt: new Date(Date.now() + ttlSeconds * 1000) };
   }
 
   async presignDownload(key: string, ttlSeconds: number): Promise<DownloadPresign> {
     const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-    const url = await getSignedUrl(this.client, cmd, { expiresIn: ttlSeconds });
+    const url = await getSignedUrl(this.presignClient, cmd, { expiresIn: ttlSeconds });
     return { publicUrl: url, expiresAt: new Date(Date.now() + ttlSeconds * 1000) };
   }
 
@@ -156,6 +184,13 @@ class S3Storage implements Storage {
     const r = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
     if (!r.Body) throw new Error(`s3 storage: empty body: ${key}`);
     return await r.Body.transformToString('utf-8');
+  }
+
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const r = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!r.Body) throw new Error(`s3 storage: empty body: ${key}`);
+    const arr = await r.Body.transformToByteArray();
+    return Buffer.from(arr);
   }
 
   async putObjectRaw(key: string, body: Buffer | string, contentType: string): Promise<void> {

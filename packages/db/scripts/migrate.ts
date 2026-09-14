@@ -13,6 +13,7 @@
  */
 import 'dotenv/config';
 import runner from 'node-pg-migrate';
+import pg from 'pg';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { execSync } from 'node:child_process';
@@ -56,6 +57,56 @@ if (!dbUrl) {
 }
 
 console.log(`▶ node-pg-migrate ${command} → ${label} (${dbUrl.replace(/:[^:@]+@/, ':***@')})`);
+
+// Preflight (100-DB-BOOTSTRAP): يفشل بصوت إن غابت التهيئة.
+// نمط الهجرة 20260907120000_control-plane-a27 يفعل RAISE داخلها، لكنّ ذلك
+// يوقف الهجرة في منتصف السلسلة برسالة غامضة. هنا نفشل مبكّراً بمخرج واضح:
+// - الأدوار الأربعة (migration_user يفحص نفسه ضمنياً بالاتّصال)
+// - الامتدادات المطلوبة (citext لـusers.email)
+if (command === 'up') {
+  const { Client } = pg;
+  const preflight = new Client({ connectionString: dbUrl });
+  try {
+    await preflight.connect();
+  } catch (err) {
+    // إن فشل الاتّصال بـmigration_user، فالمرشّح الأوّل: الدور غير موجود
+    console.error(`\n✗ الاتّصال بـmigration_user فشل: ${(err as Error).message}`);
+    console.error(`  الأرجح: التهيئة لم تجرِ. العلاج:`);
+    console.error(`    pnpm db:bootstrap${useTest ? ':test' : ''}`);
+    console.error(`  ثمّ أعد ${useTest ? 'pnpm db:migrate:test' : 'pnpm db:migrate'}.`);
+    process.exit(4);
+  }
+  try {
+    const roles = await preflight.query<{ rolname: string }>(
+      `SELECT rolname FROM pg_roles
+       WHERE rolname IN ('app_user', 'auth_lookup', 'control_plane_user')`,
+    );
+    const found = new Set(roles.rows.map((r) => r.rolname));
+    const missing = ['app_user', 'auth_lookup', 'control_plane_user'].filter((r) => !found.has(r));
+    if (missing.length > 0) {
+      console.error(`\n✗ التهيئة ناقصة: أدوار غائبة: ${missing.join(', ')}`);
+      console.error(`  الأدوار تُنشأ في infra/postgres/init/01-roles.sql — تُشغَّل مرّة عند`);
+      console.error(`  bootstrap. أيّ بيئة نظيفة (CI · إنتاج · قاعدة جديدة) تحتاج تهيئة قبل migrate.`);
+      console.error(`  العلاج:`);
+      console.error(`    pnpm db:bootstrap${useTest ? ':test' : ''}`);
+      console.error(`  ثمّ أعد ${useTest ? 'pnpm db:migrate:test' : 'pnpm db:migrate'}.`);
+      process.exit(5);
+    }
+    const ext = await preflight.query<{ extname: string }>(
+      `SELECT extname FROM pg_extension WHERE extname = 'citext'`,
+    );
+    if (ext.rowCount === 0) {
+      console.error(`\n✗ التهيئة ناقصة: امتداد citext غائب (users.email يعتمد عليه)`);
+      console.error(`  الامتدادات تُنشأ في infra/postgres/init/02-extensions.sql عند bootstrap.`);
+      console.error(`  العلاج:`);
+      console.error(`    pnpm db:bootstrap${useTest ? ':test' : ''}`);
+      console.error(`  ثمّ أعد ${useTest ? 'pnpm db:migrate:test' : 'pnpm db:migrate'}.`);
+      process.exit(6);
+    }
+  } finally {
+    await preflight.end();
+  }
+}
 
 await runner({
   databaseUrl: dbUrl,

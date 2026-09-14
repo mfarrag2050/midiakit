@@ -27,3 +27,6 @@ next-env.d.ts
 # الأصلية. الأصل (*.m4a) والمرجع (*.txt) يُتَتبَّعان.
 fixtures/audio/*-16k.wav
 fixtures/audio/*-8k.wav
+
+# demo:live — مخرَج مولَّد لكل عرض حيّ · لا يُلتزَم
+demo/live/

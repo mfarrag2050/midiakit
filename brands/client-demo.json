@@ -11,9 +11,9 @@
       "source": "builtin",
       "licenseAck": true,
       "weights": {
-        "light": { "url": "assets/fonts/Almarai-Light.ttf", "value": 300 },
-        "regular": { "url": "assets/fonts/Almarai-Regular.ttf", "value": 400 },
-        "bold": { "url": "assets/fonts/Almarai-Bold.ttf", "value": 700 }
+        "light":   { "url": "assets/fonts/Almarai-Light.ttf",   "value": 300, "metrics": { "ascent": 905, "descent": 211, "unitsPerEm": 1000 } },
+        "regular": { "url": "assets/fonts/Almarai-Regular.ttf", "value": 400, "metrics": { "ascent": 905, "descent": 211, "unitsPerEm": 1000 } },
+        "bold":    { "url": "assets/fonts/Almarai-Bold.ttf",    "value": 700, "metrics": { "ascent": 905, "descent": 211, "unitsPerEm": 1000 } }
       }
     },
     "fallback": "sans-serif",
