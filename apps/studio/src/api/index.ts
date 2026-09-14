@@ -20,6 +20,7 @@ export * as revisions from './endpoints/revisions';
 export * as subscription from './endpoints/subscription';
 export * as usage from './endpoints/usage';
 export * as ai from './endpoints/ai';
+export * as exports from './endpoints/exports';
 
 export { uploadToSignedUrl, bytesShort, type UploadEvent } from './uploader';
 export { ApiError, parseApiError } from './errors';

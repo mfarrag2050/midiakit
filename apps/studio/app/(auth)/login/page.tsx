@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthCard } from '@/src/ui/AuthCard';
 import { auth, setSessionInfo } from '@/src/api';
 
@@ -8,6 +8,11 @@ import { auth, setSessionInfo } from '@/src/api';
 // حين يُزال `NEXT_PUBLIC_API_MOCK=true` من البيئة.
 export default function LoginPage() {
   const router = useRouter();
+  const params = useSearchParams();
+  // 220-EMPTY-AND-ERROR: التحويلة من client عند فشل تجديد التوكن تُلحق
+  // `?reason=expired` لنُظهر شريط توضيح ذي فعل مباشر بدل ترك المستخدم
+  // يفكّ رمز التنبيه inline.
+  const sessionExpired = params.get('reason') === 'expired';
   return (
     <AuthCard
       titleKey="auth.login.title"
@@ -15,6 +20,9 @@ export default function LoginPage() {
       submitKey="auth.login.submit"
       linkKey="auth.login.needAccount"
       linkHref="/signup"
+      {...(sessionExpired
+        ? { bannerKey: 'auth.login.sessionExpiredBanner' as const }
+        : {})}
       fields={[
         {
           name: 'email',
@@ -23,6 +31,7 @@ export default function LoginPage() {
           autoComplete: 'email',
           required: true,
           emailFormat: true,
+          placeholderKey: 'auth.field.emailPlaceholder',
         },
         {
           name: 'password',
@@ -30,6 +39,7 @@ export default function LoginPage() {
           type: 'password',
           autoComplete: 'current-password',
           required: true,
+          placeholderKey: 'auth.field.passwordPlaceholder',
         },
       ]}
       footerLinks={[{ key: 'auth.login.forgot', href: '/forgot-password' }]}
@@ -38,10 +48,12 @@ export default function LoginPage() {
           email: values.email ?? '',
           password: values.password ?? '',
         });
-        // Access/refresh tokens ذاتياً في setSession داخل auth.login.
-        // ما نحفظه هنا: user + tenant للعرض قبل أن يوفّرهما endpoint خاص.
         setSessionInfo(res.user, res.tenant);
         router.push('/projects');
+        // نُبقي حالة التحميل في `AuthCard` حتى الانتقال بدل الوميض بين
+        // «متوقّف» وdashboard — بلا هذا يعود الزرّ إلى شكله الافتراضيّ
+        // ثوانيَ قبل الانتقال (مشية 190 §٥). ينتهي عند unmount.
+        await new Promise<void>(() => {});
       }}
     />
   );

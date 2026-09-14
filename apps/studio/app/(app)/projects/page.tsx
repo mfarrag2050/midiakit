@@ -19,6 +19,7 @@ import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
 import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
+import { isDevNamedTemplate } from '@/src/lib/dev-template-filter';
 
 // S12 — قائمة المشاريع + إنشاء + حذف. المحرّر في /projects/[id].
 // **العقد المرجعي:** docs/16 §7.1 §7.3 §7.5 · §11.6 (currentState).
@@ -95,9 +96,11 @@ export default function ProjectsPage(): JSX.Element {
         templates.list(),
       ]);
       // REEL-HIDE: أخفِ قوالب الفيديو (kind === 'video') من قائمة الاختيار.
-      const visibleTemplates = REEL_TEMPLATE_ENABLED
+      // 330 §3.1: وأخفِ القوالب المسمّاة بلغة المطوّر (mock/dev/إثبات بوّابة).
+      const visibleTemplates = (REEL_TEMPLATE_ENABLED
         ? tplPage.data
-        : tplPage.data.filter((tt) => tt.kind !== 'video');
+        : tplPage.data.filter((tt) => tt.kind !== 'video')
+      ).filter((tt) => !isDevNamedTemplate(tt.name));
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
       setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
       setNewBrandKit(bkPage.data[0]?.id ?? '');

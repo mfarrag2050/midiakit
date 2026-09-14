@@ -13,6 +13,7 @@ import {
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, workflows } from '@/src/api';
+import { roleName } from '@/src/lib/role-names';
 import type {
   WorkflowFull,
   WorkflowState,
@@ -125,7 +126,7 @@ export default function WorkflowEditorPage(): JSX.Element {
     }
   }
 
-  if (loading) return <div className="p-8 text-fg-muted">…</div>;
+  if (loading) return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
   if (loadErrorKey) {
     return (
       <div className="space-y-4">
@@ -219,21 +220,37 @@ export default function WorkflowEditorPage(): JSX.Element {
                 labelKey="pages.workflows.editor.assignableTo"
                 htmlFor={`sassign-${i}`}
               >
-                <Input
+                {/* 340 · م2 · multi-select checkboxes بدل حقل نصّيّ. القيمة
+                    المُخزَّنة (`assignableTo`) تبقى مصفوفة قيم تقنيّة —
+                    التسمية المعروضة تمرّ عبر roleName(). */}
+                <div
                   id={`sassign-${i}`}
-                  value={s.assignableTo.join(',')}
-                  onChange={(e) => {
-                    const next = [...draft.states];
-                    next[i] = {
-                      ...s,
-                      assignableTo: e.target.value
-                        .split(',')
-                        .map((x) => x.trim())
-                        .filter(Boolean),
-                    };
-                    setDraft({ ...draft, states: next });
-                  }}
-                />
+                  className="flex flex-wrap gap-x-3 gap-y-1"
+                >
+                  {ROLES.map((r) => {
+                    const checked = s.assignableTo.includes(r);
+                    return (
+                      <label
+                        key={r}
+                        className="flex items-center gap-1.5 text-sm text-fg-muted"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const nextRoles = e.target.checked
+                              ? Array.from(new Set([...s.assignableTo, r]))
+                              : s.assignableTo.filter((x) => x !== r);
+                            const next = [...draft.states];
+                            next[i] = { ...s, assignableTo: nextRoles };
+                            setDraft({ ...draft, states: next });
+                          }}
+                        />
+                        <span>{roleName(t, r)}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </Field>
               <div className="flex items-end">
                 <Button
@@ -377,7 +394,7 @@ export default function WorkflowEditorPage(): JSX.Element {
                   >
                     {ROLES.map((r) => (
                       <option key={r} value={r}>
-                        {r}
+                        {roleName(t, r)}
                       </option>
                     ))}
                   </select>

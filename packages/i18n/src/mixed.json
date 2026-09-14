@@ -28,6 +28,15 @@
     "usage": "Usage",
     "lastRender": "Last render"
   },
+  "roles": {
+    "owner":    { "name": "مالك الحساب",     "hint": "صاحب اشتراك الوكالة — واحدٌ فقط، لا يُحذَف ولا يُغيَّر دوره." },
+    "admin":    { "name": "المدير",           "hint": "يُدير النظام: يُضيف الأدوار، يُعطّل حساباً، يُنفّذ الأرشفة." },
+    "writer":   { "name": "الكاتب",           "hint": "يكتب المسودّة الأولى ويُرسلها إلى التحرير." },
+    "editor":   { "name": "المحرِّر",          "hint": "يُحرِّر المسودّة قبل عرضها على المُراجِع — يقرأ ويُعدِّل." },
+    "reviewer": { "name": "المُراجِع",         "hint": "يُقرِّر إن كانت المسودّة تصلح للنشر — يعتمد أو يُعيد." },
+    "approver": { "name": "المُعتمِد النهائيّ", "hint": "يُوقِّع المسودّة قبل النشر — خطوة أعلى من المُراجِع." },
+    "viewer":   { "name": "قارئ فقط",         "hint": "يرى المسودّات ولا يكتب — دور المشاهدة." }
+  },
   "nav": {
     "workspace": "Workspace",
     "breaking": "Compose breaking",
@@ -36,6 +45,7 @@
     "templates": "Templates",
     "assets": "Assets",
     "renders": "Renders",
+    "exports": "سجلّ exports",
     "design": "Design",
     "workflows": "Workflows",
     "aiSettings": "AI",
@@ -43,6 +53,10 @@
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
+    },
+    "mobile": {
+      "openMenu": "فتح menu",
+      "closeMenu": "إغلاق menu"
     }
   },
   "pages": {
@@ -195,7 +209,6 @@
         "assignSelf": "Assign to me",
         "unassign": "Unassign",
         "roleHint": "Current user role",
-        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
         "transitionReasonInline": "هذا الانتقال يستلزم سبباً — أدخله ثم كرِّر.",
         "transitionRoleRequired": "دورك لا يسمح — الدور المطلوب: {role}."
       },
@@ -220,16 +233,16 @@
     },
     "workflows": {
       "title": "Workflows",
-      "subtitle": "States and transitions — data rules, not hard-coded.",
+      "subtitle": "حدِّد states و transitions المحتوى قبل النشر.",
       "empty": "No workflows yet",
-      "emptyBody": "Pick a preset to start your first workflow, or build from scratch.",
+      "emptyBody": "اختر preset لبدء أوّل workflow، أو أنشئه من الصفر.",
       "create": "New workflow",
       "createTitle": "Create workflow",
       "presets": {
-        "label": "Presets (sent via POST — no server-side seed)",
-        "individual": "Individual — writer submits, reviewer approves",
-        "smallTeam": "Small team — writer/editor/reviewer/admin",
-        "fullAgency": "Full agency — longer chain + archive"
+        "label": "Presets",
+        "individual": "Individual — الكاتب يُرسل، المُراجِع يعتمد",
+        "smallTeam": "Small team — الكاتب، المحرِّر، المُراجِع، المدير",
+        "fullAgency": "Full agency — سلسلة أطول مع أرشفة"
       },
       "nameLabel": "Name",
       "isDefault": "Default",
@@ -399,7 +412,8 @@
         "preview": {
           "title": "معاينة حيّة · Breaking card",
           "subtitle": "same engine · نصّ عيّنة عربيّ · updates on change (250ms debounce).",
-          "durationHint": "render duration"
+          "durationHint": "render duration",
+          "emptyHint": "اكتب headline لترى البطاقة."
         },
         "export": {
           "button": "صدّر البطاقة",
@@ -408,6 +422,7 @@
           "dirtyBlocked": "cannot export with unsaved changes — save first.",
           "success": "تمّ التصدير · file downloaded.",
           "queuedStep": "queued…",
+          "waitingForWorkerStep": "انتظار render worker…",
           "runningStep": "rendering…",
           "downloadingStep": "downloading…"
         }
@@ -524,6 +539,37 @@
       "brandSnapshotHint": "لقطة مُجمَّدة عند POST — لا تتأثّر بتعديل الهوية بعدها.",
       "quotaExceeded": "استُنفدت حصّة التصديرات في هذه الباقة — رقّها من صفحة الاشتراك."
     },
+    "exports": {
+      "title": "سجلّ exports",
+      "subtitle": "ما صدّرته وكالتك: date · template · size · status · file.",
+      "empty": "لا exports بعد",
+      "emptyBody": "أوّل export من breaking composer أو brand-kit editor يظهر هنا.",
+      "col": {
+        "date": "Date",
+        "template": "Template",
+        "size": "Size",
+        "format": "Format",
+        "status": "Status",
+        "file": "File"
+      },
+      "status": {
+        "succeeded": "Done",
+        "failed": "فشل",
+        "queued": "queued",
+        "running": "running",
+        "cancelled": "cancelled"
+      },
+      "download": "تنزيل",
+      "downloading": "جارٍ التنزيل…",
+      "noFile": "—",
+      "unknownTemplate": "unknown template",
+      "totalLabel": "Total",
+      "loadMore": "load more",
+      "downloadFailed": "تعذّر جلب download link — أعد المحاولة.",
+      "envelopeNote": "server pagination offset-based — لا cursor مزوَّر.",
+      "errorCodeHint": "server error code — انسخه لـsupport إن سألوا.",
+      "refresh": "Refresh"
+    },
     "billing": {
       "title": "Billing",
       "subtitle": "الباقة الحالية وحصصها والاستهلاك القائم.",
@@ -595,12 +641,19 @@
     }
   },
   "auth": {
+    "checking": {
+      "label": "التحقّق من session…"
+    },
+    "expiredBanner": {
+      "reload": "Reload"
+    },
     "login": {
       "title": "تسجيل الدخول",
       "subtitle": "أدخل بيانات حسابك للمتابعة.",
       "submit": "تسجيل الدخول",
       "needAccount": "ليس لديك حساب؟ أنشئ واحداً",
-      "forgot": "نسيت كلمة السر؟"
+      "forgot": "نسيت كلمة السر؟",
+      "sessionExpiredBanner": "session انتهت — سجّل الدخول من جديد للمتابعة."
     },
     "signup": {
       "title": "إنشاء حساب",
@@ -625,7 +678,9 @@
       "email": "Email",
       "password": "Password",
       "newPassword": "New password",
-      "tenantName": "اسم الوكالة"
+      "tenantName": "اسم الوكالة",
+      "emailPlaceholder": "you@agency.com",
+      "passwordPlaceholder": "12 characters على الأقلّ"
     },
     "hint": {
       "passwordMin": "12 حرفاً على الأقل."
@@ -642,6 +697,11 @@
   "table": {
     "empty": "No rows yet.",
     "loading": "جارٍ التحميل…"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "loadingList": "جارٍ جلب the list…",
+    "sessionExpiredCTA": "سجّل الدخول من جديد"
   },
   "errors": {
     "UNKNOWN": "حدث خطأ غير متوقّع.",
@@ -680,7 +740,11 @@
     "INVALID_FONT_METRICS": "font metrics missing — الخطّ المرفوع لم تُقَس أبعاده. شغّل `pnpm measure-font <path.ttf>` ثمّ أعِد الرفع.",
     "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1.",
     "RENDER_FAILED": "تعذّر إخراج البطاقة — أعد المحاولة.",
-    "RENDER_TIMEOUT": "export timed out — الشبكة بطيئة، أعد المحاولة.",
+    "RENDER_TIMEOUT": "export timed out — الرسم بدأ لكنّه لم يُنهَ في الوقت. أعد المحاولة.",
+    "RENDER_QUEUE_STUCK": "render service لا تستجيب — الطلب في queue بلا worker. جرّب بعد قليل.",
+    "SERVER_UNRESPONSIVE": "server لا يستجيب — الرد أخذ too long. جرّب reload، وإن استمرّ فالخدمة down.",
+    "AUTH_SESSION_EXPIRED": "session انتهت — أعِد reload للدخول من جديد.",
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
     "RATE_LIMITED": "too many requests — انتظر ثمّ أعد المحاولة.",
     "EXPORT_DOWNLOAD_FAILED": "the file was produced but download failed — تحقّق من الاتّصال.",
     "INVALID_LOTTIE_SCHEMA": "ملف Lottie غير صالح — راجع البنية.",
@@ -762,7 +826,7 @@
     "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
     "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل.",
     "TEMPLATE_SNAPSHOT_INVALID": "template snapshot معطوبة أو ناقصة لهذا التصدير.",
-    "TENANT_DATA_EXPORT_FAILED": "export بيانات المستأجر لم يكتمل — راجع سجلّ العمليّة."
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم."
   },
   "design": {
     "title": "Design System",

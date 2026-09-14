@@ -12,14 +12,16 @@ interface Props {
 export function PageHeader({ titleKey, subtitleKey, action }: Props): JSX.Element {
   const { t } = useLocale();
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+    // 240-PHONE-WIDTH: على <sm الحركة تنزل تحت العنوان بعرض كامل بدل
+    // التضاغط أفقيّاً · على sm+ تعود على اليسار (RTL: end).
+    <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <h1 className="text-lg font-semibold tracking-tight">{t(titleKey)}</h1>
         {subtitleKey && (
           <p className="mt-1 text-sm text-fg-muted">{t(subtitleKey)}</p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="sm:shrink-0">{action}</div>}
     </div>
   );
 }
