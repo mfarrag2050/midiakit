@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
 import { loadImage } from 'skia-canvas';
+import { checkInkPresent, formatInkGateFailure } from './ink-gate.js';
 import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
@@ -311,6 +312,28 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(imageAssets && { assets: imageAssets as any }),
       });
+
+      // INK-GATE (2026-09-15) — يمسك «رندرٌ ناجحٌ بلا حبر» على القماش الحيّ،
+      // قبل الترميز إلى PNG. أَرخصُ موضعٍ: ctx.getImageData متاح مجّاناً هنا.
+      // على الفشل: نرفع الملفّ إلى S3 تحت مفتاح failed-output ليبقى للفحص،
+      // ثمّ نرمي — الـcatch يحوّل الحالة إلى failed برمز INK_GATE_EMPTY.
+      const pixels = ctx.getImageData(0, 0, dims.w, dims.h).data;
+      const ink = checkInkPresent(pixels, dims.w, dims.h);
+      if (!ink.hasInk) {
+        const failedBuf = await canvas.toBuffer('png');
+        const failedKey = `${tenantId}/renders/${renderId}/failed-output.${format}`;
+        try {
+          await s3.send(new PutObjectCommand({
+            Bucket: S3_BUCKET, Key: failedKey, Body: failedBuf, ContentType: 'image/png',
+          }));
+        } catch (uploadErr) {
+          // eslint-disable-next-line no-console
+          console.error(`[api-worker] ink-gate: failed to preserve artifact at ${failedKey}: ${(uploadErr as Error).message}`);
+        }
+        throw new Error(formatInkGateFailure(ink, failedKey));
+      }
+      // eslint-disable-next-line no-console
+      console.log(`[api-worker] ink-gate pass: ratio=${(ink.ratio * 100).toFixed(4)}% (threshold ${(ink.threshold * 100).toFixed(4)}% · T=${ink.perPixelDelta}) render=${renderId}`);
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 
@@ -333,7 +356,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     console.log(`[api-worker] job ${renderId} succeeded (${outputBuf.length} bytes, output=${outputKey})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_')
+    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_') || msg.startsWith('INK_GATE_')
       ? msg.split(':')[0]! : 'RENDER_FAILED';
     await updateRender(tenantId, renderId, {
       status: 'failed', completed_at: new Date(),
