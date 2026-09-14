@@ -256,9 +256,11 @@ export default function BrandKitsPage(): JSX.Element {
           >
             {t('pages.brandKits.editBtn')}
           </Link>
-          <Button variant="secondary" size="sm" onClick={() => openFontAck(r)}>
-            {t('pages.brandKits.fontAck.title')}
-          </Button>
+          {r.fontSource === 'custom' && (
+            <Button variant="secondary" size="sm" onClick={() => openFontAck(r)}>
+              {t('pages.brandKits.fontAck.title')}
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => openAssetsVersion(r)}>
             {t('pages.brandKits.assetsVersion.title')}
           </Button>
