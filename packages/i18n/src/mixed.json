@@ -299,7 +299,7 @@
       },
       "assetsVersion": {
         "title": "Bump assets version",
-        "body": "الترقية تُثبِّت إصداراً جديداً. راجع الفرق قبل التأكيد (L-29).",
+        "body": "الترقية تُثبِّت إصداراً جديداً. راجع الفرق قبل التأكيد.",
         "current": "Current version",
         "target": "New version",
         "targetHint": "Format YYYY.MM (e.g. 2026.03).",
@@ -309,7 +309,7 @@
         "ackCheckbox": "I have reviewed the diff above.",
         "submit": "Bump now"
       },
-      "editBtn": "Edit",
+      "editBtn": "Edit الهوية",
       "editor": {
         "title": "Edit brand kit",
         "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
