@@ -41,6 +41,11 @@ PG_CI_CONTAINER="pf-mediakit-ci-pg"
 PG_CI_PORT="19045"
 REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
 REDIS_CI_PORT="19046"
+# 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر (STORAGE_DRIVER=memory ⇒ mem:// ⇒
+# unknown scheme في undici). دلو خاصّ بالمِحَكّ = mk-assets-ci — لا dev ولا شوروم.
+MINIO_CI_CONTAINER="pf-mediakit-ci-minio"
+MINIO_CI_PORT="19047"
+MINIO_CI_BUCKET="mk-assets-ci"
 CI_NETWORK="pf-mediakit-ci-net"
 
 # كلمات سرّ dev-only (تنتهي مع الحاوية)
@@ -61,6 +66,7 @@ cleanup() {
   echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
   docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
   docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+  docker rm -f "${MINIO_CI_CONTAINER}" > /dev/null 2>&1 || true
   docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
   exit $ec
 }
@@ -69,6 +75,7 @@ trap cleanup EXIT INT TERM
 # ── تنظيف مُسبَق (بقايا من تشغيل فاشل سابق) ─────────
 docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+docker rm -f "${MINIO_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
 
 # ── الشبكة ─────────────────────────────────────────
@@ -128,6 +135,48 @@ for i in $(seq 1 15); do
   fi
 done
 
+# ── minio ephemeral (274 §٢ · خزن حقيقيّ بدلاً من mem://) ─────
+# اعتمادات عشوائيّة لكلّ تشغيل — لا سرّ حقيقيّ · لا قيمة تُطبَع
+MINIO_USER=$(openssl rand -hex 12 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(12).toString("hex"))')
+MINIO_PASS=$(openssl rand -hex 20 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(20).toString("hex"))')
+
+echo "[mk-ci] رفع minio ephemeral (${MINIO_CI_CONTAINER} · 127.0.0.1:${MINIO_CI_PORT})..."
+docker run -d --rm \
+  --name "${MINIO_CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -p "127.0.0.1:${MINIO_CI_PORT}:9000" \
+  -e MINIO_ROOT_USER="${MINIO_USER}" \
+  -e MINIO_ROOT_PASSWORD="${MINIO_PASS}" \
+  minio/minio:RELEASE.2024-12-18T13-15-44Z \
+  server /data > /dev/null
+
+echo -n "[mk-ci] انتظار minio ready"
+for i in $(seq 1 15); do
+  if docker exec "${MINIO_CI_CONTAINER}" mc --version > /dev/null 2>&1 || \
+     docker run --rm --network "${CI_NETWORK}" --platform linux/arm64 curlimages/curl:8.11.0 \
+       -fsS "http://${MINIO_CI_CONTAINER}:9000/minio/health/live" > /dev/null 2>&1; then
+    echo " ✓ (${i}×2ث)"
+    break
+  fi
+  echo -n "."
+  sleep 2
+  if [ "$i" = "15" ]; then
+    echo ""
+    echo "[mk-ci] ✗ minio لم تصبح ready خلال 30 ثانية"
+    exit 1
+  fi
+done
+
+# إنشاء الدلو mk-assets-ci — mc عابر · اعتمادات عبر env لا سطر أوامر
+echo "[mk-ci] إنشاء الدلو ${MINIO_CI_BUCKET}..."
+docker run --rm \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -e MC_HOST_ci="http://${MINIO_USER}:${MINIO_PASS}@${MINIO_CI_CONTAINER}:9000" \
+  minio/mc:RELEASE.2024-11-21T17-21-54Z \
+  mb --ignore-existing "ci/${MINIO_CI_BUCKET}" > /dev/null
+
 # ── URLs · داخل الحاوية pg على ${PG_CI_CONTAINER}:5432 ─────
 # migration_user + app_user + control_plane_user يُنشأون تلقائيّاً
 # بواسطة init sql عند إقلاع pg (نفس السكربتات المستعملة في dev).
@@ -163,6 +212,12 @@ docker run --rm \
   -e AI_KEY_ENCRYPTION_KEY="${AI_KEY}" \
   -e SESSION_JWT_SECRET="${JWT_SECRET}" \
   -e PLATFORM_JWT_SECRET="${PLATFORM_JWT}" \
+  -e STORAGE_DRIVER=s3 \
+  -e S3_ENDPOINT="http://${MINIO_CI_CONTAINER}:9000" \
+  -e S3_REGION=us-east-1 \
+  -e S3_BUCKET="${MINIO_CI_BUCKET}" \
+  -e S3_ACCESS_KEY_ID="${MINIO_USER}" \
+  -e S3_SECRET_ACCESS_KEY="${MINIO_PASS}" \
   -w /work \
   "${IMAGE}" \
   bash -c '
