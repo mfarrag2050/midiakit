@@ -60,7 +60,10 @@ export async function verifyPlatformAccessToken(token: string): Promise<Platform
       const code = (err as { code: string }).code;
       if (code === 'ERR_JWT_EXPIRED') throw TokenExpired();
     }
-    throw TokenInvalid();
+    // 317: مرِّر jose error كـcause · error-handler يستخرج err.code
+    // (مثل ERR_JWS_SIGNATURE_VERIFICATION_FAILED) ورسالته المختصرة إلى log.
+    // **الرمز الأصليّ لا يُسجَّل** — jose errors لا تحمل payload المُوقَّع.
+    throw TokenInvalid(err);
   }
 }
 
