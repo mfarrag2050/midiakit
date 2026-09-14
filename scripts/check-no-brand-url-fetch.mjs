@@ -35,10 +35,14 @@ import { fileURLToPath } from 'node:url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = join(__dirname, '..');
 
+// S13 (2026-09-06) — أُضيف `apps/studio/src` إلى النطاق **قبل** كتابة كود
+// المعاينة. المعاينة أول شيء في الاستوديو يلمس brand.logo.url و
+// fonts.*.url — لا نترك الفتحة مفتوحة ثم نُغلقها بعد الحدث.
 const SCAN_DIRS = [
   'packages/engine/src',
   'apps/renderer/src',
   'apps/api/src',
+  'apps/studio/src',
 ];
 
 // أنماط الاستدعاءات الممنوعة (تعبيرات نصية بسيطة — بحث محافظ).

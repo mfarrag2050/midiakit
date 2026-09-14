@@ -45,6 +45,11 @@ const NOT_ISOLATED = new Set([
   'platform_users',
   'platform_sessions',
   'plan_revisions',
+  // tenant_deletion_log — سجلّ منصّة (audit hard-delete). النيّة معلَنة
+  // صراحة في migration 20260912000000: «app_user لا يمسّه — بيانات منصّة».
+  // يحمل tenant_id لكن بلا FK إلى tenants (يبقى بعد حذف المستأجر · شرط
+  // سياسة الاحتفاظ).
+  'tenant_deletion_log',
 ]);
 
 // نقرأ APP_USER_EXPECTED_GRANTS من verify-isolation.mjs بـregex بسيط.

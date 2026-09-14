@@ -10,8 +10,9 @@
     "هذا الملفّ مصنوعٌ من ذلك المصدر · يبقى ثابتاً كي يستهلكه mkst/mkau/mkdash",
     "كنقطة استقرار لا تعتمد على cross-branch git show."
   ],
-  "source": "apps/api/src/errors.ts (نفس الشجرة)",
   "mirroredAt": "2026-09-13",
+  "mirroredFromCommit": "755ba7e",
+  "source": "apps/api/src/errors.ts (نفس الشجرة)",
   "codes": [
     "ACCOUNT_DISABLED",
     "ACCOUNT_SUSPENDED",
@@ -113,13 +114,6 @@
     "WORKFLOW_NOT_FOUND",
     "WORKFLOW_SCHEMA_VIOLATION"
   ],
-  "deferred": {
-    "$note": "Declared in errors.ts but the endpoint that emits them isn't wired until A21. Dictionary entries required now so translations are ready.",
-    "codes": [
-      "SEATS_EXHAUSTED",
-      "ACCOUNT_SUSPENDED"
-    ]
-  },
   "clientOnlyCodes": {
     "$note": "Not from mk-api — UI-side fallbacks. Excluded from mirror-vs-errors.ts diff, but must exist in dictionaries.",
     "codes": [
@@ -143,6 +137,13 @@
       "CANVAS_NO_CONTEXT",
       "PREVIEW_UNKNOWN",
       "INVALID_LOGO_DIMENSIONS"
+    ]
+  },
+  "deferred": {
+    "$note": "Declared in errors.ts but the endpoint that emits them isn't wired until A21. Dictionary entries required now so translations are ready.",
+    "codes": [
+      "SEATS_EXHAUSTED",
+      "ACCOUNT_SUSPENDED"
     ]
   }
 }

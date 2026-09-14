@@ -1,0 +1,176 @@
+{
+  "$schema": "340-typography-layout-v2",
+  "generated": "2026-09-13T15:03:48.328Z",
+  "pipelineCoverage": {
+    "preprocessBidi": "called",
+    "parseTokens": "called",
+    "computeBreakPenalties": "called",
+    "wrapOptimal": "called",
+    "justifyLine": "called",
+    "normalizeHeadlineFont": "not-called",
+    "computeHeadlineLayout": "not-called",
+    "drawHeadlineLine": "not-applicable"
+  },
+  "pipelineCoverageNotes": {
+    "normalizeHeadlineFont": "قواعد اشتقاق fs/lineHeight · إن أضاف engine قاعدة جديدة الأداة تفوّتها",
+    "computeHeadlineLayout": "dynamic lineHeightMode لا يُستعمل هنا (brand.typography.lineHeightMode=fixed)",
+    "drawHeadlineLine": "الرسم الفعليّ + استهلاك font metrics · الأداة تقيس الطول لا البكسل"
+  },
+  "engine": {
+    "wrapOptimal": "packages/engine/src/text/wrap-optimal.ts",
+    "drawLineRTL": "packages/engine/src/text/draw-line.ts"
+  },
+  "template": "breaking",
+  "brand": "marafi",
+  "size": {
+    "key": "feed",
+    "w": 1080,
+    "h": 1350
+  },
+  "canvas": {
+    "w": 1080,
+    "h": 1350
+  },
+  "input": {
+    "headline": "قَرارٌ مُفاجِئ بتَعليقِ الرِّحلات",
+    "headlineProcessed": "قَرارٌ مُفاجِئ بتَعليقِ الرِّحلات",
+    "source": "مَرافئ",
+    "purpose": "التشكيل وقِصَر السطر. علاماتٌ متراكمة (شدّة · همزة على كرسيّ · تنوين). قصيرٌ عمداً — ضبط العناوين الطويلة يكسر القصيرة كثيراً."
+  },
+  "headline": {
+    "fontSize": 49,
+    "lineHeight": 70,
+    "boxWidth": 950,
+    "rightX": 1009,
+    "direction": "rtl",
+    "wrapMode": "uniform",
+    "lines": [
+      {
+        "index": 0,
+        "text": "قَرارٌ مُفاجِئ",
+        "wordCount": 2,
+        "break": {
+          "after": "مُفاجِئ",
+          "beforeNextLine": "بتَعليقِ"
+        },
+        "runs": [
+          {
+            "text": "قَرارٌ",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 947,
+            "width": 62,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "مُفاجِئ",
+            "dir": "rtl",
+            "xEnd": 936,
+            "xStart": 813,
+            "width": 123,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      },
+      {
+        "index": 1,
+        "text": "بتَعليقِ الرِّحلات",
+        "wordCount": 2,
+        "break": null,
+        "runs": [
+          {
+            "text": "بتَعليقِ",
+            "dir": "rtl",
+            "xEnd": 1009,
+            "xStart": 893,
+            "width": 116,
+            "bold": false,
+            "accent": false
+          },
+          {
+            "text": "الرِّحلات",
+            "dir": "rtl",
+            "xEnd": 881,
+            "xStart": 743,
+            "width": 138,
+            "bold": false,
+            "accent": false
+          }
+        ],
+        "kashida": {
+          "words": [],
+          "tatweelBefore": 0,
+          "tatweelAfter": 0,
+          "tatweelInsertedByJustify": 0
+        }
+      }
+    ]
+  },
+  "diacritics": {
+    "method": "differential-ink-box",
+    "statusVersion": "330-quaternary",
+    "status": "marks-inside-box",
+    "measurements": [
+      {
+        "word": "قَرارٌ",
+        "fs": 49,
+        "status": "marks-above-box",
+        "diffCount": 161,
+        "inkWith": 949,
+        "inkWithout": 801,
+        "topWith": 43,
+        "topWithout": 54,
+        "deltaTop": 11,
+        "aboveBaselineWith": 49,
+        "aboveBaselineWithout": 38
+      },
+      {
+        "word": "مُفاجِئ",
+        "fs": 49,
+        "status": "marks-inside-box",
+        "diffCount": 133,
+        "inkWith": 1466,
+        "inkWithout": 1339,
+        "topWith": 55,
+        "topWithout": 55,
+        "deltaTop": 0,
+        "aboveBaselineWith": 37,
+        "aboveBaselineWithout": 37
+      },
+      {
+        "word": "بتَعليقِ",
+        "fs": 49,
+        "status": "marks-above-box",
+        "diffCount": 87,
+        "inkWith": 1457,
+        "inkWithout": 1378,
+        "topWith": 54,
+        "topWithout": 55,
+        "deltaTop": 1,
+        "aboveBaselineWith": 38,
+        "aboveBaselineWithout": 37
+      },
+      {
+        "word": "الرِّحلات",
+        "fs": 49,
+        "status": "marks-inside-box",
+        "diffCount": 130,
+        "inkWith": 1626,
+        "inkWithout": 1504,
+        "topWith": 55,
+        "topWithout": 55,
+        "deltaTop": 0,
+        "aboveBaselineWith": 37,
+        "aboveBaselineWithout": 37
+      }
+    ]
+  }
+}

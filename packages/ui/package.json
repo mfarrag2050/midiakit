@@ -1,0 +1,27 @@
+{
+  "name": "@pf-mediakit/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tailwind-preset": "./tailwind-preset.ts",
+    "./styles/tokens.css": "./styles/tokens.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pf-mediakit/i18n": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.11",
+    "tailwindcss": "3.4.14",
+    "typescript": "5.6.3"
+  }
+}

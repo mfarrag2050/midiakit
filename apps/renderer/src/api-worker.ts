@@ -27,7 +27,8 @@ import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { renderVideo } from './index.js';
+import { renderVideo, type RenderAssetsInput } from './index.js';
+import { loadImage } from 'skia-canvas';
 import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
@@ -147,6 +148,60 @@ async function downloadAsset(storageKey: string): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+// IMAGE-VERTICAL: يستخلص أسماء حقول الصور من `template.layers` مباشرة —
+// نفس ما يقرأه `renderFrame` (packages/engine/src/render.ts:1152). العقد
+// في `packages/templates/src/types.ts:297` يعرّف `layers: readonly Layer[]`
+// على المستوى الأعلى. القراءة السابقة من `t.card.layers ∪ t.video.layers`
+// كانت ميّتة عمليّاً — الحقلان غير موجودَين في العقد (420 §1.2).
+// **يسقط بصوت** إن لم يجد المفتاح في content مقابلاً حقيقياً في DB.
+function extractImageFieldsFromTemplate(templateSnapshot: unknown): Set<string> {
+  const fields = new Set<string>();
+  const t = templateSnapshot as { layers?: unknown[] };
+  const layers = Array.isArray(t?.layers) ? t.layers : [];
+  for (const l of layers) {
+    const layer = l as { type?: string; field?: string };
+    if (layer?.type === 'image') fields.add(layer.field ?? 'image');
+  }
+  return fields;
+}
+
+async function resolveImageAssetsOrThrow(
+  tenantId: string,
+  templateSnapshot: unknown,
+  content: Record<string, unknown>,
+  tmpDir: string,
+): Promise<RenderAssetsInput | undefined> {
+  const imageFields = extractImageFieldsFromTemplate(templateSnapshot);
+  if (imageFields.size === 0) return undefined;
+
+  const required: Array<{ field: string; assetId: string }> = [];
+  for (const field of imageFields) {
+    const v = content[field];
+    if (typeof v === 'string' && v.length > 0) required.push({ field, assetId: v });
+  }
+  if (required.length === 0) return undefined; // لا صور — fallback القالب
+
+  const images: Record<string, { width: number; height: number }> = {};
+  for (const { field, assetId } of required) {
+    const storageKey = await lookupStorageKey(tenantId, assetId);
+    if (!storageKey) {
+      throw new Error(`IMAGE_ASSET_MISSING: field=${field} assetId=${assetId} — DB has no finalized asset row`);
+    }
+    let buf: Buffer;
+    try { buf = await downloadAsset(storageKey); }
+    catch (err) {
+      throw new Error(`IMAGE_ASSET_FETCH_FAILED: field=${field} storage_key=${storageKey} err=${(err as Error).message}`);
+    }
+    const localPath = join(tmpDir, `${assetId}.img`);
+    writeFileSync(localPath, buf);
+    const img = await loadImage(localPath);
+    images[field] = img as { width: number; height: number };
+    // eslint-disable-next-line no-console
+    console.log(`[api-worker] image loaded: field=${field} bytes=${buf.length}`);
+  }
+  return { images };
+}
+
 function extractFontAssetIds(brand: Record<string, unknown>): Array<{ family: string; assetId: string }> {
   const out: Array<{ family: string; assetId: string }> = [];
   const fonts = (brand as { fonts?: Record<string, { family?: string; assetId?: string; weights?: Record<string, { assetId?: string }> }> }).fonts;
@@ -213,22 +268,49 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     const dims = SIZE_MAP[size];
     if (!dims) throw new Error(`INVALID_SIZE: ${size}`);
 
-    // 5. Render — MP4 via renderVideo (+ FFmpeg) OR PNG via canvas
+    // IMAGE-VERTICAL: حلّ أصول الصور — يُلقي بصوت إن كان content يشير إلى
+    // assetId ولا يجد قيداً في DB. لا fallback صامت.
+    const imageAssets = await resolveImageAssetsOrThrow(tenantId, templateSnapshot, content, tmpDir);
+
+    // 5. Render — MP4 via renderVideo (+ FFmpeg) OR PNG via renderFrame (still)
+    //
+    // حارس عقد الرندر — من العقد لا من الخيال (types.ts:291-303):
+    //   • كلّ قالب يحمل `layers` (schema-required) — renderFrame يعمل عليها.
+    //   • `video?: TemplateVideo` **اختياريّ** — renderVideo يحتاجه للحركة.
+    //   • `kind` تصريحٌ دلاليّ لا حاكمٌ فنيّ — لا يُشتقّ منه منعُ تصدير.
+    //
+    // لذلك: PNG يعمل على أيّ قالبٍ فيه layers (وكلّها كذلك بحكم schema).
+    // MP4 يشترط video block فقط — لا يمكن تصنيع حركةٍ من عدم.
+    //
+    // الحارس القديم (`!template.card`) بُني على تعليقٍ خاطئ عن renderFrame —
+    // راجع 420 §1.3 و 108 §1.
+    const t = template as { id?: string; video?: unknown };
+    if (format === 'mp4' && !t.video) {
+      throw new Error(
+        `MP4_UNSUPPORTED_TEMPLATE: قالب "${t.id}" لا يحمل video block — لا حركة معرَّفة، غير قابل للتصدير كفيديو`
+      );
+    }
     const outPath = join(tmpDir, `output.${format}`);
     if (format === 'mp4') {
-      await renderVideo({ template, brand, content, size: dims, outPath });
+      await renderVideo({
+        template, brand, content, size: dims, outPath,
+        ...(imageAssets && { assets: imageAssets }),
+      });
     } else {
+      // PNG-EXPORT: مرّ بالمحرك بنفس assets — لا شكل ثانٍ للأصول، لا stub.
+      const { renderFrame } = await import('@pf-mediakit/engine');
       const canvas = new Canvas(dims.w, dims.h);
       const ctx = canvas.getContext('2d');
-      const brandC = brand as { colors?: { surface?: string } };
-      ctx.fillStyle = brandC.colors?.surface ?? '#111';
-      ctx.fillRect(0, 0, dims.w, dims.h);
-      if (loadedFonts.length > 0) ctx.font = `bold 80px "${loadedFonts[0]!.family}"`;
-      else ctx.font = 'bold 80px sans-serif';
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(content['headline'] ?? 'اختبار'), dims.w / 2, dims.h / 2);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderFrame({
+        ctx: ctx as any,
+        size: dims,
+        template,
+        brand,
+        content,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(imageAssets && { assets: imageAssets as any }),
+      });
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 
@@ -270,10 +352,23 @@ async function processCliJob(job: Job<RenderJobInput>): Promise<void> {
   const { TEMPLATES } = await import('@pf-mediakit/templates');
   const template = TEMPLATES[job.data.templateId];
   if (!template) throw new UnrecoverableError(`[api-worker] CLI template ${job.data.templateId} غير معروف`);
+  // IMAGE-VERTICAL: مسار CLI يستقبل `assets` جاهزة (URLs محلولة) من الحمولة —
+  // لا يستعلم DB. loadImage(url) لكل واحد + تمرير للمحرك.
+  const cliImages: Record<string, { width: number; height: number }> | undefined = job.data.assets
+    ? Object.fromEntries(
+        await Promise.all(
+          Object.entries(job.data.assets).map(async ([field, spec]) => {
+            const img = await loadImage(spec.url);
+            return [field, img as { width: number; height: number }] as const;
+          }),
+        ),
+      )
+    : undefined;
   await renderVideo({
     template, brand: job.data.brand, content: job.data.content,
     size: job.data.size, outPath: job.data.outPath,
     ...(job.data.fps !== undefined && { fps: job.data.fps }),
+    ...(cliImages && { assets: { images: cliImages } }),
   });
 }
 

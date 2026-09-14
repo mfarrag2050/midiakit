@@ -1,17 +1,27 @@
-// verify-tashkil-collision — بوابة تشكيل يدويّة (v2 · لا يُشغَّل في pnpm test).
+// verify-tashkil-collision — حارس انحدار عكسيّ (v2 · لا يُشغَّل في pnpm test).
 //
-// **BASELINE-A · 2026-09-11 · تعديل النطاق:** `measuredLineHeight` لم يعد
-// يستدعي pixelFactory (L-73). في v1 التشكيل مطفأ (TASHKIL-OFF 2026-09-10)،
-// و`measuredLineHeight` يستعمل متريكات رأس الخطّ حصراً. هذا السكربت يبقى
-// أداة تحقيق يدويّة تُبيّن الفارق بين المسارين:
-//   (أ) القياس من رأس الخطّ (v1 · مطبَّق): كافٍ للنصّ العاري، أقلّ من
-//       الارتفاع الفعليّ لسطر مشكَّل.
-//   (ب) القياس البكسليّ (v2 · متاح لكن غير مستدعى): يكشف ذُروة التشكيل
-//       الحقيقيّة. يبقى في `pixel-height.ts` كخدمة قابلة للاستدعاء.
+// **إعادة تصميم · 2026-09-11 · L-77 · قرار (أ) في 98-TASHKIL-GATE-REVIVE:**
+// الفاحص الأصليّ كُتب قبل BASELINE-A ليُثبت أنّ رأس الخطّ (من
+// `ctx.measureText.actualBoundingBoxAscent` = em-box ≈ 1em) **لا يكفي**
+// لسطر مشكَّل، وأنّ القياس البكسليّ ضروريّ. BASELINE-A غيّر مصدر رأس
+// الخطّ إلى OS/2 typoAscender من opentype.js (1.085em على IBM Plex)،
+// الذي **يحمل فسحة التشكيل بنيويّاً**. صارت الفرضيّات الأصليّة ميتة —
+// المشكلة التي كان الفاحص يوثّقها حُلَّت.
 //
-// **متى يعود إلى pnpm test:** حين تُعاد ميزة التشكيل ويُتَّخذ قرار موحَّد
-// (راجع `TASHKIL-METRICS-UNIFY` المقترَحة). عندها يجب أيضاً حلّ تباين
-// المنصّات في القياس البكسليّ (skia vs Chrome).
+// **المعنى الجديد — حارس انحدار عكسيّ:** الفاحص الآن يُثبت أنّ رأس
+// الخطّ الجديد (typo-based) **كافٍ** لسطر مشكَّل، بحيث لو رجع مصدر
+// المتريكات مستقبلاً إلى `measureText` أو em-box، سقط الفاحص فوراً.
+// الحارس يبقى «حول ما نحرسه»: التشكيل جودة صحيفة عربيّة، والقياس مصدر
+// صحّتها. تغيّرت الفرضيّة، بقيت الحراسة.
+//
+// **v1 tashkil معطَّل (قرار المالك 2026-09-10 · TASHKIL-OFF):** المسار
+// البكسليّ (`measurePixelHeight` في `pixel-height.ts`) يبقى في الكود
+// كخدمة قابلة للاستدعاء، ويُستعمَل هنا للمقارنة فقط لا للاستدعاء من
+// المحرك. عندما يعود التشكيل في v2 (مع تذكرة `TASHKIL-METRICS-UNIFY`
+// المقترَحة)، هذه الفرضيّات تُعاد كتابتها بحسب الميزة الجديدة.
+//
+// **متى يعود إلى pnpm test:** حين تُعاد ميزة التشكيل. الآن يُشغَّل يدويّاً
+// بعد أيّ تغيير على مصدر متريكات الخطّ.
 
 import { Canvas, FontLibrary } from 'skia-canvas';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -39,7 +49,6 @@ function assert(cond, name, detail = '') {
   if (!cond) failed++;
 }
 
-// pixelFactory — يُعطى للـmeasurer كي يقيس بكسلياً عند التشكيل.
 const pixelFactory = {
   create(w, h) {
     const c = new Canvas(w, h);
@@ -48,34 +57,60 @@ const pixelFactory = {
 };
 
 const FS = 70;
-const LH_MIN = FS * 1.34;  // الحدّ الأدنى الافتراضي
-const FONT = 'IBM Plex Sans Arabic, sans-serif';
+const LH_MIN = FS * 1.34;
+const SAFE_GAP = 15;
 
-// عنوان مشكَّل من سطرين
 const LINE_A = [{ text: 'اَللَّهُمَّ صَلِّ عَلَى', bold: true, accent: false }];
 const LINE_B = [{ text: 'مُحَمَّدٍ وَآلِهِ الطَّاهِرِينَ', bold: true, accent: false }];
-const LINES = [LINE_A, LINE_B];
 
-// ── (أ) وجود — القياس البكسليّ يكشف التشكيل، رأس الخطّ لا ────
-console.log('════════ أ) البكسليّ يكشف التشكيل، رأس الخطّ يعطي حدّاً أدنى ثابتاً ════════');
-const metrics = DEFAULT_BRAND.fonts.primary.metrics;
+// AMEND-55 · 2026-09-11: FontMetrics على FontWeight لا FontFamily.
+// سلسلة fallback مطابقة لـpackages/engine/src/render.ts:652.
+const primary = DEFAULT_BRAND.fonts.primary;
+const metrics =
+  primary.weights.regular.metrics ??
+  primary.weights.bold.metrics ??
+  primary.weights.light.metrics;
+if (!metrics) throw new Error(
+  '[verify-tashkil-collision] DEFAULT_BRAND بلا FontMetrics على أيّ وزن — ' +
+  'خلل في التركيب لا حالة تُعالَج بالصمت.'
+);
+
+// ── (أ) مصدر رأس الخطّ هو typo لا em-box ──────────────────────────
+console.log('════════ أ) رأس الخطّ الجديد (typo) يحمل فسحة التشكيل ════════');
 {
-  const lhHeader = measuredLineHeight(metrics, FS, LH_MIN);
-  // القياس البكسليّ لسطر مشكَّل مباشرةً (متاح كخدمة، غير مستدعى في v1)
+  const emRatio = (metrics.ascent + metrics.descent) / metrics.unitsPerEm;
+  console.log(`    (ascent + descent) / unitsPerEm = ${emRatio.toFixed(4)} em`);
+  console.log(`    (em-box خالص = 1.0 em · typo يزيد فوق 1.0 لحمل الصاعد + الهابط + التشكيل)`);
+  assert(
+    emRatio > 1.0,
+    'المتريكات تتجاوز em-box — دليل typo لا measureText',
+    `${emRatio.toFixed(4)} em > 1.0`
+  );
+  assert(hasTashkil('اَللَّهُمَّ صَلِّ عَلَى'), 'hasTashkil يكشف الفتحة والشدّة والسكون');
+}
+
+// ── (ب) رأس الخطّ ≈ البكسليّ (فرق ≤ 5px) ─────────────────────────
+console.log('\n════════ ب) رأس الخطّ الجديد ≈ القياس البكسليّ لسطر مشكَّل ════════');
+let lhHeader, lhPixel;
+{
+  lhHeader = measuredLineHeight(metrics, FS, LH_MIN);
   const fontString = `700 ${FS}px "IBM Plex Sans Arabic", sans-serif`;
   const pxA = measurePixelHeight(pixelFactory, LINE_A[0].text, fontString);
   const pxB = measurePixelHeight(pixelFactory, LINE_B[0].text, fontString);
   const pxRaw = Math.max(pxA.ascent + pxA.descent, pxB.ascent + pxB.descent);
-  const lhPixel = Math.ceil(pxRaw * 1.05);
-  console.log(`    من رأس الخطّ (v1 المطبَّق): ${lhHeader}px`);
-  console.log(`    البكسليّ (v2 · متاح غير مستدعى): ${lhPixel}px`);
-  console.log(`    الفرق: +${lhPixel - lhHeader}px (خفاء التشكيل)`);
-  assert(hasTashkil('اَللَّهُمَّ صَلِّ عَلَى'), 'hasTashkil يكشف الفتحة والشدّة والسكون');
-  assert(lhPixel > lhHeader, 'القياس البكسلي أكبر — يكشف خفاء رأس الخطّ للتشكيل');
-  assert(lhPixel - lhHeader >= 10, 'الفرق كبير (≥ 10px) — يستحقّ عودة تشكيل مع حلّ يدمج البكسليّ', `+${lhPixel - lhHeader}px`);
+  lhPixel = Math.max(LH_MIN, Math.ceil(pxRaw * 1.05));
+  const diff = Math.abs(lhPixel - lhHeader);
+  console.log(`    من رأس الخطّ (typo): ${lhHeader}px`);
+  console.log(`    البكسليّ (قياس مباشر لتشكيل مرسوم): ${lhPixel}px`);
+  console.log(`    الفرق المطلق: ${diff}px`);
+  assert(
+    diff <= 5,
+    `رأس الخطّ يوازي البكسليّ (فرق ≤ 5px) — دليل أنّه يحمل التشكيل`,
+    `${diff}px`
+  );
 }
 
-// دالة قياس تصادم فعلي على canvas مرسوم
+// دالة قياس فجوة بين سطرَين مرسومَين بلوح canvas
 function drawTwoLinesAndMeasureGap(lineHeight) {
   const W = 1200, H = 400;
   const canvas = new Canvas(W, H);
@@ -87,20 +122,12 @@ function drawTwoLinesAndMeasureGap(lineHeight) {
   ctx.direction = 'rtl';
   ctx.textAlign = 'right';
   ctx.fillStyle = '#000000';
-  // سطر أوّل عند baseline1
   const baseline1 = 150;
   ctx.fillText(LINE_A[0].text, W - 40, baseline1);
-  // سطر ثانٍ عند baseline2 = baseline1 + lineHeight
   const baseline2 = baseline1 + lineHeight;
   ctx.fillText(LINE_B[0].text, W - 40, baseline2);
-
-  // مسح البكسلات: نبحث عن أدنى صف من السطر الأوّل ثم أعلى صف من الثاني
   const img = ctx.getImageData(0, 0, W, H);
   const data = img.data;
-  // منطقة السطر الأوّل: باستخدام descent محتمل ≈ 35px
-  // منطقة السطر الثاني: يبدأ نظرياً عند baseline2 - ascent
-  // بدل ذلك: نبحث عن الفجوة بين مجموعتَي البكسلات — أوسع صف أبيض متتال بين
-  // baseline1 و baseline2.
   function rowHasInk(row) {
     for (let col = 0; col < W; col++) {
       const idx = (row * W + col) * 4;
@@ -108,9 +135,7 @@ function drawTwoLinesAndMeasureGap(lineHeight) {
     }
     return false;
   }
-  // نبحث في المنطقة الوسطى بين baseline1 و baseline2 عن أطول متسلسلة صفوف بلا حبر.
-  let maxGap = 0;
-  let curGap = 0;
+  let maxGap = 0, curGap = 0;
   for (let row = baseline1; row <= baseline2; row++) {
     if (rowHasInk(row)) {
       if (curGap > maxGap) maxGap = curGap;
@@ -123,43 +148,52 @@ function drawTwoLinesAndMeasureGap(lineHeight) {
   return { canvas, gap: maxGap };
 }
 
-// ── (ب) راحة بصرية مع lineHeight المُصلَحة (بكسليّ) ─────
-const SAFE_GAP = 15;   // فجوة مريحة بصرياً (لا anti-aliasing متسرّب)
-console.log('\n════════ ب) سطران مشكَّلان — راحة بصرية (مع القياس البكسليّ) ════════');
-let gapFixed;
+// ── (ج) v1 يعطي فجوة مريحة — لا حاجة للبكسليّ بعد BASELINE-A ─────
+console.log('\n════════ ج) رسم بـv1 (رأس الخطّ وحده) يعطي فجوة مريحة ════════');
+let gapHeader;
 {
-  const fontString = `700 ${FS}px "IBM Plex Sans Arabic", sans-serif`;
-  const pxA = measurePixelHeight(pixelFactory, LINE_A[0].text, fontString);
-  const pxB = measurePixelHeight(pixelFactory, LINE_B[0].text, fontString);
-  const pxRaw = Math.max(pxA.ascent + pxA.descent, pxB.ascent + pxB.descent);
-  const lh = Math.max(LH_MIN, Math.ceil(pxRaw * 1.05));
-  const { canvas: drawn, gap } = drawTwoLinesAndMeasureGap(lh);
-  gapFixed = gap;
-  console.log(`    lineHeight المستخدَمة (البكسليّ): ${lh}px`);
+  const { canvas: drawn, gap } = drawTwoLinesAndMeasureGap(lhHeader);
+  gapHeader = gap;
+  console.log(`    lineHeight من رأس الخطّ: ${lhHeader}px`);
   console.log(`    فجوة أوسع بين قاع السطر 1 وقمة السطر 2: ${gap}px`);
-  assert(gap >= SAFE_GAP, `فجوة مريحة (≥ ${SAFE_GAP}px)`, `${gap}px`);
-  await writeFile(join(OUT, 'tashkil-fixed.png'), drawn.toBufferSync('png'));
-  console.log(`    ✓ out/tashkil-fixed.png`);
+  assert(
+    gap >= SAFE_GAP,
+    `v1 يعطي فجوة مريحة (≥ ${SAFE_GAP}px) — رأس الخطّ الجديد كافٍ`,
+    `${gap}px`
+  );
+  await writeFile(join(OUT, 'tashkil-header-ok.png'), drawn.toBufferSync('png'));
+  console.log(`    ✓ out/tashkil-header-ok.png`);
 }
 
-// ── (ج) سلبي — قياس رأس الخطّ (v1 · لا يكفي مع تشكيل) ───
-console.log('\n════════ ج) سلبي — قياس رأس الخطّ يخسر ذُروة التشكيل ════════');
+// ── (د) البكسليّ والرأسيّ يعطيان فجوتَين متوازيتَين ─────────────
+console.log('\n════════ د) v1 و البكسليّ يعطيان فجوة متوازية (فرق ≤ 3px) ════════');
 {
-  const lhBad = measuredLineHeight(metrics, FS, LH_MIN);  // v1 المطبَّق — يفقد التشكيل
-  const { canvas: drawn, gap } = drawTwoLinesAndMeasureGap(lhBad);
-  console.log(`    lineHeight من رأس الخطّ: ${lhBad}px`);
-  console.log(`    فجوة أوسع: ${gap}px`);
-  console.log(`    الفرق مع الحالة البكسليّة: -${gapFixed - gap}px`);
-  assert(gap < SAFE_GAP, `فجوة أقلّ من حدّ الأمان (< ${SAFE_GAP}px)`, `${gap}px`);
-  assert(gap < gapFixed / 2, `الفرق كبير — رأس الخطّ يخسر ≥ نصف الفجوة`, `${gap}px vs ${gapFixed}px`);
-  await writeFile(join(OUT, 'tashkil-collision.png'), drawn.toBufferSync('png'));
-  console.log(`    ✓ out/tashkil-collision.png`);
-  console.log(`    ⇒ الحارس يُثبت أن التصحيح ضروري — بدونه، الفجوة تكفي anti-aliasing خطر بصرياً.`);
+  const { canvas: drawn, gap: gapPixel } = drawTwoLinesAndMeasureGap(lhPixel);
+  const diff = Math.abs(gapPixel - gapHeader);
+  console.log(`    فجوة v1 (رأس الخطّ): ${gapHeader}px`);
+  console.log(`    فجوة البكسليّ: ${gapPixel}px`);
+  console.log(`    الفرق المطلق: ${diff}px`);
+  assert(
+    diff <= 3,
+    `الفجوتان متوازيتان — v1 يستبدل البكسليّ بلا خسارة`,
+    `${diff}px`
+  );
+  await writeFile(join(OUT, 'tashkil-pixel-ok.png'), drawn.toBufferSync('png'));
+  console.log(`    ✓ out/tashkil-pixel-ok.png`);
 }
 
 console.log('');
-if (failed === 0) console.log('════════ tashkil-collision gate ✓ ════════');
-else {
+if (failed === 0) {
+  console.log('════════ tashkil-collision gate ✓ (typo يحمل التشكيل — كما يجب) ════════');
+  console.log('');
+  console.log('  → هذا الفاحص يُطلَق أحمر إن رجع مصدر متريكات الخطّ إلى');
+  console.log('    measureText/em-box، أو إذا انخفضت قيَم typoAscender بحيث');
+  console.log('    لا تعود تحمل التشكيل. حارس انحدار على BASELINE-A.');
+} else {
   console.log(`════════ ${failed} إخفاق ✗ ════════`);
+  console.log('');
+  console.log('  → السقوط يعني: مصدر متريكات الخطّ لم يعد يحمل التشكيل.');
+  console.log('    راجع packages/engine/src/text/dynamic-line-height.ts');
+  console.log('    وpackages/shared/src/default-brand.ts للمتريكات الحاليّة.');
   process.exit(1);
 }

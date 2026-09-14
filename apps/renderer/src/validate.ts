@@ -30,6 +30,19 @@ const bail = (field: string, msg: string): never => {
  * والفوترة. `brand` يُمرَّر ككائن جاهز (مُحلَّل عبر `resolveBrand`
  * قبل الاستدعاء) — لا نحمّل الملفات هنا.
  */
+/** IMAGE-VERTICAL: أصل محلول تضعه mk-api في الحمولة لكل صورة يشير إليها
+ * المشروع. المصيِّر لا يقرأ قاعدة البيانات ولا يستعلم عن `assetId` —
+ * يستهلك الرابط الموقَّت مباشرةً. */
+export interface ResolvedAssetInput {
+  /** رابط موقَّت مطلق (S3/R2/MinIO). يجب أن يكون صالحاً وقت التنفيذ.
+   * mk-api مسؤولة عن refresh قبل الإدخال. */
+  readonly url: string;
+  /** نوع المحتوى — يحدّد فرع التفكيك (`image/png` | `image/jpeg` | `image/webp`). */
+  readonly contentType: string;
+  /** حجم بايت (اختياريّ، تلميح للمراقبة). */
+  readonly bytes?: number;
+}
+
 export interface RenderJobInput {
   readonly tenantId: string;
   readonly templateId: string;
@@ -42,6 +55,12 @@ export interface RenderJobInput {
   readonly size: { readonly w: number; readonly h: number };
   readonly outPath: string;
   readonly fps?: number;
+  /**
+   * IMAGE-VERTICAL: خريطة الأصول المحلولة، مفتاحها = اسم حقل القالب
+   * (`layer.field`)، مثل `image`. مُلزمة **حين يشير `content[field]` إلى
+   * `assetId` (سلسلة غير فارغة)** وحقل القالب من نوع `image`.
+   */
+  readonly assets?: Readonly<Record<string, ResolvedAssetInput>>;
 }
 
 // ── الحدود القاسية (docs/08) ─────────────────────────
@@ -150,6 +169,35 @@ export function validateRenderJob(input: unknown): RenderJobInput {
     );
   }
 
+  // IMAGE-VERTICAL: تحقّق شكل `assets` (اختياريّ في الحمولة). لا نفرض
+  // حضوره هنا — الفرض يحدث في العامل عبر cross-check مع القالب والمحتوى.
+  let validatedAssets: Readonly<Record<string, ResolvedAssetInput>> | undefined;
+  if (o['assets'] !== undefined) {
+    if (typeof o['assets'] !== 'object' || o['assets'] === null || Array.isArray(o['assets'])) {
+      bail('assets', 'يجب أن يكون object من {field: {url, contentType}}');
+    }
+    const rec = o['assets'] as Record<string, unknown>;
+    const built: Record<string, ResolvedAssetInput> = {};
+    for (const [k, v] of Object.entries(rec)) {
+      if (typeof v !== 'object' || v === null) {
+        bail(`assets.${k}`, 'يجب أن يكون {url, contentType, bytes?}');
+      }
+      const it = v as Record<string, unknown>;
+      if (typeof it['url'] !== 'string' || !it['url']) {
+        bail(`assets.${k}.url`, 'إلزامي — string غير فارغ');
+      }
+      if (typeof it['contentType'] !== 'string' || !it['contentType']) {
+        bail(`assets.${k}.contentType`, 'إلزامي — string غير فارغ');
+      }
+      built[k] = {
+        url: it['url'] as string,
+        contentType: it['contentType'] as string,
+        ...(typeof it['bytes'] === 'number' && { bytes: it['bytes'] as number }),
+      };
+    }
+    validatedAssets = built;
+  }
+
   return {
     tenantId: o['tenantId'] as string,
     templateId: o['templateId'] as string,
@@ -158,5 +206,6 @@ export function validateRenderJob(input: unknown): RenderJobInput {
     size: { w, h },
     outPath: o['outPath'] as string,
     ...(o['fps'] !== undefined && { fps: o['fps'] as number }),
+    ...(validatedAssets && { assets: validatedAssets }),
   };
 }

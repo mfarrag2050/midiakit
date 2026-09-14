@@ -663,16 +663,28 @@ export function wrapOptimal(
       readonly res: SolveResult;
       readonly metrics: Metrics;
       readonly minPostFill: number;
-      readonly softnessLevel: 0 | 1 | 2; // 0=strict, 1=soft, 2=disabled
+      readonly softnessLevel: 0 | 1 | 2; // 0=strict, 1=soft, 2=softer
     }
 
-    // مستويات التراجع الدلالي — تُطبَّق عند نفس fs قبل السقوط
+    // مستويات التراجع الدلالي — تُطبَّق عند نفس fs قبل السقوط.
+    //
+    // ── تصحيح 107 (2026-09-13): لا تعطيل كلّيّ في الطور الثالث ────
+    // الطور الثالث كان `undefined` (تعطيل كامل للـpenalties) → wrap يعتمد
+    // البصريّ الخام → يسمح بـorphan-prep («على» في نهاية السطر). قياس 107
+    // على 50 عنواناً حقيقيّاً: 4 orphan-prep منها فقط قاعدة (٢) بينما لا
+    // ينبغي حدوثها إطلاقاً.
+    //
+    // الإصلاح: الطور الثالث يُبقي كلّ الروابط الدلاليّة **مكروهة قوّياً**
+    // (INF → 8000)، لا يعطّلها. wrap يفضّل تقسيمات بلا روابط إن أمكن، لكن
+    // يقبل الكسر عند رابطة إن كان البديل استحالة كاملة. الفرق عن الطور
+    // الثاني (INF → 5000): كلفة أعلى بـ60% تُبقي orphan-prep آخر خيار
+    // بحقّ. لا حالة «كلّ التقسيمات مساوية بصريّاً — اختر عشوائيّاً».
     const penaltyLevels: readonly (readonly number[] | undefined)[] =
       options.breakPenalties
         ? [
             options.breakPenalties,
             options.breakPenalties.map((p) => (p === INF ? 5000 : p)),
-            undefined,
+            options.breakPenalties.map((p) => (p === INF ? 8000 : p)),
           ]
         : [undefined];
 

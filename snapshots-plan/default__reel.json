@@ -1,0 +1,41 @@
+{
+  "headline": {
+    "fontSize": 76,
+    "lineHeight": 103,
+    "chosenBoxW": 929,
+    "rightX": 1004.5,
+    "centerX": 540,
+    "firstBaseline": 891,
+    "lastBaseline": 891,
+    "linesJustified": [
+      [
+        {
+          "text": "عنوان",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "ريلز",
+          "bold": false,
+          "accent": false
+        },
+        {
+          "text": "تجريبي",
+          "bold": false,
+          "accent": false
+        }
+      ]
+    ],
+    "align": "right",
+    "bounds": {
+      "top": 815,
+      "bottom": 891,
+      "right": 1004.5,
+      "left": 75.5,
+      "fontSize": 76,
+      "firstBaseline": 891
+    },
+    "accentSpans": []
+  },
+  "headlineLineCount": 1
+}

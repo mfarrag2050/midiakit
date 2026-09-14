@@ -238,7 +238,7 @@ export const DEFAULT_BRAND: BrandKit = {
     logo:        { anchor: 'bottom-left',   offset: { x: 51, y: 51 } },
     badge:       { anchor: 'top-right',     offset: { x: 60, y: 60 } },
     attribution: { anchor: 'bottom-right',  offset: { x: 60, y: 60 } },
-    source:      { anchor: 'bottom-right',  offset: { x: 60, y: 135 } },
+    source:      { anchor: 'bottom-right',  offset: { x: 60, y: 135 }, align: 'left' },
     caption:     { anchor: 'bottom-center', offset: { x: 0, y: 180 } },
   },
   attribution: {
