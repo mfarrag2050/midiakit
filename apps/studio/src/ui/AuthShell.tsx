@@ -6,7 +6,7 @@ import { LocaleSwitcher } from '@pf-mediakit/i18n';
 export function AuthShell({ children }: { children: ReactNode }): JSX.Element {
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <div className="flex justify-end px-6 py-4">
+      <div className="flex justify-start px-6 py-4">
         <LocaleSwitcher />
       </div>
       <div className="flex flex-1 items-center justify-center px-4 pb-16">

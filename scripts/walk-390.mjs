@@ -16,8 +16,8 @@ import { join } from 'node:path';
 
 const CHROME =
   '/Users/mdervis/.cache/puppeteer/chrome/mac_arm-146.0.7680.31/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
-const STUDIO = 'http://127.0.0.1:19071';
-const OUT = '/Users/mdervis/MediaKit/Claude outputs/walk-2026-09-15';
+const STUDIO = process.env.STUDIO ?? 'http://127.0.0.1:19071';
+const OUT = process.env.OUT ?? '/Users/mdervis/MediaKit/Claude outputs/walk-2026-09-15';
 
 const VIEWS = {
   '390': { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
