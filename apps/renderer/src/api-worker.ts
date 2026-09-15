@@ -37,6 +37,14 @@ import {
   formatInkGateLog,
 } from './ink-gate.js';
 import {
+  composeVideoGate,
+  formatVideoGateFailure,
+  formatVideoGateLog,
+  parseVideoGateMode,
+  decideVideoGatePolicy,
+} from './video-gate.js';
+import { Image as SkiaImage } from 'skia-canvas';
+import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
 import type { RenderJobInput } from './validate.js';
@@ -299,10 +307,86 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     }
     const outPath = join(tmpDir, `output.${format}`);
     if (format === 'mp4') {
-      await renderVideo({
+      const videoResult = await renderVideo({
         template, brand, content, size: dims, outPath,
         ...(imageAssets && { assets: imageAssets }),
       });
+
+      // VIDEO-GATE (340 · نظير ink-gate) — يقيس (duration · frames · إطار وسط
+      // للحبر · فرق ٣ إطارات). **warn:** يمرّ الجميع + سطرُ لوغ موحّد.
+      // **enforce:** (VIDEO_GATE_MODE=enforce) يرفع failed-output ثمّ يرمي
+      // VIDEO_GATE_EMPTY. المعايرة على ٣ mp4s في تعليق video-gate.ts.
+      const videoMode = parseVideoGateMode(process.env['VIDEO_GATE_MODE']);
+      const midIdx = Math.floor(videoResult.frameCount / 2);
+      const endIdx = videoResult.frameCount - 1;
+      // نستخرج ٣ إطارات (0 · midIdx · endIdx) عبر ffmpeg-select — نفس أداة
+      // renderVideo. لو فشل الاستخراج، نُسجّل ولا نرمي (لا نُدخل عطباً في
+      // مسارٍ نجحت فيه ffmpeg الأصليّة).
+      let videoGateFailedKey: string | undefined;
+      try {
+        const framesDir = join(tmpDir, 'vg-frames');
+        mkdirSync(framesDir, { recursive: true });
+        await execFileAsync('ffmpeg', [
+          '-y', '-v', 'error',
+          '-i', outPath,
+          '-vf', `select='eq(n\\,0)+eq(n\\,${midIdx})+eq(n\\,${endIdx})'`,
+          '-fps_mode', 'passthrough',
+          join(framesDir, 'f-%d.png'),
+        ]);
+        const loadFrame = async (p: string): Promise<{ pixels: Uint8ClampedArray; width: number; height: number }> => {
+          const buf = readFileSync(p);
+          const img = new SkiaImage();
+          img.src = buf;
+          await img.decode();
+          const c = new Canvas(img.width, img.height);
+          const cctx = c.getContext('2d');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          cctx.drawImage(img as any, 0, 0);
+          const data = cctx.getImageData(0, 0, img.width, img.height).data;
+          return { pixels: data, width: img.width, height: img.height };
+        };
+        const [f1, f2, f3] = await Promise.all([
+          loadFrame(join(framesDir, 'f-1.png')),
+          loadFrame(join(framesDir, 'f-2.png')),
+          loadFrame(join(framesDir, 'f-3.png')),
+        ]);
+        const gate = composeVideoGate({
+          durationSec: videoResult.duration,
+          frameCount: videoResult.frameCount,
+          middleFramePixels: f2!.pixels,
+          width: f2!.width,
+          height: f2!.height,
+          frames: [f1!, f2!, f3!],
+        });
+        const decision = decideVideoGatePolicy(videoMode, gate.allOk);
+        const tv = template as { id?: string };
+        const line = formatVideoGateLog(decision.logKind, gate, {
+          templateId: tv.id, width: dims.w, height: dims.h, fps: videoResult.fps, renderId,
+        });
+        // eslint-disable-next-line no-console
+        console.log(line);
+        if (decision.shouldThrow) {
+          // enforce + فارغ — نرفع mp4 الفاشل تحت مفتاح failed-output ليبقى للفحص.
+          videoGateFailedKey = `${tenantId}/renders/${renderId}/failed-output.${format}`;
+          try {
+            const failedBuf = readFileSync(outPath);
+            await s3.send(new PutObjectCommand({
+              Bucket: S3_BUCKET, Key: videoGateFailedKey, Body: failedBuf, ContentType: 'video/mp4',
+            }));
+          } catch (uploadErr) {
+            // eslint-disable-next-line no-console
+            console.error(`[api-worker] video-gate: failed to preserve artifact at ${videoGateFailedKey}: ${(uploadErr as Error).message}`);
+          }
+          throw new Error(formatVideoGateFailure(gate, videoGateFailedKey));
+        }
+      } catch (gateErr) {
+        // إن كانت الرمية من الحارس نفسه (VIDEO_GATE_EMPTY أو mismatch) نُعيد الرمي.
+        // أمّا لو فشلت أداة استخراج الإطارات (ffmpeg select · loadFrame)، نُسجّل ولا نُسقط الرندر.
+        const msg = gateErr instanceof Error ? gateErr.message : String(gateErr);
+        if (msg.startsWith('VIDEO_GATE_') || msg.startsWith('video-gate:')) throw gateErr;
+        // eslint-disable-next-line no-console
+        console.error(`[api-worker] video-gate: frame extraction failed, skipping gate: ${msg}`);
+      }
     } else {
       // PNG-EXPORT: مرّ بالمحرك بنفس assets — لا شكل ثانٍ للأصول، لا stub.
       const { renderFrame } = await import('@pf-mediakit/engine');
@@ -371,7 +455,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     console.log(`[api-worker] job ${renderId} succeeded (${outputBuf.length} bytes, output=${outputKey})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_') || msg.startsWith('INK_GATE_')
+    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_') || msg.startsWith('INK_GATE_') || msg.startsWith('VIDEO_GATE_')
       ? msg.split(':')[0]! : 'RENDER_FAILED';
     await updateRender(tenantId, renderId, {
       status: 'failed', completed_at: new Date(),
