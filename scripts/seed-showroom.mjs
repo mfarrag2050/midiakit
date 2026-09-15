@@ -2,32 +2,34 @@
 /**
  * seed-showroom — بذرة بيئة العرض (Showroom).
  *
- * قاعدة حاكمة (تذكرة _AMEND-SHOWROOM-IDENTITY):
- *   • حساب واحد فقط: mk@primeflow.co (SHOWROOM_OWNER_EMAIL).
- *   • كلمة المرور: تُولَّد عشوائياً في bin/mk-show, تُمرَّر بيئةً،
- *     تُطبع مرّةً واحدة في stdout، ولا تُلتزم لأيّ ملفّ.
+ * قاعدة حاكمة (تذكرة 402ب §٢ · خيار أ — كلمة المرور تعيش في ملفّ):
+ *   • حساب واحد: mk@primeflow.co (SHOWROOM_OWNER_EMAIL).
+ *   • مصدرُ الكلمة الوحيد: ~/MediaKit/.show-owner-password (600).
+ *     يُقرَأ إن وُجد · يُولَّد ويُكتَب فيه إن غاب.
+ *   • **التخطّي الصامتُ ممنوع:** حسابٌ موجودٌ وكلمةٌ لا تطابق ⇒
+ *     خروجٌ بحالةٍ ≠ 0 مع تعليماتٍ لتشغيل reset-showroom-owner-password.
  *   • قائمة السماح تبدأ بهذا البريد وحده — الشريك يُضاف يدوياً لاحقاً.
  *
  * السلوك:
- *   • idempotent — إن كان الحساب موجوداً يتخطّى بلا خطأ.
- *   • signup عبر HTTP → يستعمل نفس مسار المستخدم الحقيقيّ (لا تجاوز).
- *   • brand_kit + 3 مشاريع (عمق ب: هيكل + محتوى تجريبيّ) عبر SQL مباشر
- *     بمستخدم migration_user (المتاح في migrations).
- *   • لا يستعمل بيانات عميل حقيقيّ — كلّ العناوين مُختلَقة.
+ *   • idempotent — إن وُجد الحساب وطابقت الكلمة ⇒ تخطّي آمن (بعد فحص login).
+ *   • signup عبر HTTP → نفس مسار المستخدم الحقيقيّ (لا تجاوز).
+ *   • verify عبر POST /v1/auth/login → دليل التطابق قبل تخطّي.
+ *   • brand_kit + مشاريع عيّنة عبر SQL بمستخدم migration_user (RLS ملتزَم).
  *
- * البيئة (كلّها من .env.show عبر bin/mk-show):
+ * البيئة (من .env.show عبر bin/mk-show):
  *   SHOWROOM_OWNER_EMAIL       (default: mk@primeflow.co)
- *   SHOWROOM_OWNER_PASSWORD    (إن غاب → يُولَّد ويُطبع في stdout مرّةً)
+ *   DATABASE_URL_PLATFORM      (control_plane_user — للبحث cross-tenant)
  *   DATABASE_URL               (migration_user — للـSQL المباشر)
- *   PORT                       (منفذ API — للـsignup)
+ *   PORT                       (منفذ API — للـsignup + login-verify)
  */
 
 import { randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, statSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
+import { homedir } from 'node:os';
 // _AMEND-390d §٣: البذرة لا تؤلّف هويّةً من رأسها. تبدأ من الافتراض
 // الذي يستعمله المنتج (DEFAULT_BRAND · شكل BrandKit كامل)، ثمّ تُبدّل
 // منه ما يحتاجه العرض (ألوان مَرافئ وشعارها من MARAFI_BRAND).
@@ -55,13 +57,27 @@ if (!DB_URL_PLATFORM || !DB_URL_MIGRATION) {
   process.exit(1);
 }
 
-// كلمة المرور: من البيئة إن وُجدت، وإلّا مولَّدة (تُطبع مرّةً).
-let ownerPassword = process.env.SHOWROOM_OWNER_PASSWORD;
+// كلمة المرور: من ملفّ ~/MediaKit/.show-owner-password (600).
+// إن غاب: تُولَّد وتُكتَب. (402ب §٢ · خيار أ)
+const PW_FILE = join(homedir(), 'MediaKit', '.show-owner-password');
+let ownerPassword;
 let passwordWasGenerated = false;
-if (!ownerPassword) {
-  // 24 بايت base64url ≈ 32 حرفاً بلا =/+ — أقوى بكثير من min(12).
+if (existsSync(PW_FILE)) {
+  const mode = (statSync(PW_FILE).mode & 0o777).toString(8);
+  if (mode !== '600') {
+    console.error(`✗ ${PW_FILE} صلاحيّاته ${mode} (المتوقَّع 600). أصلح بـchmod 600 ثمّ أعِد.`);
+    process.exit(1);
+  }
+  ownerPassword = readFileSync(PW_FILE, 'utf-8').replace(/\r?\n$/, '');
+  if (ownerPassword.length < 24) {
+    console.error(`✗ طولُ الكلمة في ${PW_FILE} = ${ownerPassword.length} (المتوقَّع ≥24).`);
+    process.exit(1);
+  }
+} else {
   ownerPassword = randomBytes(24).toString('base64url');
+  writeFileSync(PW_FILE, ownerPassword, { mode: 0o600 });
   passwordWasGenerated = true;
+  console.log(`[seed] كلمةُ المالك مولَّدةٌ ومحفوظةٌ في ${PW_FILE} (600). لا تُطبع.`);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -254,7 +270,30 @@ async function main() {
   if (result.created) {
     console.log(`[seed] ✓ الحساب أُنشئ. tenant=${tenantId.slice(0, 8)}… user=${userId.slice(0, 8)}…`);
   } else {
-    console.log(`[seed] ⏭  الحساب موجود مسبقاً. tenant=${tenantId.slice(0, 8)}…`);
+    // 402ب §٢: لا تخطّي صامت. تحقّق أنّ كلمةَ الملفّ تطابق ما في DB
+    // عبر مسار الدخول الفعليّ — أعلى برهانِ تطابقٍ ممكن.
+    const verifyRes = await fetch(`${API_BASE}/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: OWNER_EMAIL, password: ownerPassword }),
+    });
+    if (verifyRes.status === 200) {
+      console.log(`[seed] ⏭  الحساب موجود · الكلمة في ${PW_FILE} تطابق (login=200). تخطّي آمن. tenant=${tenantId.slice(0, 8)}…`);
+    } else {
+      console.error(`
+✗ الحسابُ ${OWNER_EMAIL} موجودٌ في القاعدة، لكنّ الكلمة في ${PW_FILE} لا تطابق:
+   POST /v1/auth/login رجع ${verifyRes.status} (المتوقَّع 200).
+   ${passwordWasGenerated
+     ? 'الكلمةُ وُلِّدت الآن وحُفظت — لكنّ القاعدة تحمل تجزئةً أقدم. لا يمكنني ضمانُ الدخول.'
+     : 'الملفُّ كان موجوداً — كلمتُه لا تطابق. ربّما غُيّرت من الاستوديو ولم تُحدَّث الملفُّ.'}
+   الإصلاح:
+     cd /Users/mdervis/MediaKit/pf-mediakit
+     node --import tsx scripts/reset-showroom-owner-password.mjs
+   (يعيد ضبطَ كلمة القاعدة إلى ما في ${PW_FILE}.)
+`);
+      await plane.end();
+      process.exit(2);
+    }
   }
   await plane.end();
 
@@ -273,19 +312,7 @@ async function main() {
 
   await mig.end();
 
-  if (passwordWasGenerated && result.created) {
-    console.log('');
-    console.log('════════════════════════════════════════════════════════════');
-    console.log('  ⚠  كلمة مرور المالك (تُطبع مرّةً واحدة — انسخها الآن):');
-    console.log('');
-    console.log(`     البريد: ${OWNER_EMAIL}`);
-    console.log(`     الكلمة: ${ownerPassword}`);
-    console.log('');
-    console.log('  انسخها إلى مدير كلمات، ثمّ غيّرها من الاستوديو.');
-    console.log('  لن تُطبع مرّةً أخرى — الكلمة ليست في أيّ ملفّ.');
-    console.log('════════════════════════════════════════════════════════════');
-  }
-
+  // 402ب §٢: لا طباعةَ للكلمة — الملفُّ ${PW_FILE} هو مصدرُ الحقيقة.
   console.log('[seed] ✓ اكتمل.');
 }
 

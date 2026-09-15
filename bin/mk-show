@@ -53,6 +53,43 @@ OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
 # v3: أضاف MINIO_ROOT_USER + MINIO_ROOT_PASSWORD (سابقاً minioadmin مشترك).
 ENV_SHOW_VERSION="3"
 
+# ═════ 402ب §٤ · مفتاح الوضع ══════════════════════════════════════════════
+# SHOWROOM_MODE يختار NEXT_PUBLIC_API_URL و CORS_ORIGIN من عائلتَين:
+#   • tunnel  → https://mkdemo.primeflow.co (ما يراه الزائر — الافتراض)
+#   • local   → http://127.0.0.1:$API/$STUDIO (فحصٌ محلّيّ من متصفّح على loopback)
+# القيمةُ تُقرأ من .env.show (SHOWROOM_MODE=...) — إن غابت ⇒ tunnel.
+# التبديل: bin/mk show mode <tunnel|local> (لا تحرير يدويّ للملفّ).
+SHOWROOM_MODE_DEFAULT="tunnel"
+BUILT_MODE_FILE_NAME="built-mode"
+
+apply_mode_overrides() {
+  local mode="${SHOWROOM_MODE:-$SHOWROOM_MODE_DEFAULT}"
+  case "$mode" in
+    tunnel)
+      export NEXT_PUBLIC_API_URL="https://mkdemo.primeflow.co"
+      export CORS_ORIGIN="https://mkdemo.primeflow.co"
+      ;;
+    local)
+      export NEXT_PUBLIC_API_URL="http://127.0.0.1:$API_PORT"
+      export CORS_ORIGIN="http://127.0.0.1:$STUDIO_PORT"
+      ;;
+    *)
+      die "SHOWROOM_MODE=$mode — قِيَم مقبولة: tunnel · local"
+      ;;
+  esac
+}
+
+built_mode() {
+  local f="$(state_dir)/$BUILT_MODE_FILE_NAME"
+  [ -f "$f" ] && cat "$f" || echo ""
+}
+
+set_built_mode() {
+  local f="$(state_dir)/$BUILT_MODE_FILE_NAME"
+  mkdir -p "$(state_dir)"
+  printf '%s' "$1" > "$f"
+}
+
 # ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
 say()   { printf '[mk-show] %s\n' "$*"; }
 warn()  { printf '[mk-show] ⚠  %s\n' "$*" >&2; }
@@ -173,6 +210,9 @@ ENV_SHOW_VERSION=$ENV_SHOW_VERSION
 NODE_ENV=development
 PORT=$API_PORT
 
+# ── 402ب §٤ · مفتاح الوضع (tunnel = ما يراه الزائر · local = فحصٌ محلّيّ) ─
+SHOWROOM_MODE=tunnel
+
 # ── كلمات DB مولَّدة للشوروم وحده (_AMEND-SHOWROOM-PORTS §3) ────────
 # postgres = دور bootstrap يشغّل init فقط، لا يستعمله التطبيق.
 # الثلاث الباقية = دور تشغيل، تظهر في DATABASE_URL_*.
@@ -285,7 +325,9 @@ start_api() {
   fi
   say "أشغّل API على $API_PORT …"
   # exec داخل subshell → $! هو node مباشرةً (لا pnpm wrapper) → kill نظيف.
+  # 402ب §٤: apply_mode_overrides يُبدِّل CORS_ORIGIN حسب SHOWROOM_MODE.
   ( set -a; . "$(env_file)"; set +a
+    apply_mode_overrides
     cd "$SHOW_ROOT/apps/api"
     nohup node --import tsx src/server.ts >"$logf" 2>&1 &
     echo $! > "$pidf" )
@@ -313,6 +355,19 @@ start_studio() {
     return
   fi
 
+  # 402ب §٤ · اكتشاف تغيّر الوضع → إجبارُ إعادة البناء.
+  # NEXT_PUBLIC_API_URL مخبوزٌ في .next عند البناء ⇒ تغييرُ الوضع بلا بناءٍ
+  # جديدٍ يبقى العنوانَ القديمَ في الحزمة (مصدرُ عطبِ 402ب أصلاً).
+  local sr_mode
+  # subshell صغير · لا آثار جانبيّة عند source
+  sr_mode="$( set -a; . "$(env_file)"; set +a; echo "${SHOWROOM_MODE:-$SHOWROOM_MODE_DEFAULT}" )"
+  local last_built
+  last_built="$(built_mode)"
+  if [[ -n "$last_built" && "$last_built" != "$sr_mode" ]]; then
+    say "الوضعُ تغيّر: $last_built → $sr_mode — أُجبر إعادةَ بناء Studio."
+    [[ -d "$SHOW_ROOT/apps/studio/.next" ]] && rm -rf "$SHOW_ROOT/apps/studio/.next"
+  fi
+
   # قرار الأسلوب: يحتاج .next مبنيّاً كاملاً → next start (إنتاج). إن غاب
   # أو فشل بناؤه → next dev (تطوير). هذا يجعل الشووروم صامداً ضدّ عطبٍ
   # عابر في مسار البناء (مثل useContext=null في prerender).
@@ -323,10 +378,12 @@ start_studio() {
   if [[ ! -f "$SHOW_ROOT/apps/studio/.next/prerender-manifest.json" ]]; then
     # نظّف .next الناقص قبل إعادة المحاولة
     [[ -d "$SHOW_ROOT/apps/studio/.next" ]] && rm -rf "$SHOW_ROOT/apps/studio/.next"
-    say "أحاول next build …"
+    say "أحاول next build (mode=$sr_mode) …"
     if ( set -a; . "$(env_file)"; set +a
+         apply_mode_overrides
          cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/studio build ) >"$buildlog" 2>&1; then
-      say "✓ next build نجح — أشغّل next start."
+      set_built_mode "$sr_mode"
+      say "✓ next build نجح (mode=$sr_mode مخبوز في .next) — أشغّل next start."
     else
       mode="dev"
       warn "next build فشل — راجع $buildlog. أرجع إلى next dev (أبطأ + hot reload)."
@@ -337,11 +394,13 @@ start_studio() {
   say "أشغّل Studio ($mode) على $STUDIO_PORT …"
   if [[ "$mode" == "start" ]]; then
     ( set -a; . "$(env_file)"; set +a
+      apply_mode_overrides
       cd "$SHOW_ROOT/apps/studio"
       nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
       echo $! > "$pidf" )
   else
     ( set -a; . "$(env_file)"; set +a
+      apply_mode_overrides
       cd "$SHOW_ROOT/apps/studio"
       nohup ./node_modules/.bin/next dev -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
       echo $! > "$pidf" )
@@ -696,6 +755,7 @@ bin/mk-show — مدير بيئة العرض
   status          الوسم · الالتزام · حالة الخوادم
   logs [api|studio]  متابعة سجلّ
   seed            إعادة seed يدوياً
+  mode [<t|l>]    يعرض/يُبدّل SHOWROOM_MODE (tunnel | local) — 402ب §٤
 
 بيئة:
   SHOW_ROOT (=$SHOW_ROOT)
@@ -703,6 +763,44 @@ bin/mk-show — مدير بيئة العرض
   MK_SHOW_TAG_SIGN=1 → وسم موقَّع بـgpg
   MK_SHOW_GATE_BYPASS=1 [+ MK_SHOW_GATE_BYPASS_REASON='...'] → تخطّي بوّابة promote (يُسجَّل)
 USAGE
+}
+
+# ═════ 402ب §٤ · cmd_mode — يعرض/يبدّل SHOWROOM_MODE بلا تحرير يدويّ ══════
+cmd_mode() {
+  require_show_worktree
+  ensure_state_dir
+  local ef; ef="$(env_file)"
+  [[ -f "$ef" ]] || die ".env.show غير موجود — bin/mk show up أوّلاً لتوليده."
+
+  local new_mode="${1:-}"
+  if [[ -z "$new_mode" ]]; then
+    # عرضٌ فقط
+    local cur; cur="$(grep -E '^SHOWROOM_MODE=' "$ef" 2>/dev/null | cut -d= -f2- | tr -d '\r')"
+    echo "  SHOWROOM_MODE في .env.show: ${cur:-<غير محدَّد → سيُقرَأ كـ$SHOWROOM_MODE_DEFAULT>}"
+    echo "  الوضع المبنيّ في .next     : $(built_mode | sed 's/^$/<غير محدَّد>/')"
+    echo "  الاستعمال: bin/mk show mode <tunnel|local>"
+    return 0
+  fi
+  case "$new_mode" in
+    tunnel|local) : ;;
+    *) die "قِيَم مقبولة: tunnel · local (المُعطى: $new_mode)" ;;
+  esac
+
+  # تحديث السطر في .env.show (macOS: sed -i يحتاج backup — نستعمل tmpfile)
+  local tmp; tmp="$(mktemp)"
+  if grep -q '^SHOWROOM_MODE=' "$ef"; then
+    grep -v '^SHOWROOM_MODE=' "$ef" > "$tmp"
+    echo "SHOWROOM_MODE=$new_mode" >> "$tmp"
+  else
+    cp "$ef" "$tmp"
+    echo "SHOWROOM_MODE=$new_mode" >> "$tmp"
+  fi
+  # حافظ على صلاحيّات .env.show الأصليّة (600 عادةً)
+  chmod --reference="$ef" "$tmp" 2>/dev/null || chmod 600 "$tmp"
+  mv "$tmp" "$ef"
+
+  say "SHOWROOM_MODE=$new_mode في $ef."
+  say "شغّل bin/mk show up لبناءِ Studio بالوضع الجديد (يُجبَر إعادةُ البناء)."
 }
 
 cmd="${1:-}"
@@ -717,6 +815,7 @@ case "$cmd" in
   status)   cmd_status ;;
   logs)     cmd_logs "$@" ;;
   seed)     cmd_seed ;;
+  mode)     cmd_mode "$@" ;;
   ""|-h|--help) usage ;;
   *) die "أمر غير معروف: $cmd — bin/mk show --help" ;;
 esac
