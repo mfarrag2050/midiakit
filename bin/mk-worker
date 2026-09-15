@@ -23,7 +23,12 @@
 set -euo pipefail
 
 # ── ثوابت وحيدة (شرط §٢·٤ · موضع واحد معلَن) ────────────────
-WORKER_DIR="${MK_WORKER_DIR:-/private/tmp/160-main-tree/apps/renderer}"
+# **الافتراضيّ من موضع السكربت** — لا افتراضٌ في `/tmp` يموت مع كلّ
+# إعادة تشغيل (290 · §١·١). إن كان السكربت في `<root>/bin/mk-worker`،
+# فالافتراضيّ `<root>/apps/renderer`. عند حاجةٍ لتشغيل من شجرةٍ أخرى
+# (مثلاً `pf-mediakit-show`) يُعيَّن `MK_WORKER_DIR` صراحةً.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKER_DIR="${MK_WORKER_DIR:-${SCRIPT_DIR%/bin}/apps/renderer}"
 WORKER_CMD="node --import tsx src/api-worker.ts"
 LEDGER_PATH="${MK_LEDGER_PATH:-/Users/mdervis/MediaKit/pf-mediakit/claude/reports/_worker.md}"
 REDIS_DB="${MK_REDIS_DB:-3}"
