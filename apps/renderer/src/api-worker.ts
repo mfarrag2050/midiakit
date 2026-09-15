@@ -18,7 +18,7 @@
 import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { Worker, UnrecoverableError, type Job, type WorkerOptions } from 'bullmq';
+import { Worker, UnrecoverableError, DelayedError, type Job, type WorkerOptions } from 'bullmq';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import pg from 'pg';
 import { Canvas, FontLibrary } from 'skia-canvas';
@@ -101,6 +101,47 @@ function computePerTenantCap(cfgs: Readonly<Record<QueueName, QueueConfig>>): nu
 function tenantKey(tenantId: string): string {
   return `${BULLMQ_PREFIX}:tenant:${tenantId}:active`;
 }
+
+// ٣٦٠: سقفُ تأجيلات cap · بعده الفشل بـTENANT_CAP_TIMEOUT.
+// افتراضياً 6 × 5s = 30s سقف انتظار. دوالٌّ لا ثوابت — كي يقرأ الاختبار
+// env المُحدَّث عند التشغيل (لا وقت الاستيراد).
+export function getCapDelayMs(): number { return Number(process.env['TENANT_CAP_DELAY_MS'] ?? 5_000); }
+export function getCapMaxDelays(): number { return Number(process.env['TENANT_CAP_MAX_DELAYS'] ?? 6); }
+
+/**
+ * ٣٦٠ · قرارُ tenant-cap · خالص (اختبارٌ مباشر بلا BullMQ).
+ * يُحدّد بحسب العدّاد وسقف التأجيلات: `proceed` | `delay` | `timeout`.
+ * الشرطُ الجانبيّ: يُنقص `active` counter إن كان القرار غير `proceed`
+ * (المُتّصل يمرّر `activeAfterIncr` — يُنقصه بنفسه بعد القرار).
+ */
+export type CapDecision =
+  | { action: 'proceed'; active: number }
+  | { action: 'delay'; delayMs: number; nextDelaysConsumed: number }
+  | { action: 'timeout'; delaysConsumed: number; message: string };
+
+export function decideTenantCap(input: {
+  activeAfterIncr: number;
+  perTenantCap: number;
+  tenantId: string;
+  delaysConsumed: number;
+  capDelayMs?: number;
+  capMaxDelays?: number;
+}): CapDecision {
+  const { activeAfterIncr, perTenantCap, tenantId, delaysConsumed } = input;
+  const delayMs = input.capDelayMs ?? getCapDelayMs();
+  const maxDelays = input.capMaxDelays ?? getCapMaxDelays();
+  if (activeAfterIncr <= perTenantCap) {
+    return { action: 'proceed', active: activeAfterIncr };
+  }
+  if (delaysConsumed >= maxDelays) {
+    return {
+      action: 'timeout',
+      delaysConsumed,
+      message: `TENANT_CAP_TIMEOUT: ${tenantId} بلغ ${maxDelays} تأجيلاً (~${Math.round(maxDelays * delayMs / 1000)}s) · cap=${perTenantCap}`,
+    };
+  }
+  return { action: 'delay', delayMs, nextDelaysConsumed: delaysConsumed + 1 };
+}
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   if (ms <= 0) return p;
   return new Promise<T>((resolve, reject) => {
@@ -150,6 +191,26 @@ async function updateRender(tenantId: string, renderId: string, patch: Record<st
     const sets = Object.keys(patch).map((k, i) => `${k} = $${i + 1}`).join(', ');
     const params = [...Object.values(patch), renderId];
     await c.query(`UPDATE renders SET ${sets} WHERE id = $${params.length}`, params);
+    await c.query('COMMIT');
+  } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; }
+  finally { c.release(); }
+}
+
+// ٣٦٠ · دفنُ صفّ رندرٍ ماتَ في BullMQ · شرطيّ (لا يدهس مكتملاً/فاشلاً بالفعل).
+// يُستدعى من failed-listener لسدّ الفجوة بين «BullMQ يعرف الفشل» و «DB يعرف».
+async function finalizeFailedRender(
+  tenantId: string, renderId: string, code: string, message: string,
+): Promise<void> {
+  const c = await getPgPool().connect();
+  try {
+    await c.query('BEGIN');
+    await c.query('SELECT app_set_tenant($1::uuid)', [tenantId]);
+    // WHERE status IN (queued, running) ⇒ صفّ فاشلٌ أو ناجحٌ لا يُلمس (idempotent-safe).
+    await c.query(
+      `UPDATE renders SET status='failed', completed_at=NOW(), error_code=$1, error_message=$2
+       WHERE id = $3 AND status IN ('queued', 'running')`,
+      [code, message, renderId],
+    );
     await c.query('COMMIT');
   } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; }
   finally { c.release(); }
@@ -550,15 +611,33 @@ async function withTempSpaceMonitor<T>(
 }
 
 // ── معالج مُوحَّد مع fair-share + timeout ──────────
-async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number): Promise<void> {
+async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number, token?: string): Promise<void> {
   const tenantId = (job.data as { tenantId?: string }).tenantId;
   if (!tenantId) throw new UnrecoverableError('[api-worker] tenantId missing');
   const conn = getConnection();
   const key = tenantKey(tenantId);
-  const active = await conn.incr(key);
-  if (active > perTenantCap) {
-    await conn.decr(key);
-    throw new Error(`[tenant-cap] ${tenantId} at cap (${active - 1}/${perTenantCap})`);
+  const activeAfterIncr = await conn.incr(key);
+  const data = job.data as { __capDelays?: number };
+  const decision = decideTenantCap({
+    activeAfterIncr,
+    perTenantCap,
+    tenantId,
+    delaysConsumed: data.__capDelays ?? 0,
+  });
+  if (decision.action !== 'proceed') {
+    await conn.decr(key); // نُنقص العدّاد فوراً — لا نحجز مكاناً لتأجيلٍ لن يمرّ الآن.
+    if (decision.action === 'timeout') {
+      throw new UnrecoverableError(decision.message);
+    }
+    // delay: نطلب من BullMQ تأجيل المهمّة CAP_DELAY_MS
+    if (!token) {
+      // defensive · token غائب ⇒ لا يمكن moveToDelayed. ندفن بدل حلقةٍ عمياء.
+      throw new UnrecoverableError(`[tenant-cap] token missing — cannot delay · tenant=${tenantId}`);
+    }
+    await job.updateData({ ...data, __capDelays: decision.nextDelaysConsumed });
+    await job.moveToDelayed(Date.now() + decision.delayMs, token);
+    // بروتوكول BullMQ: بعد moveToDelayed ارمِ DelayedError كي لا يعتبرها complete/fail.
+    throw new DelayedError();
   }
   try {
     const doJob = async () => {
@@ -592,7 +671,31 @@ export function startApiWorker(
       prefix: BULLMQ_PREFIX,
       concurrency: cfg.concurrency,
     };
-    const w = new Worker(cfg.bullmqName, async (job) => processJob(job, cfg, perTenantCap), options);
+    const w = new Worker(cfg.bullmqName, async (job, token) => processJob(job, cfg, perTenantCap, token), options);
+
+    // ٣٦٠ · failed-listener: يدفن الميّت في DB حتى لو مات قبل processApiJob.
+    // يعالج زومبي «renders.status=queued لصفٍّ ماتَ في BullMQ» — أيّاً كان
+    // مصدر الرمي (TENANT_CAP_TIMEOUT · قتل عامل · panic في التحميل …).
+    // النداءات المكرَّرة على صفٍّ فاشلٍ سلفاً حياديّة (WHERE status IN queued/running).
+    w.on('failed', async (job, err) => {
+      if (!job || !isApiJob(job.data)) return; // CLI-shape لا يمسّ DB
+      const { renderId, tenantId } = job.data;
+      const msg = err instanceof Error ? err.message : String(err);
+      const code = msg.startsWith('TENANT_CAP_') ? msg.split(':')[0]!
+        : msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_')
+          || msg.startsWith('INK_GATE_') || msg.startsWith('VIDEO_GATE_')
+          ? msg.split(':')[0]!
+          : 'RENDER_FAILED';
+      try {
+        await finalizeFailedRender(tenantId, renderId, code, msg.slice(0, 500));
+        // eslint-disable-next-line no-console
+        console.log(`[api-worker] failed-listener sync · render=${renderId} · code=${code}`);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`[api-worker] failed-listener sync error · render=${renderId}: ${(e as Error).message}`);
+      }
+    });
+
     workers.push(w);
   }
   return {
