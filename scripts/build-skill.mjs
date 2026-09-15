@@ -355,13 +355,22 @@ function buildGenerated() {
   // القوائم كاملة — لا اقتطاع.
   const fmtFull = (arr) => arr.length ? arr.map((x) => `\`${x}\``).join(' · ') : '(لا شيء)';
 
+  // القسم يُقسَم إلى منطقتَين:
+  //   • المحلّي — يعتمد على الشجرة المُلتزَمة عند HEAD فقط
+  //     (PHASES · LESSONS · docs/17 · package.json الجذر · packages/ · demo/ ·
+  //     snapshots*). كلُّ تغيّرٍ فيه يستحقّ إعادةَ توليد ⇒ يُقارَن.
+  //   • عبر الفروع — يعتمد على `origin/feat/api` و `origin/feat/studio`
+  //     التي تتحرَّك بلا التزامٍ على main، فتُحدث احمراراً كاذباً في كلّ دمج.
+  //     يبقى في الملفّ لأنّه معلومةٌ نافعة، لكنّه محبوسٌ بين علامتَين
+  //     يستثنيهما `check:skill-fresh` (280 · 2026-09-15 · L-127-ب).
   return `## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ\`pnpm skill:build\`.
 > **تاريخ التوليد:** ${m.date} · **HEAD:** \`${m.head}\` (\`${m.branch}\`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
-> الفرع الرئيسي فقط · «عبر الفروع» يجمع main + feat/api + feat/studio.
+> الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
+> مستقلّ الحركة (محبوس بين علامتَي CROSS-BRANCH ولا يفحصه check:skill-fresh).
 > السطر «packages: engine · shared · templates · tts» صحيح لـmain
 > ولا يصف المشروع كله — packages/ui و packages/i18n موجودتان على
 > feat/studio (تصحيح 2026-09-06).
@@ -370,30 +379,9 @@ function buildGenerated() {
 
 ${phaseTable}
 
-### الفروع — عبر الفروع (\`git for-each-ref\` · مقارَنة بـ\`origin/main\`)
-
-| الفرع | HEAD | أمام main | خلف main | الإجمالي |
-|---|---|---:|---:|---:|
-${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.ahead} | ${b.behind} | ${b.total} |`).join('\n')}
-
-### الفحوص الآلية — عبر الفروع (\`package.json\` الجذر)
+### الفحوص الآلية — من main (\`package.json\`)
 
 - **main (${mainChecks.length}):** ${fmtFull(mainChecks)}
-- **feat/api (${apiChecks.length}):** ${fmtFull(apiChecks)}
-- **feat/studio (${studioChecks.length}):** ${fmtFull(studioChecks)}
-
-### حالة المرحلة 4 — عبر الفروع (\`PHASES-api.md\` · \`PHASES-studio.md\`)
-
-- **mk-api (feat/api):** آخر مبنيّ ✅ = \`${apiTrack.lastDone}\` · نقاط التزامن المفتوحة: ${
-    apiTrack.syncOpen.length
-      ? apiTrack.syncOpen.map((s) => `\`${s.header}\``).join(' · ')
-      : '(لا شيء)'
-  }
-- **mk-studio (feat/studio):** آخر مبنيّ ✅ = \`${studioTrack.lastDone}\` · جارٍ 🟡: ${
-    studioTrack.partial.length
-      ? studioTrack.partial.map((h) => `\`${h}\``).join(' · ')
-      : '(لا شيء)'
-  }
 
 ### الدروس — من main (\`docs/LESSONS.md\`)
 
@@ -408,15 +396,49 @@ ${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.ahead} | ${b.behind
 - **S-list (${l17.s.length}):** ${fmtFull(l17.s)}
 - **SYNC (${l17.sync.length}):** ${fmtFull(l17.sync)}
 
-### نقاط النهاية المبنيّة — عبر الفروع (\`git ls-tree origin/feat/api apps/api/src/routes/\`)
-
-${eps.length ? eps.map((e) => `- \`${e}\``).join('\n') : '- (لا ملفات مطابقة في origin/feat/api:apps/api/src/routes/)'}
-
 ### محتويات المستودع — من main (\`ls\`)
 
 - **\`packages/\`:** ${c.packages.length ? c.packages.map((p) => `\`${p}\``).join(' · ') : '(فارغ)'}
 - **\`demo/\`:** ${c.demoCount} ملف
 - **\`snapshots/\`:** ${c.snapshotsCount} · **\`snapshots-semantic/\`:** ${c.semanticCount} · **\`snapshots-video/\`:** ${c.videoCount}
+
+<!-- CROSS-BRANCH:START -->
+<!--
+  المحتوى التالي إعلاميٌّ · مصدرُه \`origin/feat/api\` و \`origin/feat/studio\`
+  اللذان يتحرَّكان بلا التزامٍ على main. لا يشملُه check:skill-fresh
+  (يُستَثنى بالعلامتَين). يُعاد توليدُه بـ\`pnpm skill:build\` كأيّ قسم آخر،
+  لكنَّ قِدَمَه لا يفشل CI. — 280 · 2026-09-15.
+-->
+
+### الفروع — على feat/api و feat/studio (\`git for-each-ref\` · مقارَنة بـ\`origin/main\`)
+
+| الفرع | HEAD | أمام main | خلف main | الإجمالي |
+|---|---|---:|---:|---:|
+${branches.map((b) => `| \`${b.name}\` | \`${b.hash}\` | ${b.ahead} | ${b.behind} | ${b.total} |`).join('\n')}
+
+### الفحوص الآلية — على feat/api و feat/studio (\`git show <ref>:package.json\`)
+
+- **feat/api (${apiChecks.length}):** ${fmtFull(apiChecks)}
+- **feat/studio (${studioChecks.length}):** ${fmtFull(studioChecks)}
+
+### حالة المرحلة 4 — على feat/api و feat/studio (\`PHASES-api.md\` · \`PHASES-studio.md\`)
+
+- **mk-api (feat/api):** آخر مبنيّ ✅ = \`${apiTrack.lastDone}\` · نقاط التزامن المفتوحة: ${
+    apiTrack.syncOpen.length
+      ? apiTrack.syncOpen.map((s) => `\`${s.header}\``).join(' · ')
+      : '(لا شيء)'
+  }
+- **mk-studio (feat/studio):** آخر مبنيّ ✅ = \`${studioTrack.lastDone}\` · جارٍ 🟡: ${
+    studioTrack.partial.length
+      ? studioTrack.partial.map((h) => `\`${h}\``).join(' · ')
+      : '(لا شيء)'
+  }
+
+### نقاط النهاية المبنيّة — على feat/api (\`git ls-tree origin/feat/api apps/api/src/routes/\`)
+
+${eps.length ? eps.map((e) => `- \`${e}\``).join('\n') : '- (لا ملفات مطابقة في origin/feat/api:apps/api/src/routes/)'}
+
+<!-- CROSS-BRANCH:END -->
 `;
 }
 
