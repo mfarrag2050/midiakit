@@ -42,6 +42,7 @@ import { TASHKEEL_UI_ENABLED } from '@/src/config/features';
 import { roleName } from '@/src/lib/role-names';
 import { AssetPicker } from '@/src/ui/AssetPicker';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
+import { RenderFailureAlert } from '@/src/ui/RenderFailureAlert';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -1092,7 +1093,7 @@ export default function ProjectEditorPage(): JSX.Element {
                 }
               />
             )}
-            {renderRow && (
+            {renderRow && renderRow.status !== 'failed' && (
               <div className="text-xs text-fg-muted">
                 {renderRow.status === 'queued' &&
                   t('pages.projects.editor.renderQueued')}
@@ -1106,9 +1107,10 @@ export default function ProjectEditorPage(): JSX.Element {
                     {t('pages.projects.editor.renderReady')}
                   </a>
                 )}
-                {renderRow.status === 'failed' &&
-                  t('pages.projects.editor.renderFailed')}
               </div>
+            )}
+            {renderRow?.status === 'failed' && (
+              <RenderFailureAlert row={renderRow} />
             )}
             <Button
               size="sm"

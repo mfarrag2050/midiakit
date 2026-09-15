@@ -133,6 +133,8 @@
         "renderRunning": "Running...",
         "renderReady": "Output ready — open to download",
         "renderFailed": "Render failed",
+        "renderFailedGeneric": "Render failed — لم نتعرَّف على السبب. أَرسِل رمزَ الحادثةِ إلى الدعم.",
+        "renderFailedCode": "رمزُ الخطأ:",
         "transitions": "Available transitions",
         "noTransitions": "No transitions from this state.",
         "reasonLabel": "Transition reason (at least one line)",
