@@ -29,7 +29,13 @@ import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
 import { loadImage } from 'skia-canvas';
-import { checkInkPresent, formatInkGateFailure } from './ink-gate.js';
+import {
+  checkInkPresent,
+  formatInkGateFailure,
+  parseInkGateMode,
+  decideInkGatePolicy,
+  formatInkGateLog,
+} from './ink-gate.js';
 import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
@@ -313,13 +319,24 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
         ...(imageAssets && { assets: imageAssets as any }),
       });
 
-      // INK-GATE (2026-09-15) — يمسك «رندرٌ ناجحٌ بلا حبر» على القماش الحيّ،
-      // قبل الترميز إلى PNG. أَرخصُ موضعٍ: ctx.getImageData متاح مجّاناً هنا.
-      // على الفشل: نرفع الملفّ إلى S3 تحت مفتاح failed-output ليبقى للفحص،
-      // ثمّ نرمي — الـcatch يحوّل الحالة إلى failed برمز INK_GATE_EMPTY.
+      // INK-GATE (701 · وضع warn-only افتراضياً · 701b) — يقيس كثافةَ الحوافّ
+      // على القماش الحيّ قبل الترميز. **warn:** كلُّ رندرٍ يمرّ + سطرُ لوغ
+      // موحّد (الناجحُ ok · المشبوهُ INK_GATE_WOULD_FAIL). **enforce:**
+      // (INK_GATE_MODE=enforce) يرفع الملفَّ الفاشلَ إلى S3 ثمّ يرمي
+      // INK_GATE_EMPTY. الحدُّ 0.05٪ مُعايَرٌ على أربع عيّنات — أسبوعُ لوغٍ
+      // في warn يعطينا التوزيعَ قبل التشديد.
+      const inkMode = parseInkGateMode(process.env['INK_GATE_MODE']);
       const pixels = ctx.getImageData(0, 0, dims.w, dims.h).data;
       const ink = checkInkPresent(pixels, dims.w, dims.h);
-      if (!ink.hasInk) {
+      const decision = decideInkGatePolicy(inkMode, ink.hasInk);
+      const t2 = template as { id?: string };
+      const logLine = formatInkGateLog(decision.logKind, ink, {
+        templateId: t2.id, width: dims.w, height: dims.h, renderId,
+      });
+      // eslint-disable-next-line no-console
+      console.log(logLine);
+      if (decision.shouldThrow) {
+        // enforce + فارغ — نحفظ الملفَّ الفاشل قبل الرمي ليبقى للفحص.
         const failedBuf = await canvas.toBuffer('png');
         const failedKey = `${tenantId}/renders/${renderId}/failed-output.${format}`;
         try {
@@ -332,8 +349,6 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
         }
         throw new Error(formatInkGateFailure(ink, failedKey));
       }
-      // eslint-disable-next-line no-console
-      console.log(`[api-worker] ink-gate pass: ratio=${(ink.ratio * 100).toFixed(4)}% (threshold ${(ink.threshold * 100).toFixed(4)}% · T=${ink.perPixelDelta}) render=${renderId}`);
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 

@@ -16,7 +16,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Canvas, Image } from 'skia-canvas';
 
-import { checkInkPresent, formatInkGateFailure } from './ink-gate.js';
+import {
+  checkInkPresent,
+  formatInkGateFailure,
+  parseInkGateMode,
+  decideInkGatePolicy,
+  formatInkGateLog,
+  type InkGateResult,
+} from './ink-gate.js';
 
 const FIXTURES = join(__dirname, '..', '..', '..', 'fixtures', 'ink-gate');
 
@@ -107,5 +114,76 @@ describe('ink-gate · صياغة رسالة الفشل', () => {
     const r = { ratio: 0, threshold: 0.0005, perPixelDelta: 8, hasInk: false };
     const msg = formatInkGateFailure(r, 't/r/failed-output.png');
     expect(msg).toContain('failed_key=t/r/failed-output.png');
+  });
+});
+
+describe('ink-gate · parseInkGateMode', () => {
+  it('undefined ⇒ warn (الافتراضيّ)', () => {
+    expect(parseInkGateMode(undefined)).toBe('warn');
+  });
+  it('null ⇒ warn', () => {
+    expect(parseInkGateMode(null)).toBe('warn');
+  });
+  it('نصٌّ غير معروف ⇒ warn', () => {
+    expect(parseInkGateMode('reject')).toBe('warn');
+    expect(parseInkGateMode('ENFORCE')).toBe('warn'); // حساسٌ للحالة
+    expect(parseInkGateMode('')).toBe('warn');
+  });
+  it('"enforce" حرفيّاً ⇒ enforce', () => {
+    expect(parseInkGateMode('enforce')).toBe('enforce');
+  });
+});
+
+describe('ink-gate · decideInkGatePolicy — القرارُ الخالص', () => {
+  it('warn + hasInk=true ⇒ pass · لا رمي', () => {
+    expect(decideInkGatePolicy('warn', true)).toEqual({ shouldThrow: false, logKind: 'pass' });
+  });
+  it('warn + hasInk=false ⇒ warn · لا رمي', () => {
+    expect(decideInkGatePolicy('warn', false)).toEqual({ shouldThrow: false, logKind: 'warn' });
+  });
+  it('enforce + hasInk=true ⇒ pass · لا رمي', () => {
+    expect(decideInkGatePolicy('enforce', true)).toEqual({ shouldThrow: false, logKind: 'pass' });
+  });
+  it('enforce + hasInk=false ⇒ block · رمي', () => {
+    expect(decideInkGatePolicy('enforce', false)).toEqual({ shouldThrow: true, logKind: 'block' });
+  });
+});
+
+describe('ink-gate · formatInkGateLog', () => {
+  const r: InkGateResult = { ratio: 0.00436, threshold: 0.0005, perPixelDelta: 8, hasInk: true };
+  const ctx = { templateId: 'plain', width: 1080, height: 1440, renderId: 'r-123' };
+
+  it('pass · وسم ok + كلّ الحقول', () => {
+    const line = formatInkGateLog('pass', r, ctx);
+    expect(line).toContain('ink-gate ok:');
+    expect(line).toContain('ratio=0.4360%');
+    expect(line).toContain('threshold=0.0500%');
+    expect(line).toContain('T=8');
+    expect(line).toContain('template=plain');
+    expect(line).toContain('size=1080x1440');
+    expect(line).toContain('render=r-123');
+    expect(line).not.toContain('INK_GATE_WOULD_FAIL');
+    expect(line).not.toContain('INK_GATE_BLOCK');
+  });
+
+  it('warn · وسم INK_GATE_WOULD_FAIL', () => {
+    const empty = { ratio: 0, threshold: 0.0005, perPixelDelta: 8, hasInk: false };
+    const line = formatInkGateLog('warn', empty, ctx);
+    expect(line).toContain('INK_GATE_WOULD_FAIL (warn-only)');
+    expect(line).toContain('ratio=0.0000%');
+    expect(line).toContain('template=plain');
+    expect(line).toContain('size=1080x1440');
+  });
+
+  it('block · وسم INK_GATE_BLOCK', () => {
+    const empty = { ratio: 0, threshold: 0.0005, perPixelDelta: 8, hasInk: false };
+    const line = formatInkGateLog('block', empty, ctx);
+    expect(line).toContain('INK_GATE_BLOCK (enforce)');
+  });
+
+  it('templateId مفقود ⇒ ?', () => {
+    const line = formatInkGateLog('pass', r, { width: 1080, height: 1440 });
+    expect(line).toContain('template=?');
+    expect(line).not.toContain('render=');
   });
 });

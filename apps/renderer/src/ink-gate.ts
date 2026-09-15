@@ -18,6 +18,14 @@
 //
 // الفجوة من صفرٍ حرفيّ إلى 0.436% ⇒ الحدّ **0.05% مع T=8** يُثبِّت هامشاً
 // 4× تحت أرخصِ مملوء، وهامشاً غيرَ محدودٍ فوق الفارغ.
+//
+// **الوضع (2026-09-15 · قرارُ owner):** الافتراضيُّ `warn` — كلُّ رندرٍ يمرّ،
+// وسطرٌ في اللوغ لكلّ واحد (الناجحِ والمشبوه). المشبوهُ يحمل `INK_GATE_WOULD_FAIL`.
+// وضعُ `enforce` (يرفع INK_GATE_EMPTY ويوقف الرندر) خلف `INK_GATE_MODE=enforce`.
+// **السبب:** الحدُّ 0.05٪ مُعايَرٌ على أربع عيّنات — قد يرفض بطاقةً سليمة
+// (بطاقةٌ مينيماليّة · غلافُ صورةٍ ملساءَ · نصٌّ خفيفُ التباين). أسبوعٌ من
+// اللوغ يعطينا توزيعَ الإنتاج الحقيقيّ، ثمّ نُثبّت الحدَّ على بيانات لا على
+// أربع عيّنات. (701b · وأصلُ الحكم في تقرير 701.)
 
 export interface InkGateResult {
   /** نسبةُ بكسلاتِ الحافّة (edge pixels / (w-1)·(h-1)). */
@@ -78,7 +86,7 @@ export function checkInkPresent(
 
 /**
  * صياغةُ رسالةِ الفشل — تحمل الرقمَ المقيسَ والحدَّ لا اتّهاماً بسبب.
- * تُستَعمل في `error_message` عند رفعِ `INK_GATE_EMPTY`.
+ * تُستَعمل في `error_message` عند رفعِ `INK_GATE_EMPTY` (وضعُ enforce فقط).
  */
 export function formatInkGateFailure(r: InkGateResult, failedKey?: string): string {
   const pct = (v: number) => (v * 100).toFixed(3) + '%';
@@ -88,4 +96,60 @@ export function formatInkGateFailure(r: InkGateResult, failedKey?: string): stri
   ];
   if (failedKey) body.push(`· failed_key=${failedKey}`);
   return `INK_GATE_EMPTY: ${body.join(' ')}`;
+}
+
+// ── وضعُ التشغيل · سياسةٌ خالصة ─────────────────────────
+
+/** `warn` = يمرّ الجميعُ ويُسجَّل · `enforce` = يُرفَض الفارغ. */
+export type InkGateMode = 'warn' | 'enforce';
+
+/** `pass` = فيها حبر · `warn` = بلا حبر في وضع التحذير · `block` = بلا حبر في وضع الرفض. */
+export type InkGateLogKind = 'pass' | 'warn' | 'block';
+
+export interface InkGateDecision {
+  /** يُرمى INK_GATE_EMPTY فقط في `block`. */
+  shouldThrow: boolean;
+  logKind: InkGateLogKind;
+}
+
+/** يُحلّل قيمةَ متغيّر البيئة `INK_GATE_MODE`. أيُّ شيءٍ غير `enforce` = `warn`. */
+export function parseInkGateMode(v: string | undefined | null): InkGateMode {
+  return v === 'enforce' ? 'enforce' : 'warn';
+}
+
+/** القرار الخالص — ماذا يفعل العاملُ بنتيجة الفحص، بحسب الوضع. */
+export function decideInkGatePolicy(mode: InkGateMode, hasInk: boolean): InkGateDecision {
+  if (hasInk) return { shouldThrow: false, logKind: 'pass' };
+  if (mode === 'warn') return { shouldThrow: false, logKind: 'warn' };
+  return { shouldThrow: true, logKind: 'block' };
+}
+
+export interface InkGateLogContext {
+  templateId?: string | undefined;
+  width: number;
+  height: number;
+  renderId?: string | undefined;
+}
+
+/** سطرُ لوغ موحّد. يحمل النسبةَ والحدَّ و T والقالبَ والمقاسَ للناجحِ والمشبوه. */
+export function formatInkGateLog(
+  kind: InkGateLogKind,
+  r: InkGateResult,
+  ctx: InkGateLogContext,
+): string {
+  const pct = (v: number) => (v * 100).toFixed(4) + '%';
+  const tag =
+    kind === 'pass' ? 'ok'
+    : kind === 'warn' ? 'INK_GATE_WOULD_FAIL (warn-only)'
+    : 'INK_GATE_BLOCK (enforce)';
+  const parts = [
+    `[api-worker] ink-gate ${tag}:`,
+    `ratio=${pct(r.ratio)}`,
+    `threshold=${pct(r.threshold)}`,
+    `T=${r.perPixelDelta}`,
+    `template=${ctx.templateId ?? '?'}`,
+    `size=${ctx.width}x${ctx.height}`,
+  ];
+  if (ctx.renderId) parts.push(`render=${ctx.renderId}`);
+  return parts.join(' ');
 }
