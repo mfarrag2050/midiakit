@@ -736,6 +736,18 @@ export function drawHeadlineLine(
 ): AccentSpanBounds | null {
   const ln = prep.linesJustified[lineIdx];
   if (!ln) return null;
+  // 412 · حارسُ الصمت — قبله كان `undefined + i*lh = NaN` · Canvas 2D
+  // يتجاهل NaN صامتاً · فتَرَك card_kicker (anchor=below-kicker) بلا
+  // headline في المسار المخطَّط (renderVideo). الآن نرمي بصوتٍ عالٍ
+  // إن وصلَتنا layout-only prep (firstBaseline undefined) — المسار
+  // الصحيح: applyTemplateLayer يفصل ⇒ executeLayer عند غيابه.
+  if (prep.firstBaseline === undefined) {
+    throw new Error(
+      '[drawHeadlineLine] prep.firstBaseline undefined — layout-only prep. ' +
+      'حالة card_kicker (anchor=below-kicker) بلا state.kicker. المسار الصحيح: ' +
+      'applyTemplateLayer يجب أن يفصل ⇒ executeLayer عند غياب firstBaseline.'
+    );
+  }
   const y = prep.firstBaseline + lineIdx * prep.lineHeight;
   // measurer: من الخطة إن وُجد، وإلا نُنشئه من ctx الحالي (الحالة عند
   // استعمال RenderPlan المبنية Canvas-independent).

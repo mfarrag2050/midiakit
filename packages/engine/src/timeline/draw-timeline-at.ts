@@ -470,7 +470,13 @@ function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): v
 
   // الاستهلاك من الخطة لطبقة headline إن كان `ectx.headlinePrep` متاحاً.
   // متاح دائماً بعد WIRE-1-FIX لكل القوالب — عدا card_kicker (لا bounds).
-  if (layer.type === 'headline' && ectx.headlinePrep) {
+  //
+  // 412 · card_kicker (anchor=below-kicker) يصل إلى هنا بـheadlinePrep
+  // «layout-only» (بلا firstBaseline · بلا bounds) من fallback في
+  // render-plan.ts:132. سابقاً: drawHeadlineLine يحسب y=NaN فيَختفي
+  // النصّ. الآن: نفصل عندئذٍ ⇒ executeLayer يستدعي prepareHeadline
+  // بحالةٍ ممتلئة (state.kicker حاضرٌ الآن) فيحسب firstBaseline صحيحاً.
+  if (layer.type === 'headline' && ectx.headlinePrep && ectx.headlinePrep.firstBaseline !== undefined) {
     const prep = ectx.headlinePrep;
     const { ctx, brand, state } = ectx;
     for (let i = 0; i < prep.linesJustified.length; i++) {
