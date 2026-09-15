@@ -57,7 +57,22 @@ done
 # ── مساعِدات ───────────────────────────────────────────────
 find_pid() {
   # نستعمل pgrep -f بدقّة عالية: نمط يتضمّن مسار src/api-worker.ts.
-  pgrep -f "${WORKER_CMD}$" 2>/dev/null | head -1 || true
+  # `[[:space:]]*$` يسمح بمسافات لاحقة — يقتنص العمليّات التي تُعيد كتابة
+  # `process.title` (تُبقي ذيلَ مسافات من buffer argv الأصليّ · حادثة
+  # اختبار 290 · §١·هوستايل-٢).
+  # **عند التطابق المتعدِّد** نُحذّر على stderr ونُعيد الأوّل — الصمت
+  # يخفي كذبةً خطيرة (عاملان على نفس الطابور · شرط §٢·٣).
+  local all count
+  all=$(pgrep -f "${WORKER_CMD}[[:space:]]*$" 2>/dev/null || true)
+  [ -z "$all" ] && return
+  count=$(echo -n "$all" | grep -c '^' 2>/dev/null || echo 0)
+  if [ "$count" -gt 1 ]; then
+    local pids
+    pids=$(echo "$all" | tr '\n' ' ' | sed 's/ $//')
+    echo "[mk-worker] ⚠ WARN: ${count} عمليّات تطابق النمط — سأعمل على الأوّل. PIDs: ${pids}" >&2
+    echo "  استعمل: 'pgrep -fl \"${WORKER_CMD}\"' لرؤية سطر كلٍّ." >&2
+  fi
+  echo "$all" | head -1
 }
 
 get_ppid() {
@@ -87,10 +102,13 @@ worker_connected_redis() {
   # يقرأ المنفذ من REDIS_URL — لا `:6379` مثبَّت (290 · §١·٣).
   # awk بدل `grep -c || echo 0` — الأخير يُخرج «0\n0» عند عدم مطابقة
   # (grep -c يطبع 0 ثمّ يخرج بحالة 1 فيُشغل `|| echo 0` مرّةً ثانية).
+  # **نمطُ المنفذ محبوسٌ بحدّ يمين** (`[ )]`) — بلا هذا يلتقط :6379
+  # ضحيّةَ :63797، و:3 ضحيّةَ :3306. 290 · §١·هوستايل-٣.
+  # كذلك نطلب `->` قبل المنفذ ليقتصر على الطرف البعيد (Redis) لا المحلّي.
   local pid="$1"
   local out
   out=$(lsof -p "$pid" -i -a 2>/dev/null) || true
-  echo -n "$out" | awk -v pat=":${REDIS_PORT}.*ESTABLISHED" '$0 ~ pat {c++} END {print c+0}'
+  echo -n "$out" | awk -v pat="->[^ ]*:${REDIS_PORT}[ )]" '$0 ~ pat && /ESTABLISHED/ {c++} END {print c+0}'
 }
 
 now_iso() {
