@@ -135,6 +135,8 @@
         "renderAgeSeconds": "{n} ثانية",
         "renderAgeMinutes": "{n} دقيقة",
         "renderAgeHours": "{n} ساعة",
+        "renderStuckTitle": "طال الانتظار — قد يكون الطلبُ عالقاً",
+        "renderStuckBody": "في الانتظار منذ {age} — يتجاوز الحدَّ العاديّ. تحدَّث للدعم مع رمز الحادثة.",
         "renderFailed": "فشل التصدير",
         "renderFailedGeneric": "فشل التصدير — لم نتعرَّف على السبب. أَرسِل رمزَ الحادثةِ إلى الدعم.",
         "renderFailedCode": "رمزُ الخطأ:",

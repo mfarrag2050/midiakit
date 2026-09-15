@@ -136,6 +136,8 @@
         "renderAgeSeconds": "{n} ثانية",
         "renderAgeMinutes": "{n} دقيقة",
         "renderAgeHours": "{n} ساعة",
+        "renderStuckTitle": "طال الانتظار — قد يكون الطلبُ عالقاً",
+        "renderStuckBody": "في الانتظار منذ {age} — يتجاوز الحدَّ العاديّ. تحدَّث للدعم مع رمز الحادثة.",
         "renderFailed": "Render failed",
         "renderFailedGeneric": "Render failed — لم نتعرَّف على السبب. أَرسِل رمزَ الحادثةِ إلى الدعم.",
         "renderFailedCode": "رمزُ الخطأ:",

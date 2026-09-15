@@ -135,6 +135,8 @@
         "renderAgeSeconds": "{n}s",
         "renderAgeMinutes": "{n}m",
         "renderAgeHours": "{n}h",
+        "renderStuckTitle": "Waiting too long — the request may be stuck",
+        "renderStuckBody": "In queue for {age} — beyond the normal window. Contact support with the incident code.",
         "renderFailed": "Render failed",
         "renderFailedGeneric": "Render failed — reason not recognised. Send the incident code to support.",
         "renderFailedCode": "Error code:",
