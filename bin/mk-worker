@@ -55,6 +55,12 @@ get_etime() {
   ps -o etime= -p "$1" 2>/dev/null | tr -d ' ' || echo "?"
 }
 
+# **cwd الحيّ من العمليّة نفسِها** — لا الافتراضيّ ولا env. `lsof -d cwd`
+# يعيد سطراً واحداً بمسار working directory الفعليّ للعمليّة (290 · §١·٢).
+get_live_cwd() {
+  lsof -a -d cwd -p "$1" 2>/dev/null | awk 'NR==2 {print $NF}' || echo "?"
+}
+
 count_redis_clients() {
   redis-cli -n "$REDIS_DB" CLIENT LIST 2>/dev/null | wc -l | tr -d ' '
 }
@@ -69,17 +75,19 @@ now_iso() {
 }
 
 append_ledger() {
-  local action="$1" pid="$2" ppid="$3"
+  local action="$1" pid="$2" ppid="$3" cwd="${4:-$WORKER_DIR}"
+  # cwd يُمرَّر من المُنادي — يتقاطها من العمليّة الحيّة قبل kill (290 · §١·٢).
+  # فallback على env عند تعذّر القياس (عمليّة ماتت قبل القياس).
   local clients
   clients=$(count_redis_clients)
   local line
-  line="$(now_iso) · PID ${pid} (PPID ${ppid}) · ${action}-by: ${SESSION} · cwd ${WORKER_DIR} · Redis DB/${REDIS_DB} (${clients} clients)."
+  line="$(now_iso) · PID ${pid} (PPID ${ppid}) · ${action}-by: ${SESSION} · cwd ${cwd} · Redis DB/${REDIS_DB} (${clients} clients)."
   echo "$line" >> "$LEDGER_PATH"
 }
 
 # ── الأفعال ────────────────────────────────────────────────
 cmd_status() {
-  local pid ppid etime clients rc
+  local pid ppid etime clients rc live_cwd
   pid=$(find_pid)
   clients=$(count_redis_clients)
   if [ -z "$pid" ]; then
@@ -91,8 +99,13 @@ cmd_status() {
   ppid=$(get_ppid "$pid")
   etime=$(get_etime "$pid")
   rc=$(worker_connected_redis "$pid")
+  live_cwd=$(get_live_cwd "$pid")
   echo "[mk-worker] status: UP · PID ${pid} (PPID ${ppid}) · uptime ${etime}."
-  echo "  cwd: ${WORKER_DIR}"
+  # cwd الحيّ من lsof — لا env ولا الافتراضيّ (290 · §١·٢).
+  echo "  cwd (live): ${live_cwd}"
+  if [ "$live_cwd" != "$WORKER_DIR" ]; then
+    echo "  cwd (env/default): ${WORKER_DIR}  ← [لا يطابق العمليّة الحيّة]"
+  fi
   echo "  Redis DB/${REDIS_DB}: ${clients} total clients · ${rc} من العامل."
   return 0
 }
@@ -128,21 +141,24 @@ cmd_start() {
     echo "[mk-worker] start: FAILED · العامل لم يبدأ (تحقّق ${log_path})."
     return 3
   fi
-  local ppid
+  local ppid live_cwd
   ppid=$(get_ppid "$pid")
+  live_cwd=$(get_live_cwd "$pid")
   echo "[mk-worker] start: OK · PID ${pid} (PPID ${ppid}) · log: ${log_path}"
-  append_ledger "start" "$pid" "$ppid"
+  append_ledger "start" "$pid" "$ppid" "$live_cwd"
   return 0
 }
 
 cmd_stop() {
-  local pid ppid
+  local pid ppid live_cwd
   pid=$(find_pid)
   if [ -z "$pid" ]; then
     echo "[mk-worker] stop: SKIP · موقوف بالفعل (لا process يطابق)."
     return 0
   fi
   ppid=$(get_ppid "$pid")
+  # اقرأ cwd الحيّ قبل kill — بعده يفوت وقت القياس (290 · §١·٢).
+  live_cwd=$(get_live_cwd "$pid")
   echo "[mk-worker] stop: killing PID ${pid} (PPID ${ppid}) ..."
   kill "$pid" 2>/dev/null || true
   # انتظر حتّى 5 ثوان
@@ -160,7 +176,7 @@ cmd_stop() {
     return 4
   fi
   echo "[mk-worker] stop: OK · PID ${pid} انتهى."
-  append_ledger "stop" "$pid" "$ppid"
+  append_ledger "stop" "$pid" "$ppid" "$live_cwd"
   return 0
 }
 
