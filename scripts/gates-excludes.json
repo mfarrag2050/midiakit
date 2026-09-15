@@ -1,0 +1,41 @@
+{
+  "_comment": "استثناءات فحص check:test-wiring — كل حارس هنا خارج سلسلة pnpm test بسبب موثَّق. المبرِّر إلزاميّ (reason فارغة تُفشل الفحص).",
+  "_note_ci_extra_loop": "الحرّاس التي في .github/workflows/ci.yml حلقة «20 verifier خارج pnpm test» تُذكر هنا صراحةً بسبب: «في CI extra loop (60-ORPHAN §3)». هذا يجعل الحلقةَ الثانية مشتركةَ الحراسة مع pnpm test.",
+
+  "verify:a22": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:a23": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:a24": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:auth": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:bk-numerals": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:brand-kits": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:limits1": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:multilang": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:plan-all-templates": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:plans": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:projects": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:revisions": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:smart-crop": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:svg": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:templates": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:tenant": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:tenant-isolation": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:tts": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:users": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+  "verify:workflows": "في CI extra loop (60-ORPHAN §3 · 70-CI-WIRE §1)",
+
+  "verify:perf": "في workflow ليليّ منفصل (nightly-slow.yml · 70-CI-WIRE §2)",
+  "verify:alerts-wire": "في workflow ليليّ منفصل (nightly-slow.yml · 70-CI-WIRE §2)",
+
+  "verify:tashkil-collision": "ميّت · مؤجَّل (project-tashkil-deferred-v1 · 70-CI-WIRE §4)",
+
+  "verify:a18-5": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:a18-6": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:a21": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:a25": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:a28": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:assets": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:renders": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:control-plane": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:debt1": "محجوزة تنتظر §3 من 70-CI-WIRE (feat/api merge decision)",
+  "verify:all": "aggregate — يستدعي كلّ verify:* أعلاه · لا يُشغَّل مستقلّاً في CI"
+}
