@@ -5,52 +5,63 @@
 // **لا تُلقَ رسائل معدَّة للمستخدم من هذا الملف مطلقاً** — الرسالة
 // تُفَسَّر عبر `useLocale().t(error.messageKey)`.
 
-/** رموز أخطاء ثابتة من docs/16 — القائمة تنمو مع mk-api. */
-export type ApiErrorCode =
+/**
+ * رموز أخطاء ثابتة من docs/16 — القائمة تنمو مع mk-api.
+ *
+ * ٣٩٠ §٤ · **مصدرٌ واحدٌ للحقيقة قابلٌ للتكرار زمن التشغيل.** كانت
+ * القائمةُ union types فقط — لا يمكن للاختبارات أن تعدَّها. الآن هي
+ * const array مُصدَّرةً، والنوعُ مشتقٌّ منها. حارسٌ
+ * (`error-code-coverage.test.ts`) يفشل إن وُجد رمزٌ بلا مفتاحٍ في
+ * `ar.json.errors`.
+ */
+export const API_ERROR_CODES = [
   // 400 — تحقّق مدخلات
-  | 'INVALID_EMAIL'
-  | 'PASSWORD_TOO_WEAK'
-  | 'TENANT_NAME_EMPTY'
-  | 'INVALID_TIMESTAMP'
-  | 'LIMIT_TOO_LARGE'
-  | 'INVALID_FILTER_FIELD'
-  | 'INVALID_RESET_TOKEN'
-  | 'TOKEN_EXPIRED'
+  'INVALID_EMAIL',
+  'PASSWORD_TOO_WEAK',
+  'TENANT_NAME_EMPTY',
+  'INVALID_TIMESTAMP',
+  'LIMIT_TOO_LARGE',
+  'INVALID_FILTER_FIELD',
+  'INVALID_RESET_TOKEN',
+  'TOKEN_EXPIRED',
   // 401
-  | 'INVALID_CREDENTIALS'
-  | 'INVALID_REFRESH_TOKEN'
-  | 'REFRESH_TOKEN_EXPIRED'
-  | 'UNAUTHENTICATED'
+  'INVALID_CREDENTIALS',
+  'INVALID_REFRESH_TOKEN',
+  'REFRESH_TOKEN_EXPIRED',
+  'UNAUTHENTICATED',
   // 403
-  | 'INSUFFICIENT_ROLE'
-  | 'ACCOUNT_SUSPENDED'
+  'INSUFFICIENT_ROLE',
+  'ACCOUNT_SUSPENDED',
   // 404
-  | 'NOT_FOUND'
+  'NOT_FOUND',
   // 409
-  | 'EMAIL_TAKEN'
-  | 'USER_ALREADY_MEMBER'
-  | 'PENDING_INVITE_EXISTS'
-  | 'LAST_OWNER'
-  | 'CONFLICT'
+  'EMAIL_TAKEN',
+  'USER_ALREADY_MEMBER',
+  'PENDING_INVITE_EXISTS',
+  'LAST_OWNER',
+  'CONFLICT',
   // 413
-  | 'PAYLOAD_TOO_LARGE'
+  'PAYLOAD_TOO_LARGE',
   // 422
-  | 'SEATS_EXHAUSTED'
-  | 'LICENSE_ACK_MUST_BE_TRUE'
-  | 'LICENSE_ACK_REQUIRED'
+  'SEATS_EXHAUSTED',
+  'LICENSE_ACK_MUST_BE_TRUE',
+  'LICENSE_ACK_REQUIRED',
   // 429
-  | 'RATE_LIMITED'
+  'RATE_LIMITED',
   // 402
-  | 'QUOTA_EXCEEDED_VIDEOS'
-  | 'QUOTA_EXCEEDED_RENDERS'
+  'QUOTA_EXCEEDED_VIDEOS',
+  'QUOTA_EXCEEDED_RENDERS',
   // 405
-  | 'METHOD_NOT_ALLOWED'
+  'METHOD_NOT_ALLOWED',
   // 500 / شبكة
-  | 'INTERNAL_ERROR'
-  | 'NETWORK_ERROR'
-  | 'SERVICE_UNAVAILABLE'
+  'INTERNAL_ERROR',
+  'NETWORK_ERROR',
+  'SERVICE_UNAVAILABLE',
   // خطأ لم يُصنَّف — يُترجم لمفتاح عام في الواجهة
-  | 'UNKNOWN';
+  'UNKNOWN',
+] as const;
+
+export type ApiErrorCode = typeof API_ERROR_CODES[number];
 
 export interface ApiErrorShape {
   readonly code: ApiErrorCode | string;
