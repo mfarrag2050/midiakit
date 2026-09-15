@@ -1095,7 +1095,16 @@ export default function ProjectEditorPage(): JSX.Element {
               />
             )}
             {renderRow && (renderRow.status === 'queued' || renderRow.status === 'running') && (
-              <RenderPendingAlert row={renderRow} />
+              <RenderPendingAlert
+                row={renderRow}
+                onCancel={async (id) => {
+                  // ٤٠١ §٣ — مخرج «إلغاء». `renders.cancel` مبنيّةٌ في
+                  // `endpoints/renders.ts:93` — كانت غيرَ موصَّلة.
+                  await renders.cancel(id);
+                  setRenderRow(null);
+                  if (pollTimer.current) clearInterval(pollTimer.current);
+                }}
+              />
             )}
             {renderRow?.status === 'succeeded' && renderRow.output_url && (
               <div className="text-xs text-fg-muted">

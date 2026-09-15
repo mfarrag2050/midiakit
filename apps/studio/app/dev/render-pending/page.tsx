@@ -70,7 +70,13 @@ export default function DevRenderPending(): JSX.Element {
           {CASES.map((c) => (
             <section key={c.row.id} className="space-y-2">
               <h2 className="text-sm text-fg-muted">{c.title}</h2>
-              <RenderPendingAlert row={c.row} />
+              <RenderPendingAlert
+                row={c.row}
+                onCancel={async (id) => {
+                  // stub — لعرضِ الزرّ في المعرِض · لا استدعاءَ API حقيقيّاً
+                  console.log('[dev] cancel', id);
+                }}
+              />
             </section>
           ))}
         </div>

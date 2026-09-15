@@ -62,9 +62,17 @@ function ageText(seconds: number, style: DigitStyle, t: TFn): string {
   return t('pages.projects.editor.renderAgeHours', { n: formatNumber(hours, style) });
 }
 
-export function RenderPendingAlert({ row }: { row: RenderRow }): JSX.Element {
+interface Props {
+  readonly row: RenderRow;
+  /** ٤٠١ §٣ · مخرج «إلغاء». إن غاب لا يُعرَض الزرّ (كما في معرِض dev
+   *  الذي لا يستطيع إلغاءَ رندرٍ اختباريّ). */
+  readonly onCancel?: (id: string) => void | Promise<void>;
+}
+
+export function RenderPendingAlert({ row, onCancel }: Props): JSX.Element {
   const { t, locale } = useLocale();
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [cancelling, setCancelling] = useState(false);
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 1_000);
     return () => clearInterval(id);
@@ -91,7 +99,8 @@ export function RenderPendingAlert({ row }: { row: RenderRow }): JSX.Element {
     );
   }
 
-  // — بعد العتبة: تحذيرٌ + رمزُ الحادثة —
+  // — بعد العتبة: تحذير + رمزُ حادثة + مخرج (إلغاء) —
+  const canCancel = !!onCancel && !cancelling;
   return (
     <Alert kind="warning" titleKey="pages.projects.editor.renderStuckTitle">
       <p className="text-xs text-fg-muted">
@@ -100,6 +109,31 @@ export function RenderPendingAlert({ row }: { row: RenderRow }): JSX.Element {
       <div className="mt-2">
         <CopyableCode value={row.id} labelKey="pages.projects.editor.renderIdLabel" />
       </div>
+      {onCancel && (
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            disabled={!canCancel}
+            onClick={async () => {
+              if (!onCancel) return;
+              setCancelling(true);
+              try {
+                await onCancel(row.id);
+              } finally {
+                setCancelling(false);
+              }
+            }}
+            className="rounded border border-border bg-surface px-3 py-1 text-xs text-fg hover:bg-surface-2 disabled:opacity-60"
+          >
+            {cancelling
+              ? t('pages.projects.editor.renderCancelling')
+              : t('pages.projects.editor.renderCancelBtn')}
+          </button>
+          <span className="text-[11px] text-fg-subtle">
+            {t('pages.projects.editor.renderCancelHint')}
+          </span>
+        </div>
+      )}
     </Alert>
   );
 }
