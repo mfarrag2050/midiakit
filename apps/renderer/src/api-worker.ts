@@ -29,6 +29,7 @@ import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
 import { loadImage } from 'skia-canvas';
+import { supportCodeFor } from '@pf-mediakit/shared';
 import {
   checkInkPresent,
   formatInkGateFailure,
@@ -688,8 +689,10 @@ export function startApiWorker(
           : 'RENDER_FAILED';
       try {
         await finalizeFailedRender(tenantId, renderId, code, msg.slice(0, 500));
+        // ٣٧٠: supportCode في اللوغ ⇒ دعمٌ يبحث بـgrep 'support=MK-XXXX-XXXX' يجد الحادثة.
+        const supportCode = supportCodeFor(renderId);
         // eslint-disable-next-line no-console
-        console.log(`[api-worker] failed-listener sync · render=${renderId} · code=${code}`);
+        console.log(`[api-worker] failed-listener sync · render=${renderId} · code=${code} · support=${supportCode}`);
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error(`[api-worker] failed-listener sync error · render=${renderId}: ${(e as Error).message}`);

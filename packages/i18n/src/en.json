@@ -825,7 +825,16 @@
     "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
     "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
     "TEMPLATE_SNAPSHOT_INVALID": "This template cannot be exported — choose another template or ask your administrator to review it.",
-    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists."
+    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
+    "INVALID_SIZE": "Requested size is not supported — pick one from the list.",
+    "FONT_ASSET_MISSING": "Brand font isn't uploaded — re-upload from brand settings.",
+    "FONT_ASSET_FETCH_FAILED": "Could not load the brand font — try again, and contact support if it persists.",
+    "IMAGE_ASSET_MISSING": "The image used isn't available — re-upload it or pick another.",
+    "IMAGE_ASSET_FETCH_FAILED": "Could not load the image — try again, and contact support if it persists.",
+    "MP4_UNSUPPORTED_TEMPLATE": "This template cannot be exported as video — pick PNG or change the template.",
+    "INK_GATE_EMPTY": "The rendered card came out empty — review its content and retry.",
+    "VIDEO_GATE_EMPTY": "The rendered video has no content — review the template and content, then retry.",
+    "TENANT_CAP_TIMEOUT": "Server is busy handling your other requests — wait for them to finish, then retry."
   },
   "design": {
     "title": "Design System",

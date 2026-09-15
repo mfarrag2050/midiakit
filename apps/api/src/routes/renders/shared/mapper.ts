@@ -1,6 +1,7 @@
 /**
  * mapper — DB row → response shape (docs/16 §8).
  */
+import { supportCodeFor } from '@pf-mediakit/shared';
 
 export interface DbRenderRow {
   id: string;
@@ -45,7 +46,10 @@ export interface RenderSummary {
 }
 
 export interface RenderFull extends RenderSummary {
-  error?: { code: string; message: string | null };
+  // ٣٧٠: message = مفتاح i18n لا نصّ خام (نفس نمط ApiError.toBody).
+  // `renders.error_message` الخام يبقى في DB للتشخيص الداخلي · لا يُعاد.
+  // supportCode: رمز حادثة قصير للمستخدم يقرؤه للدعم (٣٧٠ §٢).
+  error?: { code: string; message: string; supportCode: string };
   waitMs?: number;
 }
 
@@ -79,7 +83,14 @@ export function toFull(row: DbRenderRow): RenderFull {
   const base = toSummary(row);
   const out: RenderFull = { ...base };
   if (row.error_code) {
-    out.error = { code: row.error_code, message: row.error_message };
+    // ٣٧٠: message = مفتاح i18n (نفس نمط ApiError.toBody:152) لا نصّ خام.
+    // `row.error_message` الخام يبقى في DB للدعم الداخلي · لا يُعاد.
+    // supportCode للمستخدم يقرؤه للدعم — يعبر إعادة التشغيل (SHA-256 حتميّ).
+    out.error = {
+      code: row.error_code,
+      message: `errors.${row.error_code}`,
+      supportCode: supportCodeFor(row.id),
+    };
   }
   if (row.started_at && row.created_at) {
     out.waitMs = row.started_at.getTime() - row.created_at.getTime();

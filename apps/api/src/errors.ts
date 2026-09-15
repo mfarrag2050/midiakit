@@ -86,6 +86,18 @@ export type ErrorCode =
   | 'EXPORTS_RATE_LIMIT'                           // 240 · rate/دقيقة/tenant (429)
   | 'TENANT_DATA_EXPORT_FAILED'                    // 250 · فشل تدفّق النسخة الكاملة
   | 'TEMPLATE_SNAPSHOT_INVALID'                    // 280 · لقطة template غير صالحة عند الإنشاء (422)
+  // Renderer errors (370 · تنقل من api-worker إلى القاموس · تُقرَأ عبر renders.error_code)
+  | 'INVALID_SIZE'                                 // 370 · size غير معروف في SIZE_MAP
+  | 'FONT_ASSET_MISSING'                           // 370 · أصل خط في content غير موجود في DB
+  | 'FONT_ASSET_FETCH_FAILED'                      // 370 · فشل تحميل خط من S3
+  | 'IMAGE_ASSET_MISSING'                          // 370 · أصل صورة في content غير موجود في DB
+  | 'IMAGE_ASSET_FETCH_FAILED'                     // 370 · فشل تحميل صورة من S3
+  | 'MP4_UNSUPPORTED_TEMPLATE'                     // 370 · قالب بلا video block · format=mp4
+  | 'INK_GATE_EMPTY'                               // 370 · بطاقة PNG بلا حبر (701 · enforce mode)
+  | 'VIDEO_GATE_EMPTY'                             // 370 · فيديو بلا محتوى (340 · enforce mode)
+  | 'TENANT_CAP_TIMEOUT'                           // 370 · مستأجر بلغ سقف التأجيلات (360)
+  // ملاحظة: `RENDER_FAILED` يبقى clientOnly (mk-api-error-codes.json:clientOnlyCodes) —
+  // مستعمَل في api-worker كـfallback لكنّ الاصطلاح القديم يبقى · القاموس فيه أصلاً.
   // Revisions (§10)
   | 'REVISION_NOT_FOUND'                           // §10.3 (404)
   | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)

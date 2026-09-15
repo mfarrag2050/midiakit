@@ -826,7 +826,16 @@
     "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
     "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل.",
     "TEMPLATE_SNAPSHOT_INVALID": "تعذّر تصدير هذا القالب — اختر قالباً آخر أو اطلب مراجعته من المسؤول.",
-    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم."
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "INVALID_SIZE": "المقاس المطلوب غير مدعوم — اختر size من القائمة.",
+    "FONT_ASSET_MISSING": "brand font غير مرفوع — أعد رفعه من brand settings.",
+    "FONT_ASSET_FETCH_FAILED": "تعذّر تحميل brand font — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "IMAGE_ASSET_MISSING": "image المستعمَلة غير موجودة — أعد رفعها أو اختر غيرها.",
+    "IMAGE_ASSET_FETCH_FAILED": "تعذّر تحميل image — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "MP4_UNSUPPORTED_TEMPLATE": "هذا القالب لا يُصدَّر كـvideo — اختر PNG أو غيّر القالب.",
+    "INK_GATE_EMPTY": "البطاقة الناتجة فارغة — راجع محتواها وحاول مجدَّداً.",
+    "VIDEO_GATE_EMPTY": "الـvideo الناتج بلا محتوى — راجع القالب والمحتوى وحاول مجدَّداً.",
+    "TENANT_CAP_TIMEOUT": "الخادم مشغول بطلباتك الأخرى — انتظر انتهاءها ثمّ حاول مجدَّداً."
   },
   "design": {
     "title": "Design System",
