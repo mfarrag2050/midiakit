@@ -90,6 +90,60 @@ set_built_mode() {
   printf '%s' "$1" > "$f"
 }
 
+# ═════ 402ج §٦·٢ · L-133 · حارسُ الاستهداف الهادم ══════════════════════════
+# يُستدعى قبل كلّ أمرٍ يُلحق ضرراً بلا رجعة (compose down · compose down -v).
+# يستخرج **من docker نفسِه** أسماءَ الحاويّات التي سيلمسها الأمر، ويقارنها
+# بـbasename($SHOW_ROOT) — الطقمُ المقصود يُثبَت من الحقيقة الحيّة لا من
+# المجلّد الذي صودف أنّي فيه.
+#
+# **علّةُ الليلة (2026-09-15T02:35Z):** أمرٌ من داخل شجرة shownext باستعمال
+# ملفّ compose منسيّ يحمل أسماء pf-mediakit-show-* — كاد يحذف volumes الحيّ.
+# نجا الحيُّ فقط بالحظّ (Resource in use).
+guard_destroy_target() {
+  local action="$1"  # فقط للرسالة
+  local expected_prefix
+  expected_prefix="$(basename "$SHOW_ROOT")"
+
+  # الحاويّاتُ التي سيتعامل معها compose الحاليّ (بأسماءِ خدماتها لا بحاويّاتها)
+  # نستعمل compose ps -aq — إن رجع empty، لا شيء ليُهدَم أصلاً.
+  local ids
+  ids="$( cd "$SHOW_ROOT" && \
+    docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE_RELATIVE" --env-file "$(env_file)" \
+      ps -aq 2>/dev/null || true )"
+  if [ -z "$ids" ]; then
+    say "guard: لا حاويّات لهذا المشروع — لا شيء يُهدَم"
+    return 0
+  fi
+
+  # لكل حاوية نستخرج اسمَها الحقيقيَّ من docker inspect ونقارنه بالبادئة
+  local mismatched=""
+  local matched_count=0
+  for cid in $ids; do
+    local name
+    name="$(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null | sed 's|^/||')"
+    [ -z "$name" ] && continue
+    case "$name" in
+      "$expected_prefix"|"$expected_prefix"-*)
+        matched_count=$((matched_count + 1))
+        ;;
+      *)
+        mismatched="$mismatched\n  - $name"
+        ;;
+    esac
+  done
+
+  if [ -n "$mismatched" ]; then
+    printf '%s\n' "[mk-show] ✗ guard: حارسُ الاستهداف الهادم رفض $action" >&2
+    printf '%s\n' "        SHOW_ROOT=$SHOW_ROOT" >&2
+    printf '%s\n' "        المتوقَّع (basename): ${expected_prefix}-*" >&2
+    printf '%s\n' "        الحاويّاتُ التي سيلمسها الأمر لا تطابق:" >&2
+    printf '%b\n'  "$mismatched" >&2
+    printf '%s\n' "        رفضٌ صريح — لا هدم. تحقّق من compose file + SHOW_ROOT." >&2
+    exit 4
+  fi
+  say "guard: $matched_count/$matched_count حاويّات تحمل بادئة $expected_prefix — سماحٌ بالمتابعة"
+}
+
 # ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
 say()   { printf '[mk-show] %s\n' "$*"; }
 warn()  { printf '[mk-show] ⚠  %s\n' "$*" >&2; }
@@ -447,6 +501,9 @@ cmd_reset() {
   read -r reply
   [[ "$reply" == "reset" ]] || die "لم يُؤكَّد — لا تغيير."
 
+  # 402ج §٦·٢ · حارس قبل الهدم (لا يكفي التأكيد اليدويّ)
+  guard_destroy_target "reset (compose down -v)"
+
   stop_proc studio || true
   stop_proc api || true
   compose down -v 2>&1 | tail -6 || true
@@ -464,6 +521,10 @@ cmd_down() {
   require_show_worktree
   require_docker_context
   ensure_state_dir
+
+  # 402ج §٦·٢ · حارس الاستهداف (down يمسّ حاويّات · حتّى بلا -v)
+  guard_destroy_target "down (compose down)"
+
   stop_proc studio
   stop_proc api
   say "أُطفئ containers (data volumes تبقى) …"

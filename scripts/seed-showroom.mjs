@@ -44,13 +44,76 @@ const pg = requireFromApi('pg');
 
 const API_PORT = Number(process.env.PORT || 19070);
 const API_BASE = `http://127.0.0.1:${API_PORT}`;
-const OWNER_EMAIL = process.env.SHOWROOM_OWNER_EMAIL || 'mk@primeflow.co';
+// 402ج · هويّةُ قِنديل المخترَعة — قِيَمٌ من التذكرة لا تُبدَّل ولا تُحسَّن.
+// L-129: الاسم بُحث قبل الاستعمال (لم يصطدم). البريد على .example محجوز بـRFC 2606.
+const QINDEEL_TENANT_NAME  = 'وكالة قِنديل';
+const QINDEEL_BRAND_NAME   = 'هويّة قِنديل — نسخة العرض';
+const QINDEEL_SOURCE       = 'وكالة قِنديل';
+const QINDEEL_SOURCE_NAME  = 'وكالة قِنديل';
+const QINDEEL_SOURCE_HANDLE = '@qindeel';
+const QINDEEL_HEADLINE     = 'افتتاحُ الخطّ الجديد للنقل السريع بين ضفّتَي المدينة — تغطيةٌ ميدانيّة';
+const QINDEEL_DEFAULT_EMAIL = 'owner@qindeel.example';
+// اللوحة (402ج §الهويّة): حبر · ذهب دافئ · ورق · أحمر عاجل.
+const QINDEEL_COLORS = {
+  ink:      '#101418',
+  goldWarm: '#D9A227',
+  paper:    '#F5F1E8',
+  breaking: '#C0392B',
+};
+
+const OWNER_EMAIL = process.env.SHOWROOM_OWNER_EMAIL || QINDEEL_DEFAULT_EMAIL;
 // اتصالان:
 //   • control_plane_user (SELECT فقط cross-tenant) — لاستعلام users قبل معرفة tenant_id.
 //   • migration_user (DML كامل + RLS ملتزَم) — لإدراج brand_kit + projects بعد SET app.tenant_id.
 const DB_URL_PLATFORM = process.env.DATABASE_URL_PLATFORM;
 const DB_URL_MIGRATION = process.env.DATABASE_URL;
-const TENANT_NAME = 'وكالة العرض التجريبيّة';
+const TENANT_NAME = QINDEEL_TENANT_NAME;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 402ج §٢ · حارسُ الاسم الحقيقيّ — قائمةٌ صغيرةٌ تُفشل البذرَ بصوتٍ عالٍ
+// إن ظهر أيُّ اسمٍ حقيقيٍّ في أيّ حقلٍ مبذور. مصدره:
+//   • scripts/brand-blocklist.json (أناضول · Anadolu · aa-media-kit · AA Media Kit).
+//   • إضافاتُ التذكرة (primeflow · mfarrag · درويش).
+// **لا تخطّي صامت** (نفس مبدأ 402ب §٢): إن فشل الفحص، اسمِّ الحقلَ واخرج بحالة ≠ 0.
+// ═══════════════════════════════════════════════════════════════════════════
+const BRAND_BLOCKLIST_TERMS = [
+  // من scripts/brand-blocklist.json
+  'أناضول',
+  'Anadolu',
+  'aa-media-kit',
+  'AA Media Kit',
+  // من 402ج §٢ (اسم المالك ونطاقه)
+  'primeflow',
+  'mfarrag',
+  'درويش',
+];
+
+function scanForLeak(fieldPath, value) {
+  if (value == null) return;
+  if (typeof value === 'string') {
+    const lc = value.toLowerCase();
+    for (const term of BRAND_BLOCKLIST_TERMS) {
+      if (lc.includes(term.toLowerCase())) {
+        console.error(
+          `\n✗ حارسُ الاسم الحقيقيّ: الحقل "${fieldPath}" يحتوي "${term}"\n` +
+          `   القيمة: "${value.length > 120 ? value.slice(0, 120) + '…' : value}"\n` +
+          `   لا بذرَ نظيفٌ يمرّ. اخترع بديلاً — راجع L-129 في claude/inbox/README.md.\n`
+        );
+        process.exit(3);
+      }
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => scanForLeak(`${fieldPath}[${i}]`, v));
+    return;
+  }
+  if (typeof value === 'object') {
+    for (const [k, v] of Object.entries(value)) {
+      scanForLeak(`${fieldPath}.${k}`, v);
+    }
+  }
+}
 
 if (!DB_URL_PLATFORM || !DB_URL_MIGRATION) {
   console.error('✗ DATABASE_URL_PLATFORM أو DATABASE_URL غير معرَّف. شغّل عبر bin/mk-show.');
@@ -101,6 +164,10 @@ async function signupIfNew(plane) {
   const existing = await lookupExistingOwner(plane);
   if (existing) return { created: false, ...existing };
 
+  // 402ج §٢ · حارس قبل signup (تُكتب users.email + tenants.name).
+  scanForLeak('users.email', OWNER_EMAIL);
+  scanForLeak('tenants.name', TENANT_NAME);
+
   const res = await fetch(`${API_BASE}/v1/auth/signup`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -142,24 +209,37 @@ async function ensureBrandKit(client, tenantId) {
   );
   if (existing.rows[0]) return existing.rows[0].id;
 
-  // _AMEND-390d §٣ · التركيب: DEFAULT_BRAND (شكل كامل) ⇐ overlay مَرافئ.
-  // spread أوّلاً DEFAULT ثمّ MARAFI ⇒ أيّ مفتاح جديد في DEFAULT مستقبلاً
-  // يبقى في البذرة تلقائيّاً · وأيّ مفتاح تُخصّصه مَرافئ يتغلّب.
-  // ألوان + fonts + logo دمج مفتاح-بمفتاح · بقيّة الحقول (typography ·
-  // direction · locale · capabilities …) تأتي كاملة من MARAFI ثمّ DEFAULT.
-  const config = {
-    ...DEFAULT_BRAND,
-    ...MARAFI_BRAND,
-    colors: { ...DEFAULT_BRAND.colors, ...MARAFI_BRAND.colors },
-    fonts: { ...DEFAULT_BRAND.fonts, ...MARAFI_BRAND.fonts },
-    logo: { ...DEFAULT_BRAND.logo, ...MARAFI_BRAND.logo },
+  // 402ج · الشكلُ من MARAFI_BRAND (typography · badges · gradient · motion
+  // · outputs · placement) ثمّ overlay Qindeel للـid + name + colors + badges.
+  // الخطوط تبقى كما هي (IBM Plex Sans Arabic + Almarai · OFL 1.1 · التذكرة §الهويّة).
+  const config = JSON.parse(JSON.stringify(MARAFI_BRAND)); // deep clone
+  config.id = 'qindeel';
+  config.name = QINDEEL_BRAND_NAME;
+  config.colors = {
+    ...config.colors,
+    text:         QINDEEL_COLORS.ink,      // حبرٌ داكن على ورق
+    accent:       QINDEEL_COLORS.goldWarm, // ذهبٌ دافئ
+    surface:      QINDEEL_COLORS.paper,    // ورق
+    urgentBadge:  QINDEEL_COLORS.breaking, // أحمر عاجل (فقط للبادج)
+    urgentBg:     QINDEEL_COLORS.paper,    // خلفيّة breaking = ورق (نمط MARAFI · §اللوحة)
+    urgentBgTint: QINDEEL_COLORS.paper,
+    placeholder:  [QINDEEL_COLORS.paper, '#E8E4D8'],
   };
+  if (config.badges?.urgent) {
+    config.badges.urgent.fill = QINDEEL_COLORS.breaking;
+    config.badges.urgent.textColor = QINDEEL_COLORS.paper;
+  }
+
+  // 402ج §٢ · حارس قبل الكتابة
+  scanForLeak('tenants.name', QINDEEL_TENANT_NAME);
+  scanForLeak('brand_kits.name', QINDEEL_BRAND_NAME);
+  scanForLeak('brand_kits.config', config);
 
   const { rows } = await client.query(
     `INSERT INTO brand_kits (tenant_id, name, config)
      VALUES ($1, $2, $3::jsonb)
      RETURNING id`,
-    [tenantId, 'هويّة العرض الافتراضيّة', JSON.stringify(config)],
+    [tenantId, QINDEEL_BRAND_NAME, JSON.stringify(config)],
   );
   return rows[0].id;
 }
@@ -191,49 +271,26 @@ async function ensureSampleProjects(client, tenantId, brandKitId, userId) {
   );
   if (existing[0]) return 0;
 
-  // ثلاثة مشاريع عيّنة — كلّ اسم/جهة/مصدر مُختلَق بالكامل.
-  // قاعدة (_AMEND-SHOWROOM-PORTS §4): لا اسم مؤسّسة حقيقيّة، ولا مادّة
-  // تحريريّة لا نملك حقّ عرضها. الأسماء أدناه لا وجود لها في الواقع.
-  //
-  // _AMEND-390 §أ · pool = مفاتيح احتماليّة. content النهائيّ يُرشَّح إلى
-  // ما يصرّح به القالب فقط (readTemplateFields). كل مشروع يحمل template_ref
-  // خاصّاً به · نصّه يُعبّأ في المفاتيح المُصرّح بها فقط.
+  // 402ج · مشروعان اثنان بهويّة قِنديل — قِيمُهما من التذكرة، لا تُبدَّل.
+  // ١ · بطاقة عاجل — قالب breaking (يحمل source/sourceName/sourceHandle).
+  // ٢ · بطاقة اقتباس — قالب card-kicker (kicker = المصدر النصّيّ · headline = العنوان).
   const projects = [
     {
-      name: 'حملة الافتتاح — بطاقة إعلان',
-      template_ref: '@pf-mediakit/templates/card-bottom.json',
-      pool: {
-        headline: 'انطلاق برنامج «صباحيّات المدينة» — مواعيد يوميّة',
-        source: 'الوكالة',
-        sourceHandle: '@morning_show',
-        sourceName: 'وكالة العرض',
-      },
-    },
-    {
-      name: 'تقرير موجز — خبر عاجل',
+      name: 'قِنديل — عاجل — عيّنة',
       template_ref: '@pf-mediakit/templates/breaking.json',
       pool: {
-        headline: 'هيئة المدينة للخدمات تُعلن نتائج مسحٍ سنويّ',
-        source: 'هيئة المدينة',
-        sourceHandle: '@city_agency',
-        sourceName: 'وكالة المدينة',
+        headline: QINDEEL_HEADLINE,
+        source: QINDEEL_SOURCE,
+        sourceHandle: QINDEEL_SOURCE_HANDLE,
+        sourceName: QINDEEL_SOURCE_NAME,
       },
     },
     {
-      name: 'برومو حلقة — بطاقة مربّعة',
-      template_ref: '@pf-mediakit/templates/card-centered.json',
+      name: 'قِنديل — بطاقة اقتباس — عيّنة',
+      template_ref: '@pf-mediakit/templates/card-kicker.json',
       pool: {
-        headline: 'حلقة الليلة: حوار في شؤون المدينة',
-        source: 'مراسلنا',
-        sourceHandle: '@episode',
-        sourceName: 'استوديو العرض',
-      },
-    },
-    {
-      name: 'ملاحظة تحريريّة — بطاقة بسيطة',
-      template_ref: '@pf-mediakit/templates/plain.json',
-      pool: {
-        headline: 'قراءة موجزة في مصطلحات التغطية الميدانيّة',
+        headline: QINDEEL_HEADLINE,
+        kicker: QINDEEL_SOURCE, // القالبُ يعرض kicker · اقتراناً بمصدرِ البطاقة
       },
     },
   ];
@@ -244,6 +301,11 @@ async function ensureSampleProjects(client, tenantId, brandKitId, userId) {
     const content = Object.fromEntries(
       declaredKeys.filter((k) => k in p.pool).map((k) => [k, p.pool[k]]),
     );
+
+    // 402ج §٢ · حارس قبل كلّ INSERT
+    scanForLeak(`projects[${p.name}].name`, p.name);
+    scanForLeak(`projects[${p.name}].content`, content);
+
     await client.query(
       `INSERT INTO projects
          (tenant_id, brand_kit_id, template_id, name, content, created_by, state, locale)
