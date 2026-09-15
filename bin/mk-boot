@@ -1,23 +1,21 @@
 #!/usr/bin/env bash
-# bin/mk-boot — وكيلُ النهوض · يوقظُ الطقمَ ويثبِتُ كلَّ قطعة.
+# bin/mk-boot — وكيلُ نهوض pf-mediakit · يُثبِت ولا يفترض (تذكرة 402).
 #
-# **العلّة:** ليلة 2026-09-14 أعاد macOS تشغيلَ الميني وحده لتحديثٍ مجدوَل،
-# فمات كلُّ شيء: colima · حاويّات · API · Studio · العامل · شاشاتُ tmux.
-# كلَّفنا النهوضُ ساعةً من اللصق اليدويّ. هذا السكربتُ يُعيدها بأمرٍ واحد،
-# **مقيسٍ لا مصدَّقٍ:** كلُّ قطعةٍ لها سطرُ برهانٍ يُقاس. لا يُطبعُ
-# «boot: HEALTHY» إلّا إن نجح كلُّ سطر. عند السقوط: يقف، يسمّي الخطوةَ،
-# لا يكمل صامتاً.
+# **المبدأُ الحاكم:** كلُّ قطعةٍ تُثبَت بأثرها لا بوجودها.
+# لا يُطبع «boot: HEALTHY» إلّا إن نجح كلُّ سطرِ برهان. عند السقوط: يقف،
+# يسمّي الخطوة، لا يكمل صامتاً.
 #
-# **ما لا يفعله:**
-#   • لا `colima start` للـdefault (لمنهاج · قاعدة CLAUDE.md §بيئة مشتركة).
-#   • لا اعتمادَ على `MK_WORKER_DIR` الافتراضيّ (يشير إلى /tmp/160-main-tree
-#     الذي يُمحى بالإقلاع — إحدى العلّات الليلة).
-#   • لا launchd binding بعد — نشغّلُه بيدنا مرّةً ونقيسه ثمّ نربطه.
+# **الستُّ التي أغلقتها 402 (كشفتها مراجعةُ Codex الخصيمة · تقرير 401):**
+#   §١ الاستوديو: HTTP حقيقيّ · لا «منفذٌ يستمع».
+#   §٢ العامل: البادئة+المسار يُقرآن من العمليّة الحيّة في الفرعَين.
+#   §٣ العامل: pgrep يرجع ≠ 1 ⇒ فشلٌ صريح · لا head -1 · لا نرد.
+#   §٤ الحاويّات: صحّةٌ لا عدد · minio-init يُفحَص رمزُ خروجه.
+#   §٥ الشاشات: نبضٌ من داخل اللوحة · لا has-session وحده.
+#   §٦ الحالةُ الجزئيّة: تكتشف · تُنزِل ما يعوق · ترفع · تقول ما فعلت.
 #
-# **قاعدة bash 3.2 (درسُ ghost-watch v1):** لا `declare -A` ولا syntax
-# مستحدَث لا يعرفه bash الافتراضيّ على macOS.
+# **قاعدة bash 3.2:** لا declare -A (درسُ ghost-watch v1).
 
-set -u  # -e يبطل fail-fast يدويّاً · pipefail لاحقاً إن احتيج
+set -u
 
 # ═════ ثوابت الحقيقة الوحيدة ═════════════════════════════════════════════════
 REPO="/Users/mdervis/MediaKit/pf-mediakit"
@@ -32,12 +30,15 @@ EXPECTED_PREFIX="pf-mediakit-show"
 NODE_VERSION="v20.18.1"
 NODE_BIN="$HOME/.nvm/versions/node/$NODE_VERSION/bin"
 WORKER_LOG="$REPO/claude/reports/_boot-worker.log"
-WORKER_PID_FILE="$REPO/claude/reports/_boot-worker.pid"
 
-# tmux · الخمس + mkwatch + mkghost
-TMUX_SESSIONS="mediakit mk-api mk-studio mkaudit mkci mkwatch mkghost"
+# قوائم مصادر الحقيقة
+TMUX_WATCHERS="mkwatch mkghost"                             # سكربتاتٌ آليّة · تُفحَص بالنبض
+TMUX_INTERACTIVE="mediakit mk-api mk-studio mkaudit mkci"   # جلسات المالك · has-session فقط
+STUDIO_OK_STATUS="200 301 302 307 308"                      # ما يقبله فحصُ Studio
+EXPECTED_HEALTH_SERVICES="postgres redis minio"             # لها healthcheck
+INIT_SERVICE="minio-init"                                   # one-shot · exit 0
 
-# ═════ ألوان ورموز ═══════════════════════════════════════════════════════════
+# ═════ ألوان ورموز ══════════════════════════════════════════════════════════
 if [ -t 1 ]; then
   C_RED=$'\033[31m'; C_GRN=$'\033[32m'; C_BLD=$'\033[1m'; C_DIM=$'\033[2m'; C_END=$'\033[0m'
 else
@@ -46,244 +47,277 @@ fi
 
 STEP_TOTAL=11
 STEP_NOW=0
-
-step() {
-  STEP_NOW=$((STEP_NOW + 1))
-  printf '\n%s[%d/%d] %s%s\n' "$C_BLD" "$STEP_NOW" "$STEP_TOTAL" "$*" "$C_END"
-}
+step()  { STEP_NOW=$((STEP_NOW + 1)); printf '\n%s[%d/%d] %s%s\n' "$C_BLD" "$STEP_NOW" "$STEP_TOTAL" "$*" "$C_END"; }
 pass()  { printf '  %s✓%s %s\n' "$C_GRN" "$C_END" "$*"; }
 info()  { printf '  %s· %s%s\n'  "$C_DIM" "$*" "$C_END"; }
 fail() {
   printf '  %s✗ FAILED:%s %s\n' "$C_RED" "$C_END" "$*" >&2
-  printf '\n%s%sboot: FAILED at step [%d/%d]%s\n' \
-    "$C_BLD" "$C_RED" "$STEP_NOW" "$STEP_TOTAL" "$C_END" >&2
+  printf '\n%s%sboot: FAILED at step [%d/%d]%s\n' "$C_BLD" "$C_RED" "$STEP_NOW" "$STEP_TOTAL" "$C_END" >&2
   exit 1
 }
 
-# ═════ [1] preflight — أدواتٌ قبل الأفعال ══════════════════════════════════
+# مساعدةٌ: هل /v1/health يجيب؟
+health_responds() {
+  curl -fsS --max-time 3 "http://127.0.0.1:$API_PORT/v1/health" >/dev/null 2>&1
+}
+
+# مساعدةٌ: كم من الحاويّات ذات البادئة قيد التشغيل؟
+running_show_containers() {
+  docker ps --filter 'name=pf-mediakit-show-' --filter 'status=running' --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' '
+}
+
+# ═════ [1] preflight ═══════════════════════════════════════════════════════
 step "preflight · أدواتٌ قبل الأفعال"
 
 for tool in docker colima tmux curl lsof pgrep ps; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    fail "$tool غير موجود في PATH"
-  fi
+  command -v "$tool" >/dev/null 2>&1 || fail "$tool غير موجود في PATH"
 done
 pass "docker · colima · tmux · curl · lsof · pgrep · ps — كلُّها موجودة"
 
-# Node عبر PATH prepend لا عبر source (feedback-nvm-path-prepend)
-if [ ! -x "$NODE_BIN/node" ]; then
-  fail "node $NODE_VERSION غير موجود في $NODE_BIN — nvm install قبل هذا السكربت"
-fi
-if [ ! -x "$NODE_BIN/pnpm" ]; then
-  fail "pnpm غير موجود في $NODE_BIN — corepack enable قبل هذا السكربت"
-fi
+[ -x "$NODE_BIN/node" ] || fail "node $NODE_VERSION غير موجود في $NODE_BIN"
+[ -x "$NODE_BIN/pnpm" ] || fail "pnpm غير موجود في $NODE_BIN"
 export PATH="$NODE_BIN:$PATH"
 pass "node=$(node --version) · pnpm=$(pnpm --version) — عبر PATH لا source"
 
-# ملفّات المشروع
-[ -d "$REPO" ]      || fail "REPO مفقود: $REPO"
+[ -d "$REPO" ] || fail "REPO مفقود: $REPO"
 [ -d "$SHOW_TREE" ] || fail "SHOW_TREE مفقود: $SHOW_TREE"
 [ -x "$REPO/bin/mk-show" ] || fail "$REPO/bin/mk-show غير قابل للتنفيذ"
-[ -f "$SHOW_TREE/.env.show" ] || fail "$SHOW_TREE/.env.show مفقود — bin/mk-show up أوّلاً لتوليده"
+[ -f "$SHOW_TREE/.env.show" ] || fail "$SHOW_TREE/.env.show مفقود"
 [ -f "$WORKER_DIR/src/api-worker.ts" ] || fail "$WORKER_DIR/src/api-worker.ts مفقود"
 pass "بنية الملفّات · REPO · SHOW_TREE · mk-show · .env.show · api-worker.ts — سليمة"
 
-# ═════ [2] colima mediakit — لا تلمس default (منهاج) ═══════════════════════
+# ═════ [2] colima ═══════════════════════════════════════════════════════════
 step "colima · profile=$COLIMA_PROFILE (لا تلمس default)"
 
 colima_status="$(colima status --profile "$COLIMA_PROFILE" 2>&1 || true)"
 if printf '%s' "$colima_status" | grep -q "is running"; then
   pass "colima [$COLIMA_PROFILE] is running — لا تشغيل"
 else
-  info "colima [$COLIMA_PROFILE] not running — أُشغّلُه (لا ألمس default)"
+  info "colima [$COLIMA_PROFILE] not running — أُشغّلُه"
   colima start --profile "$COLIMA_PROFILE" >/dev/null 2>&1 \
     || fail "colima start --profile $COLIMA_PROFILE فشل"
   pass "colima [$COLIMA_PROFILE] started"
 fi
 
-# ═════ [3] docker context = colima-mediakit ════════════════════════════════
+# ═════ [3] docker context ═══════════════════════════════════════════════════
 step "docker context · لا نلمس شيئاً خارج $DOCKER_CTX"
 
 curr_ctx="$(docker context show 2>/dev/null || echo none)"
-if [ "$curr_ctx" != "$DOCKER_CTX" ]; then
+[ "$curr_ctx" = "$DOCKER_CTX" ] || {
   info "context الحاليّ = $curr_ctx — أبدّله إلى $DOCKER_CTX"
-  docker context use "$DOCKER_CTX" >/dev/null 2>&1 \
-    || fail "تعذّر تبديل السياق إلى $DOCKER_CTX"
-fi
-curr_ctx="$(docker context show 2>/dev/null || echo none)"
-[ "$curr_ctx" = "$DOCKER_CTX" ] || fail "context لا يزال '$curr_ctx' لا '$DOCKER_CTX'"
+  docker context use "$DOCKER_CTX" >/dev/null 2>&1 || fail "تعذّر تبديل السياق"
+}
 pass "docker context = $DOCKER_CTX"
 
-# ═════ [4] mk-show up — containers + api + studio + seed ═══════════════════
-# قاعدة idempotency: `mk-show up` يفشل إن كان المنفذُ محجوزاً — حتّى ولو
-# كان الحجزُ لنفس الطقم (Colima SSH mux forwarding). لذلك نتحقّق أوّلاً:
-# هل /v1/health يجيب؟ إن نعم، الطقمُ قائم، لا نستدعي mk-show up أصلاً.
-step "mk-show up · حاويّات + api + studio + seed"
+# ═════ [4] mk-show up (مع اكتشاف الحالة الجزئيّة · §٦) ═══════════════════
+step "mk-show up · حاويّات + api + studio + seed (مع استرجاع الحالة الجزئيّة)"
 
-if lsof -nP -iTCP:"$API_PORT"    -sTCP:LISTEN >/dev/null 2>&1 \
-&& lsof -nP -iTCP:"$STUDIO_PORT" -sTCP:LISTEN >/dev/null 2>&1 \
-&& curl -fsS --max-time 3 "http://127.0.0.1:$API_PORT/v1/health" >/dev/null 2>&1; then
+if health_responds; then
   pass "الطقمُ قائمٌ بالفعل · /v1/health يجيب — أتخطّى mk-show up"
 else
+  # اكتشاف الحالة الجزئيّة: حاويّات قائمة، لكن /v1/health غائب
+  partial_containers="$(running_show_containers)"
+  if [ "$partial_containers" -gt 0 ]; then
+    info "حالةٌ جزئيّة · $partial_containers حاويّة قائمة والـAPI غائب — أُنزِل ما يعوق أوّلاً"
+    partial_log="$REPO/claude/reports/_boot-partial-down.log"
+    if ! "$REPO/bin/mk-show" show down > "$partial_log" 2>&1; then
+      tail -30 "$partial_log" >&2
+      fail "mk-show down (استرجاع) رجع بغير صفر — راجع $partial_log"
+    fi
+    info "التنظيف تمّ · $partial_containers حاويّة أُنزلت + processes قُتلت (لا Colima · لا tmux) — أرفع الآن"
+  fi
+
   mk_show_log="$REPO/claude/reports/_boot-mk-show.log"
-  info "الطقمُ غيرُ قائم — أُشغّل mk-show up (log=$mk_show_log)"
-  if ! "$REPO/bin/mk-show" up > "$mk_show_log" 2>&1; then
+  info "أُشغّل mk-show up (log=$mk_show_log)"
+  if ! "$REPO/bin/mk-show" show up > "$mk_show_log" 2>&1; then
     tail -30 "$mk_show_log" >&2
     fail "mk-show up رجع بغير صفر — راجع $mk_show_log"
   fi
   pass "mk-show up رجع بصفر"
 fi
 
-# ═════ [5] العامل · من شجرة العرض · .env.show · بادئة $EXPECTED_PREFIX ═════
+# ═════ [5] العامل · فحصٌ صارمٌ في الفرعَين (§٢·§٣) ═══════════════════════
 step "العامل · $WORKER_DIR · .env.show · بادئة=$EXPECTED_PREFIX"
 
-# هل عاملٌ حيٌّ بالفعل؟ (شرط §٢·٣ من mk-worker: عاملان أسوأ من صفر)
-existing_pid="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | head -1 || true)"
-if [ -n "$existing_pid" ]; then
-  info "العامل يعمل مسبقاً · PID=$existing_pid — لا أُنشئ ثانياً"
-  pass "worker PID=$existing_pid (existing)"
+# جميعُ المطابقات — لا head -1
+matches="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | tr '\n' ' ' | sed 's/  *$//')"
+match_count=0
+[ -n "$matches" ] && match_count="$(printf '%s' "$matches" | wc -w | tr -d ' ')"
+
+# §٣: أكثرُ من واحدٍ ⇒ فشلٌ صريح
+if [ "$match_count" -gt 1 ]; then
+  fail "متعدّدُ العمّال · pgrep يطابق $match_count PIDs: $matches — عاملان أسوأُ من صفر، ولا اختيارَ بـhead -1"
+fi
+
+verify_worker_live() {
+  # يقرأ البادئةَ والمسارَ من العمليّة الحيّة، ويرفع fail عند عدم المطابقة.
+  local pid="$1" origin="$2"
+  local live_cwd live_prefix
+
+  live_cwd="$(lsof -p "$pid" -a -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
+  [ -n "$live_cwd" ] || fail "$origin PID=$pid · تعذّر قراءة cwd من lsof"
+  [ "$live_cwd" = "$WORKER_DIR" ] \
+    || fail "$origin PID=$pid · cwd=$live_cwd لا $WORKER_DIR"
+
+  live_prefix="$(ps -E -p "$pid" 2>/dev/null | tr ' ' '\n' | grep '^BULLMQ_PREFIX=' | head -1 | cut -d= -f2- | tr -d '\n')"
+  [ -n "$live_prefix" ] || fail "$origin PID=$pid · لا BULLMQ_PREFIX في بيئة العمليّة (ps -E)"
+  [ "$live_prefix" = "$EXPECTED_PREFIX" ] \
+    || fail "$origin PID=$pid · BULLMQ_PREFIX=$live_prefix لا $EXPECTED_PREFIX"
+}
+
+if [ "$match_count" -eq 1 ]; then
+  # §٢: تحقّق من العامل القائم كما يراه نفسُه (لا فرق بين موجود ومطلوق حديثاً)
+  existing_pid="$matches"
+  info "عاملٌ قائم PID=$existing_pid — أفحصه من ps -E و lsof"
+  verify_worker_live "$existing_pid" "existing worker"
+  WORKER_PID="$existing_pid"
+  pass "worker PID=$WORKER_PID (existing · cwd+prefix تحقَّقا من العمليّة الحيّة)"
 else
+  # count == 0 · إطلاقٌ جديد
   info "لا عامل حيّ — أُشغِّلُه من $WORKER_DIR"
-  # الأسرار من .env.show — لا تُطبع (feedback-names-not-values)
   set -a
   # shellcheck disable=SC1091
   . "$SHOW_TREE/.env.show"
   set +a
+  [ "${BULLMQ_PREFIX:-}" = "$EXPECTED_PREFIX" ] \
+    || fail ".env.show أعطى BULLMQ_PREFIX=${BULLMQ_PREFIX:-<فارغة>} لا $EXPECTED_PREFIX"
 
-  # تحقّق أنّ .env.show أعطانا البادئةَ المتوقَّعة (بلا طباعة قيَم أخرى)
-  if [ "${BULLMQ_PREFIX:-}" != "$EXPECTED_PREFIX" ]; then
-    fail ".env.show أعطى BULLMQ_PREFIX=${BULLMQ_PREFIX:-<فارغة>} لا $EXPECTED_PREFIX"
-  fi
-  info "BULLMQ_PREFIX من .env.show = $EXPECTED_PREFIX ✓"
-
-  # أطلق العامل — cwd صريحاً · نsplit من subshell للحفاظ على PID الأمّ
   (
     cd "$WORKER_DIR"
     nohup node --import tsx src/api-worker.ts > "$WORKER_LOG" 2>&1 &
-    echo $! > "$WORKER_PID_FILE"
     disown 2>/dev/null || true
   )
   sleep 4
 
-  new_pid="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | head -1 || true)"
-  [ -n "$new_pid" ] || fail "العامل لم يبدأ خلال 4s — راجع $WORKER_LOG"
-  pass "worker PID=$new_pid · log=$WORKER_LOG"
+  new_matches="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | tr '\n' ' ' | sed 's/  *$//')"
+  new_count=0
+  [ -n "$new_matches" ] && new_count="$(printf '%s' "$new_matches" | wc -w | tr -d ' ')"
+  if [ "$new_count" -gt 1 ]; then
+    fail "بعد الإطلاق · pgrep يطابق $new_count PIDs: $new_matches — نشوءُ مكرّرٍ · تدخّل يدويّ"
+  fi
+  [ "$new_count" -eq 1 ] || fail "العامل لم يبدأ خلال 4s — راجع $WORKER_LOG"
+  WORKER_PID="$new_matches"
+  verify_worker_live "$WORKER_PID" "new worker"
+  pass "worker PID=$WORKER_PID (new · cwd+prefix تحقَّقا من العمليّة الحيّة)"
 fi
 
-# ═════ [6] tmux · mkwatch · الخمس · mkghost ════════════════════════════════
-step "tmux · mkwatch · الخمس · mkghost"
+# ═════ [6] tmux · إنشاءٌ عند الغياب فقط · لا قتلَ أبداً ═══════════════════
+step "tmux · $TMUX_WATCHERS + $TMUX_INTERACTIVE"
 
-created=0
-existed=0
-for s in $TMUX_SESSIONS; do
+created=0 existed=0
+for s in $TMUX_WATCHERS $TMUX_INTERACTIVE; do
   if tmux has-session -t "$s" 2>/dev/null; then
     existed=$((existed + 1))
     continue
   fi
   case "$s" in
-    mkwatch)
-      tmux new-session -d -s "$s" "bash $REPO/claude/bin/mk-watch.sh" \
-        || fail "tmux new-session $s فشل"
-      ;;
-    mkghost)
-      tmux new-session -d -s "$s" "bash $REPO/claude/bin/mk-ghost-watch.sh" \
-        || fail "tmux new-session $s فشل"
-      ;;
-    *)
-      # الخمس · قذائف فارغة · المالكُ يُشغّل claude يدوياً بعد الوصل
-      tmux new-session -d -s "$s" \
-        || fail "tmux new-session $s فشل"
-      ;;
+    mkwatch)  tmux new-session -d -s "$s" "bash $REPO/claude/bin/mk-watch.sh" || fail "tmux new-session $s فشل" ;;
+    mkghost)  tmux new-session -d -s "$s" "bash $REPO/claude/bin/mk-ghost-watch.sh" || fail "tmux new-session $s فشل" ;;
+    *)        tmux new-session -d -s "$s" || fail "tmux new-session $s فشل" ;;
   esac
   created=$((created + 1))
 done
-pass "tmux · $existed كانت قائمة · $created أُنشئت الآن"
+pass "tmux · $existed كانت قائمة · $created أُنشئت الآن (لا قتلَ لأيّ شاشة)"
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ═════ PROOF — سطرُ قياسٍ لكلّ قطعةٍ · لا كلمةَ «يعمل» بلا برهان ═══════════
+# ═════ PROOF — سطرُ قياسٍ لكلّ قطعةٍ ══════════════════════════════════════
 # ═════════════════════════════════════════════════════════════════════════════
 
-# ── [7] proof · API port + /v1/health commit ───────────────────────────────
+# ── [7] proof · API port + /v1/health ─────────────────────────────────────
 step "proof · API $API_PORT + /v1/health"
 
-if ! lsof -nP -iTCP:"$API_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-  fail "API port $API_PORT لا يستمع"
-fi
+lsof -nP -iTCP:"$API_PORT" -sTCP:LISTEN >/dev/null 2>&1 || fail "API port $API_PORT لا يستمع"
 health_body="$(curl -fsS --max-time 5 "http://127.0.0.1:$API_PORT/v1/health" 2>/dev/null || true)"
 [ -n "$health_body" ] || fail "/v1/health لا يجيب"
 
-# استخلاص commit + cwd من JSON — بلا jq · node يفعلها بأمان
-health_commit="$(printf '%s' "$health_body" | node -e '
-  let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
-    try { console.log(JSON.parse(s).commit || ""); } catch(e){ console.log(""); }
-  });' 2>/dev/null || echo "")"
-health_cwd="$(printf '%s' "$health_body" | node -e '
-  let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
-    try { console.log(JSON.parse(s).cwd || ""); } catch(e){ console.log(""); }
-  });' 2>/dev/null || echo "")"
+health_commit="$(printf '%s' "$health_body" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{console.log(JSON.parse(s).commit||"")}catch(e){}});' 2>/dev/null || echo "")"
+health_cwd="$(printf '%s' "$health_body" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{try{console.log(JSON.parse(s).cwd||"")}catch(e){}});' 2>/dev/null || echo "")"
 
-[ -n "$health_commit" ] || fail "/v1/health رجع بلا حقل commit — الرَّدُّ ليس JSON متوقَّعاً"
-[ -n "$health_cwd" ]    || fail "/v1/health رجع بلا حقل cwd"
-
-# cwd يجب أن يكون تحت شجرة العرض
-case "$health_cwd" in
-  "$SHOW_TREE"/*) : ;;
-  *) fail "/v1/health cwd=$health_cwd ليس تحت $SHOW_TREE" ;;
-esac
+[ -n "$health_commit" ] || fail "/v1/health بلا commit"
+[ -n "$health_cwd" ]    || fail "/v1/health بلا cwd"
+case "$health_cwd" in "$SHOW_TREE"/*) : ;; *) fail "/v1/health cwd=$health_cwd ليس تحت $SHOW_TREE" ;; esac
 pass "API $API_PORT LISTEN · /v1/health commit=$health_commit · cwd=$health_cwd"
 
-# ── [8] proof · Studio port ─────────────────────────────────────────────────
-step "proof · Studio $STUDIO_PORT"
+# ── [8] proof · Studio HTTP حقيقيّ (§١) ───────────────────────────────────
+step "proof · Studio $STUDIO_PORT · HTTP حقيقيّ ورمزُ حالةٍ من {$STUDIO_OK_STATUS}"
 
-lsof -nP -iTCP:"$STUDIO_PORT" -sTCP:LISTEN >/dev/null 2>&1 \
-  || fail "Studio port $STUDIO_PORT لا يستمع"
-pass "Studio $STUDIO_PORT LISTEN"
-
-# ── [9] proof · العامل كما يراه نفسُه (cwd من lsof · لا من ظنّنا) ─────────
-step "proof · العامل · معرِّفُه ومسارُه ووصلتُه · كما يراها هو"
-
-worker_pid="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | head -1 || true)"
-[ -n "$worker_pid" ] || fail "العامل مفقود (pgrep لم يجد src/api-worker.ts)"
-
-# cwd من jdول الـkernel · ليس من env أطلقناها
-worker_cwd="$(lsof -p "$worker_pid" -a -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
-[ -n "$worker_cwd" ] || fail "تعذّر قراءة cwd للعامل $worker_pid من lsof"
-[ "$worker_cwd" = "$WORKER_DIR" ] \
-  || fail "worker cwd=$worker_cwd لا $WORKER_DIR — تشغيلٌ من شجرةٍ خطأ"
-
-# وصلة Redis على منفذ الشوروم — إثباتُ بيئةِ العامل من طرف الشبكة
-redis_conns="$(lsof -p "$worker_pid" -a -iTCP -sTCP:ESTABLISHED 2>/dev/null \
-  | grep -c ":$REDIS_PORT " || true)"
-redis_conns="${redis_conns:-0}"
-[ "$redis_conns" -gt 0 ] \
-  || fail "العامل $worker_pid ليس متصلاً بـRedis الشوروم على $REDIS_PORT — قد يكون على redis آخر"
-
-pass "worker PID=$worker_pid · cwd=$worker_cwd · redis:$REDIS_PORT ($redis_conns وصلات)"
-
-# ── [10] proof · tmux · كلُّ الشاشات المتوقَّعة قائمة ───────────────────────
-step "proof · tmux · $TMUX_SESSIONS"
-
-missing=""
-for s in $TMUX_SESSIONS; do
-  if ! tmux has-session -t "$s" 2>/dev/null; then
-    missing="$missing $s"
-  fi
+studio_status=""
+for attempt in 1 2 3; do
+  studio_status="$(curl -sS -o /dev/null --max-time 5 -w '%{http_code}' "http://127.0.0.1:$STUDIO_PORT/" 2>/dev/null || echo "000")"
+  case " $STUDIO_OK_STATUS " in *" $studio_status "*) break ;; esac
+  info "المحاولة $attempt/3 رجعت HTTP=$studio_status — أعيد"
+  sleep 2
 done
-[ -z "$missing" ] || fail "شاشاتٌ ناقصة:$missing"
-count="$(echo "$TMUX_SESSIONS" | wc -w | tr -d ' ')"
-pass "tmux · $count/$count شاشات قائمة"
+case " $STUDIO_OK_STATUS " in
+  *" $studio_status "*)  pass "Studio $STUDIO_PORT · HTTP $studio_status (من المقبولة)" ;;
+  *)                     fail "Studio $STUDIO_PORT · HTTP=$studio_status ليس من {$STUDIO_OK_STATUS} — منفذٌ يستمع ≠ استوديو يعمل" ;;
+esac
 
-# ── [11] proof · docker containers show project alive ──────────────────────
-step "proof · حاويّات $DOCKER_CTX · مشروع pf-mediakit-show"
+# ── [9] proof · العامل كما رآه نفسُه (يعكس ما تحقَّق في [5]) ─────────────
+step "proof · العامل · معرّفُه ومسارُه وبادئتُه · كما قرأناها من العمليّة"
 
-# نحصل على أسماء الحاويّات ذات البادئة · نطلب ثلاثةً على الأقلّ (pg · redis · minio)
-running_containers="$(docker ps --filter 'name=pf-mediakit-show-' --filter 'status=running' \
-  --format '{{.Names}}' 2>/dev/null | wc -l | tr -d ' ')"
-running_containers="${running_containers:-0}"
-[ "$running_containers" -ge 3 ] \
-  || fail "حاويّات pf-mediakit-show الحيّة = $running_containers · متوقَّع ≥ 3"
-pass "docker · $running_containers حاويّة حيّة ببادئة pf-mediakit-show-"
+# نُعيد قراءةَ الشواهد لطباعتها — التحقّق تمَّ في step 5
+worker_cwd="$(lsof -p "$WORKER_PID" -a -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
+worker_prefix="$(ps -E -p "$WORKER_PID" 2>/dev/null | tr ' ' '\n' | grep '^BULLMQ_PREFIX=' | head -1 | cut -d= -f2-)"
+redis_conns="$(lsof -p "$WORKER_PID" -a -iTCP -sTCP:ESTABLISHED 2>/dev/null | grep -c ":$REDIS_PORT " || true)"
+redis_conns="${redis_conns:-0}"
+[ "$redis_conns" -gt 0 ] || fail "العامل $WORKER_PID ليس متصلاً بـRedis $REDIS_PORT"
+pass "worker PID=$WORKER_PID · cwd=$worker_cwd · BULLMQ_PREFIX=$worker_prefix · redis:$REDIS_PORT ($redis_conns وصلات)"
+
+# ── [10] proof · tmux · حضورٌ للتفاعليّة + نبضٌ للمراقبين (§٥) ───────────
+step "proof · tmux · حضور + نبضٌ من داخل اللوحات المراقِبة"
+
+# التفاعليّات: has-session فقط (المالكُ يعتني بها)
+missing=""
+for s in $TMUX_INTERACTIVE; do
+  tmux has-session -t "$s" 2>/dev/null || missing="$missing $s"
+done
+[ -z "$missing" ] || fail "شاشات تفاعليّة ناقصة:$missing"
+
+# المراقبون: أطفال shell اللوحة (سباقٌ محتملٌ — إعادةٌ واحدة)
+for s in $TMUX_WATCHERS; do
+  pane_pid="$(tmux list-panes -t "$s" -F '#{pane_pid}' 2>/dev/null | head -1)"
+  [ -n "$pane_pid" ] || fail "$s: لا pane_pid (شاشة غائبة؟)"
+  children="$(pgrep -P "$pane_pid" 2>/dev/null | head -1 || true)"
+  if [ -z "$children" ]; then
+    sleep 1
+    children="$(pgrep -P "$pane_pid" 2>/dev/null | head -1 || true)"
+  fi
+  [ -n "$children" ] || fail "$s: pane_pid=$pane_pid بلا أطفال — الحلقة ماتت وترك المراقبُ مكانَه لصدفةٍ خرساء"
+  info "$s: pane_pid=$pane_pid · child=$children (يلفّ)"
+done
+pass "tmux · $(echo $TMUX_INTERACTIVE | wc -w | tr -d ' ') تفاعليّة حاضرة · $(echo $TMUX_WATCHERS | wc -w | tr -d ' ') مراقب ينبضان"
+
+# ── [11] proof · حاويّات · صحّةٌ لا عدد + minio-init exit 0 (§٤) ─────────
+step "proof · حاويّات $DOCKER_CTX · صحّةٌ لكلّ خدمة + minio-init exit=0"
+
+for svc in $EXPECTED_HEALTH_SERVICES; do
+  name="pf-mediakit-show-$svc"
+  health="$(docker inspect --format '{{.State.Health.Status}}' "$name" 2>/dev/null || echo missing)"
+  [ "$health" = "healthy" ] || fail "container $name health=$health (المتوقَّع healthy)"
+  info "$name: healthy"
+done
+
+init_name="pf-mediakit-show-$INIT_SERVICE"
+init_state="$(docker inspect --format '{{.State.Status}}' "$init_name" 2>/dev/null || echo missing)"
+if [ "$init_state" = "missing" ]; then
+  fail "$init_name مفقود — mk-show up لم يُشغّله · الـbucket لم يُنشَأ"
+fi
+init_exit="$(docker inspect --format '{{.State.ExitCode}}' "$init_name" 2>/dev/null || echo -1)"
+case "$init_state" in
+  exited)
+    [ "$init_exit" = "0" ] || fail "$init_name exit=$init_exit (المتوقَّع 0) — الـbucket لم يُنشَأ · الرفعُ مكسورٌ صامتاً"
+    info "$init_name: exited(0) — bucket جاهز"
+    ;;
+  running)
+    info "$init_name: running (init جارٍ · مقبول)"
+    ;;
+  *)
+    fail "$init_name state=$init_state · exit=$init_exit"
+    ;;
+esac
+pass "containers · $(echo $EXPECTED_HEALTH_SERVICES | wc -w | tr -d ' ') خدمات healthy · $INIT_SERVICE اكتمل"
 
 # ═════════════════════════════════════════════════════════════════════════════
-printf '\n%s%sboot: HEALTHY%s · كلُّ %d خطوةٍ نجحت\n' \
+printf '\n%s%sboot: HEALTHY%s · كلُّ %d خطوةٍ نجحت · كلٌّ بأثرٍ لا بوجود\n' \
   "$C_BLD" "$C_GRN" "$C_END" "$STEP_TOTAL"

@@ -24,34 +24,76 @@
 
 set -euo pipefail
 
-# ═════ ثوابت البيئة ═════════════════════════════════════════════════════════
-SHOW_ROOT="${SHOW_ROOT:-$HOME/MediaKit/pf-mediakit-show}"
+# ═════ 403ب · TWO-TARGET SELECTOR — أداةٌ واحدة · طقمان · لا افتراضَ صامت ═════
+# الاستعمال: bin/mk-show <target> <command> [args]
+# الأهداف: show (الحيّ · 19070/19071) · shownext (خلفٌ · 19086/19087)
+# لا هدفَ ضمنيّاً — يُذكر أو exit≠0. القوائم أدناه هي الحقيقة الوحيدة لكلّ
+# هدف · أيّ قيمةٍ مكتوبةٍ في مكانٍ ثانٍ هي العطبُ القادم (L-133).
+
+# ثوابتُ مشتركةٌ لا تتفرّق بالهدف
 DEV_ROOT="${DEV_ROOT:-$HOME/MediaKit/pf-mediakit-dash}"
 EXPECTED_DOCKER_CTX="colima-mediakit"
-COMPOSE_PROJECT="pf-mediakit-show"
-COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
-ENV_FILE_NAME=".env.show"
-STATE_DIR_NAME=".mk-show-state"          # داخل SHOW_ROOT: pids, tag pointer, previous tag
-
-# منافذ خاصّة بالشوروم — لا تُشارك التطوير (dev API 19040 · Studio 19050).
-# غُيّرت من 19060/19061 في _AMEND-SHOWROOM-PORTS بعد كشف mkau أنّ dev قد
-# يحجز نفس النطاق. **مصدر الحقيقة الوحيد للأرقام — إن غيّرتَ شيئاً، غيّره هنا فقط.**
-API_PORT=19070
-STUDIO_PORT=19071
-PG_PORT=19062
-REDIS_PORT=19063
-MINIO_PORT=19064
-MINIO_CONSOLE_PORT=19065
-
-PG_DB="mediakit_show"
-REDIS_URL="redis://127.0.0.1:${REDIS_PORT}/0"
-S3_ENDPOINT="http://127.0.0.1:${MINIO_PORT}"
-S3_BUCKET="mk-assets-show"
-OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
-
-# الإصدار المتوقَّع لـ.env.show — يُبطل الملفّات القديمة عند upgrade.
-# v3: أضاف MINIO_ROOT_USER + MINIO_ROOT_PASSWORD (سابقاً minioadmin مشترك).
+STATE_DIR_NAME=".mk-show-state"           # نفسُ الاسم في كلا الهدفَين (داخل شجرتيهما)
 ENV_SHOW_VERSION="3"
+
+# متغيّرات الهدف — تُعبَّأ بـdeclare_target
+TARGET_NAME=""
+SHOW_ROOT=""
+ENV_FILE_NAME=""
+COMPOSE_PROJECT=""
+COMPOSE_FILE_RELATIVE=""
+API_PORT=""
+STUDIO_PORT=""
+PG_PORT=""
+REDIS_PORT=""
+MINIO_PORT=""
+MINIO_CONSOLE_PORT=""
+PG_DB=""
+REDIS_URL=""
+S3_ENDPOINT=""
+S3_BUCKET=""
+OWNER_EMAIL=""
+
+declare_target() {
+  case "$1" in
+    show)
+      TARGET_NAME="show"
+      SHOW_ROOT="${SHOW_ROOT_OVERRIDE:-$HOME/MediaKit/pf-mediakit-show}"
+      ENV_FILE_NAME=".env.show"
+      COMPOSE_PROJECT="pf-mediakit-show"
+      COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
+      API_PORT=19070
+      STUDIO_PORT=19071
+      PG_PORT=19062
+      REDIS_PORT=19063
+      MINIO_PORT=19064
+      MINIO_CONSOLE_PORT=19065
+      ;;
+    shownext)
+      TARGET_NAME="shownext"
+      SHOW_ROOT="${SHOW_ROOT_OVERRIDE:-$HOME/MediaKit/pf-mediakit-shownext}"
+      ENV_FILE_NAME=".env.shownext"
+      COMPOSE_PROJECT="pf-mediakit-shownext"
+      COMPOSE_FILE_RELATIVE="infra/docker-compose.shownext.yml"
+      API_PORT=19086
+      STUDIO_PORT=19087
+      PG_PORT=19082
+      REDIS_PORT=19083
+      MINIO_PORT=19084
+      MINIO_CONSOLE_PORT=19085
+      ;;
+    *)
+      echo "[mk-show] ✗ target غير معروف: '$1' — الأهداف: show · shownext" >&2
+      echo "        الاستعمال: bin/mk-show <target> <command> [args]" >&2
+      exit 5
+      ;;
+  esac
+  PG_DB="mediakit_show"                   # نفس اسم DB · حاويّة postgres منفصلةٌ لكلّ هدف
+  REDIS_URL="redis://127.0.0.1:${REDIS_PORT}/0"
+  S3_ENDPOINT="http://127.0.0.1:${MINIO_PORT}"
+  S3_BUCKET="mk-assets-${TARGET_NAME}"
+  OWNER_EMAIL="${OWNER_EMAIL_OVERRIDE:-mk@primeflow.co}"
+}
 
 # ═════ 402ب §٤ · مفتاح الوضع ══════════════════════════════════════════════
 # SHOWROOM_MODE يختار NEXT_PUBLIC_API_URL و CORS_ORIGIN من عائلتَين:
@@ -84,6 +126,23 @@ built_mode() {
   [ -f "$f" ] && cat "$f" || echo ""
 }
 
+# ═════ 330 · فحصُ الدخان — نقطةُ ربطٍ واحدة ═══════════════════════════════
+# تُستدعى من cmd_up (تلقائيّاً) ومن cmd_smoke (يدويّاً). مصدرُ التنفيذ
+# الوحيد لسكربتِ الدخان — يعمل من شجرة الهدف · بنفس اسم الهدف.
+run_smoke() {
+  local script="$SHOW_ROOT/scripts/mk-show-smoke.mjs"
+  if [ ! -f "$script" ]; then
+    warn "scripts/mk-show-smoke.mjs غير موجود في $SHOW_ROOT — لا فحصَ زائر."
+    return 0
+  fi
+  node "$script" "$TARGET_NAME"
+}
+
+cmd_smoke() {
+  [[ -d "$SHOW_ROOT" ]] || die "SHOW_ROOT غير موجود: $SHOW_ROOT"
+  run_smoke
+}
+
 set_built_mode() {
   local f="$(state_dir)/$BUILT_MODE_FILE_NAME"
   mkdir -p "$(state_dir)"
@@ -101,8 +160,36 @@ set_built_mode() {
 # نجا الحيُّ فقط بالحظّ (Resource in use).
 guard_destroy_target() {
   local action="$1"  # فقط للرسالة
-  local expected_prefix
-  expected_prefix="$(basename "$SHOW_ROOT")"
+  # 403ب: البادئةُ من TARGET_NAME (لا basename)، حتّى لو أعاد SHOW_ROOT_OVERRIDE
+  # تسمية الشجرة. مصدرُ الحقيقة الوحيد = target المُذكور صراحةً.
+  local expected_prefix="pf-mediakit-${TARGET_NAME}"
+
+  # 403ب · فحصٌ ساكن لملفّ compose — يمسك سيناريو 402ج (volumes منسيّة
+  # حتّى لو compose ps فارغة). نلتقط: container_name · volumes name · networks name.
+  local compose_file="$SHOW_ROOT/$COMPOSE_FILE_RELATIVE"
+  if [ -f "$compose_file" ]; then
+    local declared_mismatched=""
+    # container_name: X · volume `name: X` · network `name: X` (يعبِّئُها docker حرفيّاً)
+    local names
+    names="$(grep -E '^\s*(container_name|name):\s*[^ #]+' "$compose_file" 2>/dev/null | awk '{print $2}' | LC_ALL=C sort -u || true)"
+    for n in $names; do
+      case "$n" in
+        "$expected_prefix"|"$expected_prefix"-*) : ;;   # مطابق
+        pf-mediakit-*)                                  # مصدرُ pf-mediakit لكنّه هدفٌ آخر
+          declared_mismatched="$declared_mismatched\n  - (compose) $n"
+          ;;
+        *) : ;;                                          # ليس pf-mediakit-* · نتركه (شبكاتٌ عامّة إلخ)
+      esac
+    done
+    if [ -n "$declared_mismatched" ]; then
+      printf '%s\n' "[mk-show] ✗ guard: ملفُّ compose يُصرِّح موارِدَ خارج $expected_prefix-" >&2
+      printf '%s\n' "        target=$TARGET_NAME · compose file=$compose_file" >&2
+      printf '%s\n' "        الأسماءُ المُصرَّحةُ لا تطابق:" >&2
+      printf '%b\n'  "$declared_mismatched" >&2
+      printf '%s\n' "        رفضٌ صريح · حذفُ volume بلا رجعة (سيناريو 402ج)." >&2
+      exit 4
+    fi
+  fi
 
   # الحاويّاتُ التي سيتعامل معها compose الحاليّ (بأسماءِ خدماتها لا بحاويّاتها)
   # نستعمل compose ps -aq — إن رجع empty، لا شيء ليُهدَم أصلاً.
@@ -362,8 +449,17 @@ cmd_up() {
   #    فشل build لا يُسقط الشووروم — API + seed أهمّ. تُبلَّغ الحال في stdout.
   start_studio
 
+  # 6) 330 · فحصُ الدخان — نقفُ موقفَ الزائر (لا نظرةَ داخليّة). حاويّاتٌ
+  # حيّةٌ وحالةٌ 200 لا تعني «باب مفتوح» — استعادُ ٣٣٠ ما لم يكن حارسٌ
+  # ينظر كالزائر. الأمرُ المستقلّ: `bin/mk-show <target> smoke`.
   say ""
-  say "✓ الشووروم يعمل."
+  say "6) فحصُ الدخان — نقفُ موقفَ الزائر (330)"
+  run_smoke || die "الطقمُ قائمٌ داخليّاً لكنّ الزائرَ لا يستطيع دخوله (mk-show-smoke).
+        راجع الرمزَ في scripts/mk-show-smoke.mjs (10 صحّة · 20 دخول · 30 اتّجاه · 40 حبر · 50 نظافة · 99 إعداد).
+        الطقمُ لم يُصرَّح 'up' — الحاويّاتُ قد تبقى قائمةً · القرارُ لك."
+
+  say ""
+  say "✓ الشووروم يعمل — الزائرُ يستطيع الدخولَ (الخمس اجتزن)."
   say "  API:    http://127.0.0.1:$API_PORT/v1/health"
   say "  Studio: http://127.0.0.1:$STUDIO_PORT"
   say "  السجلّات: bin/mk show logs api  |  bin/mk show logs studio"
@@ -827,16 +923,18 @@ USAGE
 }
 
 # ═════ 402ب §٤ · cmd_mode — يعرض/يبدّل SHOWROOM_MODE بلا تحرير يدويّ ══════
+# 403ب: cmd_mode لا يحتاج compose file — يعمل حتّى لو غاب (كحالة shownext الآن).
+# يحتاج فقط: shjrat موجودة + env file للهدف موجود.
 cmd_mode() {
-  require_show_worktree
+  [[ -d "$SHOW_ROOT" ]] || die "SHOW_ROOT غير موجود: $SHOW_ROOT"
   ensure_state_dir
   local ef; ef="$(env_file)"
-  [[ -f "$ef" ]] || die ".env.show غير موجود — bin/mk show up أوّلاً لتوليده."
+  [[ -f "$ef" ]] || die "$(basename $ef) غير موجود في $SHOW_ROOT — لا mode بلا env."
 
   local new_mode="${1:-}"
   if [[ -z "$new_mode" ]]; then
-    # عرضٌ فقط
-    local cur; cur="$(grep -E '^SHOWROOM_MODE=' "$ef" 2>/dev/null | cut -d= -f2- | tr -d '\r')"
+    # عرضٌ فقط · grep بلا مطابقة يعود 1 · || true لمنع pipefail من قتلنا
+    local cur; cur="$(grep -E '^SHOWROOM_MODE=' "$ef" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true)"
     echo "  SHOWROOM_MODE في .env.show: ${cur:-<غير محدَّد → سيُقرَأ كـ$SHOWROOM_MODE_DEFAULT>}"
     echo "  الوضع المبنيّ في .next     : $(built_mode | sed 's/^$/<غير محدَّد>/')"
     echo "  الاستعمال: bin/mk show mode <tunnel|local>"
@@ -864,6 +962,23 @@ cmd_mode() {
   say "شغّل bin/mk show up لبناءِ Studio بالوضع الجديد (يُجبَر إعادةُ البناء)."
 }
 
+# 403ب · dispatcher — target أوّلاً · لا افتراضَ صامت.
+target="${1:-}"
+shift || true
+
+# مساعدةٌ عامّةٌ لا تحتاج target
+case "$target" in
+  ""|-h|--help)
+    echo "الاستعمال: bin/mk-show <target> <command> [args]"
+    echo "الأهداف: show · shownext"
+    echo "الأوامر: up · down · reset · gate · promote · rollback · status · logs · seed · mode"
+    exit 0
+    ;;
+esac
+
+declare_target "$target"
+say "target = $TARGET_NAME · SHOW_ROOT = $SHOW_ROOT"
+
 cmd="${1:-}"
 shift || true
 case "$cmd" in
@@ -877,6 +992,7 @@ case "$cmd" in
   logs)     cmd_logs "$@" ;;
   seed)     cmd_seed ;;
   mode)     cmd_mode "$@" ;;
+  smoke)    cmd_smoke ;;
   ""|-h|--help) usage ;;
-  *) die "أمر غير معروف: $cmd — bin/mk show --help" ;;
+  *) die "أمر غير معروف: $cmd — bin/mk-show $target --help" ;;
 esac
