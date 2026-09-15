@@ -135,6 +135,7 @@
         "renderFailed": "Render failed",
         "renderFailedGeneric": "Render failed — لم نتعرَّف على السبب. أَرسِل رمزَ الحادثةِ إلى الدعم.",
         "renderFailedCode": "رمزُ الخطأ:",
+        "renderIdLabel": "رمزُ الحادثة:",
         "transitions": "Available transitions",
         "noTransitions": "No transitions from this state.",
         "reasonLabel": "Transition reason (at least one line)",
@@ -696,7 +697,9 @@
     "delete": "Delete",
     "confirm": "Confirm",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "copy": "نسخ",
+    "copied": "تُسِخ ✓"
   },
   "table": {
     "empty": "No rows yet.",

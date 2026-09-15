@@ -134,6 +134,7 @@
         "renderFailed": "فشل التصدير",
         "renderFailedGeneric": "فشل التصدير — لم نتعرَّف على السبب. أَرسِل رمزَ الحادثةِ إلى الدعم.",
         "renderFailedCode": "رمزُ الخطأ:",
+        "renderIdLabel": "رمزُ الحادثة:",
         "transitions": "التحوّلات المتاحة",
         "noTransitions": "لا تحوّلات من هذه الحالة.",
         "reasonLabel": "سبب التحوّل (سطر واحد على الأقل)",
@@ -695,7 +696,9 @@
     "delete": "حذف",
     "confirm": "تأكيد",
     "close": "إغلاق",
-    "search": "بحث"
+    "search": "بحث",
+    "copy": "نسخ",
+    "copied": "تُسِخ ✓"
   },
   "table": {
     "empty": "لا صفوف بعد.",

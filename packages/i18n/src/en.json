@@ -134,6 +134,7 @@
         "renderFailed": "Render failed",
         "renderFailedGeneric": "Render failed — reason not recognised. Send the incident code to support.",
         "renderFailedCode": "Error code:",
+        "renderIdLabel": "Incident id:",
         "transitions": "Available transitions",
         "noTransitions": "No transitions from this state.",
         "reasonLabel": "Transition reason (at least one line)",
@@ -695,7 +696,9 @@
     "delete": "Delete",
     "confirm": "Confirm",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "copy": "Copy",
+    "copied": "Copied ✓"
   },
   "table": {
     "empty": "No rows yet.",

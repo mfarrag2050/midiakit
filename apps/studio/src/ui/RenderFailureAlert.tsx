@@ -18,6 +18,7 @@ import { Alert } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import type { RenderRow } from '@/src/api/endpoints/renders';
 import { actionKeyFor } from '@/src/api/error-action';
+import { CopyableCode } from './CopyableCode';
 
 export function RenderFailureAlert({ row }: { row: RenderRow }): JSX.Element {
   const { t, has } = useLocale();
@@ -43,6 +44,11 @@ export function RenderFailureAlert({ row }: { row: RenderRow }): JSX.Element {
           </span>
         </p>
       )}
+      {/* ٣٩٠ §٣ — رمزُ الحادثة (UUID الرندر): مستقرٌّ عبر restart، يربطُ
+          الشكوى بالصفّ في القاعدة، لاتينيٌّ داخل نصٍّ عربيّ ⇒ dir="ltr". */}
+      <div className="mt-2">
+        <CopyableCode value={row.id} labelKey="pages.projects.editor.renderIdLabel" />
+      </div>
     </Alert>
   );
 }
