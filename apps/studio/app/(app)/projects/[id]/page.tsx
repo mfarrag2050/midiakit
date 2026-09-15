@@ -43,6 +43,7 @@ import { roleName } from '@/src/lib/role-names';
 import { AssetPicker } from '@/src/ui/AssetPicker';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
 import { RenderFailureAlert } from '@/src/ui/RenderFailureAlert';
+import { RenderPendingAlert } from '@/src/ui/RenderPendingAlert';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -1093,20 +1094,17 @@ export default function ProjectEditorPage(): JSX.Element {
                 }
               />
             )}
-            {renderRow && renderRow.status !== 'failed' && (
+            {renderRow && (renderRow.status === 'queued' || renderRow.status === 'running') && (
+              <RenderPendingAlert row={renderRow} />
+            )}
+            {renderRow?.status === 'succeeded' && renderRow.output_url && (
               <div className="text-xs text-fg-muted">
-                {renderRow.status === 'queued' &&
-                  t('pages.projects.editor.renderQueued')}
-                {renderRow.status === 'running' &&
-                  t('pages.projects.editor.renderRunning')}
-                {renderRow.status === 'succeeded' && renderRow.output_url && (
-                  <a
-                    href={renderRow.output_url}
-                    className="text-accent hover:underline"
-                  >
-                    {t('pages.projects.editor.renderReady')}
-                  </a>
-                )}
+                <a
+                  href={renderRow.output_url}
+                  className="text-accent hover:underline"
+                >
+                  {t('pages.projects.editor.renderReady')}
+                </a>
               </div>
             )}
             {renderRow?.status === 'failed' && (
