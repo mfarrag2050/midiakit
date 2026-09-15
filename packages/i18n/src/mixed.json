@@ -394,7 +394,7 @@
         },
         "unsavedChanges": "unsaved changes",
         "logo": {
-          "sectionSubtitle": "SVG or PNG · بين 40 و2048 بكسل · النسبة بين 1:6 و6:1.",
+          "sectionSubtitle": "SVG or PNG · بين ٤٠ و٢٠٤٨ بكسل · النسبة بين ١:٦ و٦:١.",
           "chooseFile": "Choose logo file",
           "replaceFile": "استبدل الشعار",
           "uploadingLabel": "uploading…",
@@ -682,10 +682,10 @@
       "newPassword": "New password",
       "tenantName": "اسم الوكالة",
       "emailPlaceholder": "you@agency.com",
-      "passwordPlaceholder": "12 characters على الأقلّ"
+      "passwordPlaceholder": "١٢ حرفاً على الأقلّ"
     },
     "hint": {
-      "passwordMin": "12 حرفاً على الأقل."
+      "passwordMin": "١٢ حرفاً على الأقلّ."
     }
   },
   "actions": {
@@ -719,7 +719,7 @@
     "TOKEN_INVALID": "رمز الجلسة غير صالح.",
     "SESSION_REVOKED": "أُلغيت الجلسة — سجّل الدخول من جديد.",
     "REFRESH_TOKEN_INVALID": "رمز التجديد غير صالح.",
-    "PASSWORD_TOO_WEAK": "كلمة السر قصيرة — 12 حرفاً على الأقل.",
+    "PASSWORD_TOO_WEAK": "كلمة السر قصيرة — ١٢ حرفاً على الأقلّ.",
     "EMAIL_INVALID": "بريد إلكتروني غير صالح.",
     "EMAIL_TAKEN": "البريد مستعمَل — سجّل الدخول بدلاً من إنشاء حساب.",
     "RESET_TOKEN_EXPIRED": "رابط الاستعادة منتهي — اطلب جديداً.",
@@ -731,7 +731,7 @@
     "PENDING_INVITE_EXISTS": "دعوة سابقة لهذا البريد لا تزال معلَّقة.",
     "SEATS_EXHAUSTED": "استُنفدت المقاعد في باقتك — رقّها لدعوة المزيد.",
     "LAST_OWNER": "لا يمكن حذف آخر مالك في الوكالة.",
-    "REASON_TOO_SHORT": "السبب قصير — 10 أحرف على الأقل.",
+    "REASON_TOO_SHORT": "السبب قصير — ١٠ أحرف على الأقلّ.",
     "ACCOUNT_SUSPENDED": "الحساب موقوف — راسل الدعم.",
     "UNSUPPORTED_KIND": "نوع الأصل غير مدعوم.",
     "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "نوع الملف لا يطابق نوع الأصل.",
@@ -740,7 +740,7 @@
     "UPLOAD_NOT_COMPLETED": "الرفع لم يكتمل — أعد المحاولة.",
     "INVALID_FONT_FILE": "ملف الخط غير صالح.",
     "INVALID_FONT_METRICS": "font metrics missing — الخطّ المرفوع لم تُقَس أبعاده. شغّل `pnpm measure-font <path.ttf>` ثمّ أعِد الرفع.",
-    "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين 40 و2048 بكسل، ونسبة العرض إلى الارتفاع بين 1:6 و6:1.",
+    "INVALID_LOGO_DIMENSIONS": "logo dimensions out of range — يجب أن يكون العرض والارتفاع بين ٤٠ و٢٠٤٨ بكسل، ونسبة العرض إلى الارتفاع بين ١:٦ و٦:١.",
     "RENDER_FAILED": "تعذّر إخراج البطاقة — أعد المحاولة.",
     "RENDER_TIMEOUT": "export timed out — الرسم بدأ لكنّه لم يُنهَ في الوقت. أعد المحاولة.",
     "RENDER_QUEUE_STUCK": "render service لا تستجيب — الطلب في queue بلا worker. جرّب بعد قليل.",
