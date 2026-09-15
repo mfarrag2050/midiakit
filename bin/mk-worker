@@ -31,8 +31,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKER_DIR="${MK_WORKER_DIR:-${SCRIPT_DIR%/bin}/apps/renderer}"
 WORKER_CMD="node --import tsx src/api-worker.ts"
 LEDGER_PATH="${MK_LEDGER_PATH:-/Users/mdervis/MediaKit/pf-mediakit/claude/reports/_worker.md}"
-REDIS_DB="${MK_REDIS_DB:-3}"
 SESSION="${MK_SESSION:-unknown}"
+
+# ── إعدادات Redis من البيئة (لا `:6379` مثبَّت — 290 · §١·٣) ──
+# REDIS_URL هو المصدر الحاكم. تُشتَقّ منه المضيف والمنفذ ورقم الـDB.
+# MK_REDIS_DB (إن وُجد) يتجاوز DB من URL — للاختبار.
+REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379/${MK_REDIS_DB:-0}}"
+if [[ "$REDIS_URL" =~ ^redis://([^:/]+):([0-9]+)/([0-9]+)$ ]]; then
+  REDIS_HOST="${BASH_REMATCH[1]}"
+  REDIS_PORT="${BASH_REMATCH[2]}"
+  REDIS_DB="${MK_REDIS_DB:-${BASH_REMATCH[3]}}"
+else
+  echo "[mk-worker] FATAL: REDIS_URL شكلٌ خاطئ: ${REDIS_URL}" >&2
+  echo "  المتوقَّع: redis://<host>:<port>/<db>" >&2
+  exit 65
+fi
 
 # ── وسيط --by=<name> يتجاوز env ─────────────────────────────
 for arg in "$@"; do
@@ -62,12 +75,22 @@ get_live_cwd() {
 }
 
 count_redis_clients() {
-  redis-cli -n "$REDIS_DB" CLIENT LIST 2>/dev/null | wc -l | tr -d ' '
+  # يقرأ من REDIS_HOST:REDIS_PORT — لا `-n` وحده الذي يفترض localhost:6379
+  # (290 · §١·٣). فشل الاتصال (منفذ خطأ) يعيد 0 لا يُسقط السكربت.
+  # نستعمل awk لضمان مخرَج رقميّ نظيف (بلا كذبة «0\n0» — §١·هوستايل-١).
+  local out
+  out=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -n "$REDIS_DB" CLIENT LIST 2>/dev/null) || true
+  echo -n "$out" | awk 'NF>0 {c++} END {print c+0}'
 }
 
 worker_connected_redis() {
+  # يقرأ المنفذ من REDIS_URL — لا `:6379` مثبَّت (290 · §١·٣).
+  # awk بدل `grep -c || echo 0` — الأخير يُخرج «0\n0» عند عدم مطابقة
+  # (grep -c يطبع 0 ثمّ يخرج بحالة 1 فيُشغل `|| echo 0` مرّةً ثانية).
   local pid="$1"
-  lsof -p "$pid" -i -a 2>/dev/null | grep -c ":6379.*ESTABLISHED" || echo 0
+  local out
+  out=$(lsof -p "$pid" -i -a 2>/dev/null) || true
+  echo -n "$out" | awk -v pat=":${REDIS_PORT}.*ESTABLISHED" '$0 ~ pat {c++} END {print c+0}'
 }
 
 now_iso() {
@@ -106,7 +129,12 @@ cmd_status() {
   if [ "$live_cwd" != "$WORKER_DIR" ]; then
     echo "  cwd (env/default): ${WORKER_DIR}  ← [لا يطابق العمليّة الحيّة]"
   fi
-  echo "  Redis DB/${REDIS_DB}: ${clients} total clients · ${rc} من العامل."
+  # عرض Redis يعتمد على العدد — أخضر/أحمر واضح (290 · §١·٣).
+  if [ "${rc:-0}" -gt 0 ]; then
+    echo "  Redis: متّصل (${REDIS_HOST}:${REDIS_PORT}/DB${REDIS_DB}) · ${rc} sockets من العامل · ${clients} clients إجماليّ."
+  else
+    echo "  Redis: منقطع (${REDIS_HOST}:${REDIS_PORT}/DB${REDIS_DB}) · 0 sockets من العامل · ${clients} clients إجماليّ."
+  fi
   return 0
 }
 
@@ -204,7 +232,8 @@ Actions:
 Env:
   MK_WORKER_DIR    مسار العامل (default: ${WORKER_DIR}).
   MK_LEDGER_PATH   مسار _worker.md (default: ${LEDGER_PATH}).
-  MK_REDIS_DB      رقم Redis DB (default: ${REDIS_DB}).
+  REDIS_URL        redis://<host>:<port>/<db> (current: ${REDIS_URL}).
+  MK_REDIS_DB      يتجاوز DB من URL — للاختبار (current: ${REDIS_DB}).
   MK_SESSION       اسم الجلسة الطالبة (default: ${SESSION}).
   MK_WORKER_LOG    مسار log (default: /tmp/mk-worker.log).
 
