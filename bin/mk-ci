@@ -49,9 +49,48 @@ PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
 # (dev_migration_pass / dev_app_pass) — نفس السكربت يُنشئهما عبر init mount.
 
 if [[ "${1:-}" == "--regen-refs" ]]; then
-  echo "[mk-ci] --regen-refs غير مُنفَّذ بعد — راجع scripts/generate-plan-golden.mjs يدوياً."
-  echo "        سيُضاف عند أوّل حاجة توليد بعد قرار مالك بتحسين مرجع."
-  exit 1
+  # 411ب (2026-09-15) — إعادة توليد snapshots/ و snapshots-semantic/ من
+  # preview.mjs مباشرةً · لا نسخٌ بينهما · حارسُ فخّ النسخ في الذيل.
+  echo "[mk-ci --regen-refs] Linux container · preview.mjs × 4 (2 هويّتَين × 2 وضعَي دلالي)"
+  echo "[mk-ci --regen-refs] المسار: preview.mjs → out/{nosemantic,semantic}/ → snapshots/ و snapshots-semantic/"
+  echo ""
+  set +e
+  docker run --rm \
+    --name "${CI_CONTAINER}-regen" \
+    --platform linux/arm64 \
+    -v "${ROOT}:/work" \
+    -v "${VOLUME}:/work/node_modules" \
+    -w /work \
+    "${IMAGE}" \
+    bash -c '
+      set -e
+      echo "[regen · حاوية] apt install …"
+      apt-get update -qq > /dev/null 2>&1
+      apt-get install -qq -y --no-install-recommends git > /dev/null 2>&1
+      corepack enable > /dev/null 2>&1
+      corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+      echo "[regen · حاوية] pnpm install --frozen-lockfile …"
+      pnpm install --frozen-lockfile 2>&1 | tail -3
+      echo "[regen · حاوية] preview.mjs × 4 …"
+      for brand in default client-demo; do
+        for semantic in off on; do
+          echo "  → brand=$brand semantic=$semantic"
+          node --import tsx scripts/preview.mjs --brand=$brand --template=all --semantic=$semantic > /dev/null
+        done
+      done
+      echo "[regen · حاوية] regen-visual-refs.mjs …"
+      node scripts/regen-visual-refs.mjs
+    '
+  exit_code=$?
+  set -e
+  if [ "$exit_code" -eq 0 ]; then
+    echo ""
+    echo "[mk-ci --regen-refs] تمّ · راجع 'git diff snapshots/ snapshots-semantic/' قبل الالتزام."
+  else
+    echo ""
+    echo "[mk-ci --regen-refs] ✗ فشل (رمز=${exit_code}) — لم يُكتب مرجع."
+  fi
+  exit $exit_code
 fi
 
 # ── trap · تنظيف بلا استثناء ───────────────────────
