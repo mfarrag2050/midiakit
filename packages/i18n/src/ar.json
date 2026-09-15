@@ -17,9 +17,24 @@
   "time": {
     "now": "الآن",
     "future": "لاحقاً",
-    "minAgo": "منذ {n} دقيقة",
-    "hourAgo": "منذ {n} ساعة",
-    "dayAgo": "منذ {n} يوم"
+    "minAgo": {
+      "one": "منذ دقيقة",
+      "two": "منذ دقيقتين",
+      "few": "منذ {n} دقائق",
+      "other": "منذ {n} دقيقة"
+    },
+    "hourAgo": {
+      "one": "منذ ساعة",
+      "two": "منذ ساعتين",
+      "few": "منذ {n} ساعات",
+      "other": "منذ {n} ساعة"
+    },
+    "dayAgo": {
+      "one": "منذ يوم",
+      "two": "منذ يومين",
+      "few": "منذ {n} أيّام",
+      "other": "منذ {n} يوماً"
+    }
   },
   "format": {
     "storage": "التخزين",
@@ -132,9 +147,24 @@
         "renderRunning": "قيد التنفيذ...",
         "renderReady": "المخرج جاهز — افتح للتحميل",
         "renderAgeSince": "منذ {age}",
-        "renderAgeSeconds": "{n} ثانية",
-        "renderAgeMinutes": "{n} دقيقة",
-        "renderAgeHours": "{n} ساعة",
+        "renderAgeSeconds": {
+          "one": "ثانية",
+          "two": "ثانيتين",
+          "few": "{n} ثوانٍ",
+          "other": "{n} ثانية"
+        },
+        "renderAgeMinutes": {
+          "one": "دقيقة",
+          "two": "دقيقتين",
+          "few": "{n} دقائق",
+          "other": "{n} دقيقة"
+        },
+        "renderAgeHours": {
+          "one": "ساعة",
+          "two": "ساعتين",
+          "few": "{n} ساعات",
+          "other": "{n} ساعة"
+        },
         "renderStuckTitle": "طال الانتظار — قد يكون الطلبُ عالقاً",
         "renderStuckBody": "في الانتظار منذ {age} — يتجاوز الحدَّ العاديّ. تحدَّث للدعم مع رمز الحادثة.",
         "renderCancelBtn": "ألغِ الطلب",

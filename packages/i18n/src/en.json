@@ -17,9 +17,24 @@
   "time": {
     "now": "just now",
     "future": "in the future",
-    "minAgo": "{n} min ago",
-    "hourAgo": "{n} h ago",
-    "dayAgo": "{n} d ago"
+    "minAgo": {
+      "one": "{n} min ago",
+      "two": "{n} min ago",
+      "few": "{n} min ago",
+      "other": "{n} min ago"
+    },
+    "hourAgo": {
+      "one": "{n} h ago",
+      "two": "{n} h ago",
+      "few": "{n} h ago",
+      "other": "{n} h ago"
+    },
+    "dayAgo": {
+      "one": "{n} d ago",
+      "two": "{n} d ago",
+      "few": "{n} d ago",
+      "other": "{n} d ago"
+    }
   },
   "format": {
     "storage": "Storage",
@@ -132,9 +147,24 @@
         "renderRunning": "Running...",
         "renderReady": "Output ready — open to download",
         "renderAgeSince": "{age} ago",
-        "renderAgeSeconds": "{n}s",
-        "renderAgeMinutes": "{n}m",
-        "renderAgeHours": "{n}h",
+        "renderAgeSeconds": {
+          "one": "{n}s",
+          "two": "{n}s",
+          "few": "{n}s",
+          "other": "{n}s"
+        },
+        "renderAgeMinutes": {
+          "one": "{n}m",
+          "two": "{n}m",
+          "few": "{n}m",
+          "other": "{n}m"
+        },
+        "renderAgeHours": {
+          "one": "{n}h",
+          "two": "{n}h",
+          "few": "{n}h",
+          "other": "{n}h"
+        },
         "renderStuckTitle": "Waiting too long — the request may be stuck",
         "renderStuckBody": "In queue for {age} — beyond the normal window. Contact support with the incident code.",
         "renderCancelBtn": "Cancel request",

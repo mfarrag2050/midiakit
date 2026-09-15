@@ -43,7 +43,7 @@
 
 import { useEffect, useState, type JSX } from 'react';
 import { Alert } from '@pf-mediakit/ui';
-import { useLocale } from '@pf-mediakit/i18n';
+import { arPluralCategory, useLocale } from '@pf-mediakit/i18n';
 import type { RenderRow } from '@/src/api/endpoints/renders';
 import { formatNumber, type DigitStyle } from '@/src/format/digits';
 import { CopyableCode } from './CopyableCode';
@@ -52,14 +52,19 @@ const STUCK_THRESHOLD_SECONDS = 60;
 
 type TFn = (k: string, p?: Record<string, string | number>) => string;
 
-/** يعيد النصَّ العربيّ لعمرِ الانتظار — «٨ ثوانٍ» · «٣ دقائق» · «ساعة».
+/** يعيد النصَّ العربيّ لعمرِ الانتظار — «ثانية» · «ثانيتين» ·
+ *  «٣ ثوانٍ» · «١١ ثانية». التمييزُ عبر `arPluralCategory` (١ · ٢ · ٣–١٠ ·
+ *  ١١+) — قاعدةٌ لغويّةٌ لا عرضيّة، تعيش في `@pf-mediakit/i18n`.
  *  الأرقامُ حسب نمط اللغة (٣٨٠ §٢): `ar`/`mixed` هنديّة · `en` لاتينيّة. */
 function ageText(seconds: number, style: DigitStyle, t: TFn): string {
-  if (seconds < 60) return t('pages.projects.editor.renderAgeSeconds', { n: formatNumber(seconds, style) });
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return t('pages.projects.editor.renderAgeMinutes', { n: formatNumber(minutes, style) });
-  const hours = Math.floor(minutes / 60);
-  return t('pages.projects.editor.renderAgeHours', { n: formatNumber(hours, style) });
+  const [n, base] =
+    seconds < 60
+      ? [seconds, 'renderAgeSeconds' as const]
+      : Math.floor(seconds / 60) < 60
+        ? [Math.floor(seconds / 60), 'renderAgeMinutes' as const]
+        : [Math.floor(seconds / 3600), 'renderAgeHours' as const];
+  const cat = arPluralCategory(n);
+  return t(`pages.projects.editor.${base}.${cat}`, { n: formatNumber(n, style) });
 }
 
 interface Props {
