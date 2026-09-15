@@ -734,6 +734,15 @@
     "LAST_OWNER": "Can't remove the agency's last owner.",
     "REASON_TOO_SHORT": "Reason is too short — 10 characters minimum.",
     "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+    "action": {
+      "RETRY": "Try again.",
+      "CHECK_FIELD": "Review the highlighted field.",
+      "CHECK_BRAND_FONT": "Review the brand font in Brand Kit, then re-export.",
+      "CHECK_BRAND_ASSET": "Review logo and images in Brand Kit, then re-export.",
+      "CHECK_TEMPLATE": "The template is broken — try another or contact support.",
+      "QUOTA_UPGRADE": "You have hit your plan limit — upgrade to continue.",
+      "CONTACT_SUPPORT": "Contact support with the incident code."
+    },
     "UNSUPPORTED_KIND": "Asset kind not supported.",
     "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "File type doesn't match the asset kind.",
     "SIZE_TOO_LARGE": "File is larger than the allowed limit.",

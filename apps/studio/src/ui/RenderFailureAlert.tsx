@@ -17,21 +17,26 @@ import type { JSX } from 'react';
 import { Alert } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import type { RenderRow } from '@/src/api/endpoints/renders';
+import { actionKeyFor } from '@/src/api/error-action';
 
 export function RenderFailureAlert({ row }: { row: RenderRow }): JSX.Element {
   const { t, has } = useLocale();
   const code = row.error?.code;
   const key = code ? `errors.${code}` : null;
   const translated = key !== null && has(key);
-
-  if (translated) {
-    return <Alert kind="danger" titleKey={key!} />;
-  }
+  // ٣٩٠ §٢ — «ماذا أفعل الآن؟» — كلُّ فشلٍ يحمل فعلاً مقترَحاً
+  // مربوطاً بصنف الرمز (`error-action.ts`). الغريبُ عن الخريطة يقع
+  // على `CONTACT_SUPPORT` — الأمانُ الأقوى.
+  const action = t(actionKeyFor(code));
 
   return (
-    <Alert kind="danger" titleKey="pages.projects.editor.renderFailedGeneric">
-      {code && (
-        <p className="text-xs text-fg-muted">
+    <Alert
+      kind="danger"
+      titleKey={translated ? key! : 'pages.projects.editor.renderFailedGeneric'}
+    >
+      <p className="text-xs text-fg-muted">{action}</p>
+      {!translated && code && (
+        <p className="mt-1 text-xs text-fg-muted">
           {t('pages.projects.editor.renderFailedCode')}{' '}
           <span dir="ltr" className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px]">
             {code}
