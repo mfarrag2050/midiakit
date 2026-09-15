@@ -1,0 +1,722 @@
+#!/usr/bin/env bash
+# bin/mk-show — مدير بيئة العرض (Showroom).
+#
+# قاعدة حاكمة (docs/SHOWROOM.md · CLAUDE.md §بيئة مشتركة):
+#   • النقل بالوسم لا بالفرع. الشريك يرى «شيئاً واحداً» له اسم ثابت.
+#   • بيئة العرض في worktree منفصل: $HOME/MediaKit/pf-mediakit-show.
+#   • قاعدة/بloكت/شبكة/أسرار منفصلة عن التطوير (docker-compose.show.yml).
+#   • لا نفق، لا فتح منفذ خارج الشبكة — 127.0.0.1 فقط.
+#
+# الأوامر:
+#   bin/mk show up [<tag>]      إشعال البيئة (preflight + containers + migrate + seed + API + Studio)
+#   bin/mk show down            إطفاء (containers + processes) — القاعدة تبقى
+#   bin/mk show reset           حذف .env.show + volumes للبدء من نقطة صفر
+#   bin/mk show promote <sha>   وسم موقَّع على SHA من origin/main ونقل إليه
+#   bin/mk show status          الوسم الجاري · الالتزام · هل الخادمان حيّان
+#   bin/mk show rollback        العودة إلى الوسم السابق
+#   bin/mk show logs [api|studio]  متابعة سجلّات
+#   bin/mk show seed            (يدويّاً) إعادة تشغيل seed — يفشل إن كانت البذرة موجودة
+#
+# ما لا يفعله (بحسب §6 من تذكرة الـshowroom + _AMEND-SHOWROOM-PORTS):
+#   • لا cloudflared, لا تعديل جدار حماية, لا فتح منفذ خارج الشبكة.
+#   • لا مشاركة مقبس أو كلمة سرّ مع التطوير — منافذ مستقلّة + أدوار DB
+#     بكلماتٍ مولَّدةٍ للشوروم وحده.
+
+set -euo pipefail
+
+# ═════ ثوابت البيئة ═════════════════════════════════════════════════════════
+SHOW_ROOT="${SHOW_ROOT:-$HOME/MediaKit/pf-mediakit-show}"
+DEV_ROOT="${DEV_ROOT:-$HOME/MediaKit/pf-mediakit-dash}"
+EXPECTED_DOCKER_CTX="colima-mediakit"
+COMPOSE_PROJECT="pf-mediakit-show"
+COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
+ENV_FILE_NAME=".env.show"
+STATE_DIR_NAME=".mk-show-state"          # داخل SHOW_ROOT: pids, tag pointer, previous tag
+
+# منافذ خاصّة بالشوروم — لا تُشارك التطوير (dev API 19040 · Studio 19050).
+# غُيّرت من 19060/19061 في _AMEND-SHOWROOM-PORTS بعد كشف mkau أنّ dev قد
+# يحجز نفس النطاق. **مصدر الحقيقة الوحيد للأرقام — إن غيّرتَ شيئاً، غيّره هنا فقط.**
+API_PORT=19070
+STUDIO_PORT=19071
+PG_PORT=19062
+REDIS_PORT=19063
+MINIO_PORT=19064
+MINIO_CONSOLE_PORT=19065
+
+PG_DB="mediakit_show"
+REDIS_URL="redis://127.0.0.1:${REDIS_PORT}/0"
+S3_ENDPOINT="http://127.0.0.1:${MINIO_PORT}"
+S3_BUCKET="mk-assets-show"
+OWNER_EMAIL="mk@primeflow.co"             # قرار _AMEND-SHOWROOM-IDENTITY
+
+# الإصدار المتوقَّع لـ.env.show — يُبطل الملفّات القديمة عند upgrade.
+# v3: أضاف MINIO_ROOT_USER + MINIO_ROOT_PASSWORD (سابقاً minioadmin مشترك).
+ENV_SHOW_VERSION="3"
+
+# ═════ أدوات صغيرة ══════════════════════════════════════════════════════════
+say()   { printf '[mk-show] %s\n' "$*"; }
+warn()  { printf '[mk-show] ⚠  %s\n' "$*" >&2; }
+die()   { printf '[mk-show] ✗ %s\n' "$*" >&2; exit 1; }
+
+require_show_worktree() {
+  [[ -d "$SHOW_ROOT/.git" || -f "$SHOW_ROOT/.git" ]] \
+    || die "worktree غير موجود: $SHOW_ROOT
+        أنشئه من التطوير: git -C $DEV_ROOT worktree add $SHOW_ROOT <tag>"
+  [[ -f "$SHOW_ROOT/$COMPOSE_FILE_RELATIVE" ]] \
+    || die "compose المُتوقَّع غير موجود في الـworktree: $SHOW_ROOT/$COMPOSE_FILE_RELATIVE
+        اسحب من main بعد دمج feat/ci ثمّ أعد المحاولة."
+}
+
+require_docker_context() {
+  local cur
+  cur="$(docker context show 2>/dev/null || echo none)"
+  [[ "$cur" == "$EXPECTED_DOCKER_CTX" ]] \
+    || die "السياق الحالي: $cur — المتوقع: $EXPECTED_DOCKER_CTX
+        colima start mediakit --cpu 4 --memory 8 --disk 80
+        docker context use $EXPECTED_DOCKER_CTX"
+}
+
+# ═════ preflight: رفضٌ صريح لا اصطدامٌ صامت (_AMEND-SHOWROOM-PORTS §2) ═══
+# قبل ربط أيّ منفذ نفحصه. إن كان مشغولاً نتوقّف باسم المنفذ ومَن يشغله.
+# lsof هو المعيار على macOS + Linux — يعمل من فحص جدول tcp للـkernel.
+check_port_free() {
+  local port="$1" label="$2"
+  local pid cmd
+  # lsof يُعيد exit=1 حين لا يجد → `|| true` يمنع set -e/pipefail من قتلنا.
+  # head -1 يستهلك أوّل سطر فقط → SIGPIPE على lsof → أيضاً `|| true`.
+  pid="$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null || true)"
+  pid="$(printf '%s\n' "$pid" | head -1)"
+  if [[ -n "$pid" ]]; then
+    cmd="$(ps -o command= -p "$pid" 2>/dev/null || true)"
+    cmd="$(printf '%s' "$cmd" | tr -d '\n' | cut -c1-120)"
+    die "المنفذ $port (المخصَّص لـ$label في الشوروم) مشغول.
+        PID $pid: $cmd
+        أطفئه أوّلاً (أو عيّن رقماً آخر) قبل bin/mk show up.
+        (رفض صريح — لا نربط على مقبس غيرنا. _AMEND-SHOWROOM-PORTS §2.)"
+  fi
+}
+
+preflight_ports() {
+  say "preflight: أفحص كلّ منفذ سأربطه …"
+  check_port_free "$PG_PORT"            "postgres"
+  check_port_free "$REDIS_PORT"         "redis"
+  check_port_free "$MINIO_PORT"         "minio S3"
+  check_port_free "$MINIO_CONSOLE_PORT" "minio console"
+  check_port_free "$API_PORT"           "API"
+  check_port_free "$STUDIO_PORT"        "Studio"
+  say "preflight: 6 منافذ حرّة."
+}
+
+# لا نستعمل bin/mk لأنّه يمرّر إلى -p pf-mediakit (dev). نستعمل docker compose مباشرةً.
+# --env-file يضمن أن compose interpolation ($MIGRATION_USER_PASSWORD إلخ)
+# يعثر على قيمها الموّلَّدة في .env.show.
+compose() {
+  ( cd "$SHOW_ROOT" && docker compose -p "$COMPOSE_PROJECT" -f "$COMPOSE_FILE_RELATIVE" --env-file "$(env_file)" "$@" )
+}
+
+state_dir() { printf '%s/%s' "$SHOW_ROOT" "$STATE_DIR_NAME"; }
+env_file()  { printf '%s/%s'  "$SHOW_ROOT" "$ENV_FILE_NAME"; }
+
+ensure_state_dir() {
+  mkdir -p "$(state_dir)"
+  # يحمي من الالتزام بالخطأ إن أضاف أحد state الى الفهرس.
+  local gi="$(state_dir)/.gitignore"
+  [[ -f "$gi" ]] || printf '*\n' > "$gi"
+}
+
+# ═════ إدارة الأسرار في .env.show ═══════════════════════════════════════════
+# القيَم تُولَّد مرّةً واحدة عند أوّل up. تبقى محفوظة بين تشغيلات — إعادة توليدها
+# تعني إبطال جلسات + عدم فكّ مفاتيح AI السابقة. لا تُطبع في التقرير.
+# **الاستثناء الوحيد:** كلمة مرور المالك تُطبع مرّةً واحدةً في stdout عند
+# أوّل seed — المالك ينسخها ثمّ يغيّرها.
+ensure_env_show() {
+  local ef; ef="$(env_file)"
+  if [[ -f "$ef" ]]; then
+    # تحقّق إصدار — الملفّات القديمة (v1: منافذ 19060/19061 · كلمات مشتركة)
+    # يجب أن تُطرَح مع volumes.
+    local cur_ver
+    cur_ver="$(grep -oE '^ENV_SHOW_VERSION=[0-9]+' "$ef" | cut -d= -f2 || true)"
+    if [[ "${cur_ver:-0}" != "$ENV_SHOW_VERSION" ]]; then
+      die ".env.show إصدار ${cur_ver:-قديم} — المتوقّع $ENV_SHOW_VERSION.
+        الملفّ القديم يشير إلى منافذ 19060/19061 أو كلمات DB مشتركة مع
+        التطوير. الحلّ: bin/mk show reset ثمّ bin/mk show up.
+        (reset يحذف .env.show + volumes للبدء من نقطة صفر.)"
+    fi
+    say ".env.show موجود (إصدار $ENV_SHOW_VERSION) — أحترمه ولا أُعيد التوليد."
+    return
+  fi
+
+  say "أوّل تشغيل — أولّد الأسرار وأكتبها في $ENV_FILE_NAME (خارج git)."
+  local session_jwt platform_jwt ai_key
+  local pg_postgres_pw pg_migration_pw pg_app_pw pg_ctrl_pw
+  local s3_access s3_secret
+  session_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
+  platform_jwt="$(openssl rand -base64 48 | tr -d '\n=' | head -c 48)"
+  ai_key="$(openssl rand -hex 32)"
+  # كلمات DB — url-safe (لا حاجة لتشفير في connection string). base64url.
+  pg_postgres_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_migration_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_app_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  pg_ctrl_pw="$(openssl rand -base64 24 | tr -d '\n=' | tr '/+' '_-' | head -c 32)"
+  # اعتماد MinIO — MinIO يطلب ROOT_USER ≥3 حروف و ROOT_PASSWORD ≥8 حروف.
+  # نستعمل base64url alphanumeric — لا `/+=` تُشوّش S3 signature. length 32.
+  s3_access="mk_show_$(openssl rand -hex 8)"          # 8 حروف عشوائيّة تُميّزه
+  s3_secret="$(openssl rand -base64 32 | tr -d '\n=' | tr '/+' '_-' | head -c 40)"
+
+  umask 077
+  cat > "$ef" <<ENV
+# .env.show — مولَّد تلقائياً بواسطة bin/mk-show.
+# لا يُلتزم (.gitignore يحجبه عبر النمط .env*).
+# إعادة التوليد يعني: إبطال كلّ الجلسات + عدم فكّ AI keys المحفوظة.
+ENV_SHOW_VERSION=$ENV_SHOW_VERSION
+
+NODE_ENV=development
+PORT=$API_PORT
+
+# ── كلمات DB مولَّدة للشوروم وحده (_AMEND-SHOWROOM-PORTS §3) ────────
+# postgres = دور bootstrap يشغّل init فقط، لا يستعمله التطبيق.
+# الثلاث الباقية = دور تشغيل، تظهر في DATABASE_URL_*.
+POSTGRES_ROOT_PASSWORD=$pg_postgres_pw
+MIGRATION_USER_PASSWORD=$pg_migration_pw
+APP_USER_PASSWORD=$pg_app_pw
+CONTROL_PLANE_USER_PASSWORD=$pg_ctrl_pw
+
+# قاعدة البيانات — الأدوار تُنشأ في infra/postgres/init-show/*.sh
+# بالكلمات المولَّدة أعلاه.
+DATABASE_URL=postgres://migration_user:${pg_migration_pw}@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_APP=postgres://app_user:${pg_app_pw}@127.0.0.1:$PG_PORT/$PG_DB
+DATABASE_URL_PLATFORM=postgres://control_plane_user:${pg_ctrl_pw}@127.0.0.1:$PG_PORT/$PG_DB
+
+# أسرار التطبيق — خاصّة ببيئة العرض وحدها. لا تُشارك dev أو production.
+SESSION_JWT_SECRET=$session_jwt
+PLATFORM_JWT_SECRET=$platform_jwt
+AI_KEY_ENCRYPTION_KEY=$ai_key
+
+# Redis + BullMQ — DB 0 (طاولة خاصّة بالعرض).
+REDIS_URL=$REDIS_URL
+BULLMQ_PREFIX=pf-mediakit-show
+
+# تخزين — MinIO محلّيّ معزول باعتماد مولَّد للشوروم وحده
+# (_AMEND-SHOWROOM-RESIDUE §1 — سابقاً كانت minioadmin:minioadmin مثل dev).
+# القيَم أدناه تُقرأ من compose (MINIO_ROOT_USER/PASSWORD) وتُمرَّر لـAPI
+# كـS3_ACCESS_KEY_ID/S3_SECRET_ACCESS_KEY.
+STORAGE_DRIVER=s3
+S3_ENDPOINT=$S3_ENDPOINT
+# S3_PUBLIC_ENDPOINT (290-PRESIGN-PUBLIC-ENDPOINT): عنوان presign للمتصفّح.
+# الخادم يستعمل S3_ENDPOINT للـPUT الداخليّ · الروابط الموقَّتة تخرج بـ
+# S3_PUBLIC_ENDPOINT ليقرأها متصفّح الشريك عبر النفق. بدونه: presign
+# على 127.0.0.1:19064 → 127.0.0.1 عند الشريك = جهازه هو → التصدير مكسور.
+S3_PUBLIC_ENDPOINT=https://mkdemo.primeflow.co
+S3_REGION=us-east-1
+S3_BUCKET=$S3_BUCKET
+S3_ACCESS_KEY_ID=$s3_access
+S3_SECRET_ACCESS_KEY=$s3_secret
+S3_PRESIGN_TTL_SECONDS=900
+# نفس القيَم لـMinIO server (compose interpolates إلى minio-show + minio-init).
+MINIO_ROOT_USER=$s3_access
+MINIO_ROOT_PASSWORD=$s3_secret
+
+# CORS — الاستوديو يخدم من $STUDIO_PORT.
+CORS_ORIGIN=http://127.0.0.1:$STUDIO_PORT
+
+# Studio → API.
+NEXT_PUBLIC_API_URL=http://127.0.0.1:$API_PORT
+
+# قائمة السماح — البذرة تُنشئ حساباً واحداً بهذا البريد وحده.
+SHOWROOM_OWNER_EMAIL=$OWNER_EMAIL
+ENV
+  say "الأسرار كُتبت — لا أطبعها هنا. راجع $ef إن أردت رؤيتها يدوياً."
+}
+
+# ═════ up: إشعال البيئة ═════════════════════════════════════════════════════
+cmd_up() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+  ensure_env_show
+
+  # 0) preflight — رفض صريح إن كان أيّ منفذ مشغولاً
+  preflight_ports
+
+  # 1) الحاويات
+  say "أشعِل postgres/redis/minio للعرض …"
+  compose up -d
+
+  say "أنتظر postgres حتّى يكون جاهزاً …"
+  local i=0
+  until compose exec -T postgres-show pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; do
+    ((i++)) || true
+    (( i > 60 )) && die "postgres لم يجهز خلال 60 ثانية"
+    sleep 1
+  done
+  say "postgres جاهز."
+
+  # 2) migrations — عبر pnpm في الـworktree
+  say "أشغّل migrations على $PG_DB …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/db migrate:up )
+
+  # 3) API أوّلاً — seed يحتاجه (signup عبر HTTP). فشلُه هنا يُبلَّغ فوراً.
+  start_api
+
+  # 4) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
+  say "أشغّل seed العرض (يتخطّى إن كانت البذرة موجودة) …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && node --import tsx "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+
+  # 5) Studio — يحاول next build (إنتاج) ثمّ يرجع إلى next dev إن فشل.
+  #    فشل build لا يُسقط الشووروم — API + seed أهمّ. تُبلَّغ الحال في stdout.
+  start_studio
+
+  say ""
+  say "✓ الشووروم يعمل."
+  say "  API:    http://127.0.0.1:$API_PORT/v1/health"
+  say "  Studio: http://127.0.0.1:$STUDIO_PORT"
+  say "  السجلّات: bin/mk show logs api  |  bin/mk show logs studio"
+}
+
+start_api() {
+  local pidf logf
+  pidf="$(state_dir)/api.pid"
+  logf="$(state_dir)/api.log"
+  if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+    say "API يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
+    return
+  fi
+  say "أشغّل API على $API_PORT …"
+  # exec داخل subshell → $! هو node مباشرةً (لا pnpm wrapper) → kill نظيف.
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT/apps/api"
+    nohup node --import tsx src/server.ts >"$logf" 2>&1 &
+    echo $! > "$pidf" )
+  sleep 3
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "API فشل الإقلاع — راجع $logf"
+
+  # فحص health قبل الاعتماد على العملية
+  local i=0
+  until curl -fsS "http://127.0.0.1:$API_PORT/v1/health" >/dev/null 2>&1; do
+    ((i++)) || true
+    (( i > 30 )) && die "API لم يصر جاهزاً على /v1/health خلال 30 ثانية — راجع $logf"
+    sleep 1
+  done
+  say "API جاهز على http://127.0.0.1:$API_PORT/v1/health"
+}
+
+start_studio() {
+  local pidf logf buildlog
+  pidf="$(state_dir)/studio.pid"
+  logf="$(state_dir)/studio.log"
+  buildlog="$(state_dir)/studio-build.log"
+  if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+    say "Studio يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
+    return
+  fi
+
+  # قرار الأسلوب: يحتاج .next مبنيّاً كاملاً → next start (إنتاج). إن غاب
+  # أو فشل بناؤه → next dev (تطوير). هذا يجعل الشووروم صامداً ضدّ عطبٍ
+  # عابر في مسار البناء (مثل useContext=null في prerender).
+  #
+  # تحقّق «مكتمل»: prerender-manifest.json — يظهر بعد اجتياز جميع مراحل
+  # next build. مجرّد `-d .next` كاذب (يوجد بعد فشل جزئيّ في prerender).
+  local mode="start"
+  if [[ ! -f "$SHOW_ROOT/apps/studio/.next/prerender-manifest.json" ]]; then
+    # نظّف .next الناقص قبل إعادة المحاولة
+    [[ -d "$SHOW_ROOT/apps/studio/.next" ]] && rm -rf "$SHOW_ROOT/apps/studio/.next"
+    say "أحاول next build …"
+    if ( set -a; . "$(env_file)"; set +a
+         cd "$SHOW_ROOT" && pnpm --filter @pf-mediakit/studio build ) >"$buildlog" 2>&1; then
+      say "✓ next build نجح — أشغّل next start."
+    else
+      mode="dev"
+      warn "next build فشل — راجع $buildlog. أرجع إلى next dev (أبطأ + hot reload)."
+      # اترك .next كما هو للتشخيص، dev لا يعتمد عليه
+    fi
+  fi
+
+  say "أشغّل Studio ($mode) على $STUDIO_PORT …"
+  if [[ "$mode" == "start" ]]; then
+    ( set -a; . "$(env_file)"; set +a
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  else
+    ( set -a; . "$(env_file)"; set +a
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next dev -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  fi
+  sleep 4
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "Studio فشل الإقلاع — راجع $logf"
+}
+
+stop_proc() {
+  local name="$1"
+  local pidf="$(state_dir)/${name}.pid"
+  [[ -f "$pidf" ]] || return 0
+  local pid; pid="$(cat "$pidf")"
+  if kill -0 "$pid" 2>/dev/null; then
+    say "أُطفئ $name (PID $pid) …"
+    kill "$pid" 2>/dev/null || true
+    # انتظر 3 ثوان قبل SIGKILL
+    local i=0
+    while kill -0 "$pid" 2>/dev/null && (( i < 3 )); do
+      sleep 1; ((i++)) || true
+    done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pidf"
+}
+
+# ═════ reset — حذف .env.show + volumes للبدء من صفر ═════════════════════════
+# يُستخدم عند upgrade من إصدار قديم (مثل v1 مع منافذ 19060/19061) لأنّ
+# volumes postgres تحوي أدواراً بكلمات قديمة، وإعادة init لا تُشغَّل إلّا
+# على data volume فارغ. الأمر تدميريّ — يطلب تأكيداً.
+cmd_reset() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+
+  echo "[mk-show] ⚠  reset يحذف:"
+  echo "  • $(env_file)"
+  echo "  • volumes: pf-mediakit-show-postgres-data + pf-mediakit-show-minio-data"
+  echo "  • pids + logs في $(state_dir)"
+  echo "  البيانات (الحساب · brand-kit · المشاريع) تُفقَد. لا رجعة."
+  echo -n "  اكتب 'reset' للتأكيد: "
+  local reply
+  read -r reply
+  [[ "$reply" == "reset" ]] || die "لم يُؤكَّد — لا تغيير."
+
+  stop_proc studio || true
+  stop_proc api || true
+  compose down -v 2>&1 | tail -6 || true
+
+  rm -f "$(env_file)"
+  rm -f "$(state_dir)/api.pid" "$(state_dir)/studio.pid"
+  rm -f "$(state_dir)/api.log" "$(state_dir)/studio.log" "$(state_dir)/studio-build.log"
+  rm -f "$(state_dir)/previous-tag" "$(state_dir)/current-tag" "$(state_dir)/promoted-at"
+
+  say "✓ reset اكتمل. bin/mk show up سيبدأ من صفر."
+}
+
+# ═════ down ═════════════════════════════════════════════════════════════════
+cmd_down() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+  stop_proc studio
+  stop_proc api
+  say "أُطفئ containers (data volumes تبقى) …"
+  compose down
+  say "✓ الشووروم مُطفَأ. القاعدة والبذرة محفوظتان."
+}
+
+# ═════ status ═══════════════════════════════════════════════════════════════
+cmd_status() {
+  require_show_worktree
+  ensure_state_dir
+
+  local tag commit
+  tag="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '(بلا وسم)')"
+  commit="$(git -C "$SHOW_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
+
+  local promoted_at="(غير مسجَّل)"
+  [[ -f "$(state_dir)/promoted-at" ]] && promoted_at="$(cat "$(state_dir)/promoted-at")"
+
+  local prev_tag="(لا شيء)"
+  [[ -f "$(state_dir)/previous-tag" ]] && prev_tag="$(cat "$(state_dir)/previous-tag")"
+
+  local api_state="متوقّف" studio_state="متوقّف"
+  [[ -f "$(state_dir)/api.pid" ]] && kill -0 "$(cat "$(state_dir)/api.pid")" 2>/dev/null && api_state="يعمل (PID $(cat "$(state_dir)/api.pid"))"
+  [[ -f "$(state_dir)/studio.pid" ]] && kill -0 "$(cat "$(state_dir)/studio.pid")" 2>/dev/null && studio_state="يعمل (PID $(cat "$(state_dir)/studio.pid"))"
+
+  cat <<STATUS
+حالة الشووروم — $(date '+%Y-%m-%d %H:%M:%S')
+
+  worktree   : $SHOW_ROOT
+  الوسم       : $tag
+  الالتزام    : $commit
+  نُقل في      : $promoted_at
+  الوسم السابق : $prev_tag
+
+  API ($API_PORT)   : $api_state
+  Studio ($STUDIO_PORT): $studio_state
+
+  الحاويات (pf-mediakit-show):
+STATUS
+  if command -v docker >/dev/null 2>&1; then
+    docker ps --filter "name=pf-mediakit-show-" --format "    {{.Names}}\t{{.Status}}" 2>/dev/null | sed 's/^/  /'
+  fi
+}
+
+# ═════ gate <sha> → أربع فحوص · إجابة واحدة · exit ≠ 0 عند سقوط (140) ══════
+# القاعدة 30: البوّابة نفسها لا تُعفى من ما تُطبّقه. كلّ فحص يُطبع ما فعله،
+# لا مجرّد نتيجة نهائيّة. سبب سقوط لكلّ شرط سقط — لا واحد فقط.
+cmd_gate() {
+  local sha="${1:-}"
+  [[ -n "$sha" ]] || die "الاستعمال: bin/mk show gate <sha>
+        يفحص هل SHA صالحٌ للترقية إلى الشوروم. رمز خروج 0 إن نعم."
+
+  local sha_short
+  sha_short="$(git -C "$DEV_ROOT" rev-parse --short "$sha" 2>/dev/null || echo "$sha")"
+
+  echo "[gate] SHA: $sha_short — أفحص أربعة شروط …"
+  echo
+
+  local -a reasons=()
+
+  # ── فحص 1/4 · CI السلسلة كاملة خضراء على SHA بالذات ──────────────────
+  echo "[gate] 1/4 · CI check-runs على $sha_short …"
+  local nonpass runs_ok
+  runs_ok=1
+  # جرّب gh api. عند فشل الشبكة/الوصول نُبلغ صراحة، لا نعطي pass صامتاً.
+  if ! nonpass="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" \
+        --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped") | {name, conclusion}]' 2>/dev/null)"; then
+    reasons+=("1. تعذّر الاستعلام عن CI (gh api فشل — تحقّق من الاتّصال + المصادقة)")
+    runs_ok=0
+  fi
+  if [[ "$runs_ok" == "1" ]]; then
+    local nonpass_count
+    nonpass_count="$(printf '%s' "$nonpass" | jq 'length' 2>/dev/null || echo -1)"
+    if [[ "$nonpass_count" == "0" ]]; then
+      # تحقّق إضافيّ: هل يوجد check-run أصلاً على هذا SHA؟ صفر check-runs
+      # يعني CI لم يعمل عليه — لا يجوز pass صامت.
+      local total
+      total="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" --jq '.check_runs | length' 2>/dev/null || echo 0)"
+      if [[ "$total" == "0" ]]; then
+        reasons+=("1. لا check-runs على $sha_short — CI لم يعمل على هذا الالتزام")
+        echo "[gate]   ✗ لا check-runs."
+      else
+        echo "[gate]   ✓ $total check-run كلّها نجحت."
+      fi
+    elif [[ "$nonpass_count" == "-1" ]]; then
+      reasons+=("1. تعذّر تحليل استجابة check-runs (jq فشل)")
+      echo "[gate]   ✗ فشل تحليل استجابة check-runs."
+    else
+      local names
+      names="$(printf '%s' "$nonpass" | jq -r '.[] | "\(.name) [\(.conclusion // "pending")]"' 2>/dev/null | head -3 | tr '\n' '؛' | sed 's/؛$//')"
+      reasons+=("1. CI: $nonpass_count check-run لم تنجح — $names")
+      echo "[gate]   ✗ $nonpass_count check-run لم تنجح: $names"
+    fi
+  fi
+
+  # ── فحص 2/4 · SHA على origin/main (لا فرع جانبيّ) ─────────────────────
+  echo "[gate] 2/4 · هل $sha_short على origin/main …"
+  git -C "$DEV_ROOT" fetch --quiet origin main 2>/dev/null || warn "  fetch فشل — أستعمل origin/main المحلّيّ"
+  if git -C "$DEV_ROOT" merge-base --is-ancestor "$sha" origin/main 2>/dev/null; then
+    echo "[gate]   ✓ ancestor لـorigin/main."
+  else
+    reasons+=("2. $sha_short ليس ancestor لـorigin/main — الالتزام على فرع جانبيّ (feat/* أو غيره)")
+    echo "[gate]   ✗ ليس على origin/main."
+  fi
+
+  # ── فحص 3/4 · مشية العرض (verify-demo-walk) ──────────────────────────
+  echo "[gate] 3/4 · مشية العرض (verify-demo-walk) …"
+  local demo_walk="$DEV_ROOT/scripts/verify-demo-walk.mjs"
+  if [[ -f "$demo_walk" ]]; then
+    if ( cd "$DEV_ROOT" && node "$demo_walk" --sha "$sha" ) >/dev/null 2>&1; then
+      echo "[gate]   ✓ مشية العرض تمرّ."
+    else
+      reasons+=("3. verify-demo-walk فشل على $sha_short")
+      echo "[gate]   ✗ مشية العرض فشلت."
+    fi
+  else
+    # مؤجَّل صريح — كما نصّت docs/SHOWROOM.md §3.ب حتّى تهبط mkst 120-DEMO-WALK.
+    # لا نُسقط الشرط. **لا pass صامت** — نُعلن التخطّي.
+    echo "[gate]   ⏭  الأداة scripts/verify-demo-walk.mjs غير موجودة — شرط مؤجَّل صريح (docs/SHOWROOM.md §3.ب). يمرّ."
+  fi
+
+  # ── فحص 4/4 · عطب معلوم في مسار العرض ─────────────────────────────────
+  echo "[gate] 4/4 · عطب معلوم في مسار العرض (docs/KNOWN-DEFECTS.md) …"
+  local defects_file="$DEV_ROOT/docs/KNOWN-DEFECTS.md"
+  if [[ ! -f "$defects_file" ]]; then
+    reasons+=("4. docs/KNOWN-DEFECTS.md غير موجود — لا مصدر لقائمة العطب المعلوم")
+    echo "[gate]   ✗ docs/KNOWN-DEFECTS.md مفقود."
+  else
+    # grep -c مع لا مطابقة يطبع "0" لكن يعود exit=1 → مع || echo 0 نجمع سطرَين.
+    # الحلّ: wc -l على grep بلا -c. wc -l يعود 0 دائماً حتّى مع 0 أسطر.
+    # وnull match على grep + pipefail لا يقتل لأنّ | wc يبتلع exit code.
+    local open_count
+    open_count="$(grep -E '^- \[ \]' "$defects_file" 2>/dev/null | wc -l | tr -d ' \n' || true)"
+    open_count="${open_count:-0}"
+    if [[ "$open_count" == "0" ]]; then
+      echo "[gate]   ✓ صفر عطب مفتوح."
+    else
+      # اطبع أوّل 3 أسطر عطب لتحديد الجاني — || true يحمي من SIGPIPE على grep
+      local first
+      first="$( { grep -E '^- \[ \]' "$defects_file" 2>/dev/null || true; } | head -3 | sed 's/^- \[ \] */    - /')"
+      reasons+=("4. $open_count عطب مفتوح في docs/KNOWN-DEFECTS.md")
+      echo "[gate]   ✗ $open_count عطب مفتوح:"
+      printf '%s\n' "$first"
+    fi
+  fi
+
+  # ── القرار ────────────────────────────────────────────────────────────
+  echo
+  if [[ ${#reasons[@]} -eq 0 ]]; then
+    echo "[gate] ═════ صالحٌ للترقية · $sha_short ═════"
+    return 0
+  else
+    echo "[gate] ═════ غير صالح · $sha_short ═════"
+    for r in "${reasons[@]}"; do
+      echo "[gate]   • $r"
+    done
+    return 1
+  fi
+}
+
+# ═════ promote <sha>  → وسم جديد وسجّل السابق ═══════════════════════════════
+cmd_promote() {
+  local sha="${1:-}"
+  [[ -n "$sha" ]] || die "الاستعمال: bin/mk show promote <sha>
+        (sha من origin/main. مثال: bin/mk show promote 0b9cce9)"
+  require_show_worktree
+  ensure_state_dir
+
+  # ── بوّابة الترقية (140-PROMOTE-GATE §2) ──────────────────────────────
+  # لا تجاوُز صامت. علم صريح للتجاوز يطبع تحذيراً + يُسجَّل في bypass.log.
+  if [[ "${MK_SHOW_GATE_BYPASS:-0}" == "1" ]]; then
+    warn "MK_SHOW_GATE_BYPASS=1 — بوّابة الترقية متجاوَزة. أُسجّل التجاوز:"
+    local bypass_log="$(state_dir)/bypass.log"
+    printf '%s\tuser=%s\tsha=%s\thost=%s\treason=%s\n' \
+      "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+      "${USER:-?}" \
+      "$sha" \
+      "$(hostname 2>/dev/null || echo ?)" \
+      "${MK_SHOW_GATE_BYPASS_REASON:-غير مذكور}" \
+      >> "$bypass_log"
+    warn "  سجَّل في $bypass_log — راجعه قبل الوثوق بالترقية."
+  else
+    if ! cmd_gate "$sha"; then
+      die "الترقية مرفوضة — البوّابة رفضت $sha.
+        إن أردتَ تجاوزاً صريحاً:
+          MK_SHOW_GATE_BYPASS=1 MK_SHOW_GATE_BYPASS_REASON='سبب' bin/mk show promote $sha"
+    fi
+  fi
+
+  # تحقّق أنّ SHA على origin/main (بدون --contains لأنّه بطيء — نستعمل merge-base)
+  git -C "$DEV_ROOT" fetch --tags origin main >/dev/null 2>&1 || warn "fetch فشل — أتابع بمحلّيّ"
+  git -C "$DEV_ROOT" merge-base --is-ancestor "$sha" origin/main 2>/dev/null \
+    || die "SHA $sha ليس على origin/main — النقل يتطلّب SHA مدموج."
+
+  local date_tag
+  date_tag="show-$(date +%Y%m%d)"
+  # ابحث عن أعلى N على وسم اليوم
+  local n=1
+  while git -C "$DEV_ROOT" rev-parse "refs/tags/${date_tag}-${n}" >/dev/null 2>&1; do
+    n=$((n + 1))
+  done
+  local new_tag="${date_tag}-${n}"
+
+  # سجّل الوسم السابق قبل التغيير
+  local current_tag
+  current_tag="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '')"
+  [[ -n "$current_tag" ]] && echo "$current_tag" > "$(state_dir)/previous-tag"
+
+  say "أُنشئ وسماً موقَّعاً: $new_tag → $sha"
+  # -a (annotated) بدون -s (signed) لأنّ signing يتطلّب gpg — بيئة العرض
+  # على جهاز المالك، الوسم للأثر لا للتوثيق التشفيريّ. إن أراد التوقيع
+  # يمرّر: MK_SHOW_TAG_SIGN=1 bin/mk show promote <sha>
+  if [[ "${MK_SHOW_TAG_SIGN:-0}" == "1" ]]; then
+    git -C "$DEV_ROOT" tag -s "$new_tag" "$sha" -m "showroom promotion $new_tag → $sha"
+  else
+    git -C "$DEV_ROOT" tag -a "$new_tag" "$sha" -m "showroom promotion $new_tag → $sha"
+  fi
+  git -C "$DEV_ROOT" push origin "$new_tag" >/dev/null 2>&1 || warn "push للوسم فشل — الوسم محلّيّ حتّى تدفعه يدوياً."
+
+  # نقل الـworktree إلى الوسم الجديد (يوقف الخوادم أوّلاً)
+  stop_proc studio
+  stop_proc api
+  say "أنقل $SHOW_ROOT إلى $new_tag …"
+  git -C "$SHOW_ROOT" fetch --tags origin >/dev/null 2>&1 || true
+  git -C "$SHOW_ROOT" checkout --detach "refs/tags/$new_tag"
+
+  date '+%Y-%m-%d %H:%M:%S %Z' > "$(state_dir)/promoted-at"
+  echo "$new_tag" > "$(state_dir)/current-tag"
+
+  say "✓ نُقل إلى $new_tag. شغّل: bin/mk show up"
+}
+
+# ═════ rollback → إلى الوسم السابق ══════════════════════════════════════════
+cmd_rollback() {
+  require_show_worktree
+  ensure_state_dir
+  local prev
+  prev="$(cat "$(state_dir)/previous-tag" 2>/dev/null || true)"
+  [[ -n "$prev" ]] || die "لا يوجد وسم سابق مسجَّل — لا شيء للتراجع إليه.
+        state file: $(state_dir)/previous-tag"
+
+  local current
+  current="$(git -C "$SHOW_ROOT" describe --tags --exact-match 2>/dev/null || echo '')"
+
+  stop_proc studio
+  stop_proc api
+  say "أُرجع $SHOW_ROOT من $current إلى $prev …"
+  git -C "$SHOW_ROOT" checkout --detach "refs/tags/$prev"
+
+  # بدّل السجلّ: الحاليّ الجديد = الوسم السابق، والسابق الجديد = الحاليّ القديم
+  [[ -n "$current" ]] && echo "$current" > "$(state_dir)/previous-tag"
+  echo "$prev" > "$(state_dir)/current-tag"
+  date '+%Y-%m-%d %H:%M:%S %Z (rollback)' > "$(state_dir)/promoted-at"
+
+  say "✓ رجعتَ إلى $prev. شغّل: bin/mk show up"
+}
+
+# ═════ logs ═════════════════════════════════════════════════════════════════
+cmd_logs() {
+  require_show_worktree
+  ensure_state_dir
+  local target="${1:-api}"
+  local logf="$(state_dir)/${target}.log"
+  [[ -f "$logf" ]] || die "لا سجلّ لـ$target حتّى الآن — شغّل bin/mk show up أوّلاً."
+  tail -f "$logf"
+}
+
+# ═════ seed (يدويّ) ═════════════════════════════════════════════════════════
+cmd_seed() {
+  require_show_worktree
+  require_docker_context
+  ensure_env_show
+  say "أشغّل seed العرض يدويّاً …"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$SHOW_ROOT" && node --import tsx "$SHOW_ROOT/scripts/seed-showroom.mjs" )
+}
+
+# ═════ dispatch ═════════════════════════════════════════════════════════════
+usage() {
+  cat <<USAGE
+bin/mk-show — مدير بيئة العرض
+  up [<tag>]      إشعال (preflight + containers + migrate + seed + API + Studio)
+  down            إطفاء (containers + processes) — القاعدة تبقى
+  reset           حذف .env.show + volumes للبدء من نقطة صفر (تدميريّ)
+  gate <sha>      يفحص 4 شروط للترقية (CI · main · demo-walk · defects) — 140
+  promote <sha>   وسم جديد على SHA من origin/main ونقل إليه (يستدعي gate)
+  rollback        العودة إلى الوسم السابق
+  status          الوسم · الالتزام · حالة الخوادم
+  logs [api|studio]  متابعة سجلّ
+  seed            إعادة seed يدوياً
+
+بيئة:
+  SHOW_ROOT (=$SHOW_ROOT)
+  DEV_ROOT  (=$DEV_ROOT)
+  MK_SHOW_TAG_SIGN=1 → وسم موقَّع بـgpg
+  MK_SHOW_GATE_BYPASS=1 [+ MK_SHOW_GATE_BYPASS_REASON='...'] → تخطّي بوّابة promote (يُسجَّل)
+USAGE
+}
+
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+  up)       cmd_up "$@" ;;
+  down)     cmd_down ;;
+  reset)    cmd_reset ;;
+  gate)     cmd_gate "$@" ;;
+  promote)  cmd_promote "$@" ;;
+  rollback) cmd_rollback ;;
+  status)   cmd_status ;;
+  logs)     cmd_logs "$@" ;;
+  seed)     cmd_seed ;;
+  ""|-h|--help) usage ;;
+  *) die "أمر غير معروف: $cmd — bin/mk show --help" ;;
+esac

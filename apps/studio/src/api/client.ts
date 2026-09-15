@@ -123,6 +123,36 @@ export async function request<T>(
   path: string,
   opts: RequestOptions = {}
 ): Promise<T> {
+  // 270-WHAT-HE-SEES-AT-DAWN — سباق مهلة عامّ على كلّ نداءٍ (mock أو real).
+  // إن لم يُجب الخادم خلال REQUEST_TIMEOUT_MS، نُخرج ApiError مسمّى
+  // `SERVER_UNRESPONSIVE` بدل ترك الواجهة تدور «جارٍ التحميل…» أبديّاً.
+  //
+  // **20 ثانية اختيار متحفّظ:** نداء API محليّ سريع (< 200ms قِستُه في mock).
+  // نداء إنتاج معقول (< 3s). 20s ≈ 7-100× ذلك — يستوعب 3G/شبكة سيّئة
+  // بلا تشغيل السقف على استعمال طبيعيّ. أقلّ من 30s كي لا يشتبك مع
+  // إعادات retry في الشبكات الوسيطة.
+  return Promise.race([
+    doRequest<T>(path, opts),
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(new ApiError({
+          code: 'SERVER_UNRESPONSIVE',
+          messageKey: 'errors.SERVER_UNRESPONSIVE',
+          field: null,
+          requestId: null,
+          status: 504,
+        }));
+      }, REQUEST_TIMEOUT_MS);
+    }),
+  ]);
+}
+
+const REQUEST_TIMEOUT_MS = 20_000;
+
+async function doRequest<T>(
+  path: string,
+  opts: RequestOptions
+): Promise<T> {
   const method = opts.method ?? 'GET';
 
   // Mock switch — يعمل قبل fetch كي لا تحتاج NEXT_PUBLIC_API_URL.
@@ -156,10 +186,35 @@ export async function request<T>(
     method,
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : null,
+    // 330 · redirect:'manual' كي نلتقط تحويلة CF Access إلى
+    // *.cloudflareaccess.com بدل أن يتبعها المتصفّح صامتاً ونظنّ الردّ
+    // «تعذّر الوصول». opaqueredirect نُصنّفه صراحةً كـAUTH_SESSION_EXPIRED
+    // في الفحص التالي.
+    redirect: 'manual' as RequestRedirect,
     ...(opts.signal ? { signal: opts.signal } : {}),
   };
 
   const res = await fetch(url, init);
+
+  // 330 · CF Access · انتهاء جلسة النفق: `redirect:'manual'` يجعل أيّ 3xx
+  // يظهر بـ`type='opaqueredirect'` و`status=0`. mkapi لا يُعيد 3xx على
+  // `/v1/*` تصميميّاً؛ فأيّ opaqueredirect هنا = تحويلة خارجيّة (CF Access
+  // الأرجح · SSO الأرجح). الرسالة الصحيحة للمستخدم: انتهت جلسة النفق ⇒
+  // أعِد التحميل. لا «تعذّر الوصول».
+  if (res.type === 'opaqueredirect') {
+    // نُطلق حدثاً عامّاً كي يعرض `<AuthExpiredBanner>` overlay + reload button
+    // بلا اعتماد على catch كلّ صفحة. الحدث آمن حتّى في SSR (كتلة `if`).
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mk:auth-session-expired'));
+    }
+    throw new ApiError({
+      code: 'AUTH_SESSION_EXPIRED',
+      messageKey: 'errors.AUTH_SESSION_EXPIRED',
+      field: null,
+      requestId: null,
+      status: 302,
+    });
+  }
 
   // 429 — احترم Retry-After ثم أعد المحاولة **مرة واحدة**.
   if (res.status === 429 && !opts._isRetry) {
@@ -169,13 +224,18 @@ export async function request<T>(
     return request<T>(path, { ...opts, _isRetry: true });
   }
 
-  // 401 — جدّد access ثم كرّر (مرة واحدة).
+  // 401 — جدّد access ثم كرّر (مرة واحدة). إن فشل التجديد ⇒ الجلسة انتهت
+  // ⇒ تحويلة كاملة إلى /login كي لا يعلق المستخدم مع تنبيهٍ inline لا يهدي
+  // إلى فعل (220-EMPTY-AND-ERROR). التحويلة لا تحدث في SSR (لا window).
   if (res.status === 401 && !opts._isRetry && token) {
     try {
       await ensureRefresh();
       return request<T>(path, { ...opts, _isRetry: true });
     } catch {
       clearSession();
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login?reason=expired');
+      }
       throw parseApiError(res.status, await readBody(res));
     }
   }

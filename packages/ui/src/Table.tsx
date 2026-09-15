@@ -41,8 +41,11 @@ export function Table<T>({
 }: Props<T>): JSX.Element {
   const { t } = useLocale();
   return (
-    <div className="overflow-hidden rounded-lg border border-border">
-      <table className="w-full border-collapse text-sm">
+    // 240-PHONE-WIDTH: تمرير أفقيّ داخل الجدول على الشاشات الضيقة كي
+    // لا تنكسر الصفحة كلّها. `min-w-max` يحفظ صفوف الجدول من الالتفاف
+    // القبيح · `-webkit-overflow-scrolling` للتمرير باللمس.
+    <div className="overflow-x-auto rounded-lg border border-border">
+      <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead className="bg-surface-2 text-xs uppercase tracking-wide text-fg-muted">
           <tr>
             {columns.map((c) => (

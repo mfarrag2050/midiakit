@@ -29,6 +29,8 @@ export interface AuthField {
   readonly minLength?: number;
   /** يفعّل تحقّق شكل البريد قبل الشبكة. */
   readonly emailFormat?: boolean;
+  /** مفتاح i18n لـplaceholder — مثالٌ يوضح المتوقَّع (200-DEMO-FIX-2 §2·٤). */
+  readonly placeholderKey?: string;
 }
 
 interface FooterLink {
@@ -48,6 +50,8 @@ interface Props {
   readonly onSubmit?: (values: Record<string, string>) => Promise<void>;
   /** إن كان الفلاق النجاحي رسالة (forgot/reset) لا تحويلاً. */
   readonly successKey?: string;
+  /** شريط سياق (مثل «انتهت الجلسة») يظهر فوق النموذج بدل الخطأ (220). */
+  readonly bannerKey?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,6 +92,7 @@ export function AuthCard({
   footerLinks,
   onSubmit,
   successKey,
+  bannerKey,
 }: Props): JSX.Element {
   const { t } = useLocale();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -136,6 +141,12 @@ export function AuthCard({
         <p className="text-sm text-fg-muted">{t(subtitleKey)}</p>
       </div>
 
+      {bannerKey && !showSuccess && !topErrorKey && (
+        <div className="mb-4">
+          <Alert kind="info" titleKey={bannerKey} />
+        </div>
+      )}
+
       {topErrorKey && !showSuccess && (
         <div className="mb-4">
           <Alert kind="danger" titleKey={topErrorKey} />
@@ -170,6 +181,7 @@ export function AuthCard({
                 }
                 invalid={Boolean(errorKey)}
                 disabled={loading}
+                placeholder={f.placeholderKey ? t(f.placeholderKey) : undefined}
                 dir={
                   f.type === 'email' || f.type === 'password' ? 'ltr' : undefined
                 }

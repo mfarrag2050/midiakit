@@ -14,15 +14,14 @@ import {
   type Tenant,
   type User,
 } from '@/src/api';
+import { SHOW_DESIGN_SYSTEM_NAV } from '@/src/config/features';
 
 // AppShell — التخطيط الكامل بعد تسجيل الدخول.
 //
-// **S7 (بعد S6-FIX):** يقرأ tenant.name و user.email من الجلسة المخزَّنة
-// (localStorage بعد login/signup). login response صار يحمل
-// `tenant.{id,name,plan}` كاملاً بعد `410cc33` — الاستدعاء الإضافي
-// `GET /v1/tenant` عند mount **حُذف** (كان يعوّض عن نقص كان
-// مؤقّتاً في الاستجابة الأصلية).
-// **الحماية:** بلا access token = تحويل إلى `/login` مباشرةً.
+// **S7:** يقرأ tenant.name و user.email من الجلسة المخزَّنة.
+// **240-PHONE-WIDTH:** على <md (شاشات < 768px)، الشريط الجانبي يصبح
+// خزانة تُفتح بضغطة زرّ (hamburger) بدل احتلال 240px من 390px. على md
+// وأكبر يبقى كما كان.
 
 interface NavItem {
   readonly href: string;
@@ -30,43 +29,120 @@ interface NavItem {
   readonly icon: string;
 }
 
-const NAV: readonly NavItem[] = [
+// 330 §3.3 · «/design» = معرض المكوّنات للمطوّرين. مخفيّ افتراضياً — يظهر
+// فقط حين `NEXT_PUBLIC_SHOW_DESIGN_SYSTEM=true`. المسار يبقى قابلاً
+// للوصول بالكتابة المباشرة (لا حراسة على الصفحة).
+const NAV_ALL: readonly NavItem[] = [
   { href: '/breaking', labelKey: 'nav.breaking', icon: '⚡' },
   { href: '/projects', labelKey: 'nav.projects', icon: '◫' },
   { href: '/brand-kits', labelKey: 'nav.brandKits', icon: '❋' },
   { href: '/templates', labelKey: 'nav.templates', icon: '▤' },
   { href: '/assets', labelKey: 'nav.assets', icon: '◈' },
   { href: '/renders', labelKey: 'nav.renders', icon: '↗' },
+  { href: '/exports', labelKey: 'nav.exports', icon: '⇩' },
   { href: '/workflows', labelKey: 'nav.workflows', icon: '⇢' },
   { href: '/ai-settings', labelKey: 'nav.aiSettings', icon: '✱' },
   { href: '/billing', labelKey: 'nav.billing', icon: '⌂' },
   { href: '/design', labelKey: 'nav.design', icon: '⌘' },
 ];
+const NAV: readonly NavItem[] = SHOW_DESIGN_SYSTEM_NAV
+  ? NAV_ALL
+  : NAV_ALL.filter((item) => item.href !== '/design');
+
+// 310-AUTH-FLASH · حالةٌ ثالثة صريحة قبل حسم الجلسة كي لا يومض المحتوى
+// المصادَق قبل التحويلة إلى /login. القاعدة: **لا يُصيَّر شيءٌ حقيقيّ
+// قبل حسم الجلسة** — فقط splash هادئ بهويّة المنتج.
+//
+// **قبل الإصلاح:** `useEffect` يفحص التوكن بعد أوّل رسم كامل — الشريك يرى
+// الشريط الجانبيّ + الرأس + هيكل الصفحة ثمّ يُقذَف إلى /login (FOAC).
+//
+// **بعد الإصلاح:** authState = 'checking' | 'authed' | 'unauthed'.
+// 'checking' هو الحال الأوّليّة (React state initial) ⇒ splash فقط · لا nav
+// ولا header ولا children. `useEffect` يحسم في نفس tick البدايّة تقريباً.
+type AuthState = 'checking' | 'authed' | 'unauthed';
 
 export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const { t } = useLocale();
   const pathname = usePathname();
   const router = useRouter();
+  const [authState, setAuthState] = useState<AuthState>('checking');
   const [user, setUser] = useState<User | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
-    // بلا access token = بلا جلسة، حوّل إلى login.
     if (!getAccessToken()) {
+      setAuthState('unauthed');
       router.replace('/login');
       return;
     }
-    // اقرأ ما هو مخزَّن من login/signup — يحوي name + plan منذ 410cc33.
     setUser(getSessionUser());
     setTenant(getSessionTenant());
+    setAuthState('authed');
   }, [router]);
+
+  // إغلاق الخزانة عند تغيير المسار (بعد اختيار عنصر).
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
 
   const displayTenantName = tenant?.name ?? t('nav.user.placeholder');
   const displayUserEmail = user?.email ?? t('nav.user.placeholder');
 
+  const navList = (
+    <ul className="space-y-0.5">
+      {NAV.map((item) => {
+        const active =
+          pathname === item.href ||
+          (pathname?.startsWith(item.href + '/') ?? false);
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className={
+                'flex items-center gap-3 rounded px-3 py-2 text-sm transition ' +
+                (active
+                  ? 'bg-surface-2 text-fg'
+                  : 'text-fg-muted hover:bg-surface-2 hover:text-fg')
+              }
+            >
+              <span aria-hidden className="w-4 text-center text-fg-subtle">
+                {item.icon}
+              </span>
+              <span>{t(item.labelKey)}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  // 310-AUTH-FLASH · حين authState = 'checking' نُصيّر splash فقط. لا nav
+  // ولا header ولا children. حين 'unauthed' نُصيّر splash فارغ حتّى تكتمل
+  // التحويلة إلى /login (لتفادي وميضٍ ثانٍ لـshell قبل الانتقال).
+  if (authState !== 'authed') {
+    return (
+      <div
+        role="status"
+        aria-label={t('auth.checking.label')}
+        className="grid min-h-screen place-items-center bg-surface"
+      >
+        <div className="text-center">
+          <div className="text-xs uppercase tracking-widest text-fg-subtle">
+            {t('brand.tagline')}
+          </div>
+          <div className="mt-1 font-latin text-lg font-semibold tracking-tight">
+            {t('brand.name')}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid min-h-screen grid-cols-[240px_1fr]">
-      <aside className="border-e border-border bg-surface">
+    <div className="grid min-h-screen md:grid-cols-[240px_1fr]">
+      {/* Sidebar — يظهر دائماً على md+، ويصبح خزانة على <md */}
+      <aside className="hidden border-e border-border bg-surface md:block">
         <div className="border-b border-border px-5 py-5">
           <div className="text-xs uppercase tracking-widest text-fg-subtle">
             {t('brand.tagline')}
@@ -75,48 +151,58 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
             {t('brand.name')}
           </div>
         </div>
-        <nav className="p-3">
-          <ul className="space-y-0.5">
-            {NAV.map((item) => {
-              const active =
-                pathname === item.href ||
-                (pathname?.startsWith(item.href + '/') ?? false);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={
-                      'flex items-center gap-3 rounded px-3 py-2 text-sm transition ' +
-                      (active
-                        ? 'bg-surface-2 text-fg'
-                        : 'text-fg-muted hover:bg-surface-2 hover:text-fg')
-                    }
-                  >
-                    <span aria-hidden className="w-4 text-center text-fg-subtle">
-                      {item.icon}
-                    </span>
-                    <span>{t(item.labelKey)}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <nav className="p-3">{navList}</nav>
       </aside>
-      <div className="flex min-w-0 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-border bg-surface px-6">
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-fg">
-              {displayTenantName}
+
+      {/* Mobile drawer — يفتح على <md فقط */}
+      {navOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            aria-label={t('nav.mobile.closeMenu')}
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setNavOpen(false)}
+          />
+          <aside className="absolute inset-y-0 end-0 w-64 overflow-y-auto border-s border-border bg-surface shadow-xl">
+            <div className="border-b border-border px-5 py-5">
+              <div className="text-xs uppercase tracking-widest text-fg-subtle">
+                {t('brand.tagline')}
+              </div>
+              <div className="mt-1 font-latin text-lg font-semibold tracking-tight">
+                {t('brand.name')}
+              </div>
             </div>
-            <div className="text-[10px] uppercase tracking-widest text-fg-subtle">
-              {t('nav.workspace')}
+            <nav className="p-3">{navList}</nav>
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-col">
+        <header className="flex h-14 items-center justify-between gap-3 border-b border-border bg-surface px-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            {/* Hamburger — على <md فقط */}
+            <button
+              type="button"
+              aria-label={t('nav.mobile.openMenu')}
+              aria-expanded={navOpen}
+              className="rounded p-2 text-fg-muted hover:bg-surface-2 md:hidden"
+              onClick={() => setNavOpen(true)}
+            >
+              <span aria-hidden className="text-lg leading-none">☰</span>
+            </button>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-fg">
+                {displayTenantName}
+              </div>
+              <div className="text-[10px] uppercase tracking-widest text-fg-subtle">
+                {t('nav.workspace')}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs text-fg-muted">
-            <LocaleSwitcher />
-            <span aria-hidden>·</span>
-            <span dir="ltr" className="truncate max-w-[180px]">
+          <div className="flex items-center gap-2 text-xs text-fg-muted md:gap-4">
+            <div className="hidden sm:block"><LocaleSwitcher /></div>
+            <span aria-hidden className="hidden md:inline">·</span>
+            <span dir="ltr" className="hidden max-w-[180px] truncate md:inline">
               {displayUserEmail}
             </span>
             <button
@@ -133,13 +219,13 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
                   router.replace('/login');
                 }
               }}
-              className="text-fg-muted hover:text-fg"
+              className="rounded px-2 py-1 text-fg-muted hover:bg-surface-2 hover:text-fg"
             >
               {t('nav.user.signOut')}
             </button>
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-auto p-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-auto p-4 md:p-8">{children}</main>
       </div>
     </div>
   );

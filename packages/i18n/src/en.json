@@ -27,6 +27,15 @@
     "usage": "Usage",
     "lastRender": "Last render"
   },
+  "roles": {
+    "owner":    { "name": "Account owner",  "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned." },
+    "admin":    { "name": "Administrator",  "hint": "Manages the system: adds roles, disables accounts, runs archival." },
+    "writer":   { "name": "Writer",         "hint": "Writes the first draft and sends it for editing." },
+    "editor":   { "name": "Editor",         "hint": "Edits the draft before it goes to review — reads and revises." },
+    "reviewer": { "name": "Reviewer",       "hint": "Decides whether the draft is ready to publish — approves or returns." },
+    "approver": { "name": "Final approver", "hint": "Signs off before publication — a step above the reviewer." },
+    "viewer":   { "name": "Viewer",         "hint": "Sees drafts but doesn't write — read-only role." }
+  },
   "nav": {
     "workspace": "Workspace",
     "breaking": "Compose breaking",
@@ -35,6 +44,7 @@
     "templates": "Templates",
     "assets": "Assets",
     "renders": "Renders",
+    "exports": "Exports history",
     "design": "Design",
     "workflows": "Workflows",
     "aiSettings": "AI",
@@ -42,6 +52,10 @@
     "user": {
       "placeholder": "Account",
       "signOut": "Sign out"
+    },
+    "mobile": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
     }
   },
   "pages": {
@@ -194,7 +208,6 @@
         "assignSelf": "Assign to me",
         "unassign": "Unassign",
         "roleHint": "Current user role",
-        "actorHint": "Mock trigger — add [role:writer] to the project title to test 403 on transitions requiring higher role.",
         "transitionReasonInline": "This transition requires a reason — enter it and retry.",
         "transitionRoleRequired": "Your role isn't allowed — required role: {role}."
       },
@@ -219,16 +232,16 @@
     },
     "workflows": {
       "title": "Workflows",
-      "subtitle": "States and transitions — data rules, not hard-coded.",
+      "subtitle": "Define the states and transitions content moves through before publishing.",
       "empty": "No workflows yet",
       "emptyBody": "Pick a preset to start your first workflow, or build from scratch.",
       "create": "New workflow",
       "createTitle": "Create workflow",
       "presets": {
-        "label": "Presets (sent via POST — no server-side seed)",
-        "individual": "Individual — writer submits, reviewer approves",
-        "smallTeam": "Small team — writer/editor/reviewer/admin",
-        "fullAgency": "Full agency — longer chain + archive"
+        "label": "Presets",
+        "individual": "Individual — the writer submits, the reviewer approves",
+        "smallTeam": "Small team — writer, editor, reviewer, administrator",
+        "fullAgency": "Full agency — longer chain with archive"
       },
       "nameLabel": "Name",
       "isDefault": "Default",
@@ -285,7 +298,7 @@
       },
       "assetsVersion": {
         "title": "Bump assets version",
-        "body": "Bumping pins a new version. Review the diff before confirming (L-29).",
+        "body": "Bumping pins a new version. Review the diff before confirming.",
         "current": "Current version",
         "target": "New version",
         "targetHint": "Format YYYY.MM (e.g. 2026.03).",
@@ -295,7 +308,7 @@
         "ackCheckbox": "I have reviewed the diff above.",
         "submit": "Bump now"
       },
-      "editBtn": "Edit",
+      "editBtn": "Edit brand kit",
       "editor": {
         "title": "Edit brand kit",
         "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
@@ -398,7 +411,8 @@
         "preview": {
           "title": "Live preview · Breaking card",
           "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
-          "durationHint": "Render duration — every keystroke reschedules"
+          "durationHint": "Render duration — every keystroke reschedules",
+          "emptyHint": "Type a headline to see the card."
         },
         "export": {
           "button": "Export card",
@@ -407,6 +421,7 @@
           "dirtyBlocked": "Cannot export with unsaved changes — press Save first.",
           "success": "Exported · the file downloaded to your browser.",
           "queuedStep": "Queued…",
+          "waitingForWorkerStep": "Waiting for the render worker…",
           "runningStep": "Rendering…",
           "downloadingStep": "Downloading file…"
         }
@@ -523,6 +538,37 @@
       "brandSnapshotHint": "Frozen at POST — not affected by later brand edits.",
       "quotaExceeded": "Render quota exhausted on this plan — upgrade from the Billing page."
     },
+    "exports": {
+      "title": "Exports history",
+      "subtitle": "What your agency exported: date · template · size · status · file.",
+      "empty": "No exports yet",
+      "emptyBody": "Your first export from the breaking composer or the brand-kit editor will appear here. The file downloads to you; the log stays here.",
+      "col": {
+        "date": "Date",
+        "template": "Template",
+        "size": "Size",
+        "format": "Format",
+        "status": "Status",
+        "file": "File"
+      },
+      "status": {
+        "succeeded": "Done",
+        "failed": "Failed",
+        "queued": "Queued",
+        "running": "Running",
+        "cancelled": "Cancelled"
+      },
+      "download": "Download",
+      "downloading": "Fetching…",
+      "noFile": "—",
+      "unknownTemplate": "Unknown template",
+      "totalLabel": "Total",
+      "loadMore": "Load more",
+      "downloadFailed": "Could not fetch the download link — try again.",
+      "envelopeNote": "Server pagination is offset-based — we don't fake a cursor.",
+      "errorCodeHint": "Server error code — copy this for support if asked.",
+      "refresh": "Refresh"
+    },
     "billing": {
       "title": "Billing",
       "subtitle": "Current plan, quotas, and live usage.",
@@ -594,12 +640,19 @@
     }
   },
   "auth": {
+    "checking": {
+      "label": "Checking your session…"
+    },
+    "expiredBanner": {
+      "reload": "Reload"
+    },
     "login": {
       "title": "Sign in",
       "subtitle": "Enter your credentials to continue.",
       "submit": "Sign in",
       "needAccount": "No account? Create one",
-      "forgot": "Forgot your password?"
+      "forgot": "Forgot your password?",
+      "sessionExpiredBanner": "Your session has expired — log in again to continue."
     },
     "signup": {
       "title": "Create account",
@@ -624,7 +677,9 @@
       "email": "Email",
       "password": "Password",
       "newPassword": "New password",
-      "tenantName": "Agency name"
+      "tenantName": "Agency name",
+      "emailPlaceholder": "you@agency.com",
+      "passwordPlaceholder": "At least 12 characters"
     },
     "hint": {
       "passwordMin": "At least 12 characters."
@@ -641,6 +696,11 @@
   "table": {
     "empty": "No rows yet.",
     "loading": "Loading…"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadingList": "Fetching the list…",
+    "sessionExpiredCTA": "Log in again"
   },
   "errors": {
     "UNKNOWN": "Something went wrong.",
@@ -679,7 +739,11 @@
     "INVALID_FONT_METRICS": "Uploaded font has no measured metrics — it won't render correctly. Run `pnpm measure-font <path-to-file.ttf>` and re-upload.",
     "INVALID_LOGO_DIMENSIONS": "Logo dimensions out of the accepted range — width and height must be between 40 and 2048 pixels, and the aspect ratio must be between 1:6 and 6:1. Pick another file or adjust it before uploading.",
     "RENDER_FAILED": "Could not export the card — try again; if it repeats, contact support.",
-    "RENDER_TIMEOUT": "Export timed out before completing — the network may be slow; try again.",
+    "RENDER_TIMEOUT": "Export timed out before completing — rendering started but didn't finish in the allowed window. Try again or contact support.",
+    "RENDER_QUEUE_STUCK": "The render service is not responding — your request stayed queued without a worker picking it up. Try again shortly.",
+    "SERVER_UNRESPONSIVE": "The server isn't responding — the reply took too long. Try reloading; if the wait continues, the service is likely down.",
+    "AUTH_SESSION_EXPIRED": "Your session has expired — reload the page to sign in again.",
+    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
     "RATE_LIMITED": "Too many requests in a row — wait a moment then try again.",
     "EXPORT_DOWNLOAD_FAILED": "The file was produced but couldn't be downloaded — check your connection and try again.",
     "INVALID_LOTTIE_SCHEMA": "Lottie file is invalid — check the schema.",
@@ -761,7 +825,7 @@
     "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
     "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
     "TEMPLATE_SNAPSHOT_INVALID": "This template cannot be exported — choose another template or ask your administrator to review it.",
-    "TENANT_DATA_EXPORT_FAILED": "Tenant data export could not be completed — check the operation log."
+    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists."
   },
   "design": {
     "title": "Design System",

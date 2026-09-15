@@ -249,19 +249,32 @@ export default function BrandKitsPage(): JSX.Element {
       headerKey: 'pages.brandKits.col.actions',
       align: 'center',
       render: (r) => (
-        <div className="flex items-center justify-center gap-2">
+        // 360b §٣ · الوزن البصريّ: «تحرير الهوية» هو الفعل الأساس (زرٌّ
+        // بارز · primary). «ترقية إصدار الأصول» و«إقرار ترخيص الخطّ»
+        // ينزلان إلى روابط نصّيّة ثانويّة. «حذف» يبقى ghost صغيراً.
+        <div className="flex items-center justify-center gap-3">
           <Link
             href={`/brand-kits/${encodeURIComponent(r.id)}/edit`}
-            className="text-sm text-accent hover:underline"
+            className="inline-flex h-8 items-center justify-center gap-2 rounded bg-accent px-3 text-xs font-medium text-accent-fg transition hover:brightness-110"
           >
             {t('pages.brandKits.editBtn')}
           </Link>
-          <Button variant="secondary" size="sm" onClick={() => openFontAck(r)}>
-            {t('pages.brandKits.fontAck.title')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => openAssetsVersion(r)}>
+          <button
+            type="button"
+            onClick={() => openAssetsVersion(r)}
+            className="text-sm text-accent hover:underline"
+          >
             {t('pages.brandKits.assetsVersion.title')}
-          </Button>
+          </button>
+          {r.fontSource === 'custom' && (
+            <button
+              type="button"
+              onClick={() => openFontAck(r)}
+              className="text-sm text-accent hover:underline"
+            >
+              {t('pages.brandKits.fontAck.title')}
+            </button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setToDelete(r)}>
             {t('pages.brandKits.delete')}
           </Button>
