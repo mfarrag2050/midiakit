@@ -16,7 +16,7 @@ import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, assets, brandKits, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
-import { BUILTIN_FONTS, BUILTIN_FONT_FAMILIES } from '@/src/lib/builtin-fonts';
+import { BUILTIN_FONTS, BUILTIN_FONT_FAMILIES, findBuiltinFont } from '@/src/lib/builtin-fonts';
 import {
   contrastRatio,
   formatContrast,
@@ -602,6 +602,14 @@ export default function BrandKitEditorPage(): JSX.Element {
           (existingPrimary.weights as Record<string, unknown>) ?? {};
         const existingRegular =
           (existingWeights.regular as Record<string, unknown>) ?? {};
+        const existingLight =
+          (existingWeights.light as Record<string, unknown>) ?? {};
+        const existingBold =
+          (existingWeights.bold as Record<string, unknown>) ?? {};
+        // ٤٣٠ §٢ · متريكاتُ رأس الخطّ تُكتَب صراحةً لكلّ وزن. غيابُها كان
+        // يُبقي متريكاتِ الافتراضيّ (IBM Plex) على العائلة الجديدة، فيرمي
+        // المحرّكُ ‏(٨١٠) `INVALID_FONT_METRICS` أو يعطي lineHeight خاطئاً.
+        const bf = findBuiltinFont(draftFontChoice.family);
         payload.fonts = {
           ...(existing as Record<string, unknown>),
           primary: {
@@ -610,9 +618,18 @@ export default function BrandKitEditorPage(): JSX.Element {
             source: 'builtin',
             weights: {
               ...existingWeights,
+              light: {
+                ...existingLight,
+                ...(bf ? { value: bf.weights.light.value, metrics: bf.weights.light.metrics } : {}),
+              },
               regular: {
                 ...existingRegular,
                 assetId: null,
+                ...(bf ? { value: bf.weights.regular.value, metrics: bf.weights.regular.metrics } : {}),
+              },
+              bold: {
+                ...existingBold,
+                ...(bf ? { value: bf.weights.bold.value, metrics: bf.weights.bold.metrics } : {}),
               },
             },
           },
