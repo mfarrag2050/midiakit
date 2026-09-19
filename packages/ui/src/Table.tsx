@@ -45,21 +45,29 @@ export function Table<T>({
     // لا تنكسر الصفحة كلّها. `min-w-max` يحفظ صفوف الجدول من الالتفاف
     // القبيح · `-webkit-overflow-scrolling` للتمرير باللمس.
     //
-    // ٤١٠ §٣: `scroll-shadow` بتقنية Roman Komarov — أربعُ خلفياتٍ
-    // متزامنة، اثنتان بلون سطح الحاوية (local) واثنتان ظلٌّ رماديّ
-    // (scroll). حين يكون فيه محتوى مخفيّ يمنة/يسرة يظهر الظلّ على تلك
-    // الحافة. يخبر اللمسَ أن ثمّة أعمدةً خارج القماش دون شريط تمرير.
+    // ٤٥٠ §١: **إصلاحُ التنفيذ المكسور من ٤١٠ §٣.** التنفيذُ السابق
+    // استعمل `#fff` كلون قناع (`var(--pfmk-surface, #fff)` — المتغيّر
+    // غيرُ معرَّف في tokens، فيسقط إلى الأبيض) على واجهةٍ داكنة، فيمحو
+    // عمودَ «القالب» بدل أن يلمّح إليه. الآن:
+    //   ١) لون القناع = `var(--surface)` نفسُه لون تراوت خلف الجدول،
+    //      لا `#fff`. القيمة الحقيقيّة الحاليّة `#12151a` (tokens.css).
+    //   ٢) `bg-surface` صريحٌ على الحاوية — حتى يتطابق القناع مع
+    //      البكسل الفعليّ الذي ستحلّ محلّه.
+    //   ٣) عرضُ القناع 10px بدل 32px · عرضُ الظلّ 8px بدل 14px — يلمّح
+    //      إلى الحافة، لا يغطّي عموداً.
+    //   ٤) شدّةُ الظلّ خفيفة (rgba(0,0,0,0.24)) لا يبتلع البكسل خلفه.
     <div
-      className="overflow-x-auto rounded-lg border border-border"
+      className="overflow-x-auto rounded-lg border border-border bg-surface"
       style={{
         background:
-          'linear-gradient(to right, var(--pfmk-surface, #fff) 30%, rgba(255,255,255,0)),' +
-          'linear-gradient(to right, rgba(255,255,255,0), var(--pfmk-surface, #fff) 70%) 100% 0,' +
-          'radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)),' +
-          'radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)) 100% 0',
+          'linear-gradient(to right, var(--surface) 30%, transparent),' +
+          'linear-gradient(to right, transparent, var(--surface) 70%) 100% 0,' +
+          'radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.24), rgba(0,0,0,0)),' +
+          'radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.24), rgba(0,0,0,0)) 100% 0',
         backgroundRepeat: 'no-repeat',
-        backgroundSize: '32px 100%, 32px 100%, 14px 100%, 14px 100%',
+        backgroundSize: '10px 100%, 10px 100%, 8px 100%, 8px 100%',
         backgroundAttachment: 'local, local, scroll, scroll',
+        backgroundColor: 'var(--surface)',
       }}
     >
       <table className="w-full min-w-[640px] border-collapse text-sm">
