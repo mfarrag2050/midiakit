@@ -19,6 +19,8 @@ export interface EffectiveLimits {
   projectsLimit: number | null;
   // 410 · بابُ المسار السريع — false = ممنوع (فشلٌ مغلق).
   allowUrgent: boolean;
+  // 420 · حصّة تخزينٍ متراكمة (بايت). null = غير محدود.
+  storageQuotaBytes: number | null;
 }
 
 interface DbLimitsRow {
@@ -29,6 +31,7 @@ interface DbLimitsRow {
   plan_concurrent: number;
   plan_projects: number | null;
   plan_allow_urgent: boolean;
+  plan_storage_quota: string | null;   // pg يعيد bigint كسلسلة
   overrides: Record<string, unknown> | null;
 }
 
@@ -53,6 +56,7 @@ export async function getEffectiveLimits(
        p.concurrent_renders_limit  AS plan_concurrent,
        p.projects_limit           AS plan_projects,
        p.allow_urgent             AS plan_allow_urgent,
+       p.storage_quota_bytes      AS plan_storage_quota,
        t.plan_overrides           AS overrides
      FROM tenants t
      JOIN plans p ON p.key = t.plan
@@ -76,5 +80,12 @@ export async function getEffectiveLimits(
     concurrentRendersLimit: pick('concurrent_renders_limit', row.plan_concurrent),
     projectsLimit:          pick('projects_limit', row.plan_projects),
     allowUrgent:            pick('allow_urgent', row.plan_allow_urgent),
+    // bigint يعود سلسلةً من pg — نتعامل خارج pick() لأنّه نوعٌ مختلف.
+    // Number(bigint-string) آمن حتى 2^53-1 ≈ 9 PB (كافٍ لأيّ حصّة عمليّة).
+    storageQuotaBytes:      (() => {
+      const override = 'storage_quota_bytes' in ov ? ov['storage_quota_bytes'] : undefined;
+      const source = override !== undefined ? override : row.plan_storage_quota;
+      return source === null || source === undefined ? null : Number(source);
+    })(),
   };
 }

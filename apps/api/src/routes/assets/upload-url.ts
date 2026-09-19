@@ -15,8 +15,9 @@ import {
   ASSET_KINDS, isContentTypeAllowedForKind, type AssetKind,
 } from './shared/kind-rules.js';
 import {
-  UnsupportedKind, UnsupportedContentTypeForKind, SizeTooLarge,
+  UnsupportedKind, UnsupportedContentTypeForKind, SizeTooLarge, StorageQuotaExceeded,
 } from '../../errors.js';
+import { getEffectiveLimits } from '../../config/effective-limits.js';
 
 const bodySchema = z.object({
   kind: z.string(),
@@ -35,8 +36,34 @@ const route: FastifyPluginAsync = async (fastify) => {
     const kind = parsed.kind as AssetKind;
     if (!isContentTypeAllowedForKind(kind, parsed.contentType)) throw UnsupportedContentTypeForKind();
 
-    // 2. حدّ الحجم — SIZE_TOO_LARGE
+    // 2. حدّ الحجم — SIZE_TOO_LARGE (فرديّ · env-driven).
     if (parsed.sizeBytes > config.STORAGE_MAX_SIZE_BYTES) throw SizeTooLarge();
+
+    // 2.b · 420 §٢ · حصّة التخزين المتراكمة — STORAGE_QUOTA_EXCEEDED.
+    // ─────────────────────────────────────────────────────────────
+    // كل ملفٍّ منفردٍ يمرّ SIZE_TOO_LARGE، لكنّ ألفَ ملفٍّ صغيرٍ لا يفعل.
+    // نجمع SUM(size_bytes) لأصول المستأجر المكتملة (نفس نمط
+    // usage/current.ts:47-50)، ونرفض إن كان `المجموع + الملفّ الجديد`
+    // يتجاوز `plans.storage_quota_bytes` (nullable = غير محدود).
+    //
+    // **الأداء:** استعلامٌ واحد لكلّ رفع، مع RLS يقصر على المستأجر. لا
+    // aggregate عبر كلّ الصفوف. عدّادٌ مسبوق (بـtrigger على assets)
+    // يُبنى لاحقاً إن ظهرت مشكلة أداء — لم يُبنَ اليوم بأمر التذكرة.
+    //
+    // **فشلٌ مغلق:** `getEffectiveLimits` يرمي على مستأجرٍ مفقود ⇒
+    // الاستثناء يصعد ⇒ لا تُصدَر presign. SUM يرمي على DB منقطعة ⇒
+    // نفس المصير. لا try/catch يبتلع الفشل.
+    const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
+    if (limits.storageQuotaBytes !== null) {
+      const used = await req.dbClient!.query<{ n: string }>(
+        `SELECT COALESCE(SUM(size_bytes), 0)::bigint AS n FROM assets
+          WHERE finalized_at IS NOT NULL`,
+      );
+      const currentBytes = Number(used.rows[0]!.n);
+      if (currentBytes + parsed.sizeBytes > limits.storageQuotaBytes) {
+        throw StorageQuotaExceeded();
+      }
+    }
 
     // 3. توليد storage_key فريد: <tenantId>/<uuid>/<filename-safe>
     const assetId = randomUUID();
