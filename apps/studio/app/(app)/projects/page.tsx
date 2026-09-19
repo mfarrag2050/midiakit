@@ -294,7 +294,18 @@ export default function ProjectsPage(): JSX.Element {
         ))}
       </div>
 
-      {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
+      {listErrorKey && (
+        <div className="space-y-2">
+          <Alert kind="danger" titleKey={listErrorKey} />
+          {/* ٤٧٠ §٢ · فعلٌ صريحٌ للمستخدم: زرّ إعادة محاولة على الفور،
+             لا اضطرارٌ لإعادة تحميل الصفحة يدويّاً. */}
+          <div>
+            <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+              {t('common.retry')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {!listErrorKey && !loading && rows.length === 0 && (
         <EmptyState

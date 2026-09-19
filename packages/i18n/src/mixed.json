@@ -766,11 +766,13 @@
   },
   "table": {
     "empty": "No rows yet.",
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ جلب القائمة — لحظة"
   },
   "common": {
     "loading": "جارٍ التحميل…",
     "loadingList": "جارٍ جلب the list…",
+    "loadingProject": "جارٍ فتح the project — قد يستغرق ثوانٍ على slow network",
+    "retry": "إعادة المحاولة",
     "sessionExpiredCTA": "سجّل الدخول من جديد"
   },
   "errors": {

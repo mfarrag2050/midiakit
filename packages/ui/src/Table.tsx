@@ -90,14 +90,37 @@ export function Table<T>({
         </thead>
         <tbody>
           {loading && (
-            <tr>
-              <td
-                colSpan={columns.length}
-                className="px-4 py-8 text-center text-xs text-fg-muted"
-              >
-                {t('table.loading')}
-              </td>
-            </tr>
+            <>
+              {/* ٤٧٠ §٢ · هيكلٌ رماديّ (skeleton) بدل سطرٍ واحد يقول
+                 «جارٍ التحميل…» — على الشبكة البطيئة (نفق) الفارق
+                 يظهر: يرى المستخدم شكلَ الجدول قادماً، لا فراغاً بلا
+                 وعد. سطرٌ نصّيٌّ أوّلاً حتى يقرأ قارئُ الشاشة سياقاً،
+                 ثمّ ٥ صفوفٍ متذبذبة عرضاً. */}
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="border-b border-border/40 px-4 py-2 text-center text-xs text-fg-muted"
+                >
+                  {t('table.loading')}
+                </td>
+              </tr>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr
+                  key={`skeleton-${i}`}
+                  aria-hidden="true"
+                  className="border-b border-border/40"
+                >
+                  {columns.map((c, j) => (
+                    <td key={c.key} className="px-4 py-3">
+                      <div
+                        className="h-3 rounded bg-fg-subtle/15 motion-safe:animate-pulse"
+                        style={{ width: `${45 + ((i * 13 + j * 7) % 40)}%` }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </>
           )}
           {!loading && rows.length === 0 && (
             <tr>

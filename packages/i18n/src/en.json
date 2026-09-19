@@ -765,11 +765,13 @@
   },
   "table": {
     "empty": "No rows yet.",
-    "loading": "Loading…"
+    "loading": "Fetching the list — one moment"
   },
   "common": {
     "loading": "Loading…",
     "loadingList": "Fetching the list…",
+    "loadingProject": "Opening the project — may take seconds on a slow network",
+    "retry": "Retry",
     "sessionExpiredCTA": "Log in again"
   },
   "errors": {

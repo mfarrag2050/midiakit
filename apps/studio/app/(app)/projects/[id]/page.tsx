@@ -653,15 +653,44 @@ export default function ProjectEditorPage(): JSX.Element {
   ];
 
   if (loading) {
-    return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
+    // ٤٧٠ §٢ · الحالةُ الأولى التي يراها المستخدم على تنفٍّ بطيء —
+    // نصٌّ يقول ما يحدث + هيكلٌ رماديّ يذكّر بشكل المحرّر، لا سطرٌ
+    // منفرد في زاويةٍ يوحي بانهيار.
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-xs text-fg-muted">{t('common.loadingProject')}</div>
+        <div className="h-8 w-64 rounded bg-fg-subtle/15 motion-safe:animate-pulse" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={`sk-l-${i}`} className="space-y-2 rounded border border-border/50 bg-surface-2 p-3">
+                <div className="h-3 w-24 rounded bg-fg-subtle/15 motion-safe:animate-pulse" />
+                <div className="h-8 w-full rounded bg-fg-subtle/10 motion-safe:animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div
+            aria-hidden="true"
+            className="h-72 rounded border border-border/50 bg-surface-2 motion-safe:animate-pulse"
+          />
+        </div>
+      </div>
+    );
   }
   if (loadErrorKey) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-4">
         <Alert kind="danger" titleKey={loadErrorKey} />
-        <Link href="/projects" className="text-accent hover:underline">
-          {t('pages.projects.editor.back')}
-        </Link>
+        {/* ٤٧٠ §٢ · فعلان صريحان: إعادة المحاولة على نفس المسار،
+           أو العودة إلى القائمة إن كان العطبُ قائماً. */}
+        <div className="flex gap-3">
+          <Button variant="secondary" size="sm" onClick={() => void load()}>
+            {t('common.retry')}
+          </Button>
+          <Link href="/projects" className="text-sm text-accent hover:underline">
+            {t('pages.projects.editor.back')}
+          </Link>
+        </div>
       </div>
     );
   }
