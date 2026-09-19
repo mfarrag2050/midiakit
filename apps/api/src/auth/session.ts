@@ -55,7 +55,7 @@ const ACCESS_TTL_SECONDS = 15 * 60;                  // 15 دقيقة
 const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60;       // 30 يوم
 
 // Password reset
-const RESET_TTL_SECONDS = 60 * 60;                   // 1 ساعة (owner requirement)
+export const RESET_TTL_SECONDS = 60 * 60;            // 1 ساعة (owner requirement)
 
 // Rate limit (per 15 min window)
 const RATE_WINDOW_SECONDS = 15 * 60;

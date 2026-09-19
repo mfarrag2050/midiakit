@@ -837,6 +837,12 @@
     "VIDEO_GATE_EMPTY": "The rendered video has no content — review the template and content, then retry.",
     "TENANT_CAP_TIMEOUT": "Server is busy handling your other requests — wait for them to finish, then retry."
   },
+  "emails": {
+    "forgotPassword": {
+      "subject": "Password reset — Media Kit",
+      "body": "A password reset was requested for your Media Kit account.\n\nUse the following token to set a new password (expires in {{expiresInHours}} hour(s)):\n\n{{token}}\n\nIf you did not request this, ignore this message — nothing will change unless the token is used."
+    }
+  },
   "design": {
     "title": "Design System",
     "subtitle": "Live gallery of every component — for visual review (L-17).",
