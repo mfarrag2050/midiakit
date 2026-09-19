@@ -19,15 +19,16 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { toFull, type DbProjectRow } from './shared/mapper.js';
 import {
   BrandKitNotFound, TemplateNotFound, WorkflowNotFound, LocaleUnsupported,
-  PlanLimitReached, ContentTooLarge,
+  PlanLimitReached,
 } from '../../errors.js';
 import { getEffectiveLimits } from '../../config/effective-limits.js';
+import { serializeAndCheckContentSize } from './shared/content-size.js';
 
 const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'es', 'de'] as const;
 
-// 380 · حدّ حجم content JSON — 256 KB يستوعب عنواناً+مصدراً+مقاطع كثيرة
-// دون فتح باب انتفاخ صفوف projects بمحتوى ميغابايتات.
-export const CONTENT_MAX_BYTES = 256 * 1024;
+// 420 · CONTENT_MAX_BYTES نُقل إلى shared/content-size.ts — إعادة تصدير
+// كي لا تكسر أيّ استيراد خارجيّ محتمل.
+export { CONTENT_MAX_BYTES } from './shared/content-size.js';
 
 const bodySchema = z.object({
   title: z.string().min(1).max(500),
@@ -47,11 +48,8 @@ const route: FastifyPluginAsync = async (fastify) => {
     const locale = parsed.locale ?? 'ar';
     if (!(SUPPORTED_LOCALES as readonly string[]).includes(locale)) throw LocaleUnsupported();
 
-    // 380 · حجم content — يُقاس بعد serialize لأنّ jsonb هو ما يُخزَّن.
-    const contentJson = JSON.stringify(parsed.content ?? {});
-    if (Buffer.byteLength(contentJson, 'utf8') > CONTENT_MAX_BYTES) {
-      throw ContentTooLarge();
-    }
+    // 380 · حجم content — النقطة الموحّدة (420 §١): نفس الاستدعاء في PATCH.
+    const contentJson = serializeAndCheckContentSize(parsed.content);
 
     // 380 · PLAN_LIMIT_REACHED للمشاريع — COUNT قبل INSERT مقابل الحدّ الفعليّ.
     const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
