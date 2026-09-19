@@ -717,15 +717,18 @@ export default function ProjectEditorPage(): JSX.Element {
                 }
               }}
               className={
-                'rounded border px-2 py-1 ' +
+                'inline-flex items-baseline gap-2 whitespace-nowrap rounded border px-2 py-1 ' +
                 (k === sizeKey
                   ? 'border-accent bg-accent/15 text-accent'
                   : 'border-border bg-surface text-fg-muted hover:text-fg')
               }
               data-testid={`size-${k}`}
             >
-              {t(SIZE_OPTIONS[k].labelKey)}
-              <span dir="ltr" className="ms-2 text-[10px] text-fg-subtle">
+              {/* ٤١٠ §٣: التسمية والأبعاد داخل inline-flex بفجوة صريحة —
+                 قبلاً كانت `ms-2` على span LTR لا تُنشئ فجوةً بين النص
+                 العربيّ والرقم اللاتينيّ في نفس السطر، فيظهر «إنستغرام١٠٨٠×١٣٥٠». */}
+              <span>{t(SIZE_OPTIONS[k].labelKey)}</span>
+              <span dir="ltr" className="text-[10px] text-fg-subtle">
                 {SIZE_OPTIONS[k].dim.w}×{SIZE_OPTIONS[k].dim.h}
               </span>
             </button>

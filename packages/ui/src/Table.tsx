@@ -44,7 +44,24 @@ export function Table<T>({
     // 240-PHONE-WIDTH: تمرير أفقيّ داخل الجدول على الشاشات الضيقة كي
     // لا تنكسر الصفحة كلّها. `min-w-max` يحفظ صفوف الجدول من الالتفاف
     // القبيح · `-webkit-overflow-scrolling` للتمرير باللمس.
-    <div className="overflow-x-auto rounded-lg border border-border">
+    //
+    // ٤١٠ §٣: `scroll-shadow` بتقنية Roman Komarov — أربعُ خلفياتٍ
+    // متزامنة، اثنتان بلون سطح الحاوية (local) واثنتان ظلٌّ رماديّ
+    // (scroll). حين يكون فيه محتوى مخفيّ يمنة/يسرة يظهر الظلّ على تلك
+    // الحافة. يخبر اللمسَ أن ثمّة أعمدةً خارج القماش دون شريط تمرير.
+    <div
+      className="overflow-x-auto rounded-lg border border-border"
+      style={{
+        background:
+          'linear-gradient(to right, var(--pfmk-surface, #fff) 30%, rgba(255,255,255,0)),' +
+          'linear-gradient(to right, rgba(255,255,255,0), var(--pfmk-surface, #fff) 70%) 100% 0,' +
+          'radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)),' +
+          'radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.18), rgba(0,0,0,0)) 100% 0',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '32px 100%, 32px 100%, 14px 100%, 14px 100%',
+        backgroundAttachment: 'local, local, scroll, scroll',
+      }}
+    >
       <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead className="bg-surface-2 text-xs uppercase tracking-wide text-fg-muted">
           <tr>
