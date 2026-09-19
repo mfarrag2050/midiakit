@@ -761,9 +761,9 @@
     "sessionExpiredCTA": "Log in again"
   },
   "errors": {
-    "UNKNOWN": "Something went wrong.",
-    "UNAUTHENTICATED": "Your session expired. Please sign in again.",
-    "NETWORK_ERROR": "Can't reach the service.",
+    "UNKNOWN": "Something went wrong — retry, and if it persists refresh the page.",
+    "UNAUTHENTICATED": "Your session expired — sign in again to continue.",
+    "NETWORK_ERROR": "Can't reach the service — check your connection and retry.",
     "URL_EXPIRED": "Upload URL expired — retry will request a fresh one.",
     "UPLOAD_FAILED": "Upload failed — try again.",
     "UPLOAD_ABORTED": "Upload cancelled.",
