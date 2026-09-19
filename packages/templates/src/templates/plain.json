@@ -1,6 +1,6 @@
 {
   "id": "plain",
-  "name": "بسيط — إثبات بوابة المرحلة 2",
+  "name": "بطاقة بسيطة",
   "kind": "static",
   "sizes": ["x", "instagram", "feed"],
   "fields": [

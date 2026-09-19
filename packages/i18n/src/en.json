@@ -311,12 +311,12 @@
       "editBtn": "Edit brand kit",
       "editor": {
         "title": "Edit brand kit",
-        "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
+        "subtitle": "Only the Name field is editable right now. Other fields are read-only and will open for editing soon.",
         "backToList": "← Back to list",
         "save": "Save",
         "saved": "Saved.",
-        "readOnlyTag": "Read-only · next phase",
-        "phase1Hint": "Punching the save (patch) path end-to-end on one field before building the twenty on top of it.",
+        "readOnlyTag": "Read-only",
+        "phase1Hint": "Name is editable now · other fields are being prepared.",
         "section": {
           "identity": "Identity",
           "font": "Font",

@@ -312,12 +312,12 @@
       "editBtn": "Edit الهوية",
       "editor": {
         "title": "Edit brand kit",
-        "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
+        "subtitle": "الاسم فقط editable الآن. باقي الحقول read-only وتُفتَح للتحرير قريباً.",
         "backToList": "← Back to list",
         "save": "Save",
         "saved": "Saved.",
-        "readOnlyTag": "Read-only · next phase",
-        "phase1Hint": "توصيل مسار الحفظ (patch) من طرفه إلى طرفه بحقل واحد قبل بناء العشرين حقلاً فوقه.",
+        "readOnlyTag": "Read-only",
+        "phase1Hint": "الاسم متاح للحفظ الآن · باقي الحقول قيد التحضير.",
         "section": {
           "identity": "Identity",
           "font": "Font",
