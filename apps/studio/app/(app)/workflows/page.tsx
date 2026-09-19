@@ -209,6 +209,11 @@ export default function WorkflowsPage(): JSX.Element {
         <EmptyState
           titleKey="pages.workflows.empty"
           bodyKey="pages.workflows.emptyBody"
+          action={
+            <Button onClick={() => setCreateOpen(true)}>
+              {t('pages.workflows.create')}
+            </Button>
+          }
         />
       )}
       {(loading || rows.length > 0) && (

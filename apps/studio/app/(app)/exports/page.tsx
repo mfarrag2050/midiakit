@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -304,6 +305,13 @@ export default function ExportsPage(): JSX.Element {
         <EmptyState
           titleKey="pages.exports.empty"
           bodyKey="pages.exports.emptyBody"
+          action={
+            <Link href="/breaking">
+              <Button variant="primary">
+                {t('pages.exports.emptyAction')}
+              </Button>
+            </Link>
+          }
         />
       )}
 

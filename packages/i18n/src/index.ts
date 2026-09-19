@@ -12,3 +12,8 @@
 export { LocaleProvider, useLocale, type Locale } from './LocaleProvider';
 export { LocaleSwitcher } from './LocaleSwitcher';
 export { Ltr } from './Ltr';
+export {
+  arPluralCategory,
+  pluralFor,
+  type ArPluralCategory,
+} from './plural';

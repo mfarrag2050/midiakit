@@ -16,6 +16,8 @@ import {
   type Column,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
+import { formatDateTime } from '@/src/format/datetime';
+import { useDigitStyle } from '@/src/format/settings';
 import {
   annotations as annotationsApi,
   ApiError,
@@ -42,6 +44,8 @@ import { TASHKEEL_UI_ENABLED } from '@/src/config/features';
 import { roleName } from '@/src/lib/role-names';
 import { AssetPicker } from '@/src/ui/AssetPicker';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
+import { RenderFailureAlert } from '@/src/ui/RenderFailureAlert';
+import { RenderPendingAlert } from '@/src/ui/RenderPendingAlert';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -111,7 +115,11 @@ const TASHKEEL: readonly { readonly char: string; readonly labelKey: string }[] 
 const TASHKEEL_STRIP_RE = /[ً-ٰٟۖ-ۭـ]/g;
 
 export default function ProjectEditorPage(): JSX.Element {
-  const { t } = useLocale();
+  const locale = useLocale();
+  const { t } = locale;
+  const { style: digitStyle } = useDigitStyle();
+  const fmtDt = (iso: string): string =>
+    formatDateTime(iso, { style: digitStyle, locale: locale.locale });
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -598,8 +606,8 @@ export default function ProjectEditorPage(): JSX.Element {
       key: 'at',
       headerKey: 'pages.projects.revisions.col.at',
       render: (r) => (
-        <span dir="ltr" className="text-xs text-fg-subtle">
-          {r.createdAt.slice(0, 19).replace('T', ' ')}
+        <span dir="ltr" className="text-xs text-fg-subtle tabular">
+          {fmtDt(r.createdAt)}
         </span>
       ),
     },
@@ -645,15 +653,44 @@ export default function ProjectEditorPage(): JSX.Element {
   ];
 
   if (loading) {
-    return <div className="p-8 text-fg-muted">{t('common.loading')}</div>;
+    // ٤٧٠ §٢ · الحالةُ الأولى التي يراها المستخدم على تنفٍّ بطيء —
+    // نصٌّ يقول ما يحدث + هيكلٌ رماديّ يذكّر بشكل المحرّر، لا سطرٌ
+    // منفرد في زاويةٍ يوحي بانهيار.
+    return (
+      <div className="space-y-4 p-4">
+        <div className="text-xs text-fg-muted">{t('common.loadingProject')}</div>
+        <div className="h-8 w-64 rounded bg-fg-subtle/15 motion-safe:animate-pulse" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={`sk-l-${i}`} className="space-y-2 rounded border border-border/50 bg-surface-2 p-3">
+                <div className="h-3 w-24 rounded bg-fg-subtle/15 motion-safe:animate-pulse" />
+                <div className="h-8 w-full rounded bg-fg-subtle/10 motion-safe:animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div
+            aria-hidden="true"
+            className="h-72 rounded border border-border/50 bg-surface-2 motion-safe:animate-pulse"
+          />
+        </div>
+      </div>
+    );
   }
   if (loadErrorKey) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-4">
         <Alert kind="danger" titleKey={loadErrorKey} />
-        <Link href="/projects" className="text-accent hover:underline">
-          {t('pages.projects.editor.back')}
-        </Link>
+        {/* ٤٧٠ §٢ · فعلان صريحان: إعادة المحاولة على نفس المسار،
+           أو العودة إلى القائمة إن كان العطبُ قائماً. */}
+        <div className="flex gap-3">
+          <Button variant="secondary" size="sm" onClick={() => void load()}>
+            {t('common.retry')}
+          </Button>
+          <Link href="/projects" className="text-sm text-accent hover:underline">
+            {t('pages.projects.editor.back')}
+          </Link>
+        </div>
       </div>
     );
   }
@@ -671,7 +708,7 @@ export default function ProjectEditorPage(): JSX.Element {
             <Badge tone="neutral">
               {t(`pages.projects.state.${state.currentState}`)}
             </Badge>
-            <span dir="ltr">{project.updatedAt.slice(0, 19).replace('T', ' ')}</span>
+            <span dir="ltr" className="tabular">{fmtDt(project.updatedAt)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -714,15 +751,18 @@ export default function ProjectEditorPage(): JSX.Element {
                 }
               }}
               className={
-                'rounded border px-2 py-1 ' +
+                'inline-flex items-baseline gap-2 whitespace-nowrap rounded border px-2 py-1 ' +
                 (k === sizeKey
                   ? 'border-accent bg-accent/15 text-accent'
                   : 'border-border bg-surface text-fg-muted hover:text-fg')
               }
               data-testid={`size-${k}`}
             >
-              {t(SIZE_OPTIONS[k].labelKey)}
-              <span dir="ltr" className="ms-2 text-[10px] text-fg-subtle">
+              {/* ٤١٠ §٣: التسمية والأبعاد داخل inline-flex بفجوة صريحة —
+                 قبلاً كانت `ms-2` على span LTR لا تُنشئ فجوةً بين النص
+                 العربيّ والرقم اللاتينيّ في نفس السطر، فيظهر «إنستغرام١٠٨٠×١٣٥٠». */}
+              <span>{t(SIZE_OPTIONS[k].labelKey)}</span>
+              <span dir="ltr" className="text-[10px] text-fg-subtle">
                 {SIZE_OPTIONS[k].dim.w}×{SIZE_OPTIONS[k].dim.h}
               </span>
             </button>
@@ -859,7 +899,11 @@ export default function ProjectEditorPage(): JSX.Element {
                     htmlFor={`fld-${f.key}`}
                     className="block text-xs font-medium text-fg-muted"
                   >
-                    {f.label ?? f.key}
+                    {/* ٤١٠ §٢: عرِّب من القاموس القائم لا `f.key` الخام. المفتاح
+                       الغائب يسقط إلى تسمية عامّة، لا شفرةً على الشاشة. */}
+                    {locale.has(`pages.projects.workspace.field.${f.key}`)
+                      ? t(`pages.projects.workspace.field.${f.key}`)
+                      : (f.label ?? t('pages.projects.workspace.fieldFallback'))}
                     {f.required && <span className="ms-1 text-danger">*</span>}
                   </label>
                   <div className="flex items-center gap-1">
@@ -888,8 +932,13 @@ export default function ProjectEditorPage(): JSX.Element {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => wrapAccent(f.key)}>
-                      _word_
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => wrapAccent(f.key)}
+                      title={t('pages.projects.workspace.accentWrapTitle')}
+                    >
+                      {t('pages.projects.workspace.accentWrap')}
                     </Button>
                   </div>
                 </div>
@@ -1092,23 +1141,30 @@ export default function ProjectEditorPage(): JSX.Element {
                 }
               />
             )}
-            {renderRow && (
+            {renderRow && (renderRow.status === 'queued' || renderRow.status === 'running') && (
+              <RenderPendingAlert
+                row={renderRow}
+                onCancel={async (id) => {
+                  // ٤٠١ §٣ — مخرج «إلغاء». `renders.cancel` مبنيّةٌ في
+                  // `endpoints/renders.ts:93` — كانت غيرَ موصَّلة.
+                  await renders.cancel(id);
+                  setRenderRow(null);
+                  if (pollTimer.current) clearInterval(pollTimer.current);
+                }}
+              />
+            )}
+            {renderRow?.status === 'succeeded' && renderRow.output_url && (
               <div className="text-xs text-fg-muted">
-                {renderRow.status === 'queued' &&
-                  t('pages.projects.editor.renderQueued')}
-                {renderRow.status === 'running' &&
-                  t('pages.projects.editor.renderRunning')}
-                {renderRow.status === 'succeeded' && renderRow.output_url && (
-                  <a
-                    href={renderRow.output_url}
-                    className="text-accent hover:underline"
-                  >
-                    {t('pages.projects.editor.renderReady')}
-                  </a>
-                )}
-                {renderRow.status === 'failed' &&
-                  t('pages.projects.editor.renderFailed')}
+                <a
+                  href={renderRow.output_url}
+                  className="text-accent hover:underline"
+                >
+                  {t('pages.projects.editor.renderReady')}
+                </a>
               </div>
+            )}
+            {renderRow?.status === 'failed' && (
+              <RenderFailureAlert row={renderRow} />
             )}
             <Button
               size="sm"
@@ -1267,7 +1323,7 @@ export default function ProjectEditorPage(): JSX.Element {
                       </div>
                       <div className="text-fg">{a.body}</div>
                       <div className="text-[10px] text-fg-subtle" dir="ltr">
-                        {a.createdAt.slice(0, 19).replace('T', ' ')} ·{' '}
+                        <span className="tabular">{fmtDt(a.createdAt)}</span> ·{' '}
                         {a.authorId ?? t('pages.projects.editor.systemActor')}
                       </div>
                     </li>
@@ -1287,8 +1343,8 @@ export default function ProjectEditorPage(): JSX.Element {
                 {state.history.slice(-6).reverse().map((h, i) => (
                   <li key={`${h.at}-${i}`} className="space-y-0.5 border-t border-border pt-1">
                     <div>
-                      <span dir="ltr" className="text-fg-subtle">
-                        {h.at.slice(0, 19).replace('T', ' ')}
+                      <span dir="ltr" className="text-fg-subtle tabular">
+                        {fmtDt(h.at)}
                       </span>{' '}
                       · {h.from} → {h.to} ·{' '}
                       <span className="text-fg">

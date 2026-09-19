@@ -49,6 +49,13 @@ interface LocaleContext {
   readonly locale: Locale;
   setLocale(next: Locale): void;
   t(key: string, params?: Record<string, string | number>): string;
+  /**
+   * ٣٩٠ · هل المفتاح موجودٌ في القاموس الحاليّ أو في fallback العربيّ؟
+   * يُستعمل عند عرض رمز خطأ آتٍ من الخادم — إن كان مفقوداً، الواجهةُ
+   * تُظهر جملةً عربيّةً عامّةً + الرمز كرمزٍ لا كجملة، بدل تسريب
+   * «errors.SOMETHING_NEW» على الشاشة (٧٢٠ § ١، القناة F).
+   */
+  has(key: string): boolean;
 }
 
 const Ctx = createContext<LocaleContext | null>(null);
@@ -122,6 +129,7 @@ export function LocaleProvider({ children }: { children: ReactNode }): JSX.Eleme
         const fb = lookup(ar, key);
         return fb !== null ? interpolate(fb, params) : key;
       },
+      has: (key) => lookup(dict, key) !== null || lookup(ar, key) !== null,
     };
   }, [locale]);
 

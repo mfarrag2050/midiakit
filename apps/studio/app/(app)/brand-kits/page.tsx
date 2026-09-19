@@ -298,7 +298,15 @@ export default function BrandKitsPage(): JSX.Element {
       {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
 
       {!listErrorKey && !loading && rows.length === 0 && (
-        <EmptyState titleKey="pages.brandKits.empty" bodyKey="pages.brandKits.emptyBody" />
+        <EmptyState
+          titleKey="pages.brandKits.empty"
+          bodyKey="pages.brandKits.emptyBody"
+          action={
+            <Button variant="primary" onClick={() => setCreateOpen(true)}>
+              {t('pages.brandKits.create')}
+            </Button>
+          }
+        />
       )}
       {(loading || rows.length > 0) && (
         <Table

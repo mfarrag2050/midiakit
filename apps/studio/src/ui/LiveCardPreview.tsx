@@ -87,9 +87,10 @@ export function LiveCardPreview({
           });
           setWarning(res.warning ?? null);
         } catch (err) {
-          setWarning(
-            err instanceof Error ? err.message : 'errors.PREVIEW_UNKNOWN'
-          );
+          // ٤٢٠ §٢: لا نسرّب `err.message` (إنجليزيّة، من محرّك الرسم) إلى
+          // Alert titleKey — نسجّله للسجل ونعرض مفتاحاً مترجَماً وحده.
+          if (err instanceof Error) console.warn('[LiveCardPreview]', err.message);
+          setWarning('errors.PREVIEW_UNKNOWN');
         }
       })();
     });
