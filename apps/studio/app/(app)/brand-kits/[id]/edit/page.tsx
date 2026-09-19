@@ -17,6 +17,7 @@ import { ApiError, assets, brandKits, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
 import { BUILTIN_FONTS, BUILTIN_FONT_FAMILIES, findBuiltinFont } from '@/src/lib/builtin-fonts';
+import { interpretBrandFont } from '@/src/lib/brand-font-choice';
 import {
   contrastRatio,
   formatContrast,
@@ -348,21 +349,9 @@ export default function BrandKitEditorPage(): JSX.Element {
       // no-op معه.
       const fonts = fontsPage.data.filter((a) => a.kind === 'font');
       setAvailableFonts(fonts);
-      // 360b · اقرأ الاختيار الحاليّ من config:
-      //  1) إن كان source='builtin' + family معلومة ⇒ خط مدمَج.
-      //  2) وإلّا إن كان weights.regular.assetId موجوداً ⇒ خط مرفوع.
-      //  3) وإلّا ⇒ غير محدَّد (يعرض placeholder «اختر خطّاً»).
-      const cfgSource = pickString(cfg, 'fonts', 'primary', 'source');
-      const cfgFamily = pickString(cfg, 'fonts', 'primary', 'family');
-      const cfgAssetId = pickString(
-        cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId'
-      );
-      let initialFont: FontChoice = { kind: 'unset' };
-      if (cfgSource === 'builtin' && cfgFamily && BUILTIN_FONT_FAMILIES.includes(cfgFamily)) {
-        initialFont = { kind: 'builtin', family: cfgFamily };
-      } else if (cfgAssetId) {
-        initialFont = { kind: 'asset', id: cfgAssetId };
-      }
+      // 360b + ٤٣٠ §٣ · قراءةُ الاختيار الحاليّ عبر `interpretBrandFont`
+      // (خالصةٌ، مغطّاةٌ باختبار تراجع للهويّات المرفوعة قبل المعرِض).
+      const initialFont: FontChoice = interpretBrandFont(cfg) as FontChoice;
       setDraftFontChoice(initialFont);
       setInitialFontChoice(initialFont);
     } catch (err) {
