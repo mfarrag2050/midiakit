@@ -15,7 +15,7 @@
     "migrate:create": "node --import tsx scripts/migrate.ts create",
     "verify:isolation": "node --import tsx scripts/verify-isolation.mjs",
     "check:template-sync": "node scripts/check-template-sync.mjs",
-    "check:plan-sync": "node scripts/check-plan-sync.mjs",
+    "check:plan-sync": "node --import tsx scripts/check-plan-sync.mjs",
     "check:control-plane-policies": "node scripts/check-control-plane-policies.mjs",
     "check:isolation-completeness": "node scripts/check-isolation-completeness.mjs"
   },
