@@ -45,6 +45,7 @@ import { drawImage } from '../layers/image.js';
 import {
   drawHeadlineLine,
   executeLayer,
+  finalizePreparedHeadline,
   type RenderFrameArgs,
   type RenderState,
   type PreparedHeadline,
@@ -469,15 +470,22 @@ function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): v
   if (!layer) return;
 
   // الاستهلاك من الخطة لطبقة headline إن كان `ectx.headlinePrep` متاحاً.
-  // متاح دائماً بعد WIRE-1-FIX لكل القوالب — عدا card_kicker (لا bounds).
   //
-  // 412 · card_kicker (anchor=below-kicker) يصل إلى هنا بـheadlinePrep
-  // «layout-only» (بلا firstBaseline · بلا bounds) من fallback في
-  // render-plan.ts:132. سابقاً: drawHeadlineLine يحسب y=NaN فيَختفي
-  // النصّ. الآن: نفصل عندئذٍ ⇒ executeLayer يستدعي prepareHeadline
-  // بحالةٍ ممتلئة (state.kicker حاضرٌ الآن) فيحسب firstBaseline صحيحاً.
-  if (layer.type === 'headline' && ectx.headlinePrep && ectx.headlinePrep.firstBaseline !== undefined) {
-    const prep = ectx.headlinePrep;
+  // مساران:
+  //   (أ) خطّة كاملة (`firstBaseline !== undefined`) — كل القوالب عدا
+  //       card_kicker بعد WIRE-1-FIX. استهلاكٌ مباشرٌ.
+  //   (ب) خطّة layout-only لـcard_kicker (fallback في `render-plan.ts:131`
+  //       لأنّ `state.kicker` غيرُ متاح قبل الحلقة). كنّا نسقط إلى
+  //       `executeLayer` → `prepareHeadline` **لكلّ إطار** — 225 مرّة
+  //       (421). الآن: `finalizePreparedHeadline` يُكمل الأنكور من
+  //       `state.kicker` (المُملأ لحظتَه بطبقة kicker السابقة) **بلا
+  //       wrap ولا justify** — استدعاءٌ رخيصٌ لا يُطلق
+  //       `onHeadlinePrepared`. الفاحص `verify:render-video-all-templates`
+  //       يُثبت `in-loop=0` لكل القوالب.
+  if (layer.type === 'headline' && ectx.headlinePrep) {
+    const prep = ectx.headlinePrep.firstBaseline !== undefined
+      ? ectx.headlinePrep
+      : finalizePreparedHeadline(ectx.headlinePrep, layer, ectx.rfArgs, ectx.state);
     const { ctx, brand, state } = ectx;
     for (let i = 0; i < prep.linesJustified.length; i++) {
       drawHeadlineLine(ctx, brand, prep, i);

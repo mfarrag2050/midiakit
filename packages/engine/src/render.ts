@@ -689,9 +689,25 @@ export function prepareHeadline(
   args.onHeadlinePrepared?.();
   const layout = computeHeadlineLayout(layer, args);
   if (!layout) return null;
+  return finalizePreparedHeadline(layout, layer, args, state);
+}
 
+/**
+ * يُكمل خطّةَ `layout-only` (خرج `computeHeadlineLayout`) بحقول الأنكور —
+ * `firstBaseline` · `lastBaseline` · `bounds` · `measure` — من `state`.
+ *
+ * **الغاية (421):** card_kicker يبني خطّةَ layout-only في `buildRenderPlan`
+ * (لأنّ `state.kicker` غيرُ متاحٍ قبل الحلقة)، ويحتاج داخلَ الحلقة إلى
+ * الأنكور فحسب. `finalize` رخيصٌ (switch + حساب) — لا wrap · لا justify ·
+ * ولا يُطلق `onHeadlinePrepared` (فليس استدعاءَ `prepareHeadline` جديداً).
+ */
+export function finalizePreparedHeadline(
+  layout: PreparedHeadline,
+  layer: HeadlineLayer,
+  args: RenderFrameArgs,
+  state: RenderState
+): PreparedHeadline {
   const nLines = layout.linesJustified.length;
-
   const anchorY = computeHeadlineAnchorY(
     layer.anchor,
     layer.verticalAnchor,
@@ -713,7 +729,7 @@ export function prepareHeadline(
     firstBaseline,
   };
 
-  const measure: Measurer = createCanvasMeasurer(args.ctx, args.brand);
+  const measure: Measurer = layout.measure ?? createCanvasMeasurer(args.ctx, args.brand);
 
   return {
     ...layout,
