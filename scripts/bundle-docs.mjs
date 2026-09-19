@@ -36,7 +36,8 @@ class SectionReadError extends Error {
 
 function shOrFail(section, cmd) {
   try {
-    return execSync(cmd, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }).toString('utf8');
+    // maxBuffer 16MB: نفس فخّ ENOBUFS الذي أصاب check-docs-bundle-fresh (417 §١).
+    return execSync(cmd, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).toString('utf8');
   } catch (err) {
     const stderr = err.stderr ? err.stderr.toString().trim() : err.message;
     throw new SectionReadError(section, cmd, stderr || 'خرج بحالة غير صفرية');
