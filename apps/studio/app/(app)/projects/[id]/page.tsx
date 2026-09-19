@@ -838,10 +838,16 @@ export default function ProjectEditorPage(): JSX.Element {
             // IMAGE-VERTICAL: حقل image يظهر قبل فحص الحقل النصّي.
             if (isImageField(f.type)) {
               const selectedId = String(draft[f.key] ?? '');
+              // 480 §٣ · اقرأ التسمية من قاموس الواجهة قبل السقوط إلى
+              // مفتاح الحقل — «image» بحرف لاتينيّ داخل واجهة عربيّة
+              // كان أوّل ما تراه العينُ في المشي.
+              const labelText = locale.has(`pages.projects.workspace.field.${f.key}`)
+                ? t(`pages.projects.workspace.field.${f.key}`)
+                : (f.label ?? t('pages.projects.workspace.fieldFallback'));
               return (
                 <div key={f.key} className="space-y-1.5" data-testid={`field-${f.key}`}>
                   <label className="block text-xs font-medium text-fg-muted">
-                    {f.label ?? f.key}
+                    {labelText}
                     {f.required && <span className="ms-1 text-danger">*</span>}
                   </label>
                   <div className="flex items-center gap-2 rounded border border-border bg-surface p-3">
@@ -934,10 +940,18 @@ export default function ProjectEditorPage(): JSX.Element {
                     )}
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="secondary"
                       onClick={() => wrapAccent(f.key)}
                       title={t('pages.projects.workspace.accentWrapTitle')}
                     >
+                      {/* 480 §٣ · «لون التأكيد» كنصٍّ عارٍ قرأتُه العينُ
+                         تسميةً مُكرَّرةً لكلّ حقل. نقطةٌ بلون الهوية
+                         تجعل الزرَّ يبدو زرّاً، والنصُّ يقرأ فعلاً
+                         (تمييز) لا اسماً (لون التأكيد). */}
+                      <span
+                        aria-hidden
+                        className="me-1 inline-block h-2 w-2 rounded-full bg-accent align-middle"
+                      />
                       {t('pages.projects.workspace.accentWrap')}
                     </Button>
                   </div>
