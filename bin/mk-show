@@ -562,6 +562,64 @@ start_studio() {
     || die "Studio فشل الإقلاع — راجع $logf"
 }
 
+# ═════ resume — إقامةُ العمليّتَين فقط · بلا هدمٍ ولا بناء (418 §١) ══════════
+# ما يفعله: يستدعي start_api كما هو (idempotent + 127.0.0.1) ثمّ نسخةً من
+# start_studio لا تلمس .next أبداً — لا تحذفُ ولا تبني — تختار start أو dev
+# بناءً على وجود prerender-manifest.json وحدَه.
+#
+# ما لا يفعله: preflight · compose up · migrate · seed · smoke · rebuild.
+# سيناريو الاستعمال: البنيةُ التحتيّة حيّة والعمليّتان ميّتتان (٤١٨).
+start_studio_no_rebuild() {
+  local pidf logf mode
+  pidf="$(state_dir)/studio.pid"
+  logf="$(state_dir)/studio.log"
+  if [[ -f "$pidf" ]] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
+    say "Studio يعمل مسبقاً على PID $(cat "$pidf") — أتركه."
+    return
+  fi
+  # القرار: start فقط إن كان prerender-manifest.json حاضراً (بناءٌ كامل).
+  # وإلّا dev — بلا `rm -rf .next` وبلا محاولة بناء. حدُّ 418 §٤.
+  if [[ -f "$SHOW_ROOT/apps/studio/.next/prerender-manifest.json" ]]; then
+    mode="start"
+  else
+    mode="dev"
+    warn "prerender-manifest.json غائب — أشغّل next dev بلا بناء (418 §٤). مؤقّت — لا يُعرَض على شريك."
+  fi
+  say "أشغّل Studio ($mode) على $STUDIO_PORT (127.0.0.1 حصراً) …"
+  if [[ "$mode" == "start" ]]; then
+    ( set -a; . "$(env_file)"; set +a
+      apply_mode_overrides
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next start -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  else
+    ( set -a; . "$(env_file)"; set +a
+      apply_mode_overrides
+      cd "$SHOW_ROOT/apps/studio"
+      nohup ./node_modules/.bin/next dev -p "$STUDIO_PORT" -H 127.0.0.1 >"$logf" 2>&1 &
+      echo $! > "$pidf" )
+  fi
+  sleep 4
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "Studio فشل الإقلاع — راجع $logf"
+  # نُسجّل النمطَ في state ليقرأه التقرير + الفحوص لاحقاً.
+  printf '%s\n' "$mode" > "$(state_dir)/studio.mode"
+}
+
+cmd_resume() {
+  require_show_worktree
+  require_docker_context
+  ensure_state_dir
+  say "resume: إقامةُ العمليّتَين فقط (API + Studio) — بلا preflight/compose/migrate/seed/rebuild."
+  start_api
+  start_studio_no_rebuild
+  say ""
+  say "✓ resume تمّ — API + Studio مستمعان على 127.0.0.1."
+  say "  API:    http://127.0.0.1:$API_PORT/v1/health"
+  say "  Studio: http://127.0.0.1:$STUDIO_PORT"
+  say "  السجلّات: bin/mk-show $TARGET_NAME logs api | bin/mk-show $TARGET_NAME logs studio"
+}
+
 stop_proc() {
   local name="$1"
   local pidf="$(state_dir)/${name}.pid"
@@ -985,6 +1043,7 @@ cmd="${1:-}"
 shift || true
 case "$cmd" in
   up)       cmd_up "$@" ;;
+  resume)   cmd_resume ;;
   down)     cmd_down ;;
   reset)    cmd_reset ;;
   gate)     cmd_gate "$@" ;;
