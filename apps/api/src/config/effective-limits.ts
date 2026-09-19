@@ -15,6 +15,8 @@ export interface EffectiveLimits {
   videosPerMonthLimit: number | null;
   requestsPerMinuteLimit: number;
   concurrentRendersLimit: number;
+  // 380 · PLAN_LIMIT_REACHED للمشاريع — nullable = غير محدود.
+  projectsLimit: number | null;
 }
 
 interface DbLimitsRow {
@@ -23,6 +25,7 @@ interface DbLimitsRow {
   plan_videos: number | null;
   plan_rpm: number;
   plan_concurrent: number;
+  plan_projects: number | null;
   overrides: Record<string, unknown> | null;
 }
 
@@ -45,6 +48,7 @@ export async function getEffectiveLimits(
        p.videos_per_month_limit   AS plan_videos,
        p.requests_per_minute_limit AS plan_rpm,
        p.concurrent_renders_limit  AS plan_concurrent,
+       p.projects_limit           AS plan_projects,
        t.plan_overrides           AS overrides
      FROM tenants t
      JOIN plans p ON p.key = t.plan
@@ -66,5 +70,6 @@ export async function getEffectiveLimits(
     videosPerMonthLimit:    pick('videos_per_month_limit', row.plan_videos),
     requestsPerMinuteLimit: pick('requests_per_minute_limit', row.plan_rpm),
     concurrentRendersLimit: pick('concurrent_renders_limit', row.plan_concurrent),
+    projectsLimit:          pick('projects_limit', row.plan_projects),
   };
 }

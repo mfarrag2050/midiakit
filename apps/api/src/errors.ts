@@ -83,6 +83,7 @@ export type ErrorCode =
   | 'TEMPLATE_SNAPSHOT_NOT_FOUND'                  // §8.6 (404)
   | 'HEADLINE_TOO_LONG'                            // 240 · content.headline > MAX (422)
   | 'SOURCE_TOO_LONG'                              // 240 · content.source > MAX (422)
+  | 'CONTENT_TOO_LARGE'                            // 380 · project content JSON بايت > CONTENT_MAX (413)
   | 'EXPORTS_RATE_LIMIT'                           // 240 · rate/دقيقة/tenant (429)
   | 'TENANT_DATA_EXPORT_FAILED'                    // 250 · فشل تدفّق النسخة الكاملة
   | 'TEMPLATE_SNAPSHOT_INVALID'                    // 280 · لقطة template غير صالحة عند الإنشاء (422)
@@ -172,6 +173,8 @@ export class ApiError extends Error {
 // اختصارات
 export const InvalidCredentials = () => new ApiError('INVALID_CREDENTIALS', 401);
 export const AccountDisabled = () => new ApiError('ACCOUNT_DISABLED', 403);
+// 380 · مستأجرٌ موقوفٌ (tenants.is_active=false) على مسارِ كتابة (POST/PUT/PATCH/DELETE)
+export const AccountSuspended = () => new ApiError('ACCOUNT_SUSPENDED', 403);
 export const TokenExpired = () => new ApiError('TOKEN_EXPIRED', 401);
 // 317: TokenInvalid يقبل cause · يُحفظ في err.cause للتشخيص في error-handler.
 export const TokenInvalid = (cause?: unknown) => new ApiError('TOKEN_INVALID', 401, null, cause);
@@ -252,6 +255,8 @@ export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED
 // 240-EXPORT-LIMITS · حدود المحتوى + rate limit
 export const HeadlineTooLong = () => new ApiError('HEADLINE_TOO_LONG', 422, 'content.headline');
 export const SourceTooLong = () => new ApiError('SOURCE_TOO_LONG', 422, 'content.source');
+// 380 · حجم content JSON بايتاً · 413 لأنّ الحدّ على حجم الحمولة لا على الدلالة.
+export const ContentTooLarge = () => new ApiError('CONTENT_TOO_LARGE', 413, 'content');
 export const ExportsRateLimit = () => new ApiError('EXPORTS_RATE_LIMIT', 429);
 // 250-TENANT-DATA-EXPORT · يُكتَب داخل الـstream كسطرَ NDJSON إن فشل بعد الـheaders
 export const TenantDataExportFailed = () => new ApiError('TENANT_DATA_EXPORT_FAILED', 500);

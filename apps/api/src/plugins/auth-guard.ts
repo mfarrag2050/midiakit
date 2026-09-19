@@ -15,7 +15,23 @@ import fp from 'fastify-plugin';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { verifyAccessToken, getActiveSession } from '../auth/session.js';
 import { getPool } from '../db.js';
-import { ApiError, Unauthorized } from '../errors.js';
+import { AccountSuspended, ApiError, Unauthorized } from '../errors.js';
+
+/**
+ * 380 · حسابٌ موقوفٌ (tenants.is_active=false) — سياسة القبول:
+ * القراءة مسموحة، الكتابة مقفلة (اختيار «ب» من الخيارات الثلاثة في التذكرة
+ * — الكلفة الأقل مقابل الحفاظ على حقّ العميل في التصدير والفوترة).
+ * `POST /v1/auth/logout` مستثنى (لا حبس داخل جلسة موقوفة) وكذلك
+ * `/v1/subscription/*` (فوترة/تجديد يجب أن تعمل حتى في التعليق).
+ */
+const SUSPENDED_WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+function isSuspensionExempt(method: string, url: string): boolean {
+  // URL قد يحوي query · اعزل المسار.
+  const path = url.split('?', 1)[0] ?? url;
+  if (path === '/v1/auth/logout') return true;
+  if (path.startsWith('/v1/subscription/')) return true;
+  return !SUSPENDED_WRITE_METHODS.has(method.toUpperCase());
+}
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -54,6 +70,18 @@ const plugin: FastifyPluginAsync = async (fastify) => {
 
       // 4. فحص الجلسة النشطة (DB-backed — لا JWT بلا حالة)
       await getActiveSession(client, claims.session_id); // SESSION_REVOKED
+
+      // 4.b · 380 · فحص tenants.is_active — إن كان موقوفاً وطلب كتابة
+      // خارج الاستثناءات، ارفع ACCOUNT_SUSPENDED قبل بلوغ handler.
+      if (!isSuspensionExempt(req.method, req.url)) {
+        const t = await client.query<{ is_active: boolean }>(
+          `SELECT is_active FROM tenants WHERE id = $1`,
+          [claims.tenant_id],
+        );
+        if (t.rowCount === 0 || !t.rows[0]!.is_active) {
+          throw AccountSuspended();
+        }
+      }
 
       // 5. تسليم السياق للـhandler
       req.auth = {
