@@ -62,6 +62,7 @@ declare_target() {
       ENV_FILE_NAME=".env.show"
       COMPOSE_PROJECT="pf-mediakit-show"
       COMPOSE_FILE_RELATIVE="infra/docker-compose.show.yml"
+      PG_SVC="postgres-show"
       API_PORT=19070
       STUDIO_PORT=19071
       PG_PORT=19062
@@ -75,6 +76,7 @@ declare_target() {
       ENV_FILE_NAME=".env.shownext"
       COMPOSE_PROJECT="pf-mediakit-shownext"
       COMPOSE_FILE_RELATIVE="infra/docker-compose.shownext.yml"
+      PG_SVC="postgres-shownext"
       API_PORT=19086
       STUDIO_PORT=19087
       PG_PORT=19082
@@ -425,7 +427,7 @@ cmd_up() {
 
   say "أنتظر postgres حتّى يكون جاهزاً …"
   local i=0
-  until compose exec -T postgres-show pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; do
+  until compose exec -T "$PG_SVC" pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; do
     ((i++)) || true
     (( i > 60 )) && die "postgres لم يجهز خلال 60 ثانية"
     sleep 1
@@ -659,10 +661,10 @@ cmd_status() {
   API ($API_PORT)   : $api_state
   Studio ($STUDIO_PORT): $studio_state
 
-  الحاويات (pf-mediakit-show):
+  الحاويات ($COMPOSE_PROJECT):
 STATUS
   if command -v docker >/dev/null 2>&1; then
-    docker ps --filter "name=pf-mediakit-show-" --format "    {{.Names}}\t{{.Status}}" 2>/dev/null | sed 's/^/  /'
+    docker ps --filter "label=com.docker.compose.project=$COMPOSE_PROJECT" --format "    {{.Names}}\t{{.Status}}" 2>/dev/null | sed 's/^/  /'
   fi
 }
 
