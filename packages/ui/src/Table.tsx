@@ -112,8 +112,12 @@ export function Table<T>({
                 >
                   {columns.map((c, j) => (
                     <td key={c.key} className="px-4 py-3">
+                      {/* ٤٧٠ §٢ · Tailwind `bg-color/N` لا يعمل مع
+                         CSS-var-based colors — نستعمل token `--border`
+                         مباشرةً (وهو rgba(255,255,255,0.08) في tokens.css)
+                         عبر className مقبولة `bg-border` من tailwind preset. */}
                       <div
-                        className="h-3 rounded bg-fg-subtle/15 motion-safe:animate-pulse"
+                        className="h-3 rounded bg-border motion-safe:animate-pulse"
                         style={{ width: `${45 + ((i * 13 + j * 7) % 40)}%` }}
                       />
                     </td>
