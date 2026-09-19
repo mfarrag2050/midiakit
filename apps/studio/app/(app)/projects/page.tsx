@@ -53,7 +53,11 @@ export default function ProjectsPage(): JSX.Element {
   const [createBusy, setCreateBusy] = useState(false);
   const [createErrorKey, setCreateErrorKey] = useState<string | null>(null);
 
-  // brand kits + templates (loaded on create-dialog open)
+  // brand kits + templates — تُحمَّل مرّةً واحدةً على المستوى الصفحيّ لا لكلّ صفّ.
+  // ٤١٠ §١: قبلاً كانت تُحمَّل عند فتح حوار الإنشاء فقط، فيعرض الجدول UUID خاماً
+  // للحقول `brand_kit_id` و`template_id` إلى أن يفتح المستخدم الحوار. الآن
+  // تُحمَّل مع أوّل عرض للقائمة، ويصبح fallback عند غياب الاسم شرطةً لا
+  // مفتاحَ قاعدة (docs/17 · L-XX «عمودٌ غائبٌ خيرٌ من عمودٍ يفضح البنية»).
   const [bkOptions, setBkOptions] = useState<{ id: string; name: string }[]>([]);
   const [tplOptions, setTplOptions] = useState<{ id: string; name: string }[]>([]);
   const [pickerErrorKey, setPickerErrorKey] = useState<string | null>(null);
@@ -79,10 +83,32 @@ export default function ProjectsPage(): JSX.Element {
     }
   }
 
+  async function loadPickers(): Promise<void> {
+    try {
+      const [bkPage, tplPage] = await Promise.all([
+        brandKits.list(),
+        templates.list(),
+      ]);
+      const visibleTemplates = (REEL_TEMPLATE_ENABLED
+        ? tplPage.data
+        : tplPage.data.filter((tt) => tt.kind !== 'video')
+      ).filter((tt) => !isDevNamedTemplate(tt.name));
+      setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
+      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
+    } catch {
+      // fallback عند فشل التحميل: يبقى الجدول قابلاً للقراءة — الاسم يظهر شرطة
+      // لا UUID خام (§١). سبب الفشل يُعرَض للمستخدم عند فتح حوار الإنشاء.
+    }
+  }
+
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  useEffect(() => {
+    void loadPickers();
+  }, []);
 
   async function openCreate(): Promise<void> {
     setCreateOpen(true);
@@ -103,8 +129,8 @@ export default function ProjectsPage(): JSX.Element {
       ).filter((tt) => !isDevNamedTemplate(tt.name));
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
       setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
-      setNewBrandKit(bkPage.data[0]?.id ?? '');
-      setNewTemplate(visibleTemplates[0]?.id ?? '');
+      setNewBrandKit((prev) => prev || bkPage.data[0]?.id || '');
+      setNewTemplate((prev) => prev || visibleTemplates[0]?.id || '');
     } catch (err) {
       setPickerErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     }
@@ -181,7 +207,7 @@ export default function ProjectsPage(): JSX.Element {
       headerKey: 'pages.projects.col.brandKit',
       render: (r) => (
         <span className="text-fg-muted">
-          {bkName.get(r.brand_kit_id) ?? r.brand_kit_id}
+          {bkName.get(r.brand_kit_id) ?? '—'}
         </span>
       ),
     },
@@ -190,7 +216,7 @@ export default function ProjectsPage(): JSX.Element {
       headerKey: 'pages.projects.col.template',
       render: (r) => (
         <span className="text-fg-muted">
-          {tplName.get(r.template_id) ?? r.template_id}
+          {tplName.get(r.template_id) ?? '—'}
         </span>
       ),
     },
