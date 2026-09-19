@@ -13,6 +13,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimitByPlan from './plugins/rate-limit-by-plan.js';
 import { config } from './config.js';
+import { describeEmailerState } from './emailer.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import authGuardPlugin from './plugins/auth-guard.js';
 import tenantTxPlugin from './plugins/tenant-tx.js';
@@ -404,6 +405,22 @@ async function main(): Promise<void> {
   try {
     await fastify.listen({ port: config.PORT, host: config.API_HOST });
     fastify.log.info(`▶ mk-api listening on http://${config.API_HOST}:${config.PORT}`);
+
+    // 400 §٢ · إعلان حالة الـemailer مرّةً واحدة عند الإقلاع — لا يتكرّر عند كل طلب.
+    const emailerState = describeEmailerState(config);
+    if (emailerState === 'dev-console') {
+      fastify.log.warn(
+        '[emailer] SMTP غير مُضبَط — رسائل الاستعادة والدعوات ستُطبع في هذا السجل بدل إرسالها فعلاً. ' +
+          'لضبطها: SMTP_HOST · SMTP_PORT · SMTP_USER · SMTP_PASS · SMTP_FROM في متغيّرات البيئة. ' +
+          '(هذا التحذير يظهر مرّة واحدة عند الإقلاع.)',
+      );
+    } else if (emailerState === 'unconfigured-production') {
+      fastify.log.error(
+        '[emailer] production بلا SMTP — كلّ محاولة إرسال ستفشل بخطأ صريح. الحلّ: اضبط SMTP_* أو انزل عن NODE_ENV=production.',
+      );
+    } else {
+      fastify.log.info('[emailer] SMTP مضبوطٌ · الإرسال سيمرّ عبر مزوّد البريد.');
+    }
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
