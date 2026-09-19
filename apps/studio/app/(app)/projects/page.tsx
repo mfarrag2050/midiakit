@@ -300,6 +300,11 @@ export default function ProjectsPage(): JSX.Element {
         <EmptyState
           titleKey="pages.projects.empty"
           bodyKey="pages.projects.emptyBody"
+          action={
+            <Button onClick={() => void openCreate()}>
+              {t('pages.projects.create')}
+            </Button>
+          }
         />
       )}
       {(loading || rows.length > 0) && (

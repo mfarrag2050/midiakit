@@ -488,6 +488,7 @@
       "subtitle": "Card, Urgent, and Reel templates — public and your own.",
       "empty": "No templates yet",
       "emptyBody": "Templates are JSON files with fields you fill in to produce output.",
+      "emptyResetFilter": "Show all templates",
       "readOnly": "Read-only",
       "duplicate": "Duplicate",
       "duplicateSuffix": " — copy",
@@ -566,6 +567,7 @@
       "subtitle": "PNG and MP4 history per project, with the brand snapshot used.",
       "empty": "No renders yet",
       "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8).",
+      "emptyAction": "Start from a project",
       "col": {
         "id": "ID",
         "project": "Project",
@@ -599,6 +601,7 @@
       "subtitle": "What your agency exported: date · template · size · status · file.",
       "empty": "No exports yet",
       "emptyBody": "Your first export from the breaking composer or the brand-kit editor will appear here. The file downloads to you; the log stays here.",
+      "emptyAction": "Open the breaking composer",
       "col": {
         "date": "Date",
         "template": "Template",

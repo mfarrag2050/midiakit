@@ -314,7 +314,15 @@ export default function AssetsPage(): JSX.Element {
       {/* Assets list */}
       {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
       {!listErrorKey && !loading && rows.length === 0 && (
-        <EmptyState titleKey="pages.assets.empty" bodyKey="pages.assets.emptyBody" />
+        <EmptyState
+          titleKey="pages.assets.empty"
+          bodyKey="pages.assets.emptyBody"
+          action={
+            <Button variant="primary" onClick={chooseFile} disabled={uploading}>
+              {t('pages.assets.chooseFile')}
+            </Button>
+          }
+        />
       )}
       {(loading || rows.length > 0) && (
         <Table

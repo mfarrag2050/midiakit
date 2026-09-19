@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -191,6 +192,13 @@ export default function RendersPage(): JSX.Element {
         <EmptyState
           titleKey="pages.renders.empty"
           bodyKey="pages.renders.emptyBody"
+          action={
+            <Link href="/projects">
+              <Button variant="primary">
+                {t('pages.renders.emptyAction')}
+              </Button>
+            </Link>
+          }
         />
       )}
       {(loading || rows.length > 0) && (

@@ -489,6 +489,7 @@
       "subtitle": "قوالب البطاقات والعاجل والريلز — عامة وخاصة بك.",
       "empty": "No templates yet",
       "emptyBody": "القوالب ملفات JSON بحقول تُملأ لتنتج مخرجاً.",
+      "emptyResetFilter": "أَظهِر كلَّ القوالب",
       "readOnly": "Read-only",
       "duplicate": "Duplicate",
       "duplicateSuffix": " — copy",
@@ -567,6 +568,7 @@
       "subtitle": "سجل PNG وMP4 لكل مشروع، مع لقطة الهوية وقت الإنتاج.",
       "empty": "No renders yet",
       "emptyBody": "كل تصدير يحفظ لقطة الهوية المستعملة (docs/16 §8).",
+      "emptyAction": "ابدأ من project",
       "col": {
         "id": "ID",
         "project": "Project",
@@ -600,6 +602,7 @@
       "subtitle": "ما صدّرته وكالتك: date · template · size · status · file.",
       "empty": "لا exports بعد",
       "emptyBody": "أوّل export من breaking composer أو brand-kit editor يظهر هنا.",
+      "emptyAction": "افتح breaking composer",
       "col": {
         "date": "Date",
         "template": "Template",
