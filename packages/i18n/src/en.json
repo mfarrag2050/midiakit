@@ -365,12 +365,12 @@
       "editBtn": "Edit brand kit",
       "editor": {
         "title": "Edit brand kit",
-        "subtitle": "Phase 1: only the Name field is saved for now. The other fields are shown read-only and will be wired in later phases.",
+        "subtitle": "Only the Name field is editable right now. Other fields are read-only and will open for editing soon.",
         "backToList": "← Back to list",
         "save": "Save",
         "saved": "Saved.",
-        "readOnlyTag": "Read-only · next phase",
-        "phase1Hint": "Punching the save (patch) path end-to-end on one field before building the twenty on top of it.",
+        "readOnlyTag": "Read-only",
+        "phase1Hint": "Name is editable now · other fields are being prepared.",
         "section": {
           "identity": "Identity",
           "font": "Font",
@@ -904,9 +904,26 @@
     "PREVIEW_UNKNOWN": "Preview failed — check template content or reload.",
     "HEADLINE_TOO_LONG": "Headline exceeds maximum length — shorten it or adjust the template's headline limit.",
     "SOURCE_TOO_LONG": "Source name exceeds maximum length — use a shorter form.",
+    "CONTENT_TOO_LARGE": "Project content exceeds the allowed size — reduce fields or embedded images.",
     "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
-    "TEMPLATE_SNAPSHOT_INVALID": "Template snapshot for this export is invalid or incomplete.",
-    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists."
+    "TEMPLATE_SNAPSHOT_INVALID": "This template cannot be exported — choose another template or ask your administrator to review it.",
+    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
+    "INVALID_SIZE": "Requested size is not supported — pick one from the list.",
+    "FONT_ASSET_MISSING": "Brand font isn't uploaded — re-upload from brand settings.",
+    "FONT_ASSET_FETCH_FAILED": "Could not load the brand font — try again, and contact support if it persists.",
+    "IMAGE_ASSET_MISSING": "The image used isn't available — re-upload it or pick another.",
+    "IMAGE_ASSET_FETCH_FAILED": "Could not load the image — try again, and contact support if it persists.",
+    "MP4_UNSUPPORTED_TEMPLATE": "This template cannot be exported as video — pick PNG or change the template.",
+    "INK_GATE_EMPTY": "The rendered card came out empty — review its content and retry.",
+    "VIDEO_GATE_EMPTY": "The rendered video has no content — review the template and content, then retry.",
+    "TENANT_CAP_TIMEOUT": "Server is busy handling your other requests — wait for them to finish, then retry.",
+    "URGENT_NOT_ALLOWED_ON_PLAN": "Urgent priority is a higher-plan feature — upgrade your plan, or resubmit with normal priority. Your current request was not processed."
+  },
+  "emails": {
+    "forgotPassword": {
+      "subject": "Password reset — Media Kit",
+      "body": "A password reset was requested for your Media Kit account.\n\nUse the following token to set a new password (expires in {{expiresInHours}} hour(s)):\n\n{{token}}\n\nIf you did not request this, ignore this message — nothing will change unless the token is used."
+    }
   },
   "design": {
     "title": "Design System",

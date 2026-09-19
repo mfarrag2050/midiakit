@@ -65,7 +65,8 @@ function readErrorsTsFromLocal() {
  * بنقص/زيادة ما يشير إلى الحاجة لضبط الـregex.)
  */
 function parseErrorCodes(src) {
-  const re = /^\s*\|\s*'([A-Z][A-Z_]*)'/gm;
+  // ٣٧٠: يقبل الأرقام (MP4_UNSUPPORTED_TEMPLATE مثلاً) — يوافق regex الـmirror.
+  const re = /^\s*\|\s*'([A-Z][A-Z0-9_]*)'/gm;
   const codes = new Set();
   let m;
   while ((m = re.exec(src)) !== null) codes.add(m[1]);

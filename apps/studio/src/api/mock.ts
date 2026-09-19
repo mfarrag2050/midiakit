@@ -140,7 +140,7 @@ interface TemplateField {
   required?: boolean;
 }
 const SEED_TEMPLATES: Array<[string, 'static' | 'video', TemplateField[]]> = [
-  ['بسيط — إثبات بوابة المرحلة 2', 'static', [
+  ['بطاقة بسيطة', 'static', [
     { key: 'headline', label: 'العنوان', type: 'richtext', required: true },
     { key: 'source', label: 'المصدر', type: 'text' },
   ]],

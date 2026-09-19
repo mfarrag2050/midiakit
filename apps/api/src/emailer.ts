@@ -17,6 +17,14 @@ export interface Emailer {
 
 class DevConsoleEmailer implements Emailer {
   async send(params: { to: string; subject: string; body: string }): Promise<void> {
+    // 400 §٢ · حماية زائدة صريحة — الفئة لا تُنشَأ في production أصلاً،
+    // لكن نتحقّق ثانيةً قبل الطباعة كي لا يتسرّب رمزٌ خام إن أُنشِئت
+    // بالخطأ من مسارٍ لاحق (test أُدخِلَ في prod عن غير قصد · حقن يدويّ).
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        '[emailer] DevConsoleEmailer refused to print in production — token would leak to stdout.',
+      );
+    }
     console.log(
       `\n${'='.repeat(60)}\n[emailer/dev-console] لا SMTP مُضبَط — طباعة بدلاً من الإرسال:\n  to: ${params.to}\n  subject: ${params.subject}\n  body:\n${params.body}\n${'='.repeat(60)}\n`,
     );
@@ -40,6 +48,24 @@ class SmtpEmailer implements Emailer {
       `[emailer/smtp-stub] would send via ${this.cfg.SMTP_HOST}:${this.cfg.SMTP_PORT} from ${this.cfg.SMTP_FROM} — nodemailer integration pending`,
     );
   }
+}
+
+/**
+ * 400 §٢ · حالة SMTP للإعلان مرّةً واحدة عند الإقلاع.
+ *   • `smtp-configured` — SMTP كامل، الإرسال سيمرّ عبر nodemailer (حين يُبنى).
+ *   • `dev-console`     — dev/test بلا SMTP، الرمز يُطبع في stdout للمطوّر.
+ *   • `unconfigured-production` — إعداد ناقص في production (config يفشل قبلها،
+ *     لكن نُعلن الحالة إن وصلنا بطريقةٍ ما).
+ */
+export type EmailerState = 'smtp-configured' | 'dev-console' | 'unconfigured-production';
+
+export function describeEmailerState(config: Config): EmailerState {
+  const smtpFull = Boolean(
+    config.SMTP_HOST && config.SMTP_PORT && config.SMTP_USER && config.SMTP_PASS && config.SMTP_FROM,
+  );
+  if (smtpFull) return 'smtp-configured';
+  if (config.NODE_ENV === 'production') return 'unconfigured-production';
+  return 'dev-console';
 }
 
 let _emailer: Emailer | null = null;

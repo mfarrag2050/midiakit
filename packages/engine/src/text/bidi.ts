@@ -60,6 +60,70 @@ const charDir = (ch: string): BidiDir | 'neutral' => {
   return 'neutral';
 };
 
+// ─── ٣٥٠ · Unicode BD16 مبسَّطة للأقواس ─────────────────
+//
+// **العطب الأصلي (audit 750 §٢.٧ #20 · قِيس بايتاً بايت في _measure_350):**
+//   IN  : «Berlin Pact»          (داخل عربيّ)
+//   BIDI: «Pact» Berlin           ← الزوج انفصل، Berlin يتيم
+//
+// **السبب:** `«` محايد قبل عربيّ ⇒ ينضمّ للـrun العربيّ. `»` محايد بعد
+// لاتينيّ ⇒ ينضمّ للـrun اللاتينيّ. الـrun اللاتينيّ يصير `Berlin Pact»`
+// (بلا نظير للـ`«`). عكسُ الكلمات (orderRuns) يجعله `Pact» Berlin`.
+//
+// **العلاج:** قوسٌ محايدٌ نُلحقه بجاره اللاتينيّ الأقرب. مقيَّد بـLTR فقط
+// (لا نلمس سلوك rtl السليم). Unicode BD16 كامل يعالج المصفوفات المتداخلة
+// أيضاً — نُنفّذ الحالة الشائعة (زوجٌ واحدٌ حول مقطعٍ لاتينيّ).
+//
+// جدول الأقواس (Openers ↔ Closers · افتتاحيّ ينظر أماماً · خاتميّ خلفاً):
+const BRACKET_OPENERS = new Set(['«', '(', '[', '{', '‹', '⟨', '〈', '„']);
+const BRACKET_CLOSERS = new Set(['»', ')', ']', '}', '›', '⟩', '〉']);
+// «"» و«'» ASCII رمزان متماثلان (لا يفرّقان افتتاح/إغلاق)؛ نبحث في الجهتين.
+// عمداً غير موجودَين في OPENERS/CLOSERS — فرعُ SYMMETRIC وحده يعالجهما.
+const BRACKET_SYMMETRIC = new Set(['"', "'"]);
+
+/**
+ * لكلّ محايدٍ في `chars` يُحدَّد اتّجاهُه إن كان قوساً/علامةَ اقتباس:
+ * الافتتاحيّ يأخذ اتّجاه أوّل حرفٍ قويٍّ أمامَه. الخاتميّ خلفَه.
+ * المتماثل ينظر أماماً ثمّ خلفاً. **لا نُطبِّق إلّا LTR** (احتراز).
+ * `dirs[i]` تبقى كما هي إن لم يقع لاتينيّ.
+ */
+function resolveBracketDirs(
+  chars: readonly string[],
+  dirs: readonly (BidiDir | 'neutral')[]
+): (BidiDir | 'neutral')[] {
+  const out = dirs.slice();
+  const scanForward = (from: number): BidiDir | 'neutral' => {
+    for (let j = from; j < dirs.length; j++) {
+      if (dirs[j] !== 'neutral') return dirs[j]!;
+    }
+    return 'neutral';
+  };
+  const scanBackward = (from: number): BidiDir | 'neutral' => {
+    for (let j = from; j >= 0; j--) {
+      if (dirs[j] !== 'neutral') return dirs[j]!;
+    }
+    return 'neutral';
+  };
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i]!;
+    if (dirs[i] !== 'neutral') continue;
+    let resolved: BidiDir | 'neutral' = 'neutral';
+    if (BRACKET_OPENERS.has(ch)) {
+      resolved = scanForward(i + 1);
+    } else if (BRACKET_CLOSERS.has(ch)) {
+      resolved = scanBackward(i - 1);
+    } else if (BRACKET_SYMMETRIC.has(ch)) {
+      // متماثلٌ · ملاصقةٌ لأيّ جهةٍ لاتينيّة تكفي.
+      const fwd = scanForward(i + 1);
+      const bwd = scanBackward(i - 1);
+      if (fwd === 'ltr' || bwd === 'ltr') resolved = 'ltr';
+    }
+    // احتراز: نُطبِّق فقط إذا كان الجارُ لاتينيّاً. rtl كما كان.
+    if (resolved === 'ltr') out[i] = 'ltr';
+  }
+  return out;
+}
+
 // ── splitBidiRuns ────────────────────────────────────
 
 /**
@@ -72,7 +136,9 @@ export function splitBidiRuns(text: string): Run[] {
   if (text.length === 0) return [];
 
   const chars = [...text];
-  const dirs = chars.map(charDir);
+  const rawDirs = chars.map(charDir);
+  // ٣٥٠: أقواس محايدةٌ ملاصقةٌ لمقطعٍ لاتينيّ تأخذ اتّجاهه (BD16 مبسَّطة).
+  const dirs = resolveBracketDirs(chars, rawDirs);
 
   // أول اتجاه قوي — لحساب المحايدات المتقدّمة.
   let firstStrong: BidiDir = 'ltr';

@@ -366,12 +366,12 @@
       "editBtn": "Edit الهوية",
       "editor": {
         "title": "Edit brand kit",
-        "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
+        "subtitle": "الاسم فقط editable الآن. باقي الحقول read-only وتُفتَح للتحرير قريباً.",
         "backToList": "← Back to list",
         "save": "Save",
         "saved": "Saved.",
-        "readOnlyTag": "Read-only · next phase",
-        "phase1Hint": "توصيل مسار الحفظ (patch) من طرفه إلى طرفه بحقل واحد قبل بناء العشرين حقلاً فوقه.",
+        "readOnlyTag": "Read-only",
+        "phase1Hint": "الاسم متاح للحفظ الآن · باقي الحقول قيد التحضير.",
         "section": {
           "identity": "Identity",
           "font": "Font",
@@ -905,9 +905,26 @@
     "PREVIEW_UNKNOWN": "preview failed — راجع القالب.",
     "HEADLINE_TOO_LONG": "headline طويل — قصِّره أو غيّر maximum length في القالب.",
     "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
+    "CONTENT_TOO_LARGE": "project content أكبر من allowed size — قلّل fields أو embedded images.",
     "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل.",
-    "TEMPLATE_SNAPSHOT_INVALID": "template snapshot معطوبة أو ناقصة لهذا التصدير.",
-    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم."
+    "TEMPLATE_SNAPSHOT_INVALID": "تعذّر تصدير هذا القالب — اختر قالباً آخر أو اطلب مراجعته من المسؤول.",
+    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "INVALID_SIZE": "المقاس المطلوب غير مدعوم — اختر size من القائمة.",
+    "FONT_ASSET_MISSING": "brand font غير مرفوع — أعد رفعه من brand settings.",
+    "FONT_ASSET_FETCH_FAILED": "تعذّر تحميل brand font — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "IMAGE_ASSET_MISSING": "image المستعمَلة غير موجودة — أعد رفعها أو اختر غيرها.",
+    "IMAGE_ASSET_FETCH_FAILED": "تعذّر تحميل image — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "MP4_UNSUPPORTED_TEMPLATE": "هذا القالب لا يُصدَّر كـvideo — اختر PNG أو غيّر القالب.",
+    "INK_GATE_EMPTY": "البطاقة الناتجة فارغة — راجع محتواها وحاول مجدَّداً.",
+    "VIDEO_GATE_EMPTY": "الـvideo الناتج بلا محتوى — راجع القالب والمحتوى وحاول مجدَّداً.",
+    "TENANT_CAP_TIMEOUT": "الخادم مشغول بطلباتك الأخرى — انتظر انتهاءها ثمّ حاول مجدَّداً.",
+    "URGENT_NOT_ALLOWED_ON_PLAN": "المسار العاجل feature في باقةٍ أعلى — رقّ باقتك، أو resubmit بأولويّة عاديّة. طلبك الحاليّ لم يُنفَّذ."
+  },
+  "emails": {
+    "forgotPassword": {
+      "subject": "استعادة كلمة المرور — Media Kit",
+      "body": "طُلبت password reset لحسابك على Media Kit.\n\nاستعمل الرمز التالي لضبط كلمة سرّ جديدة (ينتهي بعد {{expiresInHours}} ساعة):\n\n{{token}}\n\nإن لم تطلب أنت الاستعادة، تجاهل هذه الرسالة — لن يتغيّر شيء ما لم يُستعمل الرمز."
+    }
   },
   "design": {
     "title": "Design System",

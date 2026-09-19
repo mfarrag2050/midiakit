@@ -7,10 +7,11 @@
  */
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { requestPasswordReset } from '../../auth/session.js';
+import { requestPasswordReset, RESET_TTL_SECONDS } from '../../auth/session.js';
 import { getPool } from '../../db.js';
 import { config } from '../../config.js';
 import { getEmailer } from '../../emailer.js';
+import { formatForgotPasswordEmail } from '../../emails/messages.js';
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -22,15 +23,11 @@ const route: FastifyPluginAsync = async (fastify) => {
     const { tokenPlain } = await requestPasswordReset(getPool(), { email: parsed.email });
     if (tokenPlain) {
       const emailer = getEmailer(config);
-      await emailer.send({
-        to: parsed.email,
-        subject: 'Reset your password',
-        body:
-          `Someone requested a password reset for this account.\n\n` +
-          `To reset your password, use this token within 1 hour:\n\n` +
-          `${tokenPlain}\n\n` +
-          `If you did not request this, ignore this email.`,
+      const msg = formatForgotPasswordEmail({
+        token: tokenPlain,
+        expiresInHours: Math.round(RESET_TTL_SECONDS / 3600),
       });
+      await emailer.send({ to: parsed.email, subject: msg.subject, body: msg.body });
     }
     reply.status(204).send();
   });
