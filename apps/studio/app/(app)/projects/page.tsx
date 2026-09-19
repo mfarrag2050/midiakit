@@ -20,6 +20,8 @@ import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
 import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
 import { isDevNamedTemplate } from '@/src/lib/dev-template-filter';
+import { formatDateTime } from '@/src/format/datetime';
+import { useDigitStyle } from '@/src/format/settings';
 
 // S12 — قائمة المشاريع + إنشاء + حذف. المحرّر في /projects/[id].
 // **العقد المرجعي:** docs/16 §7.1 §7.3 §7.5 · §11.6 (currentState).
@@ -36,7 +38,8 @@ const STATE_TONE: Record<string, 'neutral' | 'success' | 'accent' | 'warning'> =
 };
 
 export default function ProjectsPage(): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { style: digitStyle } = useDigitStyle();
   const router = useRouter();
 
   const [rows, setRows] = useState<ProjectSummary[]>([]);
@@ -232,9 +235,12 @@ export default function ProjectsPage(): JSX.Element {
     {
       key: 'updatedAt',
       headerKey: 'pages.projects.col.updatedAt',
+      // ٤١٠ §٤: التاريخ يمرّ عبر `formatDateTime` — يحترم نمط الأرقام
+      // العربيّ-الهنديّ أو اللاتينيّ حسب إعداد المستخدم، ولا يعود سطراً
+      // لاتينيّاً خاماً على شاشة عربيّة.
       render: (r) => (
-        <span dir="ltr" className="text-xs text-fg-subtle">
-          {r.updatedAt.slice(0, 19).replace('T', ' ')}
+        <span dir="ltr" className="text-xs text-fg-subtle tabular">
+          {formatDateTime(r.updatedAt, { style: digitStyle, locale })}
         </span>
       ),
     },

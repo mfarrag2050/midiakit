@@ -16,6 +16,8 @@ import {
   type Column,
 } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
+import { formatDateTime } from '@/src/format/datetime';
+import { useDigitStyle } from '@/src/format/settings';
 import {
   annotations as annotationsApi,
   ApiError,
@@ -115,6 +117,9 @@ const TASHKEEL_STRIP_RE = /[ً-ٰٟۖ-ۭـ]/g;
 export default function ProjectEditorPage(): JSX.Element {
   const locale = useLocale();
   const { t } = locale;
+  const { style: digitStyle } = useDigitStyle();
+  const fmtDt = (iso: string): string =>
+    formatDateTime(iso, { style: digitStyle, locale: locale.locale });
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -601,8 +606,8 @@ export default function ProjectEditorPage(): JSX.Element {
       key: 'at',
       headerKey: 'pages.projects.revisions.col.at',
       render: (r) => (
-        <span dir="ltr" className="text-xs text-fg-subtle">
-          {r.createdAt.slice(0, 19).replace('T', ' ')}
+        <span dir="ltr" className="text-xs text-fg-subtle tabular">
+          {fmtDt(r.createdAt)}
         </span>
       ),
     },
@@ -674,7 +679,7 @@ export default function ProjectEditorPage(): JSX.Element {
             <Badge tone="neutral">
               {t(`pages.projects.state.${state.currentState}`)}
             </Badge>
-            <span dir="ltr">{project.updatedAt.slice(0, 19).replace('T', ' ')}</span>
+            <span dir="ltr" className="tabular">{fmtDt(project.updatedAt)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1289,7 +1294,7 @@ export default function ProjectEditorPage(): JSX.Element {
                       </div>
                       <div className="text-fg">{a.body}</div>
                       <div className="text-[10px] text-fg-subtle" dir="ltr">
-                        {a.createdAt.slice(0, 19).replace('T', ' ')} ·{' '}
+                        <span className="tabular">{fmtDt(a.createdAt)}</span> ·{' '}
                         {a.authorId ?? t('pages.projects.editor.systemActor')}
                       </div>
                     </li>
@@ -1309,8 +1314,8 @@ export default function ProjectEditorPage(): JSX.Element {
                 {state.history.slice(-6).reverse().map((h, i) => (
                   <li key={`${h.at}-${i}`} className="space-y-0.5 border-t border-border pt-1">
                     <div>
-                      <span dir="ltr" className="text-fg-subtle">
-                        {h.at.slice(0, 19).replace('T', ' ')}
+                      <span dir="ltr" className="text-fg-subtle tabular">
+                        {fmtDt(h.at)}
                       </span>{' '}
                       · {h.from} → {h.to} ·{' '}
                       <span className="text-fg">
