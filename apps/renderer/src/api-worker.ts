@@ -314,13 +314,69 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 
-    // 6. Upload
+    // 6. Upload — output + plan snapshot (417 §٥)
+    // مستخلصُ الخطّة يُكتب بجوار الرفع لبناء حارس «العنوان المفقود» لاحقاً.
+    // لا حسابَ جديد: buildRenderPlan تُعيد استعمالَ ما يحسبه المحرك أصلاً
+    // (`prepareHeadline` / `computeHeadlineLayout`). فشلُ الخطّة لا يُسقط الرندر.
     const outputBuf = readFileSync(outPath);
     const outputKey = `${tenantId}/renders/${renderId}/output.${format}`;
     await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET, Key: outputKey, Body: outputBuf,
       ContentType: format === 'mp4' ? 'video/mp4' : 'image/png',
     }));
+
+    try {
+      const { buildRenderPlan } = await import('@pf-mediakit/engine');
+      const planCanvas = new Canvas(dims.w, dims.h);
+      const planCtx = planCanvas.getContext('2d');
+      const plan = buildRenderPlan({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ctx: planCtx as any,
+        size: dims,
+        template,
+        brand,
+        content,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(imageAssets && { assets: imageAssets as any }),
+      });
+      const planSnapshot = {
+        renderId,
+        tenantId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        templateId: (template as any).id ?? null,
+        format,
+        size: dims,
+        headline: plan.headline
+          ? {
+              fontSize: plan.headline.fontSize,
+              lineHeight: plan.headline.lineHeight,
+              chosenBoxW: plan.headline.chosenBoxW,
+              rightX: plan.headline.rightX,
+              centerX: plan.headline.centerX,
+              firstBaseline: plan.headline.firstBaseline ?? null,
+              lastBaseline: plan.headline.lastBaseline ?? null,
+              align: plan.headline.align,
+              bounds: plan.headline.bounds ?? null,
+              linesCount: plan.headline.linesJustified.length,
+            }
+          : null,
+        headlineLineCount: plan.headlineLineCount,
+        generatedAt: new Date().toISOString(),
+      };
+      const planKey = `${tenantId}/renders/${renderId}/output.plan.json`;
+      await s3.send(new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: planKey,
+        Body: Buffer.from(JSON.stringify(planSnapshot, null, 2)),
+        ContentType: 'application/json',
+      }));
+      // eslint-disable-next-line no-console
+      console.log(`[api-worker] plan snapshot uploaded: ${planKey}`);
+    } catch (planErr) {
+      // إخفاقُ الخطّة لا يُسقط الرندر — يُدَوَّن كتحذير.
+      // eslint-disable-next-line no-console
+      console.warn(`[api-worker] plan snapshot skipped: ${(planErr as Error).message}`);
+    }
 
     // 7. Update DB
     const completedAt = new Date();
