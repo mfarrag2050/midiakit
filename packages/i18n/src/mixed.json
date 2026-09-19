@@ -465,6 +465,15 @@
           "uploadOwn": "ارفع خطّي…",
           "assetIdHint": "Bundled fonts جاهزة · uploaded fonts معرَّفة بـassetId، لا بالاسم."
         },
+        "font": {
+          "weightsAvailable": "الأوزان المتاحة",
+          "weight": {
+            "light": "خفيف",
+            "regular": "عادي",
+            "bold": "غامق",
+            "extraBold": "فائق الغامق"
+          }
+        },
         "preview": {
           "title": "معاينة حيّة · Breaking card",
           "subtitle": "same engine · نصّ عيّنة عربيّ · updates on change (250ms debounce).",

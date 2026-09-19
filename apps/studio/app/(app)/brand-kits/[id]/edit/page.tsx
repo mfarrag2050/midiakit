@@ -337,12 +337,12 @@ export default function BrandKitEditorPage(): JSX.Element {
       setKit(k);
       setDraftName(k.name);
       const cfg = k.config as ConfigLike;
-      const initial: Record<string, string> = {};
+      const initialColors: Record<string, string> = {};
       for (const key of COLOR_KEYS) {
         const v = pickString(cfg, 'colors', key);
-        if (v) initial[key] = v;
+        if (v) initialColors[key] = v;
       }
-      setDraftColors(initial);
+      setDraftColors(initialColors);
       // تصفية العميل — mock لا يفهم `filter[kind]` (query يُهدَر عند
       // handleMock)، فنُبقيه هنا. الخادم الحقيقيّ يصفّي · فتصفيتنا
       // no-op معه.
@@ -357,14 +357,14 @@ export default function BrandKitEditorPage(): JSX.Element {
       const cfgAssetId = pickString(
         cfg, 'fonts', 'primary', 'weights', 'regular', 'assetId'
       );
-      let initial: FontChoice = { kind: 'unset' };
+      let initialFont: FontChoice = { kind: 'unset' };
       if (cfgSource === 'builtin' && cfgFamily && BUILTIN_FONT_FAMILIES.includes(cfgFamily)) {
-        initial = { kind: 'builtin', family: cfgFamily };
+        initialFont = { kind: 'builtin', family: cfgFamily };
       } else if (cfgAssetId) {
-        initial = { kind: 'asset', id: cfgAssetId };
+        initialFont = { kind: 'asset', id: cfgAssetId };
       }
-      setDraftFontChoice(initial);
-      setInitialFontChoice(initial);
+      setDraftFontChoice(initialFont);
+      setInitialFontChoice(initialFont);
     } catch (err) {
       setLoadErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     } finally {
@@ -375,6 +375,35 @@ export default function BrandKitEditorPage(): JSX.Element {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // ٤٣٠ §١ · حمّل كلَّ الخطوط المدمَجة مرّةً واحدةً عند فتح المحرّر —
+  // بطاقاتُ المعرِض تعرض معاينةً بكلٍّ منها بالتوازي، فتحتاج كلُّ عائلةٍ
+  // @font-face مسجَّلاً. `/api/fonts/[name]` يخدم الملفّات (whitelist).
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    for (const f of BUILTIN_FONTS) {
+      for (const w of Object.values(f.weights)) {
+        const key = `pfmk-builtin:${f.family}/${w.value}`;
+        if (document.fonts && Array.from(document.fonts).some((ff) => ff.family === f.family && String(ff.weight) === String(w.value))) {
+          continue;
+        }
+        try {
+          const face = new FontFace(
+            f.family,
+            `url(/api/fonts/${w.file}) format('truetype')`,
+            { weight: String(w.value), style: 'normal', display: 'swap' }
+          );
+          void face.load().then((loaded) => document.fonts.add(loaded)).catch(() => {
+            // فشلُ تحميل الخطّ لا يمنع المحرّر — البطاقةُ ستظهر بخطٍّ احتياطيّ.
+            // نسجّل صامتاً · L-٧٣ (رسالةٌ فنيّة في السجل لا على الشاشة).
+            if (typeof console !== 'undefined') {
+              console.warn(`[builtin-font] failed to load ${f.family}/${w.value}`);
+            }
+          });
+        } catch { /* المتصفح لا يدعم FontFace API — نتخطّى */ void key; }
+      }
+    }
+  }, []);
 
   // §140-LIVE-CARD-PREVIEW · حالة الهوية المرشَّحة من `kit.config` مع
   // فوقها الحقول التي يعدّلها المستخدم الآن (name/colors/logo/font).
@@ -773,87 +802,144 @@ export default function BrandKitEditorPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* Section — Font · 360b (بعد الموعد) · اختيار لا إملاء:
-          مدمَجة (من @/src/lib/builtin-fonts) + مرفوعة + «ارفع خطّي…» */}
+      {/* Section — Font · ٤٣٠ §١ · معرِضٌ يختار المستخدم منه بطاقةً
+          فيها اسمٌ عربيّ ومعاينةٌ حيّةٌ ورخصةٌ ظاهرة، إلى جانب رفعِ
+          خطّه هو (لا بديلاً عنه). */}
       <Card>
         <h2 className="mb-3 text-sm font-semibold">
           {t('pages.brandKits.editor.section.font')}
         </h2>
-        <>
-          <Field
-            htmlFor="font-picker"
-            labelKey="pages.brandKits.editor.field.fontFamily"
-          >
-            <select
-              id="font-picker"
-              value={
-                draftFontChoice.kind === 'builtin'
-                  ? `builtin:${draftFontChoice.family}`
-                  : draftFontChoice.kind === 'asset'
-                  ? `asset:${draftFontChoice.id}`
-                  : ''
-              }
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === 'upload') {
-                  // «ارفع خطّي…» — تحويلة إلى مسار الرفع القائم.
-                  // لا نعدّل الاختيار الحاليّ · المستخدم يعود ويختار من
-                  // القائمة بعد الرفع.
-                  router.push('/assets');
-                  return;
-                }
-                if (v.startsWith('builtin:')) {
-                  setDraftFontChoice({ kind: 'builtin', family: v.slice(8) });
-                } else if (v.startsWith('asset:')) {
-                  setDraftFontChoice({ kind: 'asset', id: v.slice(6) });
-                } else {
-                  setDraftFontChoice({ kind: 'unset' });
-                }
-              }}
-              disabled={saving}
-              className="w-full rounded border border-fg-subtle/30 bg-surface px-2 py-1.5 text-sm"
-            >
-              {draftFontChoice.kind === 'unset' && (
-                <option value="">
-                  {t('pages.brandKits.editor.fontPicker.chooseAFont')}
-                </option>
-              )}
-              <optgroup label={t('pages.brandKits.editor.fontPicker.builtinGroup')}>
-                {BUILTIN_FONTS.map((f) => (
-                  <option
-                    key={`builtin:${f.family}`}
-                    value={`builtin:${f.family}`}
-                    dir="ltr"
-                  >
-                    {f.family}
-                  </option>
-                ))}
-              </optgroup>
-              {availableFonts.length > 0 && (
-                <optgroup label={t('pages.brandKits.editor.fontPicker.uploadedGroup')}>
-                  {availableFonts.map((f) => {
-                    const family =
-                      typeof f.meta?.family === 'string'
-                        ? f.meta.family
-                        : f.filename;
-                    return (
-                      <option key={`asset:${f.id}`} value={`asset:${f.id}`} dir="ltr">
-                        {family}
-                      </option>
-                    );
-                  })}
-                </optgroup>
-              )}
-              <option value="upload">
-                {t('pages.brandKits.editor.fontPicker.uploadOwn')}
-              </option>
-            </select>
-          </Field>
-          <p className="mt-2 text-xs text-fg-subtle">
-            {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+        <div>
+          <p className="mb-3 text-xs text-fg-subtle">
+            {t('pages.brandKits.editor.fontPicker.builtinGroup')}
           </p>
-        </>
-        )}
+          <div
+            role="radiogroup"
+            aria-label={t('pages.brandKits.editor.fontPicker.builtinGroup')}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+          >
+            {BUILTIN_FONTS.map((f) => {
+              const selected =
+                draftFontChoice.kind === 'builtin' &&
+                draftFontChoice.family === f.family;
+              return (
+                <button
+                  type="button"
+                  key={`builtin:${f.family}`}
+                  role="radio"
+                  aria-checked={selected}
+                  disabled={saving}
+                  onClick={() =>
+                    setDraftFontChoice({ kind: 'builtin', family: f.family })
+                  }
+                  data-testid={`font-card-${f.family}`}
+                  className={
+                    'text-start rounded-lg border p-3 transition ' +
+                    (selected
+                      ? 'border-accent bg-accent/10'
+                      : 'border-fg-subtle/20 bg-surface hover:border-fg-subtle/40')
+                  }
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-fg">
+                      {f.nameAr}
+                      <span
+                        dir="ltr"
+                        className="ms-2 text-xs font-normal text-fg-subtle"
+                      >
+                        · {f.family}
+                      </span>
+                    </span>
+                    <span
+                      dir="ltr"
+                      className="rounded border border-fg-subtle/30 px-1.5 py-0.5 font-mono text-[10px] text-fg-muted"
+                    >
+                      {f.license}
+                    </span>
+                  </div>
+                  <p
+                    lang="ar"
+                    className="mb-1 text-lg leading-relaxed"
+                    style={{ fontFamily: `"${f.family}", sans-serif` }}
+                  >
+                    {f.sampleAr}
+                  </p>
+                  <p className="text-[11px] text-fg-subtle">
+                    {t('pages.brandKits.editor.font.weightsAvailable')}:{' '}
+                    {Object.entries(f.weights).map(([, w], i, arr) => (
+                      <span key={w.value}>
+                        {t(w.labelKey)}
+                        {i < arr.length - 1 ? ' · ' : ''}
+                      </span>
+                    ))}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          {availableFonts.length > 0 && (
+            <>
+              <p className="mt-4 mb-2 text-xs text-fg-subtle">
+                {t('pages.brandKits.editor.fontPicker.uploadedGroup')}
+              </p>
+              <div
+                role="radiogroup"
+                aria-label={t('pages.brandKits.editor.fontPicker.uploadedGroup')}
+                className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+              >
+                {availableFonts.map((f) => {
+                  const family =
+                    typeof f.meta?.family === 'string'
+                      ? f.meta.family
+                      : f.filename;
+                  const selected =
+                    draftFontChoice.kind === 'asset' &&
+                    draftFontChoice.id === f.id;
+                  return (
+                    <button
+                      type="button"
+                      key={`asset:${f.id}`}
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={saving}
+                      onClick={() =>
+                        setDraftFontChoice({ kind: 'asset', id: f.id })
+                      }
+                      className={
+                        'text-start rounded-lg border px-3 py-2 transition ' +
+                        (selected
+                          ? 'border-accent bg-accent/10'
+                          : 'border-fg-subtle/20 bg-surface hover:border-fg-subtle/40')
+                      }
+                    >
+                      <div dir="ltr" className="text-sm font-medium">
+                        {family}
+                      </div>
+                      <div className="text-[10px] text-fg-subtle">
+                        {t('pages.brandKits.editor.fontPicker.uploadedGroup')}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="mt-4 flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => router.push('/assets')}
+              disabled={saving}
+            >
+              {t('pages.brandKits.editor.fontPicker.uploadOwn')}
+            </Button>
+            <span className="text-xs text-fg-subtle">
+              {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+            </span>
+          </div>
+        </div>
         <div className="mt-3 space-y-1 border-t border-fg-subtle/10 pt-3">
           <ReadOnlyRow
             labelKey="pages.brandKits.editor.field.fontSource"

@@ -464,6 +464,15 @@
           "uploadOwn": "Upload my own font…",
           "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name."
         },
+        "font": {
+          "weightsAvailable": "Weights available",
+          "weight": {
+            "light": "Light",
+            "regular": "Regular",
+            "bold": "Bold",
+            "extraBold": "ExtraBold"
+          }
+        },
         "preview": {
           "title": "Live preview · Breaking card",
           "subtitle": "Same engine · Arabic sample text · updates with every change, no save required (250ms debounce).",
