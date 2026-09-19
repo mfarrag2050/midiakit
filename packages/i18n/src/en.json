@@ -241,7 +241,19 @@
         "imageChange": "Change",
         "imageRemove": "Remove",
         "imageSelected": "Image selected",
-        "fieldUnsupported": "Unsupported field type in this version"
+        "fieldUnsupported": "Unsupported field type in this version",
+        "fieldFallback": "Field",
+        "accentWrap": "Accent",
+        "accentWrapTitle": "Wrap selection in accent color",
+        "field": {
+          "headline": "Headline",
+          "kicker": "Kicker",
+          "subtitle": "Subtitle",
+          "source": "Source",
+          "byline": "Byline",
+          "caption": "Caption",
+          "image": "Image"
+        }
       },
       "editor2": {
         "noFields": "No fields in this template.",

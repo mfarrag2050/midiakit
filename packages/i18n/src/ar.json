@@ -251,7 +251,19 @@
         "imageChange": "تبديل",
         "imageRemove": "إزالة",
         "imageSelected": "صورة مُختارة",
-        "fieldUnsupported": "نوع حقل غير مدعوم في هذه النسخة"
+        "fieldUnsupported": "نوع حقل غير مدعوم في هذه النسخة",
+        "fieldFallback": "حقل",
+        "accentWrap": "لون التأكيد",
+        "accentWrapTitle": "لفّ التحديد بلون التأكيد",
+        "field": {
+          "headline": "العنوان",
+          "kicker": "كيكر",
+          "subtitle": "العنوان الفرعي",
+          "source": "المصدر",
+          "byline": "المراسل",
+          "caption": "التعليق",
+          "image": "الصورة"
+        }
       },
       "annotations": {
         "title": "التعليقات",

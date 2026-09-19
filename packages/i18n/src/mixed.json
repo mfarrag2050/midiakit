@@ -242,7 +242,19 @@
         "imageChange": "Change",
         "imageRemove": "Remove",
         "imageSelected": "صورة selected",
-        "fieldUnsupported": "نوع حقل unsupported في this version"
+        "fieldUnsupported": "نوع حقل unsupported في this version",
+        "fieldFallback": "حقل",
+        "accentWrap": "لون التأكيد",
+        "accentWrapTitle": "لفّ التحديد بلون التأكيد",
+        "field": {
+          "headline": "العنوان",
+          "kicker": "كيكر",
+          "subtitle": "العنوان الفرعي",
+          "source": "المصدر",
+          "byline": "المراسل",
+          "caption": "التعليق",
+          "image": "الصورة"
+        }
       },
       "editor2": {
         "noFields": "No fields in this template.",

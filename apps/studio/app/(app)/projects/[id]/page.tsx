@@ -113,7 +113,8 @@ const TASHKEEL: readonly { readonly char: string; readonly labelKey: string }[] 
 const TASHKEEL_STRIP_RE = /[ً-ٰٟۖ-ۭـ]/g;
 
 export default function ProjectEditorPage(): JSX.Element {
-  const { t } = useLocale();
+  const locale = useLocale();
+  const { t } = locale;
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -861,7 +862,11 @@ export default function ProjectEditorPage(): JSX.Element {
                     htmlFor={`fld-${f.key}`}
                     className="block text-xs font-medium text-fg-muted"
                   >
-                    {f.label ?? f.key}
+                    {/* ٤١٠ §٢: عرِّب من القاموس القائم لا `f.key` الخام. المفتاح
+                       الغائب يسقط إلى تسمية عامّة، لا شفرةً على الشاشة. */}
+                    {locale.has(`pages.projects.workspace.field.${f.key}`)
+                      ? t(`pages.projects.workspace.field.${f.key}`)
+                      : (f.label ?? t('pages.projects.workspace.fieldFallback'))}
                     {f.required && <span className="ms-1 text-danger">*</span>}
                   </label>
                   <div className="flex items-center gap-1">
@@ -890,8 +895,13 @@ export default function ProjectEditorPage(): JSX.Element {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => wrapAccent(f.key)}>
-                      _word_
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => wrapAccent(f.key)}
+                      title={t('pages.projects.workspace.accentWrapTitle')}
+                    >
+                      {t('pages.projects.workspace.accentWrap')}
                     </Button>
                   </div>
                 </div>
