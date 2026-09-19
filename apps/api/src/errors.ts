@@ -97,6 +97,7 @@ export type ErrorCode =
   | 'INK_GATE_EMPTY'                               // 370 · بطاقة PNG بلا حبر (701 · enforce mode)
   | 'VIDEO_GATE_EMPTY'                             // 370 · فيديو بلا محتوى (340 · enforce mode)
   | 'TENANT_CAP_TIMEOUT'                           // 370 · مستأجر بلغ سقف التأجيلات (360)
+  | 'URGENT_NOT_ALLOWED_ON_PLAN'                   // 410 · priority=urgent وخطّة المستأجر لا تسمح
   // ملاحظة: `RENDER_FAILED` يبقى clientOnly (mk-api-error-codes.json:clientOnlyCodes) —
   // مستعمَل في api-worker كـfallback لكنّ الاصطلاح القديم يبقى · القاموس فيه أصلاً.
   // Revisions (§10)
@@ -252,6 +253,8 @@ export const OutputNotReady = () => new ApiError('OUTPUT_NOT_READY', 404);
 export const RenderRunning = () => new ApiError('RENDER_RUNNING', 409);
 export const RenderAlreadyTerminal = () => new ApiError('RENDER_ALREADY_TERMINAL', 409);
 export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS', 400);
+// 410 · بابُ المسار السريع · 403 authz-by-plan (لا 422: هذا ليس تجاوز حصّةٍ رقميّة بل ميزة غير مُشترَك بها).
+export const UrgentNotAllowedOnPlan = () => new ApiError('URGENT_NOT_ALLOWED_ON_PLAN', 403, 'priority');
 // 240-EXPORT-LIMITS · حدود المحتوى + rate limit
 export const HeadlineTooLong = () => new ApiError('HEADLINE_TOO_LONG', 422, 'content.headline');
 export const SourceTooLong = () => new ApiError('SOURCE_TOO_LONG', 422, 'content.source');

@@ -835,7 +835,8 @@
     "MP4_UNSUPPORTED_TEMPLATE": "This template cannot be exported as video — pick PNG or change the template.",
     "INK_GATE_EMPTY": "The rendered card came out empty — review its content and retry.",
     "VIDEO_GATE_EMPTY": "The rendered video has no content — review the template and content, then retry.",
-    "TENANT_CAP_TIMEOUT": "Server is busy handling your other requests — wait for them to finish, then retry."
+    "TENANT_CAP_TIMEOUT": "Server is busy handling your other requests — wait for them to finish, then retry.",
+    "URGENT_NOT_ALLOWED_ON_PLAN": "Urgent priority is a higher-plan feature — upgrade your plan, or resubmit with normal priority. Your current request was not processed."
   },
   "emails": {
     "forgotPassword": {

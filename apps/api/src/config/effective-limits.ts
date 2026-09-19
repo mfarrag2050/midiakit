@@ -17,6 +17,8 @@ export interface EffectiveLimits {
   concurrentRendersLimit: number;
   // 380 · PLAN_LIMIT_REACHED للمشاريع — nullable = غير محدود.
   projectsLimit: number | null;
+  // 410 · بابُ المسار السريع — false = ممنوع (فشلٌ مغلق).
+  allowUrgent: boolean;
 }
 
 interface DbLimitsRow {
@@ -26,6 +28,7 @@ interface DbLimitsRow {
   plan_rpm: number;
   plan_concurrent: number;
   plan_projects: number | null;
+  plan_allow_urgent: boolean;
   overrides: Record<string, unknown> | null;
 }
 
@@ -49,6 +52,7 @@ export async function getEffectiveLimits(
        p.requests_per_minute_limit AS plan_rpm,
        p.concurrent_renders_limit  AS plan_concurrent,
        p.projects_limit           AS plan_projects,
+       p.allow_urgent             AS plan_allow_urgent,
        t.plan_overrides           AS overrides
      FROM tenants t
      JOIN plans p ON p.key = t.plan
@@ -59,7 +63,7 @@ export async function getEffectiveLimits(
   const row = r.rows[0]!;
   const ov = row.overrides ?? {};
 
-  const pick = <T extends number | null>(overrideKey: string, planValue: T): T => {
+  const pick = <T extends number | boolean | null>(overrideKey: string, planValue: T): T => {
     if (overrideKey in ov) return ov[overrideKey] as T;
     return planValue;
   };
@@ -71,5 +75,6 @@ export async function getEffectiveLimits(
     requestsPerMinuteLimit: pick('requests_per_minute_limit', row.plan_rpm),
     concurrentRendersLimit: pick('concurrent_renders_limit', row.plan_concurrent),
     projectsLimit:          pick('projects_limit', row.plan_projects),
+    allowUrgent:            pick('allow_urgent', row.plan_allow_urgent),
   };
 }
