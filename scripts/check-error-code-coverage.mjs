@@ -38,6 +38,10 @@ const I18N = join(ROOT, 'packages', 'i18n', 'src');
 const LOCALES = ['ar', 'mixed', 'en'];
 
 const ERRORS_TS_PATH = 'apps/api/src/errors.ts';
+// ٤٤٤ · مصدرٌ ثانٍ للحقيقة: studio API_ERROR_CODES يحوي أكواد الخادم
+// التي يترجمُها العميل + أكواد fallback يُطلقُها العميلُ نفسه (٣٩٠ §٤).
+// الحارسُ ينظرُ فيه ليعرفَ أنّ مفتاحاً في القاموس مغطّى بمصدرٍ حقيقيّ.
+const STUDIO_ERRORS_TS_PATH = 'apps/studio/src/api/errors.ts';
 
 /**
  * يقرأ محتوى errors.ts من الشجرة المحلّيّة. يفشل بوضوح إن كان الملفّ
@@ -109,16 +113,45 @@ console.log('');
 console.log(`  (2) المرآة ↔ packages/i18n/src/{ar,mixed,en}.json`);
 
 const clientOnly = new Set(canon.clientOnlyCodes?.codes ?? []);
-const allowedInDict = new Set([...mirrorCodes, ...clientOnly]);
 
-console.log(`    أكواد UI-only fallback: ${clientOnly.size}`);
+// ٤٤٤ · مصدرٌ إضافيّ للأكواد المسموحة: studio API_ERROR_CODES.
+// الرمزُ في القاموس يجب أن يُطابقَ رمزاً حقيقيّاً في مصدرٍ ما — إمّا
+// `apps/api/src/errors.ts` (يُصدرُه الخادم)، أو `apps/studio/src/api/errors.ts`
+// (يُطلقه العميل كـfallback: NETWORK_ERROR · REFRESH_TOKEN_EXPIRED · إلخ)،
+// أو `clientOnlyCodes` (قائمة معلَنة في المرآة). **توسيعُ نظرٍ لا إرخاءُ شرط:**
+// أيّ مفتاحٍ خارجَ الثلاثة يبقى حمراً.
+let studioCodes = new Set();
+try {
+  const studioSrc = readFileSync(join(ROOT, STUDIO_ERRORS_TS_PATH), 'utf8');
+  // API_ERROR_CODES = ['CODE1', 'CODE2', …] — سطرٌ لكلّ رمز
+  const arrMatch = studioSrc.match(/API_ERROR_CODES\s*=\s*\[([\s\S]*?)\]\s*(?:as\s+const)?/);
+  if (arrMatch) {
+    const body = arrMatch[1];
+    const re = /'([A-Z][A-Z0-9_]*)'/g;
+    let m;
+    while ((m = re.exec(body)) !== null) studioCodes.add(m[1]);
+  }
+} catch {
+  // studio بعيد أو محذوف — لا نُعطّل الحارس
+}
+
+const allowedInDict = new Set([...mirrorCodes, ...clientOnly, ...studioCodes]);
+
+console.log(`    أكواد UI-only fallback: ${clientOnly.size} · studio API_ERROR_CODES: ${studioCodes.size}`);
 
 for (const loc of LOCALES) {
   const p = join(I18N, `${loc}.json`);
   const raw = await readFile(p, 'utf8');
   const dict = JSON.parse(raw);
   const errorsSection = dict.errors ?? {};
-  const inDict = new Set(Object.keys(errorsSection));
+  // نُعامل الأكواد وحدَها. مفاتيحُ ذاتُ قيمٍ كائنيّة (مثل `errors.action`
+  // = هيكلٌ فرعيّ لتسميات UI: RETRY · CHECK_FIELD …) ليست أكوادَ خطأ ولا
+  // تدخل في مقارنة الرموز.
+  const inDict = new Set(
+    Object.entries(errorsSection)
+      .filter(([, v]) => typeof v === 'string')
+      .map(([k]) => k)
+  );
 
   const missing = [...mirrorCodes].filter((c) => !inDict.has(c));
   const extra = [...inDict].filter((c) => !allowedInDict.has(c));
