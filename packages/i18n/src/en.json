@@ -43,13 +43,34 @@
     "lastRender": "Last render"
   },
   "roles": {
-    "owner":    { "name": "Account owner",  "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned." },
-    "admin":    { "name": "Administrator",  "hint": "Manages the system: adds roles, disables accounts, runs archival." },
-    "writer":   { "name": "Writer",         "hint": "Writes the first draft and sends it for editing." },
-    "editor":   { "name": "Editor",         "hint": "Edits the draft before it goes to review — reads and revises." },
-    "reviewer": { "name": "Reviewer",       "hint": "Decides whether the draft is ready to publish — approves or returns." },
-    "approver": { "name": "Final approver", "hint": "Signs off before publication — a step above the reviewer." },
-    "viewer":   { "name": "Viewer",         "hint": "Sees drafts but doesn't write — read-only role." }
+    "owner": {
+      "name": "Account owner",
+      "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned."
+    },
+    "admin": {
+      "name": "Administrator",
+      "hint": "Manages the system: adds roles, disables accounts, runs archival."
+    },
+    "writer": {
+      "name": "Writer",
+      "hint": "Writes the first draft and sends it for editing."
+    },
+    "editor": {
+      "name": "Editor",
+      "hint": "Edits the draft before it goes to review — reads and revises."
+    },
+    "reviewer": {
+      "name": "Reviewer",
+      "hint": "Decides whether the draft is ready to publish — approves or returns."
+    },
+    "approver": {
+      "name": "Final approver",
+      "hint": "Signs off before publication — a step above the reviewer."
+    },
+    "viewer": {
+      "name": "Viewer",
+      "hint": "Sees drafts but doesn't write — read-only role."
+    }
   },
   "nav": {
     "workspace": "Workspace",
@@ -788,6 +809,15 @@
     "TOKEN_INVALID": "Session token is invalid.",
     "SESSION_REVOKED": "Session revoked — please sign in again.",
     "REFRESH_TOKEN_INVALID": "Refresh token is invalid.",
+    "INVALID_REFRESH_TOKEN": "Invalid refresh token.",
+    "REFRESH_TOKEN_EXPIRED": "Refresh token expired — sign in again.",
+    "INVALID_EMAIL": "Invalid email address.",
+    "INVALID_TIMESTAMP": "Invalid timestamp.",
+    "INVALID_RESET_TOKEN": "Invalid reset link.",
+    "LIMIT_TOO_LARGE": "Requested limit is above the maximum — lower it.",
+    "CONFLICT": "Data conflict — reload the page, then try again.",
+    "PAYLOAD_TOO_LARGE": "Payload is above the allowed size.",
+    "METHOD_NOT_ALLOWED": "Method not allowed for this path.",
     "PASSWORD_TOO_WEAK": "Password too short — 12 characters minimum.",
     "EMAIL_INVALID": "Not a valid email address.",
     "EMAIL_TAKEN": "Email is already in use — sign in instead.",
@@ -907,7 +937,6 @@
     "CONTENT_TOO_LARGE": "Project content exceeds the allowed size — reduce fields or embedded images.",
     "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
     "TEMPLATE_SNAPSHOT_INVALID": "This template cannot be exported — choose another template or ask your administrator to review it.",
-    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
     "INVALID_SIZE": "Requested size is not supported — pick one from the list.",
     "FONT_ASSET_MISSING": "Brand font isn't uploaded — re-upload from brand settings.",
     "FONT_ASSET_FETCH_FAILED": "Could not load the brand font — try again, and contact support if it persists.",

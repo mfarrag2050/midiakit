@@ -1,7 +1,7 @@
 /**
  * mapper — DB row → response shape (docs/16 §8).
  */
-import { supportCodeFor } from '@pf-mediakit/shared';
+import { supportCodeFor } from '@pf-mediakit/shared/support-code';
 
 export interface DbRenderRow {
   id: string;

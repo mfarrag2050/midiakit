@@ -29,7 +29,7 @@ import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
 import { loadImage } from 'skia-canvas';
-import { supportCodeFor } from '@pf-mediakit/shared';
+import { supportCodeFor } from '@pf-mediakit/shared/support-code';
 import {
   checkInkPresent,
   formatInkGateFailure,
