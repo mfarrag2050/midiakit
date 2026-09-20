@@ -18,9 +18,9 @@
 #
 # **الأسرار — الأسماء فقط:**
 #   • `CI_POSTGRES_BOOTSTRAP_PASSWORD` — postgres service.
-#   • `CI_SESSION_JWT_SECRET` (32+ chars) — verify:auth.
-#   • `CI_PLATFORM_JWT_SECRET` (32+ chars) — verify:auth.
-#   • `CI_AI_KEY_ENCRYPTION_KEY` (64 hex chars = 32 bytes) — verify:auth.
+#   • SESSION_JWT_SECRET / PLATFORM_JWT_SECRET / AI_KEY_ENCRYPTION_KEY:
+#     **تُولَّد داخل التشغيل** (437 · خطوة «توليد أسرار عابرة»)، لا تُقرَأ
+#     من GitHub Secrets. لا سرَّ منها يُخزَّن في المستودع.
 
 name: CI
 
@@ -303,9 +303,8 @@ jobs:
       # verify:tashkil-collision (الميّتة) عند mk (§4 من 70-CI-WIRE).
       # verify:perf + verify:alerts-wire في workflow ليليّ منفصل (§2).
       #
-      # الأسرار المطلوبة (بأسماء فقط):
-      #   CI_SESSION_JWT_SECRET · CI_PLATFORM_JWT_SECRET · CI_AI_KEY_ENCRYPTION_KEY
-      # إن غاب أحدها: الفواحص التي تحتاجه تفشل بـexit 1 مع رسالة env صريحة.
+      # SESSION_JWT_SECRET · PLATFORM_JWT_SECRET · AI_KEY_ENCRYPTION_KEY
+      # تُوَرَّث من خطوة «توليد أسرار عابرة» (437). لا سرَّ يُقرَأ من Secrets.
       - name: "20 verifier خارج pnpm test (60-ORPHAN جدول · بلا perf/alerts-wire)"
         if: always()
         env:
