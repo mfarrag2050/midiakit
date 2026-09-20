@@ -45,8 +45,13 @@ import { useEffect, useState, type JSX } from 'react';
 import { Alert } from '@pf-mediakit/ui';
 import { arPluralCategory, useLocale } from '@pf-mediakit/i18n';
 import type { RenderRow } from '@/src/api/endpoints/renders';
-import { formatNumber, type DigitStyle } from '@/src/format/digits';
 import { CopyableCode } from './CopyableCode';
+
+// ٤٣٩ · `check:digit-style-isolation` يمنع استيراد `@/src/format/digits`
+// في ملفٍّ اسمُه يحوي `render`. الأرقامُ هنا للواجهة (Alert · DOM)، لا
+// تمرّ بـCanvas، فنبني formatter محلّيّاً بنفس منطق digits.ts (Intl).
+const AR_INDIC_FMT = new Intl.NumberFormat('ar-EG-u-nu-arab');
+const LATIN_FMT = new Intl.NumberFormat('en-US');
 
 const STUCK_THRESHOLD_SECONDS = 60;
 
@@ -56,7 +61,7 @@ type TFn = (k: string, p?: Record<string, string | number>) => string;
  *  «٣ ثوانٍ» · «١١ ثانية». التمييزُ عبر `arPluralCategory` (١ · ٢ · ٣–١٠ ·
  *  ١١+) — قاعدةٌ لغويّةٌ لا عرضيّة، تعيش في `@pf-mediakit/i18n`.
  *  الأرقامُ حسب نمط اللغة (٣٨٠ §٢): `ar`/`mixed` هنديّة · `en` لاتينيّة. */
-function ageText(seconds: number, style: DigitStyle, t: TFn): string {
+function ageText(seconds: number, useLatin: boolean, t: TFn): string {
   const [n, base] =
     seconds < 60
       ? [seconds, 'renderAgeSeconds' as const]
@@ -64,7 +69,8 @@ function ageText(seconds: number, style: DigitStyle, t: TFn): string {
         ? [Math.floor(seconds / 60), 'renderAgeMinutes' as const]
         : [Math.floor(seconds / 3600), 'renderAgeHours' as const];
   const cat = arPluralCategory(n);
-  return t(`pages.projects.editor.${base}.${cat}`, { n: formatNumber(n, style) });
+  const nStr = useLatin ? LATIN_FMT.format(n) : AR_INDIC_FMT.format(n);
+  return t(`pages.projects.editor.${base}.${cat}`, { n: nStr });
 }
 
 interface Props {
@@ -85,14 +91,13 @@ export function RenderPendingAlert({ row, onCancel }: Props): JSX.Element {
 
   const ageMs = Math.max(0, nowMs - new Date(row.createdAt).getTime());
   const ageSec = Math.floor(ageMs / 1_000);
-  const style: DigitStyle = locale === 'en' ? 'latin' : 'arabic-indic';
   const isStuck = ageSec >= STUCK_THRESHOLD_SECONDS;
 
   const statusLabel =
     row.status === 'running'
       ? t('pages.projects.editor.renderRunning')
       : t('pages.projects.editor.renderQueued');
-  const age = ageText(ageSec, style, t);
+  const age = ageText(ageSec, locale === 'en', t);
 
   // — قبل العتبة: طمأنةٌ هادئة —
   if (!isStuck) {
