@@ -214,6 +214,18 @@ jobs:
           DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
         run: pnpm db:migrate
 
+      # ── (6.5) توليد أسرار عابرة للاختبار (437) ─────────────
+      # القيَم تُولَّد داخل التشغيل وتموتُ بموته. لا قيمة ثابتة في الملفّ،
+      # لا قراءة من `.env`، لا قراءة من GitHub Secrets — للاختبار فقط.
+      # ::add-mask:: يمنع أيّ ظهور عرضيّ لها في السجلّ.
+      - name: توليد أسرار عابرة للاختبار
+        if: always()
+        run: |
+          gen_hex32() { openssl rand -hex 32; }
+          S=$(gen_hex32); echo "::add-mask::$S"; echo "SESSION_JWT_SECRET=$S"   >> "$GITHUB_ENV"
+          P=$(gen_hex32); echo "::add-mask::$P"; echo "PLATFORM_JWT_SECRET=$P"  >> "$GITHUB_ENV"
+          A=$(gen_hex32); echo "::add-mask::$A"; echo "AI_KEY_ENCRYPTION_KEY=$A" >> "$GITHUB_ENV"
+
       # ── (7) pnpm test (31 بوابة · حلقة جمع الإخفاقات) ─────
       # عدد البوابات مقروء من `package.json` وقت التشغيل — إن غيّرَه mk،
       # الحلقة تلتقط الرقم الجديد تلقائيّاً.
@@ -242,12 +254,8 @@ jobs:
           DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
           DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
           DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
-          # قيَم test-only معلَنة — 32+ حرفاً · لا سرّ إنتاج (النصّ يقول ذلك صراحة).
-          SESSION_JWT_SECRET: ci_test_only_session_secret_min_32_chars_placeholder
-          PLATFORM_JWT_SECRET: ci_test_only_platform_secret_min_32_chars_placeholder
-          # AI key اختباريّ · 64 hex · ليس في قائمة placeholder المعروفة (superRefine
-          # يمنع أنماط ثلاثة معروفة في production · هذا NODE_ENV=test فلا يُفعَّل).
-          AI_KEY_ENCRYPTION_KEY: aabbccddeeff11223344556677889900aabbccddeeff11223344556677889900
+          # SESSION_JWT_SECRET · PLATFORM_JWT_SECRET · AI_KEY_ENCRYPTION_KEY
+          # تُوَرَّث من خطوة «توليد أسرار عابرة» (437) · لا قيمة ثابتة هنا.
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
           # 274-THE-STORAGE-ROOT §٢ · STORAGE_DRIVER=s3 + خدمة minio أعلاه.
@@ -313,9 +321,8 @@ jobs:
           DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
-          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
-          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
-          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
+          # SESSION_JWT_SECRET · PLATFORM_JWT_SECRET · AI_KEY_ENCRYPTION_KEY
+          # تُوَرَّث من خطوة «توليد أسرار عابرة» (437) · لا قراءةَ من Secrets.
           # 274-THE-STORAGE-ROOT §٢ · نفس الخدمة · نفس القيَم.
           STORAGE_DRIVER: s3
           S3_ENDPOINT: http://minio:9000
