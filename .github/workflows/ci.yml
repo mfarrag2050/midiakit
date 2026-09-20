@@ -1,0 +1,384 @@
+# .github/workflows/ci.yml — سلسلة CI الرئيسيّة (31 بوابة + 3 mkau).
+#
+# **عقد mkci §9 (GATE-2LAYER · 2026-09-11 · b4ce12e):**
+# «CI يشغّل السلسلة داخل الحاوية بلا شروط env — لا SKIP، لا tolerance.»
+# المرجع Linux فقط، مُوَلَّد داخل `node:20.18.1-bookworm-slim`.
+# CI هنا يستعمل نفس الحاوية → بايتات مطابقة لـ`bin/mk-ci` محلّيّاً.
+#
+# **verify:snapshot · verify:plan-values · verify:breaking-video** تفحص
+# `process.platform === 'linux'` وتفشل إن ≠ linux. الحاوية = Debian
+# bookworm = linux → تمرّ.
+#
+# **check:docker-context (GATE-2LAYER)**: mk أضاف branch جديداً — عند
+# غياب docker binary (حاوية · CI · dev بلا docker)، الفحص يخرج ✓ مع
+# رسالة صريحة. لا حاجة لتصفية من الحلقة بعد الآن.
+#
+# **سياسة دائمة (قرار مالك · 20-CI-BUILD جواب (4)):** جمع كلّ الإخفاقات،
+# لا `bash -e` fail-fast. **لا تُعِد هذا إلى fail-fast.**
+#
+# **الأسرار — الأسماء فقط:**
+#   • `CI_POSTGRES_BOOTSTRAP_PASSWORD` — postgres service.
+#   • `CI_SESSION_JWT_SECRET` (32+ chars) — verify:auth.
+#   • `CI_PLATFORM_JWT_SECRET` (32+ chars) — verify:auth.
+#   • `CI_AI_KEY_ENCRYPTION_KEY` (64 hex chars = 32 bytes) — verify:auth.
+
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: pnpm test (31 بوابة) + 20 verifier خارج-السلسلة (70-CI-WIRE)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # ── الحاوية (عقد §9 · GATE-2LAYER) ─────────────────────────
+    container:
+      image: node:20.18.1-bookworm-slim
+    # داخل container mode، GH Actions افتراضاً `sh -e {0}` لا bash — يكسر
+    # herestrings و[[]] وbash arrays. نفرض bash لكلّ خطوة `run:`.
+    defaults:
+      run:
+        shell: bash
+
+    # ── خدمات ──────────────────────────────────────────────────
+    # postgres: hostname `postgres` (سيبلينغ للحاوية في نفس شبكة الوظيفة).
+    # redis: hostname `redis` (نفس المبدأ). داخل الحاوية لا يوجد 127.0.0.1
+    # للـservices — نستعمل أسماء الخدمة بحسب alias التلقائيّ.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mediakit
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mediakit"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      # 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر — بدون هذه الخدمة، STORAGE_DRIVER
+      # الافتراضي = memory يولّد `mem://download/...` · undici يرمي `unknown scheme`.
+      #
+      # اختير `bitnamilegacy/minio` (bitnami/minio بعد نقل Broadcom 2025) لا
+      # `minio/minio` الرسمي: services في GH Actions لا تدعم توجيه `command:` —
+      # والـimage الرسميّة تتطلّب `server /data` كوسيط. bitnami image تحوي default
+      # entrypoint يشغّل server · وتنشئ الدلو تلقائيّاً عبر `MINIO_DEFAULT_BUCKETS`
+      # — فلا حاجة لخطوة init منفصلة.
+      #
+      # الاعتمادات test-only معلَنة (نفس نمط SESSION_JWT_SECRET · 271 §١) — services
+      # env في GH Actions يُقلع قبل أيّ step فلا يمكن توليد قيَم عشوائيّة له.
+      # bin/mk-ci محلّياً يستعمل قيَماً عشوائيّة لأنّه يتحكّم في تسلسل الأوامر.
+      # هذه القيَم ليست سرّاً · لا مشتقّة من إنتاج · لا تُستعمل خارج CI.
+      minio:
+        image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+        env:
+          MINIO_ROOT_USER: ci_test_only_minio_user
+          MINIO_ROOT_PASSWORD: ci_test_only_minio_password_placeholder_min_20_chars
+          MINIO_DEFAULT_BUCKETS: mk-assets-ci
+        options: >-
+          --health-cmd "curl -fsS http://localhost:9000/minio/health/live || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    steps:
+      # ── (1) apt install داخل الحاوية ───────────────────────
+      # bookworm-slim بلا git/ffmpeg/python3 افتراضاً.
+      # git: actions/checkout · check:skill-fresh · check:docs-bundle-fresh
+      # ffmpeg: verify:render-video-all-templates · verify:breaking-video ·
+      #         verify:audio-gate + ffprobe · verify:media-track-gate ·
+      #         verify:text-tracks-gate · verify:transitions-gate
+      # python3: msgpackr-extract postinstall (يوقف تحذيراً)
+      - name: apt install (ca-certificates + git + ffmpeg + python3) داخل الحاوية
+        # ca-certificates: بلاها git يفشل بـ«server certificate verification failed»
+        #                  عند actions/checkout (bookworm-slim بلاها افتراضاً).
+        # git: actions/checkout + check:skill-fresh + check:docs-bundle-fresh.
+        # ffmpeg: 6 حرّاس رندر (verify:render-video-all-templates · إلخ).
+        # python3: msgpackr-extract postinstall (يوقف تحذيراً).
+        run: |
+          apt-get update -qq
+          apt-get install -qq -y --no-install-recommends \
+            ca-certificates git ffmpeg python3
+          update-ca-certificates 2>&1 | tail -3
+          git --version
+          ffmpeg -version | head -1
+          node --version
+
+      # ── (2) Checkout ────────────────────────────────────────
+      - name: "Checkout (fetch-depth 0 — لـcheck:skill-fresh)"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # git safe.directory داخل container: actions/checkout يضبطها للـstep
+      # الخاصّ به فقط. الحرّاس اللاحقة (check:skill-fresh · check:docs-bundle-fresh ·
+      # check:dashboard-not-published) تستدعي git من subprocess فتفشل بـ
+      # `fatal: detected dubious ownership`. نضبطها globally بدلاً من ذلك.
+      # `*` أضمن من مسار محدّد (يعمل بغضّ النظر عن WORKSPACE path).
+      - name: git safe.directory (بعد checkout · قبل الحرّاس)
+        run: git config --global --add safe.directory '*'
+
+      # ── merge-simulation مع origin/main (80-CI-ON-PR §1) ──
+      # فريقنا لا يفتح PRs — الدمج محلّيّ عبر merge commits (ab11626 ·
+      # a8d2671). فـpull_request trigger = صامت = L-71. البديل: قبل
+      # pnpm install وتشغيل السلسلة، ندمج origin/main محلّيّاً بلا commit،
+      # فتجري السلسلة على النسخة المدموجة، فتُكشَف انحرافات المرآة **قبل**
+      # الدمج الحقيقيّ لا بعده (كما اكتشفت mk في 97-MERGE-STUDIO ·
+      # L-77 في docs/LESSONS.md).
+      #
+      # في حالة تعارض حقيقيّ: git merge يخرج بـexit != 0 والخطوة تسقط.
+      # في حالة main = ancestor أو fast-forward: الدمج يتحوّل no-op والسلسلة
+      # تجري على HEAD كما هي — لا كلفة إضافيّة.
+      - name: "محاكاة الدمج مع origin/main (كاشف انحرافات المرآة)"
+        run: |
+          git config user.email "ci@pf-mediakit.local"
+          git config user.name "mkci merge-simulator"
+          git fetch origin main
+          if git merge --no-commit --no-ff origin/main; then
+            echo "✓ merge-simulation نجح — السلسلة ستجري على النسخة المدموجة"
+            echo "  HEAD الأصليّ: $(git log --oneline -1 HEAD@{1} 2>/dev/null || echo '(لا history)')"
+            echo "  merged HEAD: $(git log --oneline -1)"
+          else
+            echo ""
+            echo "✗ merge-simulation فشل — تعارضات مع origin/main:"
+            git status --short | grep -E '^UU|^AA|^DD|^AU|^UA|^DU|^UD' || true
+            echo ""
+            echo "  السبب: الفرع feat/ci وorigin/main يعدّلان نفس السطر بشكل مختلف."
+            echo "  الحلّ: اسحب main محلّيّاً، حلّ التعارض، ادفع."
+            exit 1
+          fi
+
+      # ── (3) corepack pnpm ─────────────────────────────────
+      # node:20.18.1-bookworm-slim يحوي corepack. لا حاجة لـactions/setup-node.
+      - name: corepack pnpm 9.15.4 (يطابق packageManager)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          pnpm --version
+
+      # ── (4) تخبئة متجر pnpm (~60ث توفير) ──────────────────
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-container-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-container-
+
+      - name: pnpm install (frozen)
+        run: pnpm install --frozen-lockfile
+
+      # ── (5أ) تهيئة الأدوار + الامتدادات (260-THE-CLEAN-DATABASE-HAS-NO-ROLES) ─
+      # postgres service في GitHub Actions يُقلع بلا mount لـ
+      # docker-entrypoint-initdb.d — بخلاف dev (bin/mk) و bin/mk-ci اللذَين
+      # يمنتانه. الهجرات تفشل بـ«أدوار غائبة: app_user, auth_lookup,
+      # control_plane_user» (رأيتُه في run 34775175308).
+      #
+      # الحلّ (رسالة الفشل نفسها): `pnpm db:bootstrap` — يقرأ
+      # infra/postgres/init/*.sql (مصدر الأدوار الواحد الذي يستعمله dev).
+      # لا كتابة أدوار في ci.yml — نسخة ثانية من الحقيقة تشيخ بصمت.
+      #
+      # DATABASE_URL_ADMIN صريح — bootstrap يحتاج SUPERUSER (CREATE ROLE +
+      # CREATE EXTENSION). user = postgres مسبقاً في CI، فنستعمل نفس
+      # DATABASE_URL صراحةً لا استنباطاً (bootstrap.ts يبدّل الكلمة إلى
+      # 'postgres' حرفياً · CI يستعمل secret).
+      - name: تهيئة الأدوار + الامتدادات (bootstrap · قبل migrate)
+        env:
+          DATABASE_URL_ADMIN: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+        run: pnpm db:bootstrap
+
+      # ── (5) تشغيل الهجرات على postgres ────────────────────
+      # قد يفشل الآن على citext (mkau تعدّ في 150-FRESH-DB) — سيُحلّ دفعة
+      # واحدة في هجرة بيد mkapi، لا هنا.
+      #
+      # 276 §٣ · migrate يستعمل migration_user (لا SUPERUSER). الأدوار
+      # مُنشأة في خطوة bootstrap السابقة عبر infra/postgres/init/01-roles.sql.
+      # كلمة السرّ dev_migration_pass ثابتة في init.sql — لا سرّ حقيقيّ.
+      - name: تشغيل الهجرات على postgres
+        env:
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+        run: pnpm db:migrate
+
+      # ── (7) pnpm test (31 بوابة · حلقة جمع الإخفاقات) ─────
+      # عدد البوابات مقروء من `package.json` وقت التشغيل — إن غيّرَه mk،
+      # الحلقة تلتقط الرقم الجديد تلقائيّاً.
+      - name: pnpm test (31 بوابة · جمع كلّ الإخفاقات)
+        # سياسة دائمة (20-CI-BUILD جواب المالك (4)): جمع كلّ الإخفاقات.
+        # `if: always()` يشغّل حتى لو فشلت الهجرات — الرؤية تبقى مفتوحة.
+        # **لا تُعِد هذا إلى fail-fast ظنّاً أنّه تحسين.**
+        if: always()
+        env:
+          # ──── متطلَّبات apps/api/src/config.ts (271 §١) ────
+          # المتطلَّبات المطلوبة (بلا default): DATABASE_URL_APP · SESSION_JWT_SECRET
+          # · AI_KEY_ENCRYPTION_KEY. لها defaults غير صالحة في CI: DATABASE_URL_PLATFORM
+          # (يشير إلى 127.0.0.1:19041). **قيَم test-only معلَنة صراحةً · لا سرّ حقيقيّ ·
+          # لا اشتقاق من إنتاج · لا ترخيص فحص ليقبل الغياب** — نصّ 271 §١.
+          NODE_ENV: test
+          # 276 §٣ · اتّصال المنتج (api / vitest fastify inject) = app_user
+          # حصراً (NOSUPERUSER · محكوم بـRLS + FORCE ROW LEVEL SECURITY).
+          # قياس (أ) بـsuperuser أعطى 6 test failed. قياس (ب) بـapp_user
+          # في DATABASE_URL_APP أعطى 40 passed / 40. تفاصيل في
+          # claude/reports/276-*.md.
+          #
+          # DATABASE_URL يبقى migration_user لأنّ pnpm test يحتوي على
+          # سكربتات (verify:snapshot · verify:breaking-video · إلخ) لا تلمس
+          # DB · وvitest يقرأ DATABASE_URL_APP مباشرة. توزيع موحّد مع
+          # خطوة 20 verifier أدناه.
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
+          # قيَم test-only معلَنة — 32+ حرفاً · لا سرّ إنتاج (النصّ يقول ذلك صراحة).
+          SESSION_JWT_SECRET: ci_test_only_session_secret_min_32_chars_placeholder
+          PLATFORM_JWT_SECRET: ci_test_only_platform_secret_min_32_chars_placeholder
+          # AI key اختباريّ · 64 hex · ليس في قائمة placeholder المعروفة (superRefine
+          # يمنع أنماط ثلاثة معروفة في production · هذا NODE_ENV=test فلا يُفعَّل).
+          AI_KEY_ENCRYPTION_KEY: aabbccddeeff11223344556677889900aabbccddeeff11223344556677889900
+          REDIS_URL: redis://redis:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+          # 274-THE-STORAGE-ROOT §٢ · STORAGE_DRIVER=s3 + خدمة minio أعلاه.
+          # القيَم test-only · نفس نمط JWT · لا سرّ حقيقيّ.
+          STORAGE_DRIVER: s3
+          S3_ENDPOINT: http://minio:9000
+          S3_REGION: us-east-1
+          S3_BUCKET: mk-assets-ci
+          S3_ACCESS_KEY_ID: ci_test_only_minio_user
+          S3_SECRET_ACCESS_KEY: ci_test_only_minio_password_placeholder_min_20_chars
+        run: |
+          export PATH="$PWD/node_modules/.bin:$PATH"
+          GATES=$(node -e "
+            const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
+            console.log(p.scripts.test.split('&&').map(s => s.trim()).join('\n'));
+          ")
+          TOTAL=$(echo "$GATES" | grep -c .)
+          echo '===== سلسلة pnpm test ('$TOTAL' بوابة) ====='
+          echo "$GATES"
+          echo '=========================================='
+          FAILED=()
+          while IFS= read -r cmd; do
+            [ -z "$cmd" ] && continue
+            echo ""
+            echo "▶ $cmd"
+            if eval "$cmd"; then :; else
+              echo "  ✗ سقطت: $cmd (exit=$?)"
+              FAILED+=("$cmd")
+            fi
+          done <<< "$GATES"
+          echo ""
+          echo "===== ملخّص pnpm test: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            printf '  ✗ %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+          echo "✓ كلّ البوابات ($TOTAL) اجتازت."
+
+      # ── (8) 20 verifier خارج pnpm test (70-CI-WIRE §1) ────────
+      # قرار مالك (70-CI-WIRE-VERIFIERS §1): «الكلّ في pnpm test، إلّا
+      # البطيئتَين» — 22 حقيقيّة من 60-ORPHAN §3 · ناقص perf و alerts-wire.
+      # نضعها في **حلقة جمع** نفس الشكل — لا set -e يقطع عند أوّل سقوط.
+      # التسع المحجوزة (a18-5/6 · a21 · a25 · a28 · assets · control-plane
+      # · debt1 · renders) تنتظر §3 من 70-CI-WIRE (feat/api merge decision).
+      # verify:tashkil-collision (الميّتة) عند mk (§4 من 70-CI-WIRE).
+      # verify:perf + verify:alerts-wire في workflow ليليّ منفصل (§2).
+      #
+      # الأسرار المطلوبة (بأسماء فقط):
+      #   CI_SESSION_JWT_SECRET · CI_PLATFORM_JWT_SECRET · CI_AI_KEY_ENCRYPTION_KEY
+      # إن غاب أحدها: الفواحص التي تحتاجه تفشل بـexit 1 مع رسالة env صريحة.
+      - name: "20 verifier خارج pnpm test (60-ORPHAN جدول · بلا perf/alerts-wire)"
+        if: always()
+        env:
+          # 276 §٣ · فاحصات mjs تستعمل DATABASE_URL مباشرة لـscaffolding
+          # (CREATE/INSERT على جداول تحتاج migration_user). لكنّ api الذي
+          # تستدعيه (fastify inject) يقرأ DATABASE_URL_APP. توزيع مقيس
+          # بـ§٤: 8/9 verifiers خضراء بهذا التوزيع (المتبقّي يكشف جذراً
+          # منفصلاً — FORCE ROW LEVEL SECURITY على templates/revisions).
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_TEST: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_TEST_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
+          REDIS_URL: redis://redis:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
+          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
+          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
+          # 274-THE-STORAGE-ROOT §٢ · نفس الخدمة · نفس القيَم.
+          STORAGE_DRIVER: s3
+          S3_ENDPOINT: http://minio:9000
+          S3_REGION: us-east-1
+          S3_BUCKET: mk-assets-ci
+          S3_ACCESS_KEY_ID: ci_test_only_minio_user
+          S3_SECRET_ACCESS_KEY: ci_test_only_minio_password_placeholder_min_20_chars
+        run: |
+          export PATH="$PWD/node_modules/.bin:$PATH"
+          GATES="verify:a22
+          verify:a23
+          verify:a24
+          verify:auth
+          verify:bk-numerals
+          verify:brand-kits
+          verify:limits1
+          verify:multilang
+          verify:plan-all-templates
+          verify:plans
+          verify:projects
+          verify:revisions
+          verify:smart-crop
+          verify:svg
+          verify:templates
+          verify:tenant
+          verify:tenant-isolation
+          verify:tts
+          verify:users
+          verify:workflows"
+          # نظِّف السطور من مسافات البادئة (YAML block indented)
+          GATES=$(echo "$GATES" | sed 's/^ *//')
+          TOTAL=$(echo "$GATES" | grep -c .)
+          echo "===== $TOTAL verifier خارج pnpm test (60-ORPHAN جدول) ====="
+          echo "$GATES"
+          echo '======================================='
+          FAILED=()
+          while IFS= read -r v; do
+            [ -z "$v" ] && continue
+            echo ""
+            echo "▶ pnpm $v"
+            if pnpm "$v"; then :; else
+              echo "  ✗ سقطت: pnpm $v (exit=$?)"
+              FAILED+=("$v")
+            fi
+          done <<< "$GATES"
+          echo ""
+          echo "===== ملخّص خارج-السلسلة: ${#FAILED[@]} من $TOTAL بوابة سقطت ====="
+          if [ ${#FAILED[@]} -gt 0 ]; then
+            printf '  ✗ %s\n' "${FAILED[@]}"
+            exit 1
+          fi
+          echo "✓ كلّ الـ$TOTAL خارج-السلسلة اجتازت."
+
+      # ── (9) رفع verify-breaking.mp4 كـartifact (50-CI-SYNC-VIDEO §2) ─
+      # الغاية: لا يُجمَّد md5 على مخرَج لم ينظر إليه أحد (L-17 · L-71).
+      # verify:breaking-video يخرج بـmp4 في `out/verify-breaking.mp4` سواء
+      # مرّ أو فشل. `if-no-files-found: error` يمنع صمت المسار الخطأ.
+      # md5 مطبوع في سجلّ الحلقة (سطر «فعلي: <hex>» من السكربت نفسه).
+      - name: "رفع verify-breaking.mp4 كـartifact (للنظر قبل التجميد)"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: breaking-linux-amd64.mp4
+          path: out/verify-breaking.mp4
+          if-no-files-found: error
+          retention-days: 30

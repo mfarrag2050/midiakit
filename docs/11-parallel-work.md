@@ -227,7 +227,10 @@ git rebase origin/main
   | 19030–19039 | **D (اللوحات — أداة تطوير محلّية)** — `apps/dashboard` على `127.0.0.1` (راجع `DEV-ONLY.md`) | `19030` Next.js dev |
   | 19040–19049 | **P (mk-api)** | `19041` PG dev · `19042` PG test · `19043` MinIO S3 API (:9000) · `19044` MinIO console (:9001) |
   | 19050–19059 | **S (mk-studio)** | `19050` Next.js dev |
-  | 19060–19079 | **احتياطي** — يبقى فارغاً | لا مستمع |
+  | 19060–19069 | **احتياطي** — يبقى فارغاً | لا مستمع |
+  | 19062–19065 | **Show (بيئة العرض · خدمات)** — على سياق colima-mediakit ببادئة `pf-mediakit-show-` | `19062` PG show · `19063` Redis show · `19064` MinIO S3 · `19065` MinIO console (docs/SHOWROOM.md) |
+  | 19070–19071 | **Show (بيئة العرض · تطبيقات)** | `19070` API show · `19071` Studio show |
+  | 19072–19079 | **احتياطي Show** | لا مستمع |
   | 19080–19082 | **خدمات معزولة (Python)** — بلا مسار ملكية، تُستهلَك عبر Next server routes | `19080` diacritizer · `19081` transcriber · `19082` face-detector |
   | 19083–19099 | **احتياطي لخدمات معزولة** | لا مستمع |
 

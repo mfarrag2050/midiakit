@@ -216,7 +216,10 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
   const { ctx, size, timeline, brand, template, content, assets, t } = args;
 
   const state: RenderState = {};
-  if (args.headlinePrep) state.headline = args.headlinePrep.bounds;
+  // `exactOptionalPropertyTypes` صارم: `state.headline?: HeadlineBounds` لا
+  // يقبل إسناد `undefined`. `headlinePrep.bounds` اختياريّ (L-69). نُضيّق
+  // إلى وجودٍ صريح — لا نُسند إن كان bounds ناقصاً (300 §١·٤).
+  if (args.headlinePrep?.bounds) state.headline = args.headlinePrep.bounds;
 
   const rfArgs: RenderFrameArgs = {
     ctx, size, template, brand, content,
