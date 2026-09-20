@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthCard } from '@/src/ui/AuthCard';
 import { auth, setSessionInfo } from '@/src/api';
 
 // شاشة تسجيل الدخول — S5 على mocks حتى A6-A8. تنتقل إلى الحقيقي
 // حين يُزال `NEXT_PUBLIC_API_MOCK=true` من البيئة.
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   // 220-EMPTY-AND-ERROR: التحويلة من client عند فشل تجديد التوكن تُلحق
@@ -56,5 +57,15 @@ export default function LoginPage() {
         await new Promise<void>(() => {});
       }}
     />
+  );
+}
+
+export default function LoginPage() {
+  // ٤٣٣ · لفٌّ في Suspense — `useSearchParams` يستوجبُ حدَّ تعليقٍ في
+  // Next 14 (missing-suspense-with-csr-bailout). لفٌّ لا إعادةُ كتابة.
+  return (
+    <Suspense fallback={<div aria-hidden="true" />}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
