@@ -159,8 +159,30 @@ async function inTxWithoutTenant(pool, fn) {
 async function resetAndSeed(migrationPool) {
   const client = await migrationPool.connect();
   try {
-    // TRUNCATE يعتمد على ملكية الجدول لا RLS. migration_user يملك.
-    await client.query('TRUNCATE tenants CASCADE');
+    // ٤٥٤ · «من أتلف حالةً مشتركةً يعيدها».
+    // كان: `TRUNCATE tenants CASCADE` — يُفرِغ `templates` كاملاً بما فيها
+    // القوالبَ العالميّة (scope='global', tenant_id IS NULL) عبر CASCADE.
+    // القوالبُ العالميّةُ حالةٌ مشتركةٌ يبذرُها migration `templates-a13`
+    // مرّةً واحدةً، فلا تُعادُ بعد التفريغ. النتيجة: أيُّ verifier لاحقٌ
+    // يعتمدُ على globals (verify:templates · verify:users) يجدُ صفراً.
+    //
+    // البديلُ الأضيق: نحذفُ فقط مستأجرَي الاختبار Alpha/Beta بمعرِّفَيهما.
+    // FK `tenant_id REFERENCES tenants(id) ON DELETE CASCADE` على كلّ
+    // الجداول tenant-scoped يمسحُ صفوفَ الاختبار مع المستأجرَين — بلا
+    // لمسِ globals ولا لمسِ حالةِ verifiers أخرى.
+    //
+    // ملاحظة: `tenants` تحمل FORCE RLS بسياسة `tenants_delete` تشترط
+    // `id = current_setting('app.tenant_id')`. migration_user لا يملك
+    // سياسةَ bypass على tenants (فقط control_plane_user يملك واحدة).
+    // إن حذفنا بلا SET LOCAL، فالسياسةُ تُخفي الصفوف وترجعُ 0 صامتاً،
+    // ثمّ INSERT التالي يصطدم بـPK الموجود. لذلك: نضبطُ tenant_id قبلَ
+    // كلّ DELETE.
+    for (const tid of [TENANT_A, TENANT_B]) {
+      await client.query('BEGIN');
+      await client.query('SELECT app_set_tenant($1::uuid)', [tid]);
+      await client.query(`DELETE FROM tenants WHERE id = $1::uuid`, [tid]);
+      await client.query('COMMIT');
+    }
 
     await client.query('BEGIN');
     await client.query(
@@ -413,7 +435,11 @@ async function checkTable(appPool, table) {
   else fail(`${table} stability`, `100 runs → ${distinct.size} distinct counts: ${[...distinct].join(',')}`);
 
   // 3. سلبي بـID — SELECT سجل tenant_B من جلسة tenant_A → صفر
-  const bRow = bRows.rows[0];
+  // ٤٥٤ · للجداول التي فيها صفوفٌ عالميّة (templates.scope='global') الأصلُ
+  // أنّها مرئيّةٌ للجميع بحكم السياسة — لا تنقض عزل tenant-scoped. لذلك
+  // نختارُ صفَّاً يخصُّ tenant_B فعلاً (tenant_id = TENANT_B) لتجربة السلبيّة،
+  // فيبقى ما نقيسُه: هل يرى tenant_A صفَّ tenant_B الخاصّ؟
+  const bRow = bRows.rows.find((r) => r.tenant_id === TENANT_B) ?? bRows.rows[0];
   const idCol = 'id' in bRow ? 'id' : 'project_id';
   const bId = bRow[idCol];
   const negSelect = await inTxAsTenant(appPool, TENANT_A, (c) =>
@@ -497,9 +523,15 @@ async function checkWithoutSetLocal(appPool) {
   console.log(`\n▶ Negative: without SET LOCAL`);
   const allTables = ['tenants', ...TABLES_UNDER_TENANT];
   for (const table of allTables) {
-    const r = await inTxWithoutTenant(appPool, (c) =>
-      c.query(`SELECT count(*)::int AS n FROM ${table}`),
-    );
+    // ٤٥٤ · templates تحمل صفوفاً عالميّةً (scope='global', tenant_id IS NULL)
+    // مرئيّةً بلا SET LOCAL بحكم السياسة `templates_select` — أصلٌ مقصود.
+    // نقيسُ العزلَ على الصفوفِ tenant-scoped وحدَها (تلك التي يحرسُها
+    // `tenant_id = current_setting('app.tenant_id')`)، فنستثني globals من
+    // العدّ هنا. باقي الجداول بلا استثناء.
+    const q = table === 'templates'
+      ? `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id IS NOT NULL`
+      : `SELECT count(*)::int AS n FROM ${table}`;
+    const r = await inTxWithoutTenant(appPool, (c) => c.query(q));
     if (r.rows[0].n === 0) pass(`${table}: without SET LOCAL → 0 rows`);
     else fail(`no-set-local ${table}`, `expected 0, got ${r.rows[0].n} rows visible`);
   }
