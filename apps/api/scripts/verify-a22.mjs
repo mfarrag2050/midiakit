@@ -77,7 +77,14 @@ async function setPlan(tenantId, plan, overrides = null) {
   finally { c.release(); }
 }
 
-// أدوات إدراج rendering يدوياً بتفعيل RLS
+// أدوات إدراج rendering يدوياً بتفعيل RLS.
+// ٤٥٢ · trigger renders_snapshot_guard (هجرة 20260912010000) يرفض
+// status='succeeded' مع brand_snapshot يفتقدُ fonts أو colors. البذرةُ
+// كانت تُدخل `'{}'::jsonb` — كاذبةٌ بلا الحقلَين، والحارسُ صادق.
+// نُدخلُ لقطةً صغيرةً صحيحةً بنيويّاً (المفاتيحُ حاضرةٌ فارغة) توافقُ العقد
+// بأدنى ما يجعلُه صادقاً · لا تلامسُ الحارسَ ولا تُرخي شرطاً.
+const MIN_VALID_BRAND_SNAPSHOT = JSON.stringify({ fonts: {}, colors: {} });
+
 async function insertRender(tenantId, projectId, userId, format, status) {
   const c = await migPool.connect();
   try {
@@ -86,9 +93,9 @@ async function insertRender(tenantId, projectId, userId, format, status) {
     const r = await c.query(
       `INSERT INTO renders(tenant_id, project_id, size, format, status,
                             brand_snapshot, template_snapshot, requested_by)
-       VALUES ($1, $2, 'x', $3, $4, '{}'::jsonb, '{}'::jsonb, $5)
+       VALUES ($1, $2, 'x', $3, $4, $6::jsonb, '{}'::jsonb, $5)
        RETURNING id`,
-      [tenantId, projectId, format, status, userId]);
+      [tenantId, projectId, format, status, userId, MIN_VALID_BRAND_SNAPSHOT]);
     await c.query('COMMIT');
     return r.rows[0].id;
   } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; }
