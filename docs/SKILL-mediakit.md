@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-20 · **HEAD:** `ca38354` (`main`)
+> **تاريخ التوليد:** 2026-09-21 · **HEAD:** `3a8fe95` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -89,16 +89,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 504 | 1 |
-| `feat/api` | `665ab4f` | 1 | 119 | 387 |
-| `feat/ci` | `7d6ee3f` | 0 | 110 | 395 |
-| `feat/dashboards` | `376077c` | 0 | 393 | 112 |
-| `feat/studio` | `fa96aaa` | 3 | 123 | 385 |
-| `origin/aa-internal` | `ee178ca` | 0 | 504 | 1 |
-| `origin/feat/api` | `665ab4f` | 1 | 119 | 387 |
-| `origin/feat/ci` | `033ac5b` | 0 | 116 | 389 |
-| `origin/feat/dashboards` | `376077c` | 0 | 393 | 112 |
-| `origin/feat/studio` | `fa96aaa` | 3 | 123 | 385 |
+| `aa-internal` | `ee178ca` | 0 | 508 | 1 |
+| `feat/api` | `665ab4f` | 1 | 123 | 387 |
+| `feat/ci` | `7d6ee3f` | 0 | 114 | 395 |
+| `feat/dashboards` | `376077c` | 0 | 397 | 112 |
+| `feat/studio` | `fa96aaa` | 3 | 127 | 385 |
+| `origin/aa-internal` | `ee178ca` | 0 | 508 | 1 |
+| `origin/feat/api` | `665ab4f` | 1 | 123 | 387 |
+| `origin/feat/ci` | `033ac5b` | 0 | 120 | 389 |
+| `origin/feat/dashboards` | `376077c` | 0 | 397 | 112 |
+| `origin/feat/studio` | `fa96aaa` | 3 | 127 | 385 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
