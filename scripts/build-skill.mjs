@@ -311,10 +311,15 @@ function branchesInfo() {
 function contents() {
   const section = 'محتويات المستودع';
   const packages = shOrFail(section, `ls packages`).split('\n').filter(Boolean);
-  // المجلدات الاختيارية: قد لا توجد بعد. نستخدم shOptional ونعرض 0.
+  // mk/459 §٢: العدُّ يعتمدُ على git-tracked لا `ls` — `ls` يعدُّ مجلَّداتٍ
+  // مُدرَجةً في `.gitignore` (مثل `demo/live/`) على آلة المطوِّر ولا يعدُّها
+  // في CI، فيُنتِج فرقاً كاذباً في السكيل خارج علامتَي CROSS-BRANCH.
+  // git-tracked = ما يراه CI = حتميّ.
   const count = (dir) => {
     if (!existsSync(join(ROOT, dir))) return '0';
-    const out = shOptional(`ls ${dir} 2>/dev/null | wc -l | tr -d ' '`);
+    // `git ls-tree --name-only HEAD <dir>/` يُعيد سطراً لكلِّ إدخالٍ مُتَتَبَّعٍ
+    // في الجذر المباشر لـ<dir>. `wc -l` يعدّ.
+    const out = shOptional(`git ls-tree --name-only HEAD ${dir}/ 2>/dev/null | wc -l | tr -d ' '`);
     return out || '0';
   };
   return {
