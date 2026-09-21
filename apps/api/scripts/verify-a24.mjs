@@ -25,10 +25,17 @@ import 'dotenv/config';
 import pg from 'pg';
 import { spawnSync } from 'node:child_process';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve as pathResolve } from 'node:path';
 import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+
+// mk/457 §٢: مسارات مُشتقّة من موقع السكربت لا من cwd متغيّر ولا من
+// مسار مطلقٍ مثبَّت لآلة المطوّر. CI ليس فيه `pf-mediakit-api`.
+const API_ROOT = pathResolve(dirname(fileURLToPath(import.meta.url)), '..');
+const CONFIG_IMPORT_PATH = pathResolve(API_ROOT, 'src/config.js');
 
 process.env.RATE_LIMIT_DISABLE = '1';
 process.env.AI_PROVIDER = 'fake';
@@ -51,7 +58,7 @@ function spawnServer(envOverrides) {
   const check = `(async () => {
     process.env = { ...process.env, ...${JSON.stringify(envOverrides)} };
     try {
-      await import('/Users/mdervis/MediaKit/pf-mediakit-api/apps/api/src/config.js');
+      await import(${JSON.stringify(CONFIG_IMPORT_PATH)});
       console.log('BOOT_OK');
     } catch (e) {
       console.error('BOOT_FAIL:', String(e?.message ?? e));
@@ -59,7 +66,7 @@ function spawnServer(envOverrides) {
     }
   })();`;
   const r = spawnSync('node', ['--import', 'tsx', '--input-type=module', '-e', check], {
-    cwd: '/Users/mdervis/MediaKit/pf-mediakit-api',
+    cwd: API_ROOT,
     encoding: 'utf8',
     timeout: 15_000,
   });
