@@ -145,7 +145,18 @@ globals صمدت (6/6)، القوالبُ تمرّ متتاليةً وبمفرد
 **الملفّ الجديد:**
 - `claude/reports/454-THE-TRUNCATE-AND-THE-KASHIDA.md` (هذا).
 
-**Push واحد.**
+**Push واحد.** `1654926..87b5d15 · main -> main`.
+
+### ٣.١ · نتيجة CI (35572897839)
+
+**البوابات الثلاث المستهدَفة — خضراء:**
+- `✓ G-P4-7 PASSED` (verify:templates)
+- `✓ G-P4-1 PASSED` — كل الفحوص نجحت (1.40s) (verify:tenant-isolation)
+- `✓ G-P4-5 PASSED` (verify:users)
+
+**ملخّص خارج-السلسلة: 1 من 20 بوابة سقطت** — `verify:a24` (config path ENOENT — عيبٌ سابقٌ في 452، مسارٌ مطلقٌ في المصدر لا علاقةَ له بـ454).
+
+**بقايا CI (سابقةٌ لا صلةَ لها بـ454):** `check:skill-fresh` · `check:template-drift` · `vitest run` (JWS) · `verify:breaking-video` (اختفاءُ التطويل — الموضوع نفسه في §٢).
 
 ---
 
