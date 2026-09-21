@@ -517,7 +517,7 @@ async function checkWithoutSetLocal(appPool) {
 //     SUPERUSER/BYPASSRLS (يخالف القاعدة)، أو RLS نفسها لا تُطبَّق.
 // ══════════════════════════════════════════════════════════════════
 
-async function checkAnyTenantAndForce(migrationPool) {
+async function checkAnyTenantAndForce(migrationPool, appPool) {
   console.log(`\n▶ ANY_TENANT + FORCE على 15 جدولاً`);
   const client = await migrationPool.connect();
   try {
@@ -547,8 +547,50 @@ async function checkAnyTenantAndForce(migrationPool) {
         continue;
       }
 
-      // FORCE ضرورية: مع FORCE يجب أن يكون < بلا FORCE.
+      // ٤٤٦ · FORCE ضرورية على migration_user — إلّا حيث توجد سياسةٌ
+      // PERMISSIVE FOR ALL TO migration_user USING(true) أُضيفت عمداً
+      // لتمكين الهجرات من الكتابة عبر tenants بلا SET LOCAL (هجرتَي
+      // 2026-09-13 · templates_migration_user_all · revisions_migration_user_all).
+      // في هذه الحالة FORCE بلا أثر على migration_user — والخاصيّةُ التي
+      // نبيعُها ليست تقييدَ migration_user بل عزل app_user. نُثبتُ العزلَ
+      // الحقيقيَّ مباشرةً على `app_user`:
+      //   • tenant_A (app_user) يرى ≥١ صفّه.
+      //   • tenant_A (app_user) لا يرى صفوفَ tenant_B (count = 0).
+      // إن كسر أحدُهما ⇒ فشلٌ صريحٌ يسمّي الجدولَ والاتّجاهَ.
       if (wf === wof) {
+        const policyRes = await client.query(
+          `SELECT policyname FROM pg_policies
+            WHERE schemaname = 'public'
+              AND tablename = $1
+              AND policyname LIKE '%_migration_user_all'`,
+          [table],
+        );
+        const bypassPolicy = policyRes.rows[0]?.policyname ?? null;
+
+        if (bypassPolicy) {
+          // إثبات العزل الحقيقيّ على app_user لهذا الجدول بالضبط.
+          const posA = await inTxAsTenant(appPool, TENANT_A, (c) =>
+            c.query(`SELECT count(*)::int AS n FROM ${table}`),
+          );
+          const negA = await inTxAsTenant(appPool, TENANT_A, (c) =>
+            c.query(`SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1`, [TENANT_B]),
+          );
+          const own = posA.rows[0].n;
+          const cross = negA.rows[0].n;
+          if (own >= 1 && cross === 0) {
+            pass(
+              `${table}: FORCE بلا أثر على migration_user بسبب سياسة ${bypassPolicy} (مقصودة · هجرتا 2026-09-13) — ` +
+              `الخاصيّةُ الأصليّةُ (عزلُ app_user) مُثبَتَةٌ هنا: own=${own} · cross-tenant=0`,
+            );
+          } else {
+            fail(
+              `${table} app_user isolation`,
+              `app_user tenant_A: own=${own} (متوقع ≥1) · cross-tenant=${cross} (متوقع 0) — العزلُ منتقض حتى مع ${bypassPolicy}`,
+            );
+          }
+          continue;
+        }
+
         fail(
           `${table} FORCE necessity`,
           `مع/بدون FORCE أعطيا نفس النتيجة (${wf}) — FORCE بلا أثر؛ تحقّق أن migration_user ليس SUPERUSER أو BYPASSRLS`,
@@ -1007,7 +1049,7 @@ async function main() {
       await checkTable(appPool, table);
     }
     await checkWithoutSetLocal(appPool);
-    await checkAnyTenantAndForce(migrationPool);
+    await checkAnyTenantAndForce(migrationPool, appPool);
     await checkRevisionsOrphan(appPool);
     await checkNoBypassRls(migrationPool);
     await checkNoAppSuperuser(migrationPool);
