@@ -26,12 +26,22 @@ const BUNDLE_REL = 'docs/BUNDLE.md';
 
 // نُهمل سطور «تاريخ التوليد» و «HEAD (...)» في المقارنة — ميتا لا مصدر.
 // تضمينها يجعل الفحص يفشل بعد كلّ commit على main بلا فائدة.
+//
+// ٤٤٩ · صفوف الفروع في الجداول (`| `branch` | `sha` | count | count | count |`)
+// تتقدّم بعمود «خلف main» مع كلّ commit على main — سباقٌ ذاتيٌّ ينتقض بمجرّد
+// الحفظ. نستعمل النمطَ نفسه المُثبَت في check-skill-fresh.mjs (280 · L-127-ب)
+// حرفياً، فما يُصان هناك يُصان هنا. أيّ تغييرٍ في PHASES.md · docs/LESSONS.md
+// · docs/17-phase4-plan.md · package.json الجذر · packages/ · demo/ · snapshots*/
+// يبقى مكتشَفاً (لا يمرّ عبر هذا الحذف).
+const BRANCH_ROW_RE = /^\|\s+`[^`]+`\s+\|\s+`[a-f0-9]+`\s+\|/;
+
 function stripVolatileMeta(text) {
   return text
     .split('\n')
     .filter((line) => (
       !line.startsWith('> **تاريخ التوليد:**') &&
-      !line.startsWith('> **HEAD (')
+      !line.startsWith('> **HEAD (') &&
+      !BRANCH_ROW_RE.test(line)
     ))
     .join('\n')
     .trim();
