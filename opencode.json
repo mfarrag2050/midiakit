@@ -28,6 +28,7 @@
     "webfetch": "deny"
   },
   "instructions": [
-    "AGENTS.md"
+    "AGENTS.md",
+    "AGENTS-reels.md"
   ]
 }
