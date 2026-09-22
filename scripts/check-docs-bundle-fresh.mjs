@@ -26,19 +26,31 @@ const BUNDLE_REL = 'docs/BUNDLE.md';
 
 // نُهمل سطور «تاريخ التوليد» و «HEAD (...)» في المقارنة — ميتا لا مصدر.
 // تضمينها يجعل الفحص يفشل بعد كلّ commit على main بلا فائدة.
+//
+// ٤٤٩ · صفوف الفروع في الجداول (`| `branch` | `sha` | count | count | count |`)
+// تتقدّم بعمود «خلف main» مع كلّ commit على main — سباقٌ ذاتيٌّ ينتقض بمجرّد
+// الحفظ. نستعمل النمطَ نفسه المُثبَت في check-skill-fresh.mjs (280 · L-127-ب)
+// حرفياً، فما يُصان هناك يُصان هنا. أيّ تغييرٍ في PHASES.md · docs/LESSONS.md
+// · docs/17-phase4-plan.md · package.json الجذر · packages/ · demo/ · snapshots*/
+// يبقى مكتشَفاً (لا يمرّ عبر هذا الحذف).
+const BRANCH_ROW_RE = /^\|\s+`[^`]+`\s+\|\s+`[a-f0-9]+`\s+\|/;
+
 function stripVolatileMeta(text) {
   return text
     .split('\n')
     .filter((line) => (
       !line.startsWith('> **تاريخ التوليد:**') &&
-      !line.startsWith('> **HEAD (')
+      !line.startsWith('> **HEAD (') &&
+      !BRANCH_ROW_RE.test(line)
     ))
     .join('\n')
     .trim();
 }
 
+// maxBuffer 16MB: الحزمة تجاوزت 1MB (السقف الافتراضيّ لـNode) فاستُبدل
+// «bundle قديم» بـENOBUFS · أي «تعذّر الفحص» يُتَّهم به «الوثائق». راجع 417 §١.
 function sh(cmd) {
-  return execSync(cmd, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] }).toString('utf8');
+  return execSync(cmd, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).toString('utf8');
 }
 
 // (0) وجود الملف
@@ -65,22 +77,23 @@ if (porcelain) {
 }
 
 // (أ) المولَّد الآن ≠ git show HEAD:docs/BUNDLE.md
+// **تمييزٌ صريح (417 §١):** فشلُ الفاحصِ ذاتِه ≠ الحزمةُ بائتة. الرسالتان مختلفتان.
 let headContent;
 try {
   headContent = sh(`git show HEAD:${BUNDLE_REL}`);
 } catch (err) {
-  console.error('[check-docs-bundle-fresh] ✗ git show HEAD:docs/BUNDLE.md فشل:');
-  console.error(err.stderr ? err.stderr.toString() : err.message);
-  process.exit(1);
+  console.error('[check-docs-bundle-fresh] ✗ تعذّر الفحصُ — قراءةُ HEAD:docs/BUNDLE.md فشلت (ليس عطبَ طزاجة، عطبٌ في الفاحص):');
+  console.error(`  ${err.code === 'ENOBUFS' ? 'ENOBUFS — الحزمةُ فاضت maxBuffer.' : (err.stderr ? err.stderr.toString() : err.message)}`);
+  process.exit(2);
 }
 
 let fresh;
 try {
   fresh = sh('node scripts/bundle-docs.mjs --stdout');
 } catch (err) {
-  console.error('[check-docs-bundle-fresh] ✗ bundle-docs --stdout فشل:');
-  console.error(err.stderr ? err.stderr.toString() : err.message);
-  process.exit(1);
+  console.error('[check-docs-bundle-fresh] ✗ تعذّر الفحصُ — bundle-docs --stdout فشل (ليس عطبَ طزاجة، عطبٌ في الفاحص):');
+  console.error(`  ${err.code === 'ENOBUFS' ? 'ENOBUFS — الخرْجُ فاض maxBuffer.' : (err.stderr ? err.stderr.toString() : err.message)}`);
+  process.exit(2);
 }
 
 if (stripVolatileMeta(headContent) === stripVolatileMeta(fresh)) {

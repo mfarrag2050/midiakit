@@ -13,6 +13,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimitByPlan from './plugins/rate-limit-by-plan.js';
 import { config } from './config.js';
+import { describeEmailerState } from './emailer.js';
 import errorHandlerPlugin from './plugins/error-handler.js';
 import authGuardPlugin from './plugins/auth-guard.js';
 import tenantTxPlugin from './plugins/tenant-tx.js';
@@ -119,8 +120,10 @@ import aiInvokeRoute from './routes/ai/invoke.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
 
-export async function buildServer() {
-  const loggerConfig = config.NODE_ENV === 'production'
+// 317: `loggerOverride` يسمح للـtests بحقن pino instance يكتب إلى Writable
+// stream لاستخراج السطور · لا مسّ لسلوك الإنتاج (default كما هو حين لا override).
+export async function buildServer(loggerOverride?: unknown) {
+  const loggerConfig = loggerOverride ?? (config.NODE_ENV === 'production'
     ? { level: 'info' }
     : {
         level: 'debug',
@@ -128,12 +131,14 @@ export async function buildServer() {
           target: 'pino-pretty',
           options: { colorize: true, translateTime: 'HH:MM:ss.l' },
         },
-      };
+      });
   // 221-AUTH-COVERAGE-GATE — نجمع routes عبر onRoute hook · للفاحص.
   const collectedRoutes: Array<{ method: string; path: string; hasPreHandler: boolean; preHandlerNames: string[] }> = [];
 
   const fastify = Fastify({
-    logger: loggerConfig,
+    // 317: cast لأنّ loggerConfig قد يكون pino instance (test override) أو config object.
+    // Fastify يقبل الاثنين runtime.
+    logger: loggerConfig as never,
     trustProxy: true,
   });
 
@@ -400,6 +405,22 @@ async function main(): Promise<void> {
   try {
     await fastify.listen({ port: config.PORT, host: config.API_HOST });
     fastify.log.info(`▶ mk-api listening on http://${config.API_HOST}:${config.PORT}`);
+
+    // 400 §٢ · إعلان حالة الـemailer مرّةً واحدة عند الإقلاع — لا يتكرّر عند كل طلب.
+    const emailerState = describeEmailerState(config);
+    if (emailerState === 'dev-console') {
+      fastify.log.warn(
+        '[emailer] SMTP غير مُضبَط — رسائل الاستعادة والدعوات ستُطبع في هذا السجل بدل إرسالها فعلاً. ' +
+          'لضبطها: SMTP_HOST · SMTP_PORT · SMTP_USER · SMTP_PASS · SMTP_FROM في متغيّرات البيئة. ' +
+          '(هذا التحذير يظهر مرّة واحدة عند الإقلاع.)',
+      );
+    } else if (emailerState === 'unconfigured-production') {
+      fastify.log.error(
+        '[emailer] production بلا SMTP — كلّ محاولة إرسال ستفشل بخطأ صريح. الحلّ: اضبط SMTP_* أو انزل عن NODE_ENV=production.',
+      );
+    } else {
+      fastify.log.info('[emailer] SMTP مضبوطٌ · الإرسال سيمرّ عبر مزوّد البريد.');
+    }
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

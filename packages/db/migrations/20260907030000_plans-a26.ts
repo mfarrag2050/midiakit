@@ -69,7 +69,10 @@ interface PlanSeed {
 
 // SOURCE OF TRUTH — القيم من docs/16 §17 + docs/01 §نموذج الإيراد.
 // أي تعديل هنا يستدعي هجرة جديدة (لا PATCH داخل نفس الهجرة — كسر تاريخ).
-const PLANS: PlanSeed[] = [
+// 450 · مُصدَّرة كي يستهلكها `check-plan-sync.mjs` كمصدر الحقيقة
+// (بدل حساب البصمة من DB ومقارنتها بنفسها — العطب الصامت الذي كشفه
+// mkau/950 §٤ وثبّته mkapi/450).
+export const PLANS: PlanSeed[] = [
   { key: 'trial',   name_ar: 'تجريبي',  name_en: 'Trial',   price_usd_cents: 0,     brand_kits_limit: 1,   seats_limit: 1,    videos_per_month_limit: 5,   requests_per_minute_limit: 30,  concurrent_renders_limit: 1 },
   { key: 'starter', name_ar: 'مبتدئ',   name_en: 'Starter', price_usd_cents: 2900,  brand_kits_limit: 1,   seats_limit: 2,    videos_per_month_limit: 20,  requests_per_minute_limit: 60,  concurrent_renders_limit: 1 },
   { key: 'studio',  name_ar: 'استوديو', name_en: 'Studio',  price_usd_cents: 7900,  brand_kits_limit: 5,   seats_limit: 5,    videos_per_month_limit: 100, requests_per_minute_limit: 180, concurrent_renders_limit: 3 },

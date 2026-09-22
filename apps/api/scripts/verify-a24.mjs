@@ -25,10 +25,17 @@ import 'dotenv/config';
 import pg from 'pg';
 import { spawnSync } from 'node:child_process';
 import { execSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve as pathResolve } from 'node:path';
 import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+
+// mk/457 §٢: مسارات مُشتقّة من موقع السكربت لا من cwd متغيّر ولا من
+// مسار مطلقٍ مثبَّت لآلة المطوّر. CI ليس فيه `pf-mediakit-api`.
+const API_ROOT = pathResolve(dirname(fileURLToPath(import.meta.url)), '..');
+const CONFIG_IMPORT_PATH = pathResolve(API_ROOT, 'src/config.js');
 
 process.env.RATE_LIMIT_DISABLE = '1';
 process.env.AI_PROVIDER = 'fake';
@@ -45,13 +52,13 @@ function fail(m) { failures++; console.error(`  ✗ ${m}`); }
 function json(r) { try { return JSON.parse(r.body); } catch { return null; } }
 const H = (t) => ({ authorization: `Bearer ${t}` });
 
-/** يشغّل server.ts subprocess بـenv مخصَّص. يعيد {code, out}. */
+/** يشغّل server.ts subprocess بـenv مخصَّص. يعيد {code, out, signal, error}. */
 function spawnServer(envOverrides) {
   // نستدعي node -e يستورد config ثم يخرج — أرخص من buildServer كامل
   const check = `(async () => {
     process.env = { ...process.env, ...${JSON.stringify(envOverrides)} };
     try {
-      await import('/Users/mdervis/MediaKit/pf-mediakit-api/apps/api/src/config.js');
+      await import(${JSON.stringify(CONFIG_IMPORT_PATH)});
       console.log('BOOT_OK');
     } catch (e) {
       console.error('BOOT_FAIL:', String(e?.message ?? e));
@@ -59,11 +66,19 @@ function spawnServer(envOverrides) {
     }
   })();`;
   const r = spawnSync('node', ['--import', 'tsx', '--input-type=module', '-e', check], {
-    cwd: '/Users/mdervis/MediaKit/pf-mediakit-api',
+    cwd: API_ROOT,
     encoding: 'utf8',
     timeout: 15_000,
   });
-  return { code: r.status, out: (r.stdout ?? '') + (r.stderr ?? '') };
+  // ٤٥٢ · التقاطُ signal و error (لا فقط status و stdout) — `exit=null out=`
+  // في CI معناه spawn failed (cwd ENOENT, signal, أو timeout) لا فشلُ العمليّة.
+  // signal/error يكشفانِه.
+  return {
+    code: r.status,
+    signal: r.signal ?? null,
+    error: r.error ? (r.error.code || r.error.message || String(r.error)) : null,
+    out: (r.stdout ?? '') + (r.stderr ?? ''),
+  };
 }
 
 async function main() {
@@ -95,13 +110,13 @@ async function main() {
     const noKey = spawnServer({ AI_KEY_ENCRYPTION_KEY: '' });
     noKey.code !== 0 && !noKey.out.includes('BOOT_OK') && noKey.out.includes('AI_KEY_ENCRYPTION_KEY')
       ? pass('config بلا KEY ⇒ لا يُقلع (exit=' + noKey.code + ')')
-      : fail(`config بلا KEY: exit=${noKey.code} out=${noKey.out.slice(0, 200)}`);
+      : fail(`config بلا KEY: exit=${noKey.code} signal=${noKey.signal} error=${noKey.error} out=${noKey.out.slice(0, 200)}`);
 
     // (ب) config بمفتاح 63 حرفاً
     const shortKey = spawnServer({ AI_KEY_ENCRYPTION_KEY: 'a'.repeat(63) });
     shortKey.code !== 0 && shortKey.out.includes('64 hex')
       ? pass('config بمفتاح 63 حرفاً ⇒ لا يُقلع')
-      : fail(`config 63: exit=${shortKey.code} out=${shortKey.out.slice(0, 200)}`);
+      : fail(`config 63: exit=${shortKey.code} signal=${shortKey.signal} error=${shortKey.error} out=${shortKey.out.slice(0, 200)}`);
 
     // (ج) placeholder في production
     const placeholder = spawnServer({
@@ -113,7 +128,7 @@ async function main() {
     });
     placeholder.code !== 0 && placeholder.out.includes('placeholder')
       ? pass('config بـplaceholder في production ⇒ لا يُقلع')
-      : fail(`config placeholder: exit=${placeholder.code} out=${placeholder.out.slice(0, 300)}`);
+      : fail(`config placeholder: exit=${placeholder.code} signal=${placeholder.signal} error=${placeholder.error} out=${placeholder.out.slice(0, 300)}`);
 
     // signup + bump حدود
     const suffix = `a24-${Date.now()}`;

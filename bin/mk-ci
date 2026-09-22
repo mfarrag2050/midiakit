@@ -41,6 +41,11 @@ PG_CI_CONTAINER="pf-mediakit-ci-pg"
 PG_CI_PORT="19045"
 REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
 REDIS_CI_PORT="19046"
+# 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر (STORAGE_DRIVER=memory ⇒ mem:// ⇒
+# unknown scheme في undici). دلو خاصّ بالمِحَكّ = mk-assets-ci — لا dev ولا شوروم.
+MINIO_CI_CONTAINER="pf-mediakit-ci-minio"
+MINIO_CI_PORT="19047"
+MINIO_CI_BUCKET="mk-assets-ci"
 CI_NETWORK="pf-mediakit-ci-net"
 
 # كلمات سرّ dev-only (تنتهي مع الحاوية)
@@ -49,9 +54,48 @@ PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
 # (dev_migration_pass / dev_app_pass) — نفس السكربت يُنشئهما عبر init mount.
 
 if [[ "${1:-}" == "--regen-refs" ]]; then
-  echo "[mk-ci] --regen-refs غير مُنفَّذ بعد — راجع scripts/generate-plan-golden.mjs يدوياً."
-  echo "        سيُضاف عند أوّل حاجة توليد بعد قرار مالك بتحسين مرجع."
-  exit 1
+  # 411ب (2026-09-15) — إعادة توليد snapshots/ و snapshots-semantic/ من
+  # preview.mjs مباشرةً · لا نسخٌ بينهما · حارسُ فخّ النسخ في الذيل.
+  echo "[mk-ci --regen-refs] Linux container · preview.mjs × 4 (2 هويّتَين × 2 وضعَي دلالي)"
+  echo "[mk-ci --regen-refs] المسار: preview.mjs → out/{nosemantic,semantic}/ → snapshots/ و snapshots-semantic/"
+  echo ""
+  set +e
+  docker run --rm \
+    --name "${CI_CONTAINER}-regen" \
+    --platform linux/arm64 \
+    -v "${ROOT}:/work" \
+    -v "${VOLUME}:/work/node_modules" \
+    -w /work \
+    "${IMAGE}" \
+    bash -c '
+      set -e
+      echo "[regen · حاوية] apt install …"
+      apt-get update -qq > /dev/null 2>&1
+      apt-get install -qq -y --no-install-recommends git > /dev/null 2>&1
+      corepack enable > /dev/null 2>&1
+      corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+      echo "[regen · حاوية] pnpm install --frozen-lockfile …"
+      pnpm install --frozen-lockfile 2>&1 | tail -3
+      echo "[regen · حاوية] preview.mjs × 4 …"
+      for brand in default client-demo; do
+        for semantic in off on; do
+          echo "  → brand=$brand semantic=$semantic"
+          node --import tsx scripts/preview.mjs --brand=$brand --template=all --semantic=$semantic > /dev/null
+        done
+      done
+      echo "[regen · حاوية] regen-visual-refs.mjs …"
+      node scripts/regen-visual-refs.mjs
+    '
+  exit_code=$?
+  set -e
+  if [ "$exit_code" -eq 0 ]; then
+    echo ""
+    echo "[mk-ci --regen-refs] تمّ · راجع 'git diff snapshots/ snapshots-semantic/' قبل الالتزام."
+  else
+    echo ""
+    echo "[mk-ci --regen-refs] ✗ فشل (رمز=${exit_code}) — لم يُكتب مرجع."
+  fi
+  exit $exit_code
 fi
 
 # ── trap · تنظيف بلا استثناء ───────────────────────
@@ -61,6 +105,7 @@ cleanup() {
   echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
   docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
   docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+  docker rm -f "${MINIO_CI_CONTAINER}" > /dev/null 2>&1 || true
   docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
   exit $ec
 }
@@ -69,6 +114,7 @@ trap cleanup EXIT INT TERM
 # ── تنظيف مُسبَق (بقايا من تشغيل فاشل سابق) ─────────
 docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
+docker rm -f "${MINIO_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
 
 # ── الشبكة ─────────────────────────────────────────
@@ -128,6 +174,48 @@ for i in $(seq 1 15); do
   fi
 done
 
+# ── minio ephemeral (274 §٢ · خزن حقيقيّ بدلاً من mem://) ─────
+# اعتمادات عشوائيّة لكلّ تشغيل — لا سرّ حقيقيّ · لا قيمة تُطبَع
+MINIO_USER=$(openssl rand -hex 12 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(12).toString("hex"))')
+MINIO_PASS=$(openssl rand -hex 20 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(20).toString("hex"))')
+
+echo "[mk-ci] رفع minio ephemeral (${MINIO_CI_CONTAINER} · 127.0.0.1:${MINIO_CI_PORT})..."
+docker run -d --rm \
+  --name "${MINIO_CI_CONTAINER}" \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -p "127.0.0.1:${MINIO_CI_PORT}:9000" \
+  -e MINIO_ROOT_USER="${MINIO_USER}" \
+  -e MINIO_ROOT_PASSWORD="${MINIO_PASS}" \
+  minio/minio:RELEASE.2024-12-18T13-15-44Z \
+  server /data > /dev/null
+
+echo -n "[mk-ci] انتظار minio ready"
+for i in $(seq 1 15); do
+  if docker exec "${MINIO_CI_CONTAINER}" mc --version > /dev/null 2>&1 || \
+     docker run --rm --network "${CI_NETWORK}" --platform linux/arm64 curlimages/curl:8.11.0 \
+       -fsS "http://${MINIO_CI_CONTAINER}:9000/minio/health/live" > /dev/null 2>&1; then
+    echo " ✓ (${i}×2ث)"
+    break
+  fi
+  echo -n "."
+  sleep 2
+  if [ "$i" = "15" ]; then
+    echo ""
+    echo "[mk-ci] ✗ minio لم تصبح ready خلال 30 ثانية"
+    exit 1
+  fi
+done
+
+# إنشاء الدلو mk-assets-ci — mc عابر · اعتمادات عبر env لا سطر أوامر
+echo "[mk-ci] إنشاء الدلو ${MINIO_CI_BUCKET}..."
+docker run --rm \
+  --network "${CI_NETWORK}" \
+  --platform linux/arm64 \
+  -e MC_HOST_ci="http://${MINIO_USER}:${MINIO_PASS}@${MINIO_CI_CONTAINER}:9000" \
+  minio/mc:RELEASE.2024-11-21T17-21-54Z \
+  mb --ignore-existing "ci/${MINIO_CI_BUCKET}" > /dev/null
+
 # ── URLs · داخل الحاوية pg على ${PG_CI_CONTAINER}:5432 ─────
 # migration_user + app_user + control_plane_user يُنشأون تلقائيّاً
 # بواسطة init sql عند إقلاع pg (نفس السكربتات المستعملة في dev).
@@ -148,7 +236,7 @@ echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · volume ${VOLUME}
 echo ""
 
 # ── حاوية الاختبار ──────────────────────────────────
-# لا exec — نحتاج trap ليعمل بعد انتهاء docker run
+# لا exec — نحتاج trap ليعمل بعد انتهاء docker run + ci-steps-diff (250 §١)
 docker run --rm \
   --name "${CI_CONTAINER}" \
   --network "${CI_NETWORK}" \
@@ -157,12 +245,20 @@ docker run --rm \
   -v "${VOLUME}:/work/node_modules" \
   -e DATABASE_URL="${DB_URL_MIGRATION}" \
   -e DATABASE_URL_APP="${DB_URL_APP}" \
+  -e DATABASE_URL_TEST="${DB_URL_MIGRATION}" \
+  -e DATABASE_URL_TEST_APP="${DB_URL_APP}" \
   -e DATABASE_URL_ADMIN="${DB_URL_ADMIN}" \
   -e DATABASE_URL_PLATFORM="${DB_URL_PLATFORM}" \
   -e REDIS_URL="${REDIS_URL_CI}" \
   -e AI_KEY_ENCRYPTION_KEY="${AI_KEY}" \
   -e SESSION_JWT_SECRET="${JWT_SECRET}" \
   -e PLATFORM_JWT_SECRET="${PLATFORM_JWT}" \
+  -e STORAGE_DRIVER=s3 \
+  -e S3_ENDPOINT="http://${MINIO_CI_CONTAINER}:9000" \
+  -e S3_REGION=us-east-1 \
+  -e S3_BUCKET="${MINIO_CI_BUCKET}" \
+  -e S3_ACCESS_KEY_ID="${MINIO_USER}" \
+  -e S3_SECRET_ACCESS_KEY="${MINIO_PASS}" \
   -w /work \
   "${IMAGE}" \
   bash -c '
@@ -174,8 +270,19 @@ docker run --rm \
     corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
     echo "[mk-ci · حاوية] pnpm install --frozen-lockfile …"
     pnpm install --frozen-lockfile 2>&1 | tail -3
+    # 276-THE-GATE-RUNS-AS-THE-WRONG-USER §٣ · التوزيع الصحيح المُقاس:
+    #   DATABASE_URL      = migration_user (لـscaffolding الفاحصات mjs · لـmigrate)
+    #   DATABASE_URL_APP  = app_user       (اتّصال المنتج · api / vitest fastify inject)
+    # فاحصات mjs تخضّر 8/9 بهذا التوزيع (§٤). vitest يخضّر 40/40 (§٢ ب).
     echo "[mk-ci · حاوية] pnpm db:migrate …"
     pnpm db:migrate 2>&1 | tail -20
     echo "[mk-ci · حاوية] pnpm test …"
     pnpm test
   '
+MK_CI_EXIT=$?
+
+# §١ من 250 · دائماً وبلا شرط: أَعلِن ما لا تقيسه هذه البوّابة.
+# القائمة مشتقّة من ci.yml مباشرةً — لا قائمة يدويّة تشيخ بصمت.
+node "${ROOT}/scripts/ci-steps-diff.mjs" || true
+
+exit "$MK_CI_EXIT"

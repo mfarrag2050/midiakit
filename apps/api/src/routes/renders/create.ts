@@ -21,7 +21,7 @@ import {
   NotFound, QuotaExceededRenders, QuotaExceededVideos,
   UnsupportedBrandHasExternalAssets,
   HeadlineTooLong, SourceTooLong, ExportsRateLimit,
-  TemplateSnapshotInvalid,
+  TemplateSnapshotInvalid, UrgentNotAllowedOnPlan,
 } from '../../errors.js';
 
 // 240-EXPORT-LIMITS · ثوابت الحدود.
@@ -110,7 +110,19 @@ const route: FastifyPluginAsync = async (fastify) => {
     if ((recent.rows[0]?.n ?? 0) >= EXPORTS_PER_MINUTE) throw ExportsRateLimit();
 
     // A21 — الحدّان من plan (كانا ثابتين في config).
+    // 410 · فشلٌ مغلق: إن رمى `getEffectiveLimits` (اتّصال منقطع · مستأجر
+    // غير موجود) فالاستثناء يصعد إلى error-handler → 500، **ولا يمرّ**
+    // إلى INSERT ولا enqueue. الفشل هنا يعني «لم يُقبَل الطلب» لا
+    // «قُبِل بحذر». هذا هو السلوك المُشترَط في §٢.
     const limits = await getEffectiveLimits(req.dbClient!, req.auth!.tenantId);
+
+    // 410 · بابُ المسار السريع — قبل أيّ INSERT أو enqueue.
+    // `allowUrgent` من `pick()` يفتح مسار override في `plan_overrides`
+    // كأيّ حدٍّ آخر (لا تخصيص). القيم غير المقروءة تُعامَل كـfalse (الافتراض
+    // في العمود · فشلٌ مغلق ثانٍ).
+    if (body.priority === 'urgent' && !limits.allowUrgent) {
+      throw UrgentNotAllowedOnPlan();
+    }
 
     // 3. QUOTA_EXCEEDED_RENDERS — حصة التوازي من plan.
     const active = await req.dbClient!.query<{ n: number }>(

@@ -31,17 +31,37 @@ function extractGenerated(content, sourceLabel) {
   return content.slice(s + BEGIN.length, e).trim();
 }
 
-// نُهمل ما يتغيَّر مع كلّ commit على main بلا دلالة على تقادم:
+// نُهمل ما يتغيَّر بلا دلالة على تقادمٍ في مصادر main نفسها:
 //   • سطر «تاريخ التوليد · HEAD» (ميتا).
 //   • صفوف جدول الفروع (`| \`branch\` | \`hash\` | ahead | behind | total |`)
 //     — «خلف main» و «الإجمالي» تتغيَّر مع كلّ commit على main نفسه
-//     (self-reference). تحرّك فرع فعلي يُلتقَط عبر تغيّر PHASES-*.md
-//     في محتوى BUNDLE + قائمة endpoints المولَّدة في السكيل (تُبنى من
-//     git ls-tree origin/feat/api).
+//     (self-reference).
+//   • كامل المنطقة المحبوسة بين <!-- CROSS-BRANCH:START --> و
+//     <!-- CROSS-BRANCH:END --> — محتواها مصدره `origin/feat/api` و
+//     `origin/feat/studio`، وهذان يتحرَّكان بلا التزامٍ على main،
+//     فيُحدثان احمراراً كاذباً في كلّ دمج. يبقى المحتوى إعلامياً في
+//     السكيل، ولا يُقارَن. (280 · 2026-09-15 · L-127-ب.)
+//
+// **معيار السلامة (المشهد ج):** بعد هذا الحذف، كلُّ اختلافٍ في:
+//   PHASES.md · docs/LESSONS.md · docs/17-phase4-plan.md · package.json الجذر ·
+//   packages/ · demo/ · snapshots*/
+// يبقى مكتشَفاً في المقارنة. تُصان اختباراً بالمشهد ج.
 const BRANCH_ROW_RE = /^\|\s+`[^`]+`\s+\|\s+`[a-f0-9]+`\s+\|/;
+const CB_START = '<!-- CROSS-BRANCH:START -->';
+const CB_END = '<!-- CROSS-BRANCH:END -->';
+
+function stripCrossBranch(text) {
+  // إزالة كل ما بين CROSS-BRANCH:START و CROSS-BRANCH:END (شاملَين).
+  // إن كانت العلامة مفقودة في أحد الطرفَين (نصٌّ قديم ما زال بلا فصل)،
+  // يُترك كما هو — الحذف الأمين لا يفترض ما ليس موجوداً.
+  const s = text.indexOf(CB_START);
+  const e = text.indexOf(CB_END);
+  if (s < 0 || e < 0 || e < s) return text;
+  return text.slice(0, s) + text.slice(e + CB_END.length);
+}
 
 function stripVolatileMeta(text) {
-  return text
+  return stripCrossBranch(text)
     .split('\n')
     .filter((line) => (
       !line.startsWith('> **تاريخ التوليد:**') &&

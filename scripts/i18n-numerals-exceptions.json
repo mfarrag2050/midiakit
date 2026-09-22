@@ -1,0 +1,69 @@
+{
+  "_note": "استثناءات حارس check:i18n-numerals · كلّ استثناء يحمل حقل reason غير فارغٍ يشرح لماذا الرقم اللاتينيّ الحرفيّ داخل هذه السلسلة العربيّة مشروع (رمز دعم · رقم إصدار · معرِّف مرجعيّ · قيمة تقنيّة معياريّة).",
+  "entries": [
+    {
+      "keySuffix": ".restoreReason",
+      "reason": "معرِّف درس (L-15) — مرجعُ توثيقٍ ثابتٌ لا يتغيّر مع تفضيل الأرقام."
+    },
+    {
+      "keySuffix": ".actorHint",
+      "reason": "نصّ محاكاة تطويريّ يعرض قيماً تقنيّة (403 · role:writer) — لا يظهر في وضع الإنتاج."
+    },
+    {
+      "keySuffix": ".assetsVersion.body",
+      "reason": "معرِّف درس (L-29) — مرجعُ توثيقٍ ثابت."
+    },
+    {
+      "keySuffix": ".assetsVersion.targetHint",
+      "reason": "مثال تنسيق إصدار (YYYY.MM · 2026.03) — رقم إصدارٍ لا رقم عرض."
+    },
+    {
+      "key": "pages.brandKits.editor.value.latin",
+      "reason": "التسمية تعرض شكل الأرقام اللاتينيّة نفسها (123) — الرقم هو الموضوع، ولا يُترجَم."
+    },
+    {
+      "keySuffix": ".wcagThreshold",
+      "reason": "قيمة معياريّة WCAG (4.5:1) — لا تتحوّل حسب تفضيل المستخدم."
+    },
+    {
+      "keySuffix": ".logo.sectionSubtitle",
+      "reason": "حدود تقنيّة ثابتة لأصول الشعار (docs/13 §asset-limits) — 40 و2048 بكسل، 1:6 و6:1."
+    },
+    {
+      "keySuffix": ".fontPicker.assetIdHint",
+      "reason": "معرِّف تعديل مرجعيّ (_AMEND-100) — رمزُ تذكرة."
+    },
+    {
+      "keySuffix": "assets.emptyBody",
+      "reason": "مرجع توثيقيّ (docs/16 §9) — معرِّفُ ملفٍّ ثابت."
+    },
+    {
+      "keySuffix": "renders.subtitle",
+      "reason": "أسماء صيغ الملفّات (PNG · MP4) — لا أرقام عرضٍ فعليّة."
+    },
+    {
+      "keySuffix": "renders.emptyBody",
+      "reason": "مرجع توثيقيّ (docs/16 §8)."
+    },
+    {
+      "keySuffix": "INVALID_LOGO_DIMENSIONS",
+      "reason": "حدود تقنيّة ثابتة لأبعاد الشعار (docs/13) — 40 و2048 بكسل، 1:6 و6:1."
+    },
+    {
+      "key": "design.subtitle",
+      "reason": "معرِّف درس (L-17) — مرجعُ توثيقٍ ثابت."
+    },
+    {
+      "key": "pages.brandKits.editor.preview.subtitle",
+      "reason": "قيمة تقنيّة (250ms debounce) في وضع mixed — رقم أداءٍ لا رقم عرض."
+    },
+    {
+      "key": "nav.subtitle",
+      "reason": "مرجع توثيق ورقم مرحلة (docs/08 · 3.2) — معرِّفات ثابتة."
+    },
+    {
+      "key": "ops.resCpu",
+      "reason": "اختصار وحدات زمنيّة (1د/5د = دقيقة واحدة / خمس دقائق) — دلالة رقميّة تقنيّة، وسيُغطّى بتنسيق موحَّد لاحقاً."
+    }
+  ]
+}

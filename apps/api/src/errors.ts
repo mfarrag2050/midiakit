@@ -83,9 +83,23 @@ export type ErrorCode =
   | 'TEMPLATE_SNAPSHOT_NOT_FOUND'                  // §8.6 (404)
   | 'HEADLINE_TOO_LONG'                            // 240 · content.headline > MAX (422)
   | 'SOURCE_TOO_LONG'                              // 240 · content.source > MAX (422)
+  | 'CONTENT_TOO_LARGE'                            // 380 · project content JSON بايت > CONTENT_MAX (413)
   | 'EXPORTS_RATE_LIMIT'                           // 240 · rate/دقيقة/tenant (429)
   | 'TENANT_DATA_EXPORT_FAILED'                    // 250 · فشل تدفّق النسخة الكاملة
   | 'TEMPLATE_SNAPSHOT_INVALID'                    // 280 · لقطة template غير صالحة عند الإنشاء (422)
+  // Renderer errors (370 · تنقل من api-worker إلى القاموس · تُقرَأ عبر renders.error_code)
+  | 'INVALID_SIZE'                                 // 370 · size غير معروف في SIZE_MAP
+  | 'FONT_ASSET_MISSING'                           // 370 · أصل خط في content غير موجود في DB
+  | 'FONT_ASSET_FETCH_FAILED'                      // 370 · فشل تحميل خط من S3
+  | 'IMAGE_ASSET_MISSING'                          // 370 · أصل صورة في content غير موجود في DB
+  | 'IMAGE_ASSET_FETCH_FAILED'                     // 370 · فشل تحميل صورة من S3
+  | 'MP4_UNSUPPORTED_TEMPLATE'                     // 370 · قالب بلا video block · format=mp4
+  | 'INK_GATE_EMPTY'                               // 370 · بطاقة PNG بلا حبر (701 · enforce mode)
+  | 'VIDEO_GATE_EMPTY'                             // 370 · فيديو بلا محتوى (340 · enforce mode)
+  | 'TENANT_CAP_TIMEOUT'                           // 370 · مستأجر بلغ سقف التأجيلات (360)
+  | 'URGENT_NOT_ALLOWED_ON_PLAN'                   // 410 · priority=urgent وخطّة المستأجر لا تسمح
+  // ملاحظة: `RENDER_FAILED` يبقى clientOnly (mk-api-error-codes.json:clientOnlyCodes) —
+  // مستعمَل في api-worker كـfallback لكنّ الاصطلاح القديم يبقى · القاموس فيه أصلاً.
   // Revisions (§10)
   | 'REVISION_NOT_FOUND'                           // §10.3 (404)
   | 'RESTORE_WOULD_BREAK_REFERENCES'               // §10.3 (409)
@@ -134,8 +148,9 @@ export class ApiError extends Error {
   public readonly httpStatus: number;
   public readonly field: string | null;
 
-  constructor(code: ErrorCode, httpStatus: number, field: string | null = null) {
-    super(code);
+  constructor(code: ErrorCode, httpStatus: number, field: string | null = null, cause?: unknown) {
+    // 317: ES2022 Error options — cause يُحفظ للتشخيص · لا يُسرَّب في toBody.
+    super(code, cause !== undefined ? { cause } : undefined);
     this.code = code;
     this.httpStatus = httpStatus;
     this.field = field;
@@ -159,8 +174,11 @@ export class ApiError extends Error {
 // اختصارات
 export const InvalidCredentials = () => new ApiError('INVALID_CREDENTIALS', 401);
 export const AccountDisabled = () => new ApiError('ACCOUNT_DISABLED', 403);
+// 380 · مستأجرٌ موقوفٌ (tenants.is_active=false) على مسارِ كتابة (POST/PUT/PATCH/DELETE)
+export const AccountSuspended = () => new ApiError('ACCOUNT_SUSPENDED', 403);
 export const TokenExpired = () => new ApiError('TOKEN_EXPIRED', 401);
-export const TokenInvalid = () => new ApiError('TOKEN_INVALID', 401);
+// 317: TokenInvalid يقبل cause · يُحفظ في err.cause للتشخيص في error-handler.
+export const TokenInvalid = (cause?: unknown) => new ApiError('TOKEN_INVALID', 401, null, cause);
 export const SessionRevoked = () => new ApiError('SESSION_REVOKED', 401);
 export const RefreshTokenInvalid = () => new ApiError('REFRESH_TOKEN_INVALID', 401);
 export const PasswordTooWeak = () => new ApiError('PASSWORD_TOO_WEAK', 400, 'password');
@@ -235,9 +253,13 @@ export const OutputNotReady = () => new ApiError('OUTPUT_NOT_READY', 404);
 export const RenderRunning = () => new ApiError('RENDER_RUNNING', 409);
 export const RenderAlreadyTerminal = () => new ApiError('RENDER_ALREADY_TERMINAL', 409);
 export const UnsupportedBrandHasExternalAssets = () => new ApiError('UNSUPPORTED_BRAND_HAS_EXTERNAL_ASSETS', 400);
+// 410 · بابُ المسار السريع · 403 authz-by-plan (لا 422: هذا ليس تجاوز حصّةٍ رقميّة بل ميزة غير مُشترَك بها).
+export const UrgentNotAllowedOnPlan = () => new ApiError('URGENT_NOT_ALLOWED_ON_PLAN', 403, 'priority');
 // 240-EXPORT-LIMITS · حدود المحتوى + rate limit
 export const HeadlineTooLong = () => new ApiError('HEADLINE_TOO_LONG', 422, 'content.headline');
 export const SourceTooLong = () => new ApiError('SOURCE_TOO_LONG', 422, 'content.source');
+// 380 · حجم content JSON بايتاً · 413 لأنّ الحدّ على حجم الحمولة لا على الدلالة.
+export const ContentTooLarge = () => new ApiError('CONTENT_TOO_LARGE', 413, 'content');
 export const ExportsRateLimit = () => new ApiError('EXPORTS_RATE_LIMIT', 429);
 // 250-TENANT-DATA-EXPORT · يُكتَب داخل الـstream كسطرَ NDJSON إن فشل بعد الـheaders
 export const TenantDataExportFailed = () => new ApiError('TENANT_DATA_EXPORT_FAILED', 500);

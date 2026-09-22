@@ -1,0 +1,124 @@
+# .github/workflows/l46-redis-observe.yml — L-46 على خدمة Redis.
+#
+# **الغاية (30-CI-REDIS-SERVICE):** إثبات أنّ الخمسة اختبارات في
+# `apps/renderer/src/observe.test.ts` **تفشل بلا Redis** و**تمرّ معه**
+# — بلا هذا الإثبات، «أضفتُ Redis» ادّعاء لا بوابة (L-46 حرفيّاً).
+#
+# **قياس mkau (`100-OBSERVE-FAILURES`):** لينكس بلا Redis ⇒ 5/5 تفشل بعد
+# ~10s لكلٍّ (~50s إجماليّ). لينكس مع Redis ⇒ 5/5 تمرّ في ~20-50ms.
+# النقص خدمة لا عطب.
+#
+# **تصميم منفصل** بحسب حدّ 30-CI-REDIS-SERVICE («لا تدمج مع دورة أخرى»):
+# وظيفتان في هذا الـworkflow فقط:
+#   • `without_redis` — بلا `services:` — إن مرّ vitest ⇒ الوظيفة تفشل
+#     (L-46 نفي: الفشل هو النجاح). قياس مباشر لكلفة Redis صفر.
+#   • `with_redis` — `redis:7-alpine` خدمةً — إن فشل vitest ⇒ الوظيفة تفشل.
+#     قياس مباشر لكلفة Redis كاملاً.
+# **الفرق بين زمنَي `Initialize containers` = كلفة Redis وحدها.**
+#
+# **قدح `push:paths` على الملفّ نفسه** — يعمل مرّة عند لمسه.
+# `workflow_dispatch` يعمل بعد دمج feat/ci إلى main.
+
+name: L-46 Redis (observe.test.ts)
+
+on:
+  push:
+    branches: [feat/ci]
+    paths:
+      - '.github/workflows/l46-redis-observe.yml'
+  workflow_dispatch: {}
+
+jobs:
+  # ── جولة (أ): بلا Redis — L-46 نفي ───────────────────────────
+  without_redis:
+    name: بلا Redis — الخمسة يجب أن تفشل (L-46 نفي)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20.18.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: corepack pnpm 9.15.4
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: تركيب التبعيّات
+        run: pnpm install --frozen-lockfile
+
+      - name: vitest observe.test.ts — بلا Redis (يجب أن يفشل)
+        env:
+          # نُشير إلى redis://127.0.0.1:6379/3 بلا خدمة — bullmq يحاول ثمّ يفشل
+          REDIS_URL: redis://127.0.0.1:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+        run: |
+          # inversion: نجاح vitest = فشل L-46 (يعني شيء يُمرّر الاختبارات
+          # بلا Redis — لغز أخطر من غياب Redis).
+          if pnpm exec vitest run apps/renderer/src/observe.test.ts; then
+            echo ""
+            echo "✗ L-46 نفي فشل: الاختبارات مرّت بلا Redis (غير متوقّع)."
+            echo "  هذا يعني شيء ما يُمرّرها — عطل في التصميم لا في الخدمة."
+            exit 1
+          else
+            echo ""
+            echo "✓ L-46 نفي نجح: الاختبارات فشلت بلا Redis كما توقّع mkau."
+          fi
+
+  # ── جولة (ب): مع Redis — L-46 إثبات ──────────────────────────
+  with_redis:
+    name: مع Redis — الخمسة يجب أن تمرّ (L-46 إثبات)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 20.18.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+
+      - name: corepack pnpm 9.15.4
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+      - name: تخبئة متجر pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: تركيب التبعيّات
+        run: pnpm install --frozen-lockfile
+
+      - name: vitest observe.test.ts — مع Redis (يجب أن يمرّ)
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/3
+          BULLMQ_PREFIX: pf-mediakit
+        run: pnpm exec vitest run apps/renderer/src/observe.test.ts

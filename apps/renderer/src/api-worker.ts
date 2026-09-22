@@ -18,7 +18,7 @@
 import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { Worker, UnrecoverableError, type Job, type WorkerOptions } from 'bullmq';
+import { Worker, UnrecoverableError, DelayedError, type Job, type WorkerOptions } from 'bullmq';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import pg from 'pg';
 import { Canvas, FontLibrary } from 'skia-canvas';
@@ -29,6 +29,22 @@ import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
 import { loadImage } from 'skia-canvas';
+import { supportCodeFor } from '@pf-mediakit/shared/support-code';
+import {
+  checkInkPresent,
+  formatInkGateFailure,
+  parseInkGateMode,
+  decideInkGatePolicy,
+  formatInkGateLog,
+} from './ink-gate.js';
+import {
+  composeVideoGate,
+  formatVideoGateFailure,
+  formatVideoGateLog,
+  parseVideoGateMode,
+  decideVideoGatePolicy,
+} from './video-gate.js';
+import { Image as SkiaImage } from 'skia-canvas';
 import {
   QUEUE_NAMES, BULLMQ_PREFIX, getConnection, type QueueName,
 } from './queues.js';
@@ -86,6 +102,47 @@ function computePerTenantCap(cfgs: Readonly<Record<QueueName, QueueConfig>>): nu
 function tenantKey(tenantId: string): string {
   return `${BULLMQ_PREFIX}:tenant:${tenantId}:active`;
 }
+
+// ٣٦٠: سقفُ تأجيلات cap · بعده الفشل بـTENANT_CAP_TIMEOUT.
+// افتراضياً 6 × 5s = 30s سقف انتظار. دوالٌّ لا ثوابت — كي يقرأ الاختبار
+// env المُحدَّث عند التشغيل (لا وقت الاستيراد).
+export function getCapDelayMs(): number { return Number(process.env['TENANT_CAP_DELAY_MS'] ?? 5_000); }
+export function getCapMaxDelays(): number { return Number(process.env['TENANT_CAP_MAX_DELAYS'] ?? 6); }
+
+/**
+ * ٣٦٠ · قرارُ tenant-cap · خالص (اختبارٌ مباشر بلا BullMQ).
+ * يُحدّد بحسب العدّاد وسقف التأجيلات: `proceed` | `delay` | `timeout`.
+ * الشرطُ الجانبيّ: يُنقص `active` counter إن كان القرار غير `proceed`
+ * (المُتّصل يمرّر `activeAfterIncr` — يُنقصه بنفسه بعد القرار).
+ */
+export type CapDecision =
+  | { action: 'proceed'; active: number }
+  | { action: 'delay'; delayMs: number; nextDelaysConsumed: number }
+  | { action: 'timeout'; delaysConsumed: number; message: string };
+
+export function decideTenantCap(input: {
+  activeAfterIncr: number;
+  perTenantCap: number;
+  tenantId: string;
+  delaysConsumed: number;
+  capDelayMs?: number;
+  capMaxDelays?: number;
+}): CapDecision {
+  const { activeAfterIncr, perTenantCap, tenantId, delaysConsumed } = input;
+  const delayMs = input.capDelayMs ?? getCapDelayMs();
+  const maxDelays = input.capMaxDelays ?? getCapMaxDelays();
+  if (activeAfterIncr <= perTenantCap) {
+    return { action: 'proceed', active: activeAfterIncr };
+  }
+  if (delaysConsumed >= maxDelays) {
+    return {
+      action: 'timeout',
+      delaysConsumed,
+      message: `TENANT_CAP_TIMEOUT: ${tenantId} بلغ ${maxDelays} تأجيلاً (~${Math.round(maxDelays * delayMs / 1000)}s) · cap=${perTenantCap}`,
+    };
+  }
+  return { action: 'delay', delayMs, nextDelaysConsumed: delaysConsumed + 1 };
+}
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   if (ms <= 0) return p;
   return new Promise<T>((resolve, reject) => {
@@ -135,6 +192,26 @@ async function updateRender(tenantId: string, renderId: string, patch: Record<st
     const sets = Object.keys(patch).map((k, i) => `${k} = $${i + 1}`).join(', ');
     const params = [...Object.values(patch), renderId];
     await c.query(`UPDATE renders SET ${sets} WHERE id = $${params.length}`, params);
+    await c.query('COMMIT');
+  } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; }
+  finally { c.release(); }
+}
+
+// ٣٦٠ · دفنُ صفّ رندرٍ ماتَ في BullMQ · شرطيّ (لا يدهس مكتملاً/فاشلاً بالفعل).
+// يُستدعى من failed-listener لسدّ الفجوة بين «BullMQ يعرف الفشل» و «DB يعرف».
+async function finalizeFailedRender(
+  tenantId: string, renderId: string, code: string, message: string,
+): Promise<void> {
+  const c = await getPgPool().connect();
+  try {
+    await c.query('BEGIN');
+    await c.query('SELECT app_set_tenant($1::uuid)', [tenantId]);
+    // WHERE status IN (queued, running) ⇒ صفّ فاشلٌ أو ناجحٌ لا يُلمس (idempotent-safe).
+    await c.query(
+      `UPDATE renders SET status='failed', completed_at=NOW(), error_code=$1, error_message=$2
+       WHERE id = $3 AND status IN ('queued', 'running')`,
+      [code, message, renderId],
+    );
     await c.query('COMMIT');
   } catch (e) { await c.query('ROLLBACK').catch(() => {}); throw e; }
   finally { c.release(); }
@@ -292,10 +369,86 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     }
     const outPath = join(tmpDir, `output.${format}`);
     if (format === 'mp4') {
-      await renderVideo({
+      const videoResult = await renderVideo({
         template, brand, content, size: dims, outPath,
         ...(imageAssets && { assets: imageAssets }),
       });
+
+      // VIDEO-GATE (340 · نظير ink-gate) — يقيس (duration · frames · إطار وسط
+      // للحبر · فرق ٣ إطارات). **warn:** يمرّ الجميع + سطرُ لوغ موحّد.
+      // **enforce:** (VIDEO_GATE_MODE=enforce) يرفع failed-output ثمّ يرمي
+      // VIDEO_GATE_EMPTY. المعايرة على ٣ mp4s في تعليق video-gate.ts.
+      const videoMode = parseVideoGateMode(process.env['VIDEO_GATE_MODE']);
+      const midIdx = Math.floor(videoResult.frameCount / 2);
+      const endIdx = videoResult.frameCount - 1;
+      // نستخرج ٣ إطارات (0 · midIdx · endIdx) عبر ffmpeg-select — نفس أداة
+      // renderVideo. لو فشل الاستخراج، نُسجّل ولا نرمي (لا نُدخل عطباً في
+      // مسارٍ نجحت فيه ffmpeg الأصليّة).
+      let videoGateFailedKey: string | undefined;
+      try {
+        const framesDir = join(tmpDir, 'vg-frames');
+        mkdirSync(framesDir, { recursive: true });
+        await execFileAsync('ffmpeg', [
+          '-y', '-v', 'error',
+          '-i', outPath,
+          '-vf', `select='eq(n\\,0)+eq(n\\,${midIdx})+eq(n\\,${endIdx})'`,
+          '-fps_mode', 'passthrough',
+          join(framesDir, 'f-%d.png'),
+        ]);
+        const loadFrame = async (p: string): Promise<{ pixels: Uint8ClampedArray; width: number; height: number }> => {
+          const buf = readFileSync(p);
+          const img = new SkiaImage();
+          img.src = buf;
+          await img.decode();
+          const c = new Canvas(img.width, img.height);
+          const cctx = c.getContext('2d');
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          cctx.drawImage(img as any, 0, 0);
+          const data = cctx.getImageData(0, 0, img.width, img.height).data;
+          return { pixels: data, width: img.width, height: img.height };
+        };
+        const [f1, f2, f3] = await Promise.all([
+          loadFrame(join(framesDir, 'f-1.png')),
+          loadFrame(join(framesDir, 'f-2.png')),
+          loadFrame(join(framesDir, 'f-3.png')),
+        ]);
+        const gate = composeVideoGate({
+          durationSec: videoResult.duration,
+          frameCount: videoResult.frameCount,
+          middleFramePixels: f2!.pixels,
+          width: f2!.width,
+          height: f2!.height,
+          frames: [f1!, f2!, f3!],
+        });
+        const decision = decideVideoGatePolicy(videoMode, gate.allOk);
+        const tv = template as { id?: string };
+        const line = formatVideoGateLog(decision.logKind, gate, {
+          templateId: tv.id, width: dims.w, height: dims.h, fps: videoResult.fps, renderId,
+        });
+        // eslint-disable-next-line no-console
+        console.log(line);
+        if (decision.shouldThrow) {
+          // enforce + فارغ — نرفع mp4 الفاشل تحت مفتاح failed-output ليبقى للفحص.
+          videoGateFailedKey = `${tenantId}/renders/${renderId}/failed-output.${format}`;
+          try {
+            const failedBuf = readFileSync(outPath);
+            await s3.send(new PutObjectCommand({
+              Bucket: S3_BUCKET, Key: videoGateFailedKey, Body: failedBuf, ContentType: 'video/mp4',
+            }));
+          } catch (uploadErr) {
+            // eslint-disable-next-line no-console
+            console.error(`[api-worker] video-gate: failed to preserve artifact at ${videoGateFailedKey}: ${(uploadErr as Error).message}`);
+          }
+          throw new Error(formatVideoGateFailure(gate, videoGateFailedKey));
+        }
+      } catch (gateErr) {
+        // إن كانت الرمية من الحارس نفسه (VIDEO_GATE_EMPTY أو mismatch) نُعيد الرمي.
+        // أمّا لو فشلت أداة استخراج الإطارات (ffmpeg select · loadFrame)، نُسجّل ولا نُسقط الرندر.
+        const msg = gateErr instanceof Error ? gateErr.message : String(gateErr);
+        if (msg.startsWith('VIDEO_GATE_') || msg.startsWith('video-gate:')) throw gateErr;
+        // eslint-disable-next-line no-console
+        console.error(`[api-worker] video-gate: frame extraction failed, skipping gate: ${msg}`);
+      }
     } else {
       // PNG-EXPORT: مرّ بالمحرك بنفس assets — لا شكل ثانٍ للأصول، لا stub.
       const { renderFrame } = await import('@pf-mediakit/engine');
@@ -311,16 +464,103 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(imageAssets && { assets: imageAssets as any }),
       });
+
+      // INK-GATE (701 · وضع warn-only افتراضياً · 701b) — يقيس كثافةَ الحوافّ
+      // على القماش الحيّ قبل الترميز. **warn:** كلُّ رندرٍ يمرّ + سطرُ لوغ
+      // موحّد (الناجحُ ok · المشبوهُ INK_GATE_WOULD_FAIL). **enforce:**
+      // (INK_GATE_MODE=enforce) يرفع الملفَّ الفاشلَ إلى S3 ثمّ يرمي
+      // INK_GATE_EMPTY. الحدُّ 0.05٪ مُعايَرٌ على أربع عيّنات — أسبوعُ لوغٍ
+      // في warn يعطينا التوزيعَ قبل التشديد.
+      const inkMode = parseInkGateMode(process.env['INK_GATE_MODE']);
+      const pixels = ctx.getImageData(0, 0, dims.w, dims.h).data;
+      const ink = checkInkPresent(pixels, dims.w, dims.h);
+      const decision = decideInkGatePolicy(inkMode, ink.hasInk);
+      const t2 = template as { id?: string };
+      const logLine = formatInkGateLog(decision.logKind, ink, {
+        templateId: t2.id, width: dims.w, height: dims.h, renderId,
+      });
+      // eslint-disable-next-line no-console
+      console.log(logLine);
+      if (decision.shouldThrow) {
+        // enforce + فارغ — نحفظ الملفَّ الفاشل قبل الرمي ليبقى للفحص.
+        const failedBuf = await canvas.toBuffer('png');
+        const failedKey = `${tenantId}/renders/${renderId}/failed-output.${format}`;
+        try {
+          await s3.send(new PutObjectCommand({
+            Bucket: S3_BUCKET, Key: failedKey, Body: failedBuf, ContentType: 'image/png',
+          }));
+        } catch (uploadErr) {
+          // eslint-disable-next-line no-console
+          console.error(`[api-worker] ink-gate: failed to preserve artifact at ${failedKey}: ${(uploadErr as Error).message}`);
+        }
+        throw new Error(formatInkGateFailure(ink, failedKey));
+      }
       writeFileSync(outPath, await canvas.toBuffer('png'));
     }
 
-    // 6. Upload
+    // 6. Upload — output + plan snapshot (417 §٥)
+    // مستخلصُ الخطّة يُكتب بجوار الرفع لبناء حارس «العنوان المفقود» لاحقاً.
+    // لا حسابَ جديد: buildRenderPlan تُعيد استعمالَ ما يحسبه المحرك أصلاً
+    // (`prepareHeadline` / `computeHeadlineLayout`). فشلُ الخطّة لا يُسقط الرندر.
     const outputBuf = readFileSync(outPath);
     const outputKey = `${tenantId}/renders/${renderId}/output.${format}`;
     await s3.send(new PutObjectCommand({
       Bucket: S3_BUCKET, Key: outputKey, Body: outputBuf,
       ContentType: format === 'mp4' ? 'video/mp4' : 'image/png',
     }));
+
+    try {
+      const { buildRenderPlan } = await import('@pf-mediakit/engine');
+      const planCanvas = new Canvas(dims.w, dims.h);
+      const planCtx = planCanvas.getContext('2d');
+      const plan = buildRenderPlan({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ctx: planCtx as any,
+        size: dims,
+        template,
+        brand,
+        content,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(imageAssets && { assets: imageAssets as any }),
+      });
+      const planSnapshot = {
+        renderId,
+        tenantId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        templateId: (template as any).id ?? null,
+        format,
+        size: dims,
+        headline: plan.headline
+          ? {
+              fontSize: plan.headline.fontSize,
+              lineHeight: plan.headline.lineHeight,
+              chosenBoxW: plan.headline.chosenBoxW,
+              rightX: plan.headline.rightX,
+              centerX: plan.headline.centerX,
+              firstBaseline: plan.headline.firstBaseline ?? null,
+              lastBaseline: plan.headline.lastBaseline ?? null,
+              align: plan.headline.align,
+              bounds: plan.headline.bounds ?? null,
+              linesCount: plan.headline.linesJustified.length,
+            }
+          : null,
+        headlineLineCount: plan.headlineLineCount,
+        generatedAt: new Date().toISOString(),
+      };
+      const planKey = `${tenantId}/renders/${renderId}/output.plan.json`;
+      await s3.send(new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: planKey,
+        Body: Buffer.from(JSON.stringify(planSnapshot, null, 2)),
+        ContentType: 'application/json',
+      }));
+      // eslint-disable-next-line no-console
+      console.log(`[api-worker] plan snapshot uploaded: ${planKey}`);
+    } catch (planErr) {
+      // إخفاقُ الخطّة لا يُسقط الرندر — يُدَوَّن كتحذير.
+      // eslint-disable-next-line no-console
+      console.warn(`[api-worker] plan snapshot skipped: ${(planErr as Error).message}`);
+    }
 
     // 7. Update DB
     const completedAt = new Date();
@@ -333,7 +573,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     console.log(`[api-worker] job ${renderId} succeeded (${outputBuf.length} bytes, output=${outputKey})`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_')
+    const code = msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_') || msg.startsWith('INK_GATE_') || msg.startsWith('VIDEO_GATE_')
       ? msg.split(':')[0]! : 'RENDER_FAILED';
     await updateRender(tenantId, renderId, {
       status: 'failed', completed_at: new Date(),
@@ -428,15 +668,33 @@ async function withTempSpaceMonitor<T>(
 }
 
 // ── معالج مُوحَّد مع fair-share + timeout ──────────
-async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number): Promise<void> {
+async function processJob(job: Job, cfg: QueueConfig, perTenantCap: number, token?: string): Promise<void> {
   const tenantId = (job.data as { tenantId?: string }).tenantId;
   if (!tenantId) throw new UnrecoverableError('[api-worker] tenantId missing');
   const conn = getConnection();
   const key = tenantKey(tenantId);
-  const active = await conn.incr(key);
-  if (active > perTenantCap) {
-    await conn.decr(key);
-    throw new Error(`[tenant-cap] ${tenantId} at cap (${active - 1}/${perTenantCap})`);
+  const activeAfterIncr = await conn.incr(key);
+  const data = job.data as { __capDelays?: number };
+  const decision = decideTenantCap({
+    activeAfterIncr,
+    perTenantCap,
+    tenantId,
+    delaysConsumed: data.__capDelays ?? 0,
+  });
+  if (decision.action !== 'proceed') {
+    await conn.decr(key); // نُنقص العدّاد فوراً — لا نحجز مكاناً لتأجيلٍ لن يمرّ الآن.
+    if (decision.action === 'timeout') {
+      throw new UnrecoverableError(decision.message);
+    }
+    // delay: نطلب من BullMQ تأجيل المهمّة CAP_DELAY_MS
+    if (!token) {
+      // defensive · token غائب ⇒ لا يمكن moveToDelayed. ندفن بدل حلقةٍ عمياء.
+      throw new UnrecoverableError(`[tenant-cap] token missing — cannot delay · tenant=${tenantId}`);
+    }
+    await job.updateData({ ...data, __capDelays: decision.nextDelaysConsumed });
+    await job.moveToDelayed(Date.now() + decision.delayMs, token);
+    // بروتوكول BullMQ: بعد moveToDelayed ارمِ DelayedError كي لا يعتبرها complete/fail.
+    throw new DelayedError();
   }
   try {
     const doJob = async () => {
@@ -470,7 +728,33 @@ export function startApiWorker(
       prefix: BULLMQ_PREFIX,
       concurrency: cfg.concurrency,
     };
-    const w = new Worker(cfg.bullmqName, async (job) => processJob(job, cfg, perTenantCap), options);
+    const w = new Worker(cfg.bullmqName, async (job, token) => processJob(job, cfg, perTenantCap, token), options);
+
+    // ٣٦٠ · failed-listener: يدفن الميّت في DB حتى لو مات قبل processApiJob.
+    // يعالج زومبي «renders.status=queued لصفٍّ ماتَ في BullMQ» — أيّاً كان
+    // مصدر الرمي (TENANT_CAP_TIMEOUT · قتل عامل · panic في التحميل …).
+    // النداءات المكرَّرة على صفٍّ فاشلٍ سلفاً حياديّة (WHERE status IN queued/running).
+    w.on('failed', async (job, err) => {
+      if (!job || !isApiJob(job.data)) return; // CLI-shape لا يمسّ DB
+      const { renderId, tenantId } = job.data;
+      const msg = err instanceof Error ? err.message : String(err);
+      const code = msg.startsWith('TENANT_CAP_') ? msg.split(':')[0]!
+        : msg.startsWith('FONT_') || msg.startsWith('TEMPLATE_') || msg.startsWith('INVALID_')
+          || msg.startsWith('INK_GATE_') || msg.startsWith('VIDEO_GATE_')
+          ? msg.split(':')[0]!
+          : 'RENDER_FAILED';
+      try {
+        await finalizeFailedRender(tenantId, renderId, code, msg.slice(0, 500));
+        // ٣٧٠: supportCode في اللوغ ⇒ دعمٌ يبحث بـgrep 'support=MK-XXXX-XXXX' يجد الحادثة.
+        const supportCode = supportCodeFor(renderId);
+        // eslint-disable-next-line no-console
+        console.log(`[api-worker] failed-listener sync · render=${renderId} · code=${code} · support=${supportCode}`);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`[api-worker] failed-listener sync error · render=${renderId}: ${(e as Error).message}`);
+      }
+    });
+
     workers.push(w);
   }
   return {

@@ -19,7 +19,6 @@ import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
 import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
-import { isDevNamedTemplate } from '@/src/lib/dev-template-filter';
 import { formatDateTime } from '@/src/format/datetime';
 import { useDigitStyle } from '@/src/format/settings';
 
@@ -92,10 +91,9 @@ export default function ProjectsPage(): JSX.Element {
         brandKits.list(),
         templates.list(),
       ]);
-      const visibleTemplates = (REEL_TEMPLATE_ENABLED
+      const visibleTemplates = REEL_TEMPLATE_ENABLED
         ? tplPage.data
-        : tplPage.data.filter((tt) => tt.kind !== 'video')
-      ).filter((tt) => !isDevNamedTemplate(tt.name));
+        : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
       setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
     } catch {
@@ -126,10 +124,9 @@ export default function ProjectsPage(): JSX.Element {
       ]);
       // REEL-HIDE: أخفِ قوالب الفيديو (kind === 'video') من قائمة الاختيار.
       // 330 §3.1: وأخفِ القوالب المسمّاة بلغة المطوّر (mock/dev/إثبات بوّابة).
-      const visibleTemplates = (REEL_TEMPLATE_ENABLED
+      const visibleTemplates = REEL_TEMPLATE_ENABLED
         ? tplPage.data
-        : tplPage.data.filter((tt) => tt.kind !== 'video')
-      ).filter((tt) => !isDevNamedTemplate(tt.name));
+        : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
       setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
       setNewBrandKit((prev) => prev || bkPage.data[0]?.id || '');

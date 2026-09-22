@@ -1,0 +1,50 @@
+{
+  "_comment": "استثناءات فحص check:typecheck — كل حزمة حمراء تحتاج max_errors + expires + owner + close_ticket. الاستثناء يفشل عند تجاوز السقف أو انقضاء التاريخ.",
+  "_policy": "أُنشئ 2026-09-15 من ٣٢٠. سُقوفٌ رُفعت في ٤١٢ إلى **الرقم الحقيقيّ على main** (٣٤٠ · قياس mkci) — كانت السُقوف السابقة من feat/ci وحده. أيّ زيادةٍ عن هذا السقف تفشل الفحص. حين تُغلَق أخطاء تُخفَّض القيمة يدويّاً.",
+  "_baseline_source": "pnpm typecheck على main بعد إصلاح render.ts:739 firstBaseline (٤١٢ · ٢٠٢٦-٠٩-١٥). سابقاً ١٦٧ (٣٤٠ § ١) · حاليّاً ١٦٢ (سقط ٥ لأنّ الإصلاح في packages/engine ينعكس على كلّ تطبيقٍ يستورد منها).",
+  "_ratchet": "max_errors سقفٌ لا يُتجاوَز — يمنع الزيادة. لا يُصفَّر شهراً · يُخفَّض حين نُغلق. حدٌّ لا يعلو أنفعُ من حدٍّ يُصفَّر بعد شهر.",
+  "_expires_policy": "٢٠٢٦-١٠-١٥ (٣٠ يوماً من ٣٢٠). عند انقضاء التاريخ يفشل الفحص — إمّا يُخفَّض max_errors (بعد إغلاق أخطاء) أو يُمَدَّد بمبرِّرٍ محدَّث. «كما كان» ليست مبرِّراً.",
+
+  "apps/renderer": {
+    "reason": "٤٠ خطأ على main · معظمها imports/exports ناقصة + optional chaining على PreparedHeadline (render.ts:739 · firstBaseline?)",
+    "owner": "mediakit",
+    "expires": "2026-10-15",
+    "close_ticket": "412",
+    "max_errors": 39
+  },
+  "apps/api": {
+    "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع)",
+    "owner": "mk-api",
+    "expires": "2026-10-15",
+    "close_ticket": "412 · أو تذكرة mk-api لاحقة",
+    "max_errors": 37
+  },
+  "packages/engine": {
+    "reason": "٢٩ خطأ على main · محرّك — render.ts + text/layout-balanced.ts + text/index.ts + layers/svg.ts · جوهرُها في timeline كانت أُغلقت في ٣٠٠ · الباقي يشمل render.ts:739 firstBaseline",
+    "owner": "mediakit",
+    "expires": "2026-10-15",
+    "close_ticket": "412",
+    "max_errors": 28
+  },
+  "apps/studio": {
+    "reason": "٢٦ خطأ على main بعد إصلاح render.ts:739 (كان ٢٧) · تحت مسؤوليّة feat/studio",
+    "owner": "mk-studio",
+    "expires": "2026-10-15",
+    "close_ticket": "412 · أو تذكرة mk-studio لاحقة",
+    "max_errors": 26
+  },
+  "apps/dashboard": {
+    "reason": "٢٦ خطأ على main · لوحة الإدارة (dev-only حسب check:dashboard-not-published)",
+    "owner": "mediakit",
+    "expires": "2026-10-15",
+    "close_ticket": "412",
+    "max_errors": 25
+  },
+  "packages/tts": {
+    "reason": "٧ أخطاء على main · نصّ إلى صوت · صغيرة العدد · مطابقةٌ لسقف mkci الأصليّ",
+    "owner": "mediakit",
+    "expires": "2026-10-15",
+    "close_ticket": "412",
+    "max_errors": 7
+  }
+}

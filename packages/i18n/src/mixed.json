@@ -44,13 +44,34 @@
     "lastRender": "Last render"
   },
   "roles": {
-    "owner":    { "name": "مالك الحساب",     "hint": "صاحب اشتراك الوكالة — واحدٌ فقط، لا يُحذَف ولا يُغيَّر دوره." },
-    "admin":    { "name": "المدير",           "hint": "يُدير النظام: يُضيف الأدوار، يُعطّل حساباً، يُنفّذ الأرشفة." },
-    "writer":   { "name": "الكاتب",           "hint": "يكتب المسودّة الأولى ويُرسلها إلى التحرير." },
-    "editor":   { "name": "المحرِّر",          "hint": "يُحرِّر المسودّة قبل عرضها على المُراجِع — يقرأ ويُعدِّل." },
-    "reviewer": { "name": "المُراجِع",         "hint": "يُقرِّر إن كانت المسودّة تصلح للنشر — يعتمد أو يُعيد." },
-    "approver": { "name": "المُعتمِد النهائيّ", "hint": "يُوقِّع المسودّة قبل النشر — خطوة أعلى من المُراجِع." },
-    "viewer":   { "name": "قارئ فقط",         "hint": "يرى المسودّات ولا يكتب — دور المشاهدة." }
+    "owner": {
+      "name": "مالك الحساب",
+      "hint": "صاحب اشتراك الوكالة — واحدٌ فقط، لا يُحذَف ولا يُغيَّر دوره."
+    },
+    "admin": {
+      "name": "المدير",
+      "hint": "يُدير النظام: يُضيف الأدوار، يُعطّل حساباً، يُنفّذ الأرشفة."
+    },
+    "writer": {
+      "name": "الكاتب",
+      "hint": "يكتب المسودّة الأولى ويُرسلها إلى التحرير."
+    },
+    "editor": {
+      "name": "المحرِّر",
+      "hint": "يُحرِّر المسودّة قبل عرضها على المُراجِع — يقرأ ويُعدِّل."
+    },
+    "reviewer": {
+      "name": "المُراجِع",
+      "hint": "يُقرِّر إن كانت المسودّة تصلح للنشر — يعتمد أو يُعيد."
+    },
+    "approver": {
+      "name": "المُعتمِد النهائيّ",
+      "hint": "يُوقِّع المسودّة قبل النشر — خطوة أعلى من المُراجِع."
+    },
+    "viewer": {
+      "name": "قارئ فقط",
+      "hint": "يرى المسودّات ولا يكتب — دور المشاهدة."
+    }
   },
   "nav": {
     "workspace": "Workspace",
@@ -366,12 +387,12 @@
       "editBtn": "Edit الهوية",
       "editor": {
         "title": "Edit brand kit",
-        "subtitle": "المرحلة الأولى: حقل «الاسم» وحده قابل للحفظ الآن. باقي الحقول تُعرض للقراءة، وتُبنى في المراحل التالية.",
+        "subtitle": "الاسم فقط editable الآن. باقي الحقول read-only وتُفتَح للتحرير قريباً.",
         "backToList": "← Back to list",
         "save": "Save",
         "saved": "Saved.",
-        "readOnlyTag": "Read-only · next phase",
-        "phase1Hint": "توصيل مسار الحفظ (patch) من طرفه إلى طرفه بحقل واحد قبل بناء العشرين حقلاً فوقه.",
+        "readOnlyTag": "Read-only",
+        "phase1Hint": "الاسم متاح للحفظ الآن · باقي الحقول قيد التحضير.",
         "section": {
           "identity": "Identity",
           "font": "Font",
@@ -789,6 +810,15 @@
     "TOKEN_INVALID": "رمز الجلسة غير صالح.",
     "SESSION_REVOKED": "أُلغيت الجلسة — سجّل الدخول من جديد.",
     "REFRESH_TOKEN_INVALID": "رمز التجديد غير صالح.",
+    "INVALID_REFRESH_TOKEN": "رمز التجديد غير صالح.",
+    "REFRESH_TOKEN_EXPIRED": "رمز التجديد منتهي — سجّل الدخول من جديد.",
+    "INVALID_EMAIL": "بريد إلكتروني غير صالح.",
+    "INVALID_TIMESTAMP": "طابع زمني غير صالح.",
+    "INVALID_RESET_TOKEN": "رابط الاستعادة غير صالح.",
+    "LIMIT_TOO_LARGE": "الحدُّ المطلوب أكبر من المسموح — قلّصه.",
+    "CONFLICT": "تعارضٌ في البيانات — أعِد تحميل الصفحة ثمّ حاول.",
+    "PAYLOAD_TOO_LARGE": "الحمولة أكبر من الحدّ المسموح.",
+    "METHOD_NOT_ALLOWED": "الأمر غير مسموح لهذا المسار.",
     "PASSWORD_TOO_WEAK": "كلمة السر قصيرة — ١٢ حرفاً على الأقلّ.",
     "EMAIL_INVALID": "بريد إلكتروني غير صالح.",
     "EMAIL_TAKEN": "البريد مستعمَل — سجّل الدخول بدلاً من إنشاء حساب.",
@@ -905,9 +935,25 @@
     "PREVIEW_UNKNOWN": "preview failed — راجع القالب.",
     "HEADLINE_TOO_LONG": "headline طويل — قصِّره أو غيّر maximum length في القالب.",
     "SOURCE_TOO_LONG": "source name طويل — استعمل shorter form.",
+    "CONTENT_TOO_LARGE": "project content أكبر من allowed size — قلّل fields أو embedded images.",
     "EXPORTS_RATE_LIMIT": "exports rate limit للدقيقة — أعد المحاولة after قليل.",
-    "TEMPLATE_SNAPSHOT_INVALID": "template snapshot معطوبة أو ناقصة لهذا التصدير.",
-    "TENANT_DATA_EXPORT_FAILED": "تعذّر تجهيز tenant data export — أعد المحاولة، وإن تكرّر فأبلِغ الدعم."
+    "TEMPLATE_SNAPSHOT_INVALID": "تعذّر تصدير هذا القالب — اختر قالباً آخر أو اطلب مراجعته من المسؤول.",
+    "INVALID_SIZE": "المقاس المطلوب غير مدعوم — اختر size من القائمة.",
+    "FONT_ASSET_MISSING": "brand font غير مرفوع — أعد رفعه من brand settings.",
+    "FONT_ASSET_FETCH_FAILED": "تعذّر تحميل brand font — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "IMAGE_ASSET_MISSING": "image المستعمَلة غير موجودة — أعد رفعها أو اختر غيرها.",
+    "IMAGE_ASSET_FETCH_FAILED": "تعذّر تحميل image — أعد المحاولة، وإن تكرّر فأبلِغ الدعم.",
+    "MP4_UNSUPPORTED_TEMPLATE": "هذا القالب لا يُصدَّر كـvideo — اختر PNG أو غيّر القالب.",
+    "INK_GATE_EMPTY": "البطاقة الناتجة فارغة — راجع محتواها وحاول مجدَّداً.",
+    "VIDEO_GATE_EMPTY": "الـvideo الناتج بلا محتوى — راجع القالب والمحتوى وحاول مجدَّداً.",
+    "TENANT_CAP_TIMEOUT": "الخادم مشغول بطلباتك الأخرى — انتظر انتهاءها ثمّ حاول مجدَّداً.",
+    "URGENT_NOT_ALLOWED_ON_PLAN": "المسار العاجل feature في باقةٍ أعلى — رقّ باقتك، أو resubmit بأولويّة عاديّة. طلبك الحاليّ لم يُنفَّذ."
+  },
+  "emails": {
+    "forgotPassword": {
+      "subject": "استعادة كلمة المرور — Media Kit",
+      "body": "طُلبت password reset لحسابك على Media Kit.\n\nاستعمل الرمز التالي لضبط كلمة سرّ جديدة (ينتهي بعد {{expiresInHours}} ساعة):\n\n{{token}}\n\nإن لم تطلب أنت الاستعادة، تجاهل هذه الرسالة — لن يتغيّر شيء ما لم يُستعمل الرمز."
+    }
   },
   "design": {
     "title": "Design System",

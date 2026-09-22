@@ -60,7 +60,10 @@ export async function verifyPlatformAccessToken(token: string): Promise<Platform
       const code = (err as { code: string }).code;
       if (code === 'ERR_JWT_EXPIRED') throw TokenExpired();
     }
-    throw TokenInvalid();
+    // 317: مرِّر jose error كـcause · error-handler يستخرج err.code
+    // (مثل ERR_JWS_SIGNATURE_VERIFICATION_FAILED) ورسالته المختصرة إلى log.
+    // **الرمز الأصليّ لا يُسجَّل** — jose errors لا تحمل payload المُوقَّع.
+    throw TokenInvalid(err);
   }
 }
 
@@ -74,15 +77,29 @@ export async function getActivePlatformSession(
   client: PoolClient,
   sessionId: string,
 ): Promise<{ platform_user_id: string; is_active: boolean }> {
-  const r = await client.query<{ platform_user_id: string; is_active: boolean; expires_at: Date }>(
-    `SELECT platform_user_id, is_active, expires_at FROM platform_sessions WHERE id = $1`,
+  // 380 §٢ · JOIN على platform_users.is_active — إيقافُ مشرفٍ يسري فوراً
+  // بلا انتظار انتهاء رمز الوصول (كان يستمر حتى ساعة قبل هذا الإصلاح).
+  const r = await client.query<{
+    platform_user_id: string;
+    session_active: boolean;
+    user_active: boolean;
+    expires_at: Date;
+  }>(
+    `SELECT ps.platform_user_id,
+            ps.is_active     AS session_active,
+            ps.expires_at,
+            pu.is_active     AS user_active
+       FROM platform_sessions ps
+       JOIN platform_users pu ON pu.id = ps.platform_user_id
+      WHERE ps.id = $1`,
     [sessionId],
   );
   if (r.rowCount === 0) throw SessionRevoked();
   const row = r.rows[0]!;
-  if (!row.is_active) throw SessionRevoked();
+  if (!row.session_active) throw SessionRevoked();
+  if (!row.user_active) throw SessionRevoked();
   if (row.expires_at.getTime() < Date.now()) throw TokenExpired();
-  return row;
+  return { platform_user_id: row.platform_user_id, is_active: row.session_active };
 }
 
 export { PLATFORM_ACCESS_TTL_SECONDS, PLATFORM_REFRESH_TTL_SECONDS };

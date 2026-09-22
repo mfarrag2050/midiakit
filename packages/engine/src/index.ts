@@ -12,6 +12,7 @@ export {
   executeLayer,
   prepareHeadline,
   computeHeadlineLayout,
+  finalizePreparedHeadline,
   drawHeadlineLine,
   computeBreakPenalties,
   type RenderFrameArgs,

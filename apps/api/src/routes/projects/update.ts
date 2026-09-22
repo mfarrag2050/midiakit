@@ -18,6 +18,7 @@ import { toFull, type DbProjectRow } from './shared/mapper.js';
 import {
   NotFound, ImmutableField, LocaleUnsupported, WorkflowNotFound, StaleUpdate,
 } from '../../errors.js';
+import { serializeAndCheckContentSize } from './shared/content-size.js';
 
 const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'es', 'de'] as const;
 const FORBIDDEN_KEYS = new Set(['id', 'tenant_id', 'createdAt', 'currentState', 'state']);
@@ -75,7 +76,9 @@ const route: FastifyPluginAsync = async (fastify) => {
     const params: unknown[] = [];
     if (body.title !== undefined) { params.push(body.title); sets.push(`name = $${params.length}`); }
     if (body.content !== undefined) {
-      params.push(JSON.stringify(body.content));
+      // 420 §١ · نفس نقطة الفحص التي يستدعيها create.ts — «مسار واحد،
+      // نداءٌ واحد». تجاوز الحدّ ⇒ ContentTooLarge (413).
+      params.push(serializeAndCheckContentSize(body.content));
       sets.push(`content = $${params.length}::jsonb`);
     }
     if (body.assignee_id !== undefined) {

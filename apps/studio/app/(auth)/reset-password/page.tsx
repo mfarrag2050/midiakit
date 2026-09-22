@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthCard } from '@/src/ui/AuthCard';
 import { auth } from '@/src/api';
 
 // reset-password — الرابط المُرسَل بالبريد يحمل `?token=…` يقرأه Next
 // من searchParams. نجاح 204 يعيد إلى /login.
-export default function ResetPasswordPage() {
+function ResetPasswordPageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const token = params?.get('token') ?? '';
@@ -36,5 +37,15 @@ export default function ResetPasswordPage() {
         router.push('/login');
       }}
     />
+  );
+}
+
+export default function ResetPasswordPage() {
+  // ٤٣٣ · لفٌّ في Suspense — `useSearchParams` يستوجبُ حدَّ تعليقٍ في
+  // Next 14 (missing-suspense-with-csr-bailout). لفٌّ لا إعادةُ كتابة.
+  return (
+    <Suspense fallback={<div aria-hidden="true" />}>
+      <ResetPasswordPageInner />
+    </Suspense>
   );
 }
