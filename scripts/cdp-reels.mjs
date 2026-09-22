@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// cdp-reels — لقطات محرّر الخطّ الزمني على /dev/reels (reels/454 → 456 → 458).
+// cdp-reels — لقطات محرّر الخطّ الزمني على /dev/reels (reels/454 → 456 → 458 → 463).
 //
-// **الغطاء (458 §2.3 — ستُّ لقطات):**
+// **الغطاء (458 §2.3 — ستُّ لقطات · و463 أضافت السابعة):**
 //   reels-01-idle.png           الشريط ساكناً
 //   reels-02-selected.png       وقطعةٌ مختارة
 //   reels-03-after-drag.png     بعد نقلِ قطعةٍ برمزيّاً (سحب ماوس فعليّ
@@ -10,13 +10,18 @@
 //   reels-05-arabic-digits.png  ومبدّلُ الأرقام على ١٢٣
 //   reels-06-zoomed.png         الشريطُ مقرَّباً (×8): المحتوى تجاوز
 //                               العرضَ والتمريرُ ظاهر.
+//   reels-07-preview.png        الزجاجُ الأماميّ (463): القماشةُ فوق
+//                               الشريط ترسمُ إطارَ رأس القراءة.
 //
-// **القياسات قبل اللقطات (456 §٣):** سطرُ اللقطات يبدأ بحالةٍ نظيفة،
-// لذا يُقاس التحريكُ أوّلاً ثمّ تُعاد قراءة الصفحة:
+// **القياسات قبل اللقطات (456 §٣ · 463 قلبَ اتجاهَ الأسهم):** سطرُ
+// اللقطات يبدأ بحالةٍ نظيفة، لذا يُقاس التحريكُ أوّلاً ثمّ تُعاد قراءة
+// الصفحة:
 //   - bidi: ترتيب «⌘Z» البصريّ (عطبت 454: Z⌘ — قيس قبل الإصلاح
 //     في تقرير 456، وهنا يُتحقَّق من التصحيح بمواضع Range.x).
-//   - → تُزيح القطعةَ المختارة **تقدّماً في الزمن** (RTL قياساً لا
-//     افتراضاً): start% يزداد. ⇧ = خطوة أوسع (علامة كبرى).
+//   - الأسهمُ تمضي حيث تشير (463): **← تقدّماً في الزمن** و→ عَكساً —
+//     قياساً من الـDOM لا افتراضاً. ⇧ = خطوة أوسع (علامة كبرى).
+//     القياسُ على title-02 — أوسعِ فجوةٍ في العيّنة (للوسائطُ ثانيةٌ
+//     واحدةٌ تكفي نُقلَها منذ 464).
 //   - [ / ] يقصّان الحافّتين: العرضُ ينقص بقدر الخطوة.
 //
 // **قياسات الزوم (458 §١) — كلّها من الـDOM بالحساب لا بالنظر:**
@@ -230,62 +235,64 @@ async function main() {
     );
   }
 
-  // التحريك: اختيار clip-02 ثمّ الأسهم — → تقدّماً في الزمن (start% يزداد)
-  await page.click('[data-testid="reels-item-clip-02"]');
+  // التحريك (463: الأسهمُ تمضي حيث تشير): اختيار title-02 للقياس —
+  // فجوتُها [7, 13] أوسعُ فجوةٍ في العيّنة (للوسائط ثانيةٌ واحدة تكفيها).
+  await page.click('[data-testid="reels-item-title-02"]');
   await sleep(300);
-  // 9.5/32 = 29.6875٪
-  assertClose(await startPct(page, 'reels-item-clip-02'), 29.6875, 0.2, 'قبل التحريك clip-02 start%');
+  // 7/32 = 21.875٪
+  assertClose(await startPct(page, 'reels-item-title-02'), 21.875, 0.2, 'قبل التحريك title-02 start%');
 
-  // → خطوة صغيرة = علامة صغرى = 1ث = 3.125٪ → 32.8125٪
-  await page.keyboard.press('ArrowRight');
-  await sleep(300);
-  assertClose(
-    await startPct(page, 'reels-item-clip-02'),
-    32.8125,
-    0.75,
-    'ArrowRight (→) = تقدّمٌ في الزمن: clip-02 start%',
-  );
-
-  // ⇧→ خطوة أوسع = علامة كبرى = 5ث = 15.625٪ → 48.4375٪
-  await page.keyboard.down('Shift');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.up('Shift');
-  await sleep(300);
-  assertClose(
-    await startPct(page, 'reels-item-clip-02'),
-    48.4375,
-    0.75,
-    'Shift+→ خطوةٌ أوسع: clip-02 start%',
-  );
-
-  // ← خطوة صغيرة عَكساً → 45.3125٪
+  // ← خطوة صغيرة = علامة صغرى = 1ث تقدّماً في الزمن → 8/32 = 25٪
   await page.keyboard.press('ArrowLeft');
   await sleep(300);
   assertClose(
-    await startPct(page, 'reels-item-clip-02'),
-    45.3125,
+    await startPct(page, 'reels-item-title-02'),
+    25,
     0.75,
-    'ArrowLeft (←) عَكساً: clip-02 start%',
+    'ArrowLeft (←) = تقدّمٌ في الزمن (463): title-02 start%',
   );
 
-  // ] تقصّ النهاية 1ث: العرض 8.5ث → 7.5ث = 23.4375٪
+  // ⇧← خطوة أوسع = علامة كبرى = 5ث → 13/32 = 40.625٪ (سقفُ الفجوة،
+  // والالتصاقُ يُنزل النهايةَ على بدايةِ title-03)
+  await page.keyboard.down('Shift');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.up('Shift');
+  await sleep(300);
+  assertClose(
+    await startPct(page, 'reels-item-title-02'),
+    40.625,
+    0.75,
+    'Shift+← خطوةٌ أوسع: title-02 start%',
+  );
+
+  // → خطوة صغيرة عَكساً → 12/32 = 37.5٪
+  await page.keyboard.press('ArrowRight');
+  await sleep(300);
+  assertClose(
+    await startPct(page, 'reels-item-title-02'),
+    37.5,
+    0.75,
+    'ArrowRight (→) عَكساً (463): title-02 start%',
+  );
+
+  // ] تقصّ النهاية 1ث: العرض 7ث → 6ث = 18.75٪
   await page.keyboard.press(']');
   await sleep(300);
   assertClose(
-    await widthPctOf(page, 'reels-item-clip-02'),
-    23.4375,
+    await widthPctOf(page, 'reels-item-title-02'),
+    18.75,
     0.75,
-    '] يقصّ حافة النهاية: clip-02 width%',
+    '] يقصّ حافة النهاية: title-02 width%',
   );
 
-  // [ تقصّ البداية 1ث: العرض 6.5ث = 20.3125٪
+  // [ تقصّ البداية 1ث: العرض 5ث = 15.625٪
   await page.keyboard.press('[');
   await sleep(300);
   assertClose(
-    await widthPctOf(page, 'reels-item-clip-02'),
-    20.3125,
+    await widthPctOf(page, 'reels-item-title-02'),
+    15.625,
     0.75,
-    '[ يقصّ حافة البداية: clip-02 width%',
+    '[ يقصّ حافة البداية: title-02 width%',
   );
 
   // إعادة القراءة — اللقطات تبدأ من العيّنة النظيفة
@@ -322,13 +329,16 @@ async function main() {
   if (!hasRing) failures += 1;
   await shot(page, 'reels-02-selected.png');
 
-  // تدفّق 03: سحب clip-01 بـ+٥ ثوانٍ (يساراً = لاحقاً في الزمن) —
+  // تدفّق 03: سحب title-02 بـ+٥ ثوانٍ (يساراً = لاحقاً في الزمن) —
   // يستعمل مرّتين: للقطة 03، ثمّ مجدّداً بعد تبديل الأرقام (05).
+  // القطعُ الإعلاميّةُ (clip-01..03) محشورةٌ بلا فجوةٍ منذ 462 فلا
+  // تتحرك — والقاطعةُ المتّسعةُ المؤهَّلةُ للسحبِ الآمنِ هي title-02
+  // (فجوتُها [7, 13] والإفلاتُ في 12 داخلُها).
   const runDrag = async () => {
     const box = await (
-      await page.$('[data-testid="reels-item-clip-01"]')
+      await page.$('[data-testid="reels-item-title-02"]')
     ).boundingBox();
-    const laneWidth = await page.$eval('[data-testid="reels-item-clip-01"]', (el) =>
+    const laneWidth = await page.$eval('[data-testid="reels-item-title-02"]', (el) =>
       el.parentElement.getBoundingClientRect().width,
     );
     const px = 5 * (laneWidth / DURATION); // ٥ ثوانٍ بالبكسل
@@ -343,19 +353,19 @@ async function main() {
     await sleep(200);
     await page.mouse.up();
     await sleep(300);
-    // 5/32 = 15.625% — الإفلات ثبَّت moveItem في History.
+    // (7+5)/32 = 37.5% — الإفلات ثبَّت moveItemSafe في History.
     assertClose(
-      await startPct(page, 'reels-item-clip-01'),
-      15.625,
+      await startPct(page, 'reels-item-title-02'),
+      37.5,
       0.75,
-      'after-drag clip-01 start%',
+      'after-drag title-02 start%',
     );
   };
 
-  // تدفّق 04: شطر القطعة المختارة عند رأس القراءة (١٢ ث) باختصار S.
-  // السحب أبقى clip-01 مختارة (select عند mousedown) — بعد +٥ ث هي
-  // ٥–١٤٫٥ و١٢ داخلها. لا ننقر clip-02 هنا: clip-01 المنقولة تتراكب
-  // مركزها (z-10 للمختار) فتلتقط النقرة — شطرُ المختارة أصدق.
+  // تدفّق 04: شطر القطعة المختارة عند رأس القراءة (١٤ ث) باختصار S.
+  // السحب أبقى title-02 مختارة (select عند mousedown) — بعد +٥ ث هي
+  // ١٢–١٩ و14 داخلها. بلا نقرٍ إضافيّ: السحبُ الآمنُ لا يُنتج تراكباً
+  // (462) فلا جارَ تحتَ القطعة يلتقط النقرة.
   const runSplit = async () => {
     await page.$eval('[data-testid="reels-scrub"]', (el) => {
       // الـsetter الأصليّ من prototype — إسناد el.value مباشرةً يمرّ عبر
@@ -364,27 +374,27 @@ async function main() {
         HTMLInputElement.prototype,
         'value',
       ).set;
-      setter.call(el, '12');
+      setter.call(el, '14');
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await sleep(300);
-    // رأس القراءة عند ١٢/٣٢ = 37.5% — التمرير وصل فعلاً.
-    assertClose(await playheadPct(page), 37.5, 0.2, 'playhead عند 12ث');
+    // رأس القراءة عند ١٤/٣٢ = 43.75% — التمرير وصل فعلاً.
+    assertClose(await playheadPct(page), 43.75, 0.2, 'playhead عند 14ث');
     await page.keyboard.press('s');
     await sleep(400);
     const splitExists = await page.$(
-      '[data-testid="reels-item-clip-01__split_1"]',
+      '[data-testid="reels-item-title-02__split_1"]',
     );
     process.stdout.write(
-      `  ${splitExists ? '✓' : '✗'} clip-01__split_1 وُجد بعد الشطر\n`,
+      `  ${splitExists ? '✓' : '✗'} title-02__split_1 وُجد بعد الشطر\n`,
     );
     if (!splitExists) failures += 1;
-    // النصف الثاني يبدأ عند ١٢/٣٢ = 37.5% — الشطر وقع عند رأس القراءة.
+    // النصف الثاني يبدأ عند ١٤/٣٢ = 43.75% — الشطر وقع عند رأس القراءة.
     assertClose(
-      await startPct(page, 'reels-item-clip-01__split_1'),
-      37.5,
+      await startPct(page, 'reels-item-title-02__split_1'),
+      43.75,
       0.75,
-      'after-split clip-01__split_1 start%',
+      'after-split title-02__split_1 start%',
     );
   };
 
@@ -606,6 +616,74 @@ async function main() {
 
   // ── 06: اللقطة — مقرَّبٌ، متجاوزٌ للعرض، والتمريرُ ظاهر ──
   await shot(page, 'reels-06-zoomed.png');
+
+  // ── 07 (463): الزجاجُ الأماميّ — القماشةُ فوق الشريط ──
+  // إعادةُ قراءةٍ لحالةٍ نظيفة، ثمّ القياسُ بالبكسل لا بالنظر:
+  // إطارٌ غيرُ فارغ (بكسلاتٌ غيرُ شفّافةٍ > 0)، وحالةُ "ready" لا
+  // "error"، وبصمةٌ تتغيّر بتحريكِ قطعةٍ — معاينةٌ لا تتبدّلُ بتبدّلِ
+  // الخطّ الزمنيّ ليست معاينة.
+  await page.reload({ waitUntil: 'networkidle2' });
+  await page.waitForSelector('[data-testid="reels-item-clip-01"]', { timeout: 10000 });
+  await page.waitForSelector('[data-testid="reels-preview"][data-state="ready"]', { timeout: 15000 });
+  await sleep(400);
+
+  const canvasStats = () =>
+    page.$eval('[data-testid="reels-preview-canvas"]', (el) => {
+      const ctx = el.getContext('2d');
+      const d = ctx.getImageData(0, 0, el.width, el.height).data;
+      let count = 0;
+      let h = 5381;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] > 0) count += 1;
+        h = (h * 33) ^ (d[i] | (d[i + 1] << 8) | (d[i + 2] << 16) | (d[i + 3] << 24));
+      }
+      return { count, hash: h };
+    });
+
+  const stats0 = await canvasStats();
+  assertTrue(
+    stats0.count > 0,
+    `المعاينةُ ترسمُ إطاراً غيرَ فارغ: ${stats0.count} بكسلاً غيرَ شفّاف > 0`,
+  );
+  assertTrue(
+    stats0.hash !== 0,
+    'بصمةُ الإطار محسوبةٌ (djb2 على البكسلات)',
+  );
+
+  const previewState = await page.$eval('[data-testid="reels-preview"]', (el) =>
+    el.getAttribute('data-state'),
+  );
+  assertTrue(
+    previewState === 'ready',
+    `حالةُ المعاينة "ready" لا "error" — قِيل: "${previewState}"`,
+  );
+
+  // رأسُ القراءة داخلَ نافذةِ title-02 (7.5) — البصمةُ قبل النقل:
+  await page.$eval('[data-testid="reels-scrub"]', (el) => {
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value',
+    ).set;
+    setter.call(el, '7.5');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await sleep(500);
+  const before = await canvasStats();
+
+  // نقلُ title-02 ثانيةً (← تقدّماً في الزمن — 463): [7,14] → [8,15] —
+  // تخرجُ من نافذةِ رأس القراءة (7.5) فتتغيّرُ مجموعةُ النشاطِ وتبدّلُ
+  // الإطارُ. معاينةٌ لا تتبدّلُ بتبدّل الخطّ الزمنيّ ليست معاينة.
+  await page.click('[data-testid="reels-item-title-02"]');
+  await sleep(200);
+  await page.keyboard.press('ArrowLeft');
+  await sleep(700);
+  const after = await canvasStats();
+  assertTrue(
+    after.hash !== before.hash,
+    `تحريكُ title-02 غيّر بصمةَ الإطار (${before.hash} → ${after.hash})`,
+  );
+
+  await shot(page, 'reels-07-preview.png');
 
   await browser.close();
 

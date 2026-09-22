@@ -12,7 +12,8 @@
   "digits": {
     "label": "Digits",
     "latin": "123",
-    "arabicIndic": "١٢٣"
+    "arabicIndic": "١٢٣",
+    "switcher": "Digits switcher"
   },
   "time": {
     "now": "just now",
@@ -114,6 +115,31 @@
           "noTemplate": "The 'breaking' template is not available — check the Templates page.",
           "noHeadline": "Type a headline first — no export without a headline."
         }
+      }
+    },
+    "reels": {
+      "timeline": "Timeline",
+      "track": "Track",
+      "clip": "Clip",
+      "playhead": "Playhead",
+      "ruler": "Ruler",
+      "scrubber": "Position bar",
+      "trackType": {
+        "media": "Media",
+        "text": "Text",
+        "audio": "Audio"
+      },
+      "kbdSpace": "Space",
+      "hintPlay": "Play or pause the playhead.",
+      "hintNudge": "Arrows nudge the selected clip where they point: ← forward in time, → back; ⇧ widens the step.",
+      "hintTrim": "Square brackets trim the selected clip's edges: the first the start edge, the second the end edge; ⇧ widens the step.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "hintZoom": "The wheel alone scrolls the strip; with ⌘ it zooms in and out.",
+      "size": {
+        "square": "Square",
+        "portrait": "Portrait",
+        "reel": "Reel"
       }
     },
     "projects": {
@@ -782,7 +808,12 @@
     "close": "Close",
     "search": "Search",
     "copy": "Copy",
-    "copied": "Copied ✓"
+    "copied": "Copied ✓",
+    "split": "Split",
+    "undo": "Undo",
+    "redo": "Redo",
+    "play": "Play",
+    "pause": "Pause"
   },
   "table": {
     "empty": "No rows yet.",

@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -12,10 +12,22 @@
 // وتلميحٍ مرئيّ. رموز المفاتيح المركّبة (⌘Z · ⌘⇧Z · ⌫ ⌦ · [ ]) تُعزل
 // بمكوّن `Ltr` — عطبُ bidi المقلوب (Z⌘) قيس قبل الإصلاح وسُدّ.
 // التحريكُ بلوحة المفاتيح (456 §٣): الأسهمُ تُزيح القطعةَ المختارة
-// (→ تقدّماً في الزمن — RTL قياساً لا افتراضاً)، و⇧ يوسّع الخطوة،
-// والقوسان يقصّان الحافّتين. كلُّها عبر `snapMove`/`snapTrim` (462:
-// الآمنُ + الالتصاق) و`apply` — لا منطقَ جديد، والكمّيّات من
-// `labelStepFor` نفسها (كمّيّات المسطرة).
+// (الأسهمُ تمضي حيث تشير — 463 قلَبَ الاتّجاه: ← تقدّماً في الزمن في
+// شريطٍ RTL و→ عَكساً، قياساً لا افتراضاً)، و⇧ يوسّع الخطوة، والقوسان
+// يقصّان الحافّتين. كلُّها عبر `snapMove`/`snapTrim` (462: الآمنُ +
+// الالتصاق) و`apply` — لا منطقَ جديد، والكمّيّات من `labelStepFor`
+// نفسها (كمّيّات المسطرة).
+//
+// **463 · الزجاجُ الأماميّ:** TimelinePreview فوق الشريط تحت «معاينة
+// حيّة» — قماشةٌ ترسم الإطارَ عند رأس القراءة عبر `drawTimelineAt`
+// (الوصفةُ من /dev/pixel-eq: الخطُّ أوّلاً ثمّ dpr=1)، فيصدقُ العنوانُ
+// الذي فوقه.
+//
+// **464 · قطعةٌ بلا مؤثّرٍ غيرُ موجودة.** المؤثّرُ ليس زينةً تُضاف
+// لاحقاً — هو ما يجعلُ القطعةَ مرئيّةً: `draw-timeline-at` يتخطّى كلَّ
+// عنصرٍ بلا `effects`، فالوسائطُ تحمل `draw-media` والنصوصُ `text-item-lines`.
+// قطعةٌ تظهرُ في الشريط ولا تظهرُ في المعاينةِ **محرّرٌ يكذب** — والعيّنةُ
+// قبل هذا التذكرة كانت ترسمُ صفرَ بكسلٍ من ٢٬٠٧٣٬٦٠٠ لهذا السبب بعينه.
 //
 // **462 · البابُ الثاني — الأسهمُ كالفأرة:** التحريكُ والقصُّ باللوحة
 // صارا على الآمنَين من timeline-snap: التصاقٌ بعتبةِ SNAP_PX/pxPerSec
@@ -43,6 +55,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import type { Timeline } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
+import { TimelinePreview } from '@/src/reels/TimelinePreview';
 import {
   apply,
   createHistory,
@@ -67,9 +80,25 @@ const SAMPLE: Timeline = {
       type: 'media',
       index: 0,
       items: [
-        { id: 'clip-01', start: 0, end: 9.5, src: 'asset:reel-a' },
-        { id: 'clip-02', start: 9.5, end: 18, src: 'asset:reel-b' },
-        { id: 'clip-03', start: 18, end: 32, src: 'asset:reel-c' },
+        // 464: بلا `draw-media` لا ترسمُ الوسائطُ شيئاً — والصورُ
+        // المولَّدةُ تصلُ المحرّكَ عبر assets.images بمفتاح src نفسِه.
+        // `kenBurns` من مؤثّراتنا المسمّاة في 464 — لا ترسمُ شيئاً بعدُ
+        // في المحرّك الحاليّ، وتبقى عهداً مكشوفاً في التقرير.
+        { id: 'clip-01', start: 0, end: 9.5, src: 'asset:reel-a',
+          effects: [
+            { type: 'draw-media', assetKey: 'asset:reel-a' },
+            { type: 'kenBurns' },
+          ] },
+        { id: 'clip-02', start: 9.5, end: 18, src: 'asset:reel-b',
+          effects: [
+            { type: 'draw-media', assetKey: 'asset:reel-b' },
+            { type: 'kenBurns' },
+          ] },
+        { id: 'clip-03', start: 18, end: 32, src: 'asset:reel-c',
+          effects: [
+            { type: 'draw-media', assetKey: 'asset:reel-c' },
+            { type: 'kenBurns' },
+          ] },
       ],
     },
     {
@@ -77,9 +106,17 @@ const SAMPLE: Timeline = {
       type: 'text',
       index: 1,
       items: [
-        { id: 'title-01', start: 0.5, end: 7 },
-        { id: 'title-02', start: 7, end: 14 },
-        { id: 'title-03', start: 20, end: 28 },
+        // 464: سطورُ النصّ تُرسمُ بـ`text-item-lines` من الخطّة — والقيمةُ
+        // نصٌّ عربيٌّ حقيقيٌّ من اختراع هذه الصفحة، لا اسمَ جهةٍ ولا علامةً.
+        { id: 'title-01', start: 0.5, end: 7,
+          effects: [{ type: 'text-item-lines' }],
+          value: 'الإيقاعُ السريعُ يشدُّ المشاهدَ من أوّلِ ثانية' },
+        { id: 'title-02', start: 7, end: 14,
+          effects: [{ type: 'text-item-lines' }],
+          value: 'كلُّ لقطةٍ تخدمُ الحكايةَ ولا تحيدُ عنها' },
+        { id: 'title-03', start: 20, end: 28,
+          effects: [{ type: 'text-item-lines' }],
+          value: 'النصُّ المكتوبُ جيّداً يصلُ قبلَ الصورة' },
       ],
     },
     {
@@ -260,13 +297,15 @@ export default function ReelsTimelinePage(): JSX.Element {
         return;
       }
       if (inField) return;
-      // التحريك: → تقدّماً في الزمن (RTL) · ⇧ خطوة أوسع. القوسان
-      // يقصّان الحافّتين (e.code لا e.key — فالقوسُ مع ⇧ يصير «{»).
+      // التحريك: الأسهمُ تمضي حيث تشير — ← تقدّماً في الزمن (شريط RTL)
+      // و→ عَكساً (463: السهمُ يدٌ تدفعُ جسماً، لا كلمةٌ تُقرأ) · ⇧ خطوة
+      // أوسع. القوسان يقصّان الحافّتين (e.code لا e.key — فالقوسُ مع ⇧
+      // يصير «{»).
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         if (!selectedItem) return;
         e.preventDefault();
         const step = (e.shiftKey ? nudgeLarge : nudgeSmall) *
-          (e.key === 'ArrowRight' ? 1 : -1);
+          (e.key === 'ArrowRight' ? -1 : 1);
         nudgeSelected(step);
         return;
       }
@@ -350,6 +389,10 @@ export default function ReelsTimelinePage(): JSX.Element {
           {t('pages.projects.preview.title')}
         </h2>
         <div className="mt-3 rounded-lg border border-border bg-surface p-4 shadow-soft">
+          {/* الزجاجُ الأماميّ فوق المقود (463) — العنوانُ يصدق */}
+          <div className="mb-4 flex justify-center">
+            <TimelinePreview timeline={present} playheadSec={playheadSec} />
+          </div>
           <TimelineStrip
             timeline={present}
             playheadSec={playheadSec}
