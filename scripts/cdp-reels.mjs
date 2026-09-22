@@ -617,11 +617,11 @@ async function main() {
   // ── 06: اللقطة — مقرَّبٌ، متجاوزٌ للعرض، والتمريرُ ظاهر ──
   await shot(page, 'reels-06-zoomed.png');
 
-  // ── 07 (463): الزجاجُ الأماميّ — القماشةُ فوق الشريط ──
+  // ── 07 (463·466): الزجاجُ الأماميّ — معاينةٌ ترسمُ وتتحرّك ──
   // إعادةُ قراءةٍ لحالةٍ نظيفة، ثمّ القياسُ بالبكسل لا بالنظر:
-  // إطارٌ غيرُ فارغ (بكسلاتٌ غيرُ شفّافةٍ > 0)، وحالةُ "ready" لا
-  // "error"، وبصمةٌ تتغيّر بتحريكِ قطعةٍ — معاينةٌ لا تتبدّلُ بتبدّلِ
-  // الخطّ الزمنيّ ليست معاينة.
+  // إطارٌ غيرُ فارغ، وحالةُ "ready"، **وحساسيّةٌ دقيقة**: نقلُ نصفِ
+  // ثانيةٍ داخلَ نافذة النشاط يغيّرُ البصمة (466 §٣.1 — الذي سقط في
+  // 464)، وثلاثُ بصماتٍ داخل قطعةٍ متحرّكةٍ ثلاثٌ مختلفة (§٣.2).
   await page.reload({ waitUntil: 'networkidle2' });
   await page.waitForSelector('[data-testid="reels-item-clip-01"]', { timeout: 10000 });
   await page.waitForSelector('[data-testid="reels-preview"][data-state="ready"]', { timeout: 15000 });
@@ -658,32 +658,68 @@ async function main() {
     `حالةُ المعاينة "ready" لا "error" — قِيل: "${previewState}"`,
   );
 
-  // رأسُ القراءة داخلَ نافذةِ title-02 (7.5) — البصمةُ قبل النقل:
-  await page.$eval('[data-testid="reels-scrub"]', (el) => {
-    const setter = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype,
-      'value',
-    ).set;
-    setter.call(el, '7.5');
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await sleep(500);
-  const before = await canvasStats();
+  await shot(page, 'reels-07-preview.png');
 
-  // نقلُ title-02 ثانيةً (← تقدّماً في الزمن — 463): [7,14] → [8,15] —
-  // تخرجُ من نافذةِ رأس القراءة (7.5) فتتغيّرُ مجموعةُ النشاطِ وتبدّلُ
-  // الإطارُ. معاينةٌ لا تتبدّلُ بتبدّل الخطّ الزمنيّ ليست معاينة.
-  await page.click('[data-testid="reels-item-title-02"]');
+  // (466 §٣.1) نقلُ title-01 نصفَ ثانيةٍ **داخلَ نافذتها** — [0.5,7] →
+  // [0,6.5] عند t=4.5: القطعةُ تبقى نشطةً والبصمةُ تتغيّر. هذا هو
+  // الاختبارُ الذي سقط في 464 — مؤثّراتٌ ساكنةٌ كانت ترسمُ ساكناً.
+  const h0 = await canvasStats();
+  await page.click('[data-testid="reels-item-title-01"]');
   await sleep(200);
-  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowRight'); // → عَكساً (463): إلى الجدار 0
   await sleep(700);
-  const after = await canvasStats();
+  const h1 = await canvasStats();
   assertTrue(
-    after.hash !== before.hash,
-    `تحريكُ title-02 غيّر بصمةَ الإطار (${before.hash} → ${after.hash})`,
+    h1.hash !== h0.hash,
+    `نقلُ title-01 نصفَ ثانيةٍ داخل النافذة غيّر بصمةَ الإطار (${h0.hash} → ${h1.hash})`,
   );
 
-  await shot(page, 'reels-07-preview.png');
+  const scrubTo = async (t) => {
+    await page.$eval(
+      '[data-testid="reels-scrub"]',
+      (el, tt) => {
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          'value',
+        ).set;
+        setter.call(el, String(tt));
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      t,
+    );
+    await sleep(500);
+  };
+
+  // (466 §٣.2) ثلاثُ بصماتٍ متتاليةٍ داخل clip-01 (t = بدايتها
+  // +0.2 · +1.0 · +2.0): ثلاثٌ مختلفة — kenBurns تُقرأ. إطارٌ لا
+  // يتغيّرُ داخل قطعةٍ متحرّكةٍ يعني أنّ المؤثّرَ لم يُقرَأ.
+  await scrubTo(0.2);
+  const c1 = await canvasStats();
+  await scrubTo(1.0);
+  const c2 = await canvasStats();
+  await scrubTo(2.0);
+  const c3 = await canvasStats();
+  assertTrue(
+    c1.hash !== c2.hash && c2.hash !== c3.hash && c1.hash !== c3.hash,
+    `ثلاثُ بصماتٍ داخل clip-01 ثلاثٌ مختلفة (${c1.hash} · ${c2.hash} · ${c3.hash})`,
+  );
+
+  // origin تختلفُ بين القطعتَين (466 §١): kenBurns على clip-02 تُقرأ
+  // أيضاً — تقدّمُ ثانيةٍ داخلَ نافذتها يغيّرُ الإطار.
+  await scrubTo(12);
+  const s1 = await canvasStats();
+  await scrubTo(13);
+  const s2 = await canvasStats();
+  assertTrue(
+    s1.hash !== s2.hash,
+    `kenBurns على clip-02 تُقرأ: بصمتا 12ث و13ث تختلفان (${s1.hash} → ${s2.hash})`,
+  );
+
+  // (466 §٣.5) لقطتان عند زمنَين داخل نفس القطعة — تُريان الحركة.
+  await scrubTo(1.0);
+  await shot(page, 'reels-08-motion-1s.png');
+  await scrubTo(4.0);
+  await shot(page, 'reels-09-motion-4s.png');
 
   await browser.close();
 
