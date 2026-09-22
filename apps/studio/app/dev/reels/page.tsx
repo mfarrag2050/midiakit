@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -51,6 +51,16 @@
 // `present` لا من العيّنة — insert يُطيلُها فلا يكذبُ شريطُ الموضعِ
 // ولا القراءةُ ولا حلقةُ التشغيل.
 //
+// **470 · اسحبْه حيث تشاء · وفاصلةٌ تخالف نقطة:** (١) حقولُ الأعداد
+// صارت نصّاً موحَّدَ الصيغة عبر مبدّل ١٢٣/123 القائم (formatFieldNumber
+// من مسار الأرقام، بلا تجميعٍ ألفيٍّ) — والقياسُ قبل الإصلاح أثبتَ أنّ
+// type=number تحت lang=ar كان يطحنُ «3,5» و«٣٫٥» إلى **صفر** (تصفيةُ
+// المتصفّح إلى '' ثمّ Number('')=0 يعبرُ الحارس). (٢) القطعةُ النصّيّةُ
+// المحدَّدةُ تُسحَبُ على القماشة نفسِها: anchor رأسيّاً وoffset.x
+// أفقيّاً، بمعاملِ تحويلِ 1080/العرض-المعروض، والإفلاتُ يُسجَّلُ مرّةً
+// واحدةً عبر `apply` — سحبةٌ واحدةٌ = تراجعٌ واحد. اللوحةُ قرُبت من
+// القماشة (تحتَها مباشرةً) والحقولُ تتبعُ السحبَ لحظةً بلحظة.
+//
 // **469 · العينُ ترى ما لا يراه المقياس:** بوّابةُ 468 اجتازتها خربشةٌ
 // متراكبة — كلُّ مقاييسها خضراء. العلاجُ بجذوره: (١) **عطاءُ العيّنةِ
 // anchor صريحاً** (0.2 · 0.5 · 0.8) — بلا anchor يهبطُ النصُّ إلى
@@ -86,11 +96,11 @@
 // المبدّلُ يُسمّى من الخارج (`digits.switcher`): مكوّنه خارج بدل هذه
 // التذكرة، فالتسميةُ تغليفٌ هنا.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import type { Timeline, Track, TrackItem, TrackType } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
-import { TimelinePreview, type TextLayoutInfo } from '@/src/reels/TimelinePreview';
+import { TimelinePreview, PREVIEW_SIZE, type TextLayoutInfo } from '@/src/reels/TimelinePreview';
 import {
   apply,
   createHistory,
@@ -103,7 +113,7 @@ import {
 import { snapMove, snapTrim } from '@/src/reels/timeline-snap';
 import { addTrack, addItem } from '@/src/reels/timeline-add';
 import { useDigitStyle } from '@/src/format/settings';
-import { formatNumber } from '@/src/format/digits';
+import { formatNumber, formatFieldNumber, parseFieldNumber, type DigitStyle } from '@/src/format/digits';
 import { DigitStyleSwitcher } from '@/src/format/DigitStyleSwitcher';
 
 const SAMPLE: Timeline = {
@@ -235,6 +245,51 @@ const timelineEq = (a: Timeline, b: Timeline): boolean =>
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
+const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
+
+/** anchor كما يراه المُنزلِقُ والسحبُ (470): الكلماتُ على أقربِ طرفٍ،
+ *  والتحريرُ يكتبُ نسبةً رقميّةً دائماً. */
+const anchorAsNumber = (a: TrackItem['anchor']): number =>
+  typeof a === 'number' ? a : a === 'top' ? 0 : a === 'bottom' ? 1 : 0.5;
+
+/** حقلُ عددٍ موحَّدُ الصيغة (470 §١): عرضٌ من مسار الأرقام بلا تجميعٍ
+ *  ألفيٍّ، وإدخالٌ متسامحٌ (عربيّة-هنديّة · ٫ · , · .) — type=text لا
+ *  يُصفّيه المتصفّحُ فلا تُطحنُ القيمةُ إلى الصفر. أثناءَ التركيزِ
+ *  مسوَّدةٌ حرّةٌ (الفاصلةُ لا تُؤكل) تُطبَّعُ صيغتُها عند الغياب؛
+ *  وكلُّ ما يُفهمُ منها يُطبَّقُ فوراً. */
+function NumberField(props: {
+  readonly testId: string;
+  readonly value: number;
+  readonly digitStyle: DigitStyle;
+  readonly onValue: (v: number) => void;
+  readonly className: string;
+}): JSX.Element {
+  const { testId, value, digitStyle, onValue, className } = props;
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      dir="ltr"
+      data-testid={testId}
+      className={className}
+      value={draft !== null ? draft : formatFieldNumber(value, digitStyle)}
+      onFocus={(e) => {
+        setDraft(e.target.value);
+      }}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDraft(raw);
+        const v = parseFieldNumber(raw);
+        if (v !== null) onValue(v);
+      }}
+      onBlur={() => {
+        setDraft(null);
+      }}
+    />
+  );
+}
+
 /** الاختيار (468): صار مساريّاً — القطعةُ تختارُ مسارَها، والمسارُ
  *  المضافُ يُختارُ بلا قطعةٍ فتُبنى عليه القطعةُ التالية. */
 interface Selection {
@@ -257,6 +312,17 @@ export default function ReelsTimelinePage(): JSX.Element {
   /** خريطةُ صناديقِ النصوصِ من آخر إطارٍ (469 §٣) — يستقرُّ هويّةً حتى
    *  لا يعيدَ الرسمَ إلا لصناديقٍ تبدّلت فعلاً. */
   const [textLayout, setTextLayout] = useState<TextLayoutInfo | null>(null);
+  /** سحبُ النصّ على القماشة (470 §٢): القاعدةُ عند الإمساك، والإزاحةُ
+   *  الحيَّةُ أثناءه؛ الإفلاتُ يُسجَّلُ مرّةً واحدةً عبر editSelectedItem. */
+  const [boxDragBase, setBoxDragBase] = useState<{
+    readonly itemId: string;
+    readonly anchor0: number;
+    readonly offsetX0: number;
+  } | null>(null);
+  const [boxDragDelta, setBoxDragDelta] = useState<{
+    readonly dx: number;
+    readonly dy: number;
+  } | null>(null);
 
   const present = history.present;
 
@@ -313,24 +379,73 @@ export default function ReelsTimelinePage(): JSX.Element {
   const canUndo = history.past.length > 0;
   const canRedo = history.future.length > 0;
 
+  // ── سحبُ النصّ على القماشة (470 §٢) ──
+  // الحيَّةُ مشتقّةٌ لا مخزَّنة: القاعدة + الإزاحة = الموضعُ المعروض.
+  const dragAnchor =
+    boxDragBase !== null && boxDragDelta !== null
+      ? clamp01(boxDragBase.anchor0 + boxDragDelta.dy / PREVIEW_SIZE.h)
+      : null;
+  const dragOffsetX =
+    boxDragBase !== null && boxDragDelta !== null
+      ? boxDragBase.offsetX0 + boxDragDelta.dx
+      : null;
+
+  /** ما تراهُ المعاينةُ واللوحةُ: الحيُّ أثناءَ السحب، وإلا `present`.
+   *  مثبَّتُ الهويّة — إعادةُ بنائه عندَ textLayout وحده لا تُعيدُ
+   *  رسمَ القماشة. */
+  const shownTimeline = useMemo(() => {
+    if (dragAnchor === null || dragOffsetX === null || !selected?.itemId) {
+      return present;
+    }
+    const { trackId, itemId } = selected;
+    return {
+      ...present,
+      tracks: present.tracks.map((tr) =>
+        tr.id === trackId
+          ? {
+              ...tr,
+              items: tr.items.map((it) =>
+                it.id === itemId
+                  ? {
+                      ...it,
+                      anchor: dragAnchor,
+                      offset: { ...(it.offset ?? {}), x: dragOffsetX },
+                    }
+                  : it,
+              ),
+            }
+          : tr,
+      ),
+    };
+  }, [dragAnchor, dragOffsetX, present, selected]);
+
+  /** القطعةُ كما تُعرضُ في اللوحة — الحيَّةُ أثناءَ السحب (470 §٢). */
+  const shownItem = selected?.itemId
+    ? shownTimeline.tracks
+        .find((tr) => tr.id === selected.trackId)
+        ?.items.find((i) => i.id === selected.itemId)
+    : undefined;
+
+  /** صندوقُ القطعةِ النصّيّةِ المحدَّدة — من خريطةِ الإطار الحيَّة،
+   *  فيتبعُ السحبَ ويُحيطُه إطارُ التحويم. */
+  const dragBox = useMemo(() => {
+    if (!selected?.itemId) return null;
+    const track = present.tracks.find((tr) => tr.id === selected.trackId);
+    if (!track || track.type !== 'text') return null;
+    return textLayout?.boxes.find((b) => b.itemId === selected.itemId) ?? null;
+  }, [present, selected, textLayout]);
+
   // قيمُ العرضِ للوحةِ الخصائص (469 §٤) — المسارُ الوحيدُ للأرقامِ
   // `formatNumber` في الموضع؛ وحقولُ الإدخالِ قيمٌ خامٌ بياناتٌ. الكلمات
   // ('top'/'center'/'bottom') تُعرضُ على أقربِ طرفٍ للمُنزلِق، والتحريرُ
   // يكتبُ نسبةً رقميّةً دائماً. gain الغائبُ يُعرضُ 1 (كاملَ المستوى)
   // ويبقى الغيابُ في البياناتِ حتى يُحرَّر.
-  const anchorValue =
-    typeof selectedItem?.anchor === 'number'
-      ? selectedItem.anchor
-      : selectedItem?.anchor === 'top'
-        ? 0
-        : selectedItem?.anchor === 'bottom'
-          ? 1
-          : 0.5;
+  const anchorValue = anchorAsNumber(shownItem?.anchor);
   const offsetValueX =
-    typeof selectedItem?.offset?.x === 'number' ? selectedItem.offset.x : 0;
+    typeof shownItem?.offset?.x === 'number' ? shownItem.offset.x : 0;
   const offsetValueY =
-    typeof selectedItem?.offset?.y === 'number' ? selectedItem.offset.y : 0;
-  const kenBurnsEffect = selectedItem?.effects?.find(
+    typeof shownItem?.offset?.y === 'number' ? shownItem.offset.y : 0;
+  const kenBurnsEffect = shownItem?.effects?.find(
     (fx) => fx.type === 'kenBurns',
   );
   const kenBurnsFromValue =
@@ -529,6 +644,45 @@ export default function ReelsTimelinePage(): JSX.Element {
     [playheadSec, selected],
   );
 
+  // ── سحبُ النصّ على القماشة: المعالجات (470 §٢) — بعد editSelectedItem
+  //    لأنّ الإفلاتَ يُسجَّلُ عبره مرّةً واحدة. ──
+  const onBoxDragStart = useCallback((): void => {
+    if (!selected?.itemId) return;
+    const it = present.tracks
+      .find((tr) => tr.id === selected.trackId)
+      ?.items.find((i) => i.id === selected.itemId);
+    if (!it) return;
+    setBoxDragBase({
+      itemId: selected.itemId,
+      anchor0: anchorAsNumber(it.anchor),
+      offsetX0: it.offset?.x ?? 0,
+    });
+    setBoxDragDelta({ dx: 0, dy: 0 });
+  }, [present, selected]);
+
+  const onBoxDragMove = useCallback((dx: number, dy: number): void => {
+    setBoxDragDelta({ dx, dy });
+  }, []);
+
+  /** الإفلاتُ = تسجيلٌ واحد: editSelectedItem يطبّقُ apply مرّةً
+   *  ويمتنعُ عن السحبةِ التي لم تُحرّك شيئاً (سحبةٌ = تراجعٌ واحد). */
+  const onBoxDragEnd = useCallback(
+    (dx: number, dy: number): void => {
+      const base = boxDragBase;
+      setBoxDragBase(null);
+      setBoxDragDelta(null);
+      if (!base) return;
+      const anchor = clamp01(base.anchor0 + dy / PREVIEW_SIZE.h);
+      const offsetX = base.offsetX0 + dx;
+      editSelectedItem((it) => ({
+        ...it,
+        anchor,
+        offset: { ...(it.offset ?? {}), x: offsetX },
+      }));
+    },
+    [boxDragBase, editSelectedItem],
+  );
+
   const doUndo = useCallback((): void => {
     setHistory((h) => undo(h));
   }, []);
@@ -708,11 +862,182 @@ export default function ReelsTimelinePage(): JSX.Element {
           {/* الزجاجُ الأماميّ فوق المقود (463) — العنوانُ يصدق */}
           <div className="mb-4 flex justify-center">
             <TimelinePreview
-              timeline={present}
+              timeline={shownTimeline}
               playheadSec={playheadSec}
               onTextLayout={onTextLayout}
+              dragBox={dragBox}
+              onBoxDragStart={onBoxDragStart}
+              onBoxDragMove={onBoxDragMove}
+              onBoxDragEnd={onBoxDragEnd}
             />
           </div>
+
+          {/* لوحةُ الخصائص (469 §٤ · 470 §٣) — تحتَ القماشةِ مباشرةً:
+              المستخدمُ يكتبُ هنا وينظرُ إلى جواره لا إلى أسفل الصفحة.
+              حقولُ النوعِ وحدَه، وكلُّ تعديلٍ عبر `apply` فيدخلُ
+              التراجع، والحقولُ تتبعُ سحبَ القماشةِ لحظةً بلحظة (470). */}
+          {shownItem && selectedTrack ? (
+            <section
+              className="mb-4"
+              aria-label={t('pages.reels.properties')}
+              data-testid="reels-properties"
+            >
+              <h2 className="text-xs uppercase tracking-widest text-fg-subtle">
+                {t('pages.reels.properties')}
+              </h2>
+              <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-2 p-3 shadow-soft md:grid-cols-4">
+                <label className={fieldLbl}>
+                  <span>{t('pages.reels.start')}</span>
+                  <NumberField
+                    testId="reels-prop-start"
+                    className={fieldIn}
+                    value={shownItem.start}
+                    digitStyle={digitStyle}
+                    onValue={(v) => {
+                      editEdge('start', v);
+                    }}
+                  />
+                </label>
+                <label className={fieldLbl}>
+                  <span>{t('pages.reels.end')}</span>
+                  <NumberField
+                    testId="reels-prop-end"
+                    className={fieldIn}
+                    value={shownItem.end}
+                    digitStyle={digitStyle}
+                    onValue={(v) => {
+                      editEdge('end', v);
+                    }}
+                  />
+                </label>
+                {selectedTrack.type === 'text' ? (
+                  <>
+                    <label className={`${fieldLbl} col-span-2`}>
+                      <span>{t('pages.reels.textValue')}</span>
+                      <input
+                        type="text"
+                        dir="auto"
+                        data-testid="reels-prop-value"
+                        className={fieldIn}
+                        value={shownItem.value ?? ''}
+                        onChange={(e) => {
+                          setTextValue(e.target.value);
+                        }}
+                      />
+                    </label>
+                    <label className={fieldLbl}>
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{t('pages.reels.anchor')}</span>
+                        <span dir="ltr" className="tabular text-fg-subtle">
+                          {formatNumber(
+                            Math.round(anchorValue * 100) / 100,
+                            digitStyle,
+                          )}
+                        </span>
+                      </span>
+                      {/* dir=ltr: ٠ يساراً و١ يميناً — الأرقامُ حتميّةُ
+                          الترتيب، والموضعُ على الشاشة من الأعلى إلى الأسفل.
+                          step 0.01: السحبُ الحرُّ (470) يكتبُ قيمماً
+                          دقيقة، فلا يكسرَ العرضَ شبكةُ 0.05. */}
+                      <input
+                        type="range"
+                        dir="ltr"
+                        data-testid="reels-prop-anchor"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={anchorValue}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          if (Number.isFinite(v)) setTextAnchor(v);
+                        }}
+                      />
+                    </label>
+                    <label className={fieldLbl}>
+                      <span>{t('pages.reels.offsetX')}</span>
+                      <NumberField
+                        testId="reels-prop-offset-x"
+                        className={fieldIn}
+                        value={offsetValueX}
+                        digitStyle={digitStyle}
+                        onValue={setTextOffsetX}
+                      />
+                    </label>
+                    <label className={fieldLbl}>
+                      <span>{t('pages.reels.offsetY')}</span>
+                      <NumberField
+                        testId="reels-prop-offset-y"
+                        className={fieldIn}
+                        value={offsetValueY}
+                        digitStyle={digitStyle}
+                        onValue={setTextOffsetY}
+                      />
+                    </label>
+                  </>
+                ) : null}
+                {selectedTrack.type === 'media' ? (
+                  <>
+                    <label className={`${fieldLbl} col-span-2`}>
+                      <span>{t('pages.reels.assetName')}</span>
+                      <input
+                        type="text"
+                        dir="ltr"
+                        data-testid="reels-prop-src"
+                        className={fieldIn}
+                        value={shownItem.src ?? ''}
+                        onChange={(e) => {
+                          setMediaSrc(e.target.value);
+                        }}
+                      />
+                    </label>
+                    {kenBurnsEffect ? (
+                      <>
+                        <label className={fieldLbl}>
+                          <span>
+                            {t('pages.reels.kenBurns')} · {t('pages.reels.from')}
+                          </span>
+                          <NumberField
+                            testId="reels-prop-kb-from"
+                            className={fieldIn}
+                            value={kenBurnsFromValue}
+                            digitStyle={digitStyle}
+                            onValue={setKenBurnsFrom}
+                          />
+                        </label>
+                        <label className={fieldLbl}>
+                          <span>
+                            {t('pages.reels.kenBurns')} · {t('pages.reels.to')}
+                          </span>
+                          <NumberField
+                            testId="reels-prop-kb-to"
+                            className={fieldIn}
+                            value={kenBurnsToValue}
+                            digitStyle={digitStyle}
+                            onValue={setKenBurnsTo}
+                          />
+                        </label>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+                {selectedTrack.type === 'audio' ? (
+                  <label className={fieldLbl}>
+                    <span>{t('pages.reels.gain')}</span>
+                    <NumberField
+                      testId="reels-prop-gain"
+                      className={fieldIn}
+                      value={
+                        typeof shownItem.gain === 'number' ? shownItem.gain : 1
+                      }
+                      digitStyle={digitStyle}
+                      onValue={setAudioGain}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           <TimelineStrip
             timeline={present}
             playheadSec={playheadSec}
@@ -912,195 +1237,6 @@ export default function ReelsTimelinePage(): JSX.Element {
         <span aria-hidden> · </span>
         <Ltr>⌘</Ltr> {t('pages.reels.hintZoom')}
       </p>
-
-      {/* لوحةُ الخصائص (469 §٤) — عند تحديدِ قطعةٍ تظهرُ حقولُ نوعِها
-          وحدَه. كلُّ تعديلٍ عبر `apply` فيدخلُ التراجع، والمعاينةُ
-          تتبدّلُ فوراً لأنّها تقرأ `present` نفسَه. */}
-      {selectedItem && selectedTrack ? (
-        <section
-          className="mt-4"
-          aria-label={t('pages.reels.properties')}
-          data-testid="reels-properties"
-        >
-          <h2 className="text-xs uppercase tracking-widest text-fg-subtle">
-            {t('pages.reels.properties')}
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface p-4 shadow-soft md:grid-cols-4">
-            <label className={fieldLbl}>
-              <span>{t('pages.reels.start')}</span>
-              <input
-                type="number"
-                data-testid="reels-prop-start"
-                className={fieldIn}
-                step={1 / SAMPLE.fps}
-                value={selectedItem.start}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isFinite(v)) editEdge('start', v);
-                }}
-              />
-            </label>
-            <label className={fieldLbl}>
-              <span>{t('pages.reels.end')}</span>
-              <input
-                type="number"
-                data-testid="reels-prop-end"
-                className={fieldIn}
-                step={1 / SAMPLE.fps}
-                value={selectedItem.end}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  if (Number.isFinite(v)) editEdge('end', v);
-                }}
-              />
-            </label>
-            {selectedTrack.type === 'text' ? (
-              <>
-                <label className={`${fieldLbl} col-span-2`}>
-                  <span>{t('pages.reels.textValue')}</span>
-                  <input
-                    type="text"
-                    dir="auto"
-                    data-testid="reels-prop-value"
-                    className={fieldIn}
-                    value={selectedItem.value ?? ''}
-                    onChange={(e) => {
-                      setTextValue(e.target.value);
-                    }}
-                  />
-                </label>
-                <label className={fieldLbl}>
-                  <span className="flex items-center justify-between gap-2">
-                    <span>{t('pages.reels.anchor')}</span>
-                    <span dir="ltr" className="tabular text-fg-subtle">
-                      {formatNumber(
-                        Math.round(anchorValue * 100) / 100,
-                        digitStyle,
-                      )}
-                    </span>
-                  </span>
-                  {/* dir=ltr: ٠ يساراً و١ يميناً — الأرقامُ حتميّةُ
-                      الترتيب، والموضعُ على الشاشة من الأعلى إلى الأسفل. */}
-                  <input
-                    type="range"
-                    dir="ltr"
-                    data-testid="reels-prop-anchor"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={anchorValue}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v)) setTextAnchor(v);
-                    }}
-                  />
-                </label>
-                <label className={fieldLbl}>
-                  <span>{t('pages.reels.offsetX')}</span>
-                  <input
-                    type="number"
-                    data-testid="reels-prop-offset-x"
-                    className={fieldIn}
-                    step={1}
-                    value={offsetValueX}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v)) setTextOffsetX(v);
-                    }}
-                  />
-                </label>
-                <label className={fieldLbl}>
-                  <span>{t('pages.reels.offsetY')}</span>
-                  <input
-                    type="number"
-                    data-testid="reels-prop-offset-y"
-                    className={fieldIn}
-                    step={1}
-                    value={offsetValueY}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      if (Number.isFinite(v)) setTextOffsetY(v);
-                    }}
-                  />
-                </label>
-              </>
-            ) : null}
-            {selectedTrack.type === 'media' ? (
-              <>
-                <label className={`${fieldLbl} col-span-2`}>
-                  <span>{t('pages.reels.assetName')}</span>
-                  <input
-                    type="text"
-                    dir="ltr"
-                    data-testid="reels-prop-src"
-                    className={fieldIn}
-                    value={selectedItem.src ?? ''}
-                    onChange={(e) => {
-                      setMediaSrc(e.target.value);
-                    }}
-                  />
-                </label>
-                {kenBurnsEffect ? (
-                  <>
-                    <label className={fieldLbl}>
-                      <span>
-                        {t('pages.reels.kenBurns')} · {t('pages.reels.from')}
-                      </span>
-                      <input
-                        type="number"
-                        data-testid="reels-prop-kb-from"
-                        className={fieldIn}
-                        step={0.01}
-                        value={kenBurnsFromValue}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (Number.isFinite(v)) setKenBurnsFrom(v);
-                        }}
-                      />
-                    </label>
-                    <label className={fieldLbl}>
-                      <span>
-                        {t('pages.reels.kenBurns')} · {t('pages.reels.to')}
-                      </span>
-                      <input
-                        type="number"
-                        data-testid="reels-prop-kb-to"
-                        className={fieldIn}
-                        step={0.01}
-                        value={kenBurnsToValue}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          if (Number.isFinite(v)) setKenBurnsTo(v);
-                        }}
-                      />
-                    </label>
-                  </>
-                ) : null}
-              </>
-            ) : null}
-            {selectedTrack.type === 'audio' ? (
-              <label className={fieldLbl}>
-                <span>{t('pages.reels.gain')}</span>
-                <input
-                  type="number"
-                  data-testid="reels-prop-gain"
-                  className={fieldIn}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={
-                    typeof selectedItem.gain === 'number' ? selectedItem.gain : 1
-                  }
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    if (Number.isFinite(v)) setAudioGain(v);
-                  }}
-                />
-              </label>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
 
       {/* (469 §٣) نافذةُ القياس — صناديقُ النصوص من آخر إطارٍ كما
           يحسبُها المحرّك، يقرؤها السكربتُ ويفحصُ تقاطعَ المتداخلَين

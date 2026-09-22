@@ -215,7 +215,10 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'new',
-    defaultViewport: { width: 1400, height: 900 },
+    // ١٢٠٠ (كانت ٩٠٠): لوحةُ الخصائص انتقلت تحتَ القماشة (469 §٤ ·
+    // 470 §٣) فنزلَ الشريطُ عن حافةِ ٩٠٠ — إحداثيّاتُ السحب في خطوة 03
+    // كانت تخطئُ الصفحةَ كلَّها. القياسُ كلُّه نسبيٌّ فلا يتأثّر بالارتفاع.
+    defaultViewport: { width: 1400, height: 1200 },
   });
   const page = await browser.newPage();
   page.on('pageerror', (e) => process.stderr.write(`[pageerror] ${e.message}\n`));

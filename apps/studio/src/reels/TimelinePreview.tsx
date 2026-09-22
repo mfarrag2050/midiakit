@@ -26,7 +26,7 @@
 // تراكبُ صندوقَين رأسيّاً لقطعتَين متداخلتَين زمنيّاً فشلٌ صريحٌ يُمسَك
 // بلا عين — ما اجتاز «البصمةُ تغيّرت» في 468 كان خربشةً فوق بعضها.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { BrandKit, Timeline } from '@pf-mediakit/shared';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import { REEL } from '@pf-mediakit/templates';
@@ -39,10 +39,16 @@ import {
 
 const SIZE = { w: 1080, h: 1920 } as const;
 
+/** يُصدَّر لصفحة dev: رياضيّاتُ السحب الرأسيّ تحتاجُ ارتفاعَ القماشة
+ *  (تحويلِ dx/dy الفأرة إلى anchor وoffset) — الرقمُ من مالكِ القماشة
+ *  لا نسخةً ثانية. */
+export const PREVIEW_SIZE = SIZE;
+
 // ── خريطةُ صناديقِ النصوص — للفحص الآليّ (469 §٣) ─────
 
-/** صندوقُ قطعةِ نصٍّ على القماش — إحداثيّاتُ رأسيّةٌ شاملةً `offset.y`،
- *  وزمنُ نشاطِها. الصيغةُ مرآةُ `detectCollisions` في المحرّك. */
+/** صندوقُ قطعةِ نصٍّ على القماش — إحداثيّاتٌ شاملةً `offset.x/y` (مرآةُ
+ *  ما يُرسَم فعلاً)، وزمنُ نشاطِها. الصيغةُ مرآةُ كاشفِ التصادم في
+ *  المحرّك مضافةً إليها المحورُ الأفقيّ (470 §٢: إصابةُ الفأرة). */
 export interface TextBoxEntry {
   readonly trackId: string;
   readonly itemId: string;
@@ -50,6 +56,8 @@ export interface TextBoxEntry {
   readonly end: number;
   readonly top: number;
   readonly bottom: number;
+  readonly left: number;
+  readonly right: number;
 }
 
 /** نتيجةُ إطارٍ واحد: الصناديقُ كلُّها + أزواجُ التصادم كما حسبَها
@@ -72,6 +80,7 @@ const collectTextBoxes = (
       .find((tr) => tr.id === entry.trackId)
       ?.items.find((i) => i.id === entry.itemId);
     if (!bounds || !item) continue;
+    const dx = item.offset?.x ?? 0;
     const dy = item.offset?.y ?? 0;
     out.push({
       trackId: entry.trackId,
@@ -80,6 +89,8 @@ const collectTextBoxes = (
       end: item.end,
       top: bounds.top + dy,
       bottom: bounds.bottom + dy,
+      left: bounds.left + dx,
+      right: bounds.right + dx,
     });
   }
   return out;
@@ -133,6 +144,15 @@ export interface TimelinePreviewProps {
    *  الآليّ. مستدعٍ مستقرُّ الهويّة (useCallback بلا أسرِبة) كي لا
    *  يعادَ الرسمُ من أجله. */
   readonly onTextLayout?: (info: TextLayoutInfo) => void;
+  /** (470 §٢) صندوقُ القطعةِ النصّيّةِ المحدَّدة — يُحيطُه إطارٌ عند
+   *  التحويم وتُمسَكُ بالسحب. تُحدَّثُ قيمتُه أثناءَ السحب فتتبعه. */
+  readonly dragBox?: TextBoxEntry | null;
+  /** الإمساكُ داخل الصندوق بدأ — التسجيلُ مرّةً عند الإفلات (عند الأب). */
+  readonly onBoxDragStart?: () => void;
+  /** إزاحةُ الفأرة بوحدات القماشة (بعد معاملِ التحويل) منذ الإمساك. */
+  readonly onBoxDragMove?: (dxCanvas: number, dyCanvas: number) => void;
+  /** الإفلاتُ بالإزاحةِ الكلّيّةِ بوحدات القماشة — يُسجَّلُ مرّةً واحدة. */
+  readonly onBoxDragEnd?: (dxCanvas: number, dyCanvas: number) => void;
 }
 
 export function TimelinePreview({
@@ -141,6 +161,10 @@ export function TimelinePreview({
   brand: brandProp,
   maxWidthPx = 270,
   onTextLayout,
+  dragBox,
+  onBoxDragStart,
+  onBoxDragMove,
+  onBoxDragEnd,
 }: TimelinePreviewProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
@@ -247,18 +271,117 @@ export function TimelinePreview({
     }
   }, [fontsReady, timeline, playheadSec, brandBase, onTextLayout]);
 
+  // ── ٣) السحبُ على القماشة (470 §٢) — إصابةٌ بمعاملِ التحويل ──
+  // القماشةُ معروضةٌ مصغَّرةً (maxWidthPx ≠ 1080): إحداثيّاتُ الفأرة
+  // تُضربُ في 1080/العرض-المعروض قبل أيّ مقارنةٍ أو إزاحة — وإلّا سار
+  // النصُّ أسرعَ من المؤشّر. هندسةُ الإمساك تُثبَّتُ لحظةَ الضغط.
+  const boxDragRef = useRef<{ startX: number; startY: number; scaleX: number; scaleY: number } | null>(null);
+  const [boxDragging, setBoxDragging] = useState(false);
+  const [boxHover, setBoxHover] = useState(false);
+
+  const canvasToPointer = (e: ReactMouseEvent<HTMLCanvasElement>): { cx: number; cy: number } => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scaleX = SIZE.w / rect.width;
+    const scaleY = SIZE.h / rect.height;
+    return {
+      cx: (e.clientX - rect.left) * scaleX,
+      cy: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const insideBox = (cx: number, cy: number): boolean =>
+    dragBox !== null &&
+    dragBox !== undefined &&
+    cx >= dragBox.left &&
+    cx <= dragBox.right &&
+    cy >= dragBox.top &&
+    cy <= dragBox.bottom;
+
+  const onCanvasMouseDown = (e: ReactMouseEvent<HTMLCanvasElement>): void => {
+    if (!dragBox || !onBoxDragStart) return;
+    if (e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const { cx, cy } = canvasToPointer(e);
+    if (!insideBox(cx, cy)) return;
+    e.preventDefault();
+    boxDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      scaleX: SIZE.w / rect.width,
+      scaleY: SIZE.h / rect.height,
+    };
+    setBoxDragging(true);
+    onBoxDragStart();
+  };
+
+  const onCanvasMouseMove = (e: ReactMouseEvent<HTMLCanvasElement>): void => {
+    if (boxDragging) return;
+    const { cx, cy } = canvasToPointer(e);
+    setBoxHover(insideBox(cx, cy));
+  };
+
+  useEffect(() => {
+    if (!boxDragging) return;
+    document.body.style.cursor = 'grabbing';
+    const onMove = (ev: MouseEvent): void => {
+      const g = boxDragRef.current;
+      if (!g) return;
+      onBoxDragMove?.((ev.clientX - g.startX) * g.scaleX, (ev.clientY - g.startY) * g.scaleY);
+    };
+    const onUp = (ev: MouseEvent): void => {
+      const g = boxDragRef.current;
+      boxDragRef.current = null;
+      setBoxDragging(false);
+      document.body.style.cursor = '';
+      if (!g) return;
+      onBoxDragEnd?.((ev.clientX - g.startX) * g.scaleX, (ev.clientY - g.startY) * g.scaleY);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+    };
+  }, [boxDragging, onBoxDragEnd, onBoxDragMove]);
+
   return (
     <div
       data-testid="reels-preview"
       data-state={error ? 'error' : fontsReady ? 'ready' : 'loading'}
       className="flex flex-col items-center gap-2"
     >
-      <canvas
-        ref={canvasRef}
-        data-testid="reels-preview-canvas"
-        className="rounded-lg border border-border bg-surface-2 shadow-soft"
-        style={{ width: maxWidthPx, height: (maxWidthPx * SIZE.h) / SIZE.w }}
-      />
+      {/* dir=ltr: فضاءُ القماشة فيزيائيٌّ لا يتّجاه — إحداثيّاتُه من
+          اليسار، فالخصائصُ المنطقيّةُ تحلُّ يساراً داخلَه بلا انعكاس. */}
+      <div dir="ltr" className="relative">
+        <canvas
+          ref={canvasRef}
+          data-testid="reels-preview-canvas"
+          onMouseDown={onCanvasMouseDown}
+          onMouseMove={onCanvasMouseMove}
+          className="rounded-lg border border-border bg-surface-2 shadow-soft"
+          style={{
+            width: maxWidthPx,
+            height: (maxWidthPx * SIZE.h) / SIZE.w,
+            cursor: boxDragging ? 'grabbing' : boxHover && dragBox ? 'grab' : undefined,
+          }}
+        />
+        {/* إطارُ التحويم (470 §٢): ما سيُمسَك — رفيعٌ بلون التوكيد،
+            يتبعُ الصندوقَ الحيَّ أثناء السحب. */}
+        {dragBox && (boxHover || boxDragging) ? (
+          <div
+            aria-hidden
+            data-testid="reels-preview-box-outline"
+            className="pointer-events-none absolute z-10 border border-accent"
+            style={{
+              insetInlineStart: `${(dragBox.left * maxWidthPx) / SIZE.w}px`,
+              insetBlockStart: `${(dragBox.top * maxWidthPx) / SIZE.w}px`,
+              inlineSize: `${((dragBox.right - dragBox.left) * maxWidthPx) / SIZE.w}px`,
+              blockSize: `${((dragBox.bottom - dragBox.top) * maxWidthPx) / SIZE.w}px`,
+            }}
+          />
+        ) : null}
+      </div>
       {error ? (
         <p data-testid="reels-preview-error" className="text-xs text-danger">
           {error}
