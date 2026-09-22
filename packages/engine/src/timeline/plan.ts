@@ -203,11 +203,18 @@ function detectCollisions(
       // تداخل زمني
       const tOverlap = Math.min(a.item.end, b.item.end) - Math.max(a.item.start, b.item.start);
       if (tOverlap <= 0) continue;
-      // تقاطع رأسي (يشمل offset.y إن وُجد)
-      const aTop = a.prep.bounds.top + (a.item.offset?.y ?? 0);
-      const aBot = a.prep.bounds.bottom + (a.item.offset?.y ?? 0);
-      const bTop = b.prep.bounds.top + (b.item.offset?.y ?? 0);
-      const bBot = b.prep.bounds.bottom + (b.item.offset?.y ?? 0);
+      // تقاطع رأسي (يشمل offset.y إن وُجد).
+      // **PreparedHeadline.bounds اختياريّ لصالح card_kicker (L-69):** مسار
+      // timeline يبني bounds دائماً عبر prepareHeadline (render.ts L707)،
+      // لكنّ التنميط لا يفرّق. عنصر بلا bounds لا يمكن أن يتصادم مكانيّاً
+      // (لا صندوق رأسيّ يُقارن) — نُخطّاه بلا تحذير.
+      const aBounds = a.prep.bounds;
+      const bBounds = b.prep.bounds;
+      if (!aBounds || !bBounds) continue;
+      const aTop = aBounds.top + (a.item.offset?.y ?? 0);
+      const aBot = aBounds.bottom + (a.item.offset?.y ?? 0);
+      const bTop = bBounds.top + (b.item.offset?.y ?? 0);
+      const bBot = bBounds.bottom + (b.item.offset?.y ?? 0);
       const yOverlap = Math.min(aBot, bBot) - Math.max(aTop, bTop);
       if (yOverlap <= 0) continue; // لا تقاطع — سالم
       warnings.push({

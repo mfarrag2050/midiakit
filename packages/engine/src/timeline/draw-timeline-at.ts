@@ -45,6 +45,7 @@ import { drawImage } from '../layers/image.js';
 import {
   drawHeadlineLine,
   executeLayer,
+  finalizePreparedHeadline,
   type RenderFrameArgs,
   type RenderState,
   type PreparedHeadline,
@@ -215,7 +216,10 @@ export function drawTimelineAt(args: DrawTimelineAtArgs): void {
   const { ctx, size, timeline, brand, template, content, assets, t } = args;
 
   const state: RenderState = {};
-  if (args.headlinePrep) state.headline = args.headlinePrep.bounds;
+  // `exactOptionalPropertyTypes` صارم: `state.headline?: HeadlineBounds` لا
+  // يقبل إسناد `undefined`. `headlinePrep.bounds` اختياريّ (L-69). نُضيّق
+  // إلى وجودٍ صريح — لا نُسند إن كان bounds ناقصاً (300 §١·٤).
+  if (args.headlinePrep?.bounds) state.headline = args.headlinePrep.bounds;
 
   const rfArgs: RenderFrameArgs = {
     ctx, size, template, brand, content,
@@ -469,9 +473,22 @@ function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): v
   if (!layer) return;
 
   // الاستهلاك من الخطة لطبقة headline إن كان `ectx.headlinePrep` متاحاً.
-  // متاح دائماً بعد WIRE-1-FIX لكل القوالب — عدا card_kicker (لا bounds).
+  //
+  // مساران:
+  //   (أ) خطّة كاملة (`firstBaseline !== undefined`) — كل القوالب عدا
+  //       card_kicker بعد WIRE-1-FIX. استهلاكٌ مباشرٌ.
+  //   (ب) خطّة layout-only لـcard_kicker (fallback في `render-plan.ts:131`
+  //       لأنّ `state.kicker` غيرُ متاح قبل الحلقة). كنّا نسقط إلى
+  //       `executeLayer` → `prepareHeadline` **لكلّ إطار** — 225 مرّة
+  //       (421). الآن: `finalizePreparedHeadline` يُكمل الأنكور من
+  //       `state.kicker` (المُملأ لحظتَه بطبقة kicker السابقة) **بلا
+  //       wrap ولا justify** — استدعاءٌ رخيصٌ لا يُطلق
+  //       `onHeadlinePrepared`. الفاحص `verify:render-video-all-templates`
+  //       يُثبت `in-loop=0` لكل القوالب.
   if (layer.type === 'headline' && ectx.headlinePrep) {
-    const prep = ectx.headlinePrep;
+    const prep = ectx.headlinePrep.firstBaseline !== undefined
+      ? ectx.headlinePrep
+      : finalizePreparedHeadline(ectx.headlinePrep, layer, ectx.rfArgs, ectx.state);
     const { ctx, brand, state } = ectx;
     for (let i = 0; i < prep.linesJustified.length; i++) {
       drawHeadlineLine(ctx, brand, prep, i);
@@ -549,14 +566,39 @@ function applyPulseAroundCenter(effect: PulseEffect, ectx: EffectContext): void 
  * 'top' → (w/2, 0)، 'top-left' → (0, 0)، إلخ.
  */
 function applyKenBurns(effect: KenBurnsEffect, ectx: EffectContext): void {
+  // mk/465 §١: `KenBurnsEffect` يُوجب `from: number` و`to: number`،
+  // لكنّ dispatch:438 يستعمل `as` فيمرّ كائنٌ ناقصٌ صامتاً — فيصلُ `NaN`
+  // إلى `ctx.scale` ويُسمِّم مصفوفة التحويل. الرمي هنا يجعل خطأً في
+  // الخطّ الزمنيّ يسقط بصوت عند البناء لا يُخفى بإطارٍ فارغ (دستور §٢
+  // «حارسٌ لا يُسكَت»).
+  if (!Number.isFinite(effect.from) || !Number.isFinite(effect.to)) {
+    throw new Error(
+      `[applyKenBurns] معلَمات ناقصة على المؤثّر ` +
+        `(item="${ectx.item.id}" · from=${effect.from} · to=${effect.to}). ` +
+        `KenBurnsEffect يوجب from:number و to:number منتهيَين.`
+    );
+  }
   const scale = effect.from + (effect.to - effect.from) * ectx.itemProgress;
   if (scale === 1) return;
+  assertFiniteScale(scale, 'kenBurns', ectx.item.id);
   const { ctx, size } = ectx;
   const origin = effect.origin ?? 'center';
   const [ax, ay] = originToAnchor(origin, size);
   ctx.translate(ax, ay);
   ctx.scale(scale, scale);
   ctx.translate(-ax, -ay);
+}
+
+// mk/465 §١: حارسٌ عامٌّ — عددٌ غيرُ منتهٍ لا يصلُ إلى `ctx.scale` أبداً.
+// يُستدعى من applyKenBurns بعد الحساب. سيُستدعى من applyPulseAroundCenter
+// أيضاً حين يقرّر المالكُ سدَّ ثقبِه (انظر جدول §٢ في تقرير 465).
+function assertFiniteScale(scale: number, effectName: string, itemId: string): void {
+  if (!Number.isFinite(scale)) {
+    throw new Error(
+      `[${effectName}] scale=${scale} غيرُ منتهٍ (item="${itemId}"). ` +
+        `عددٌ غيرُ منتهٍ لا يصلُ إلى ctx.scale.`
+    );
+  }
 }
 
 function originToAnchor(

@@ -104,9 +104,9 @@ describe('parseTokens', () => {
   });
 
   it('٣٥٠ · #hashtag متعدّد الـ_ · كلّه رمزٌ واحد', () => {
-    const out = parseTokens('#عاجل_من_الوزارة اليوم');
+    const out = parseTokens('#عاجل_من_قِنديل اليوم');
     expect(out).toEqual([
-      { text: '#عاجل_من_الوزارة', bold: false, accent: false },
+      { text: '#عاجل_من_قِنديل', bold: false, accent: false },
       { text: 'اليوم',            bold: false, accent: false },
     ]);
   });

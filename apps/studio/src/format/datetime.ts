@@ -6,6 +6,7 @@
 // عربي يعطي أرقاماً هندية، لاتيني يعطي لاتينية. `?locale=` يتقبّل
 // override للاختبار.
 
+import { arPluralCategory } from '@pf-mediakit/i18n';
 import type { DigitStyle } from './digits';
 
 interface FormatOptions {
@@ -65,13 +66,16 @@ export function formatRelative(
   if (diffSec < 60) return t('time.now');
 
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return t('time.minAgo', { n: numLocal(diffMin, opts) });
+  if (diffMin < 60)
+    return t(`time.minAgo.${arPluralCategory(diffMin)}`, { n: numLocal(diffMin, opts) });
 
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return t('time.hourAgo', { n: numLocal(diffH, opts) });
+  if (diffH < 24)
+    return t(`time.hourAgo.${arPluralCategory(diffH)}`, { n: numLocal(diffH, opts) });
 
   const diffD = Math.floor(diffH / 24);
-  if (diffD < 7) return t('time.dayAgo', { n: numLocal(diffD, opts) });
+  if (diffD < 7)
+    return t(`time.dayAgo.${arPluralCategory(diffD)}`, { n: numLocal(diffD, opts) });
 
   return formatDate(iso, opts);
 }

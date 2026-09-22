@@ -17,9 +17,24 @@
   "time": {
     "now": "just now",
     "future": "in the future",
-    "minAgo": "{n} min ago",
-    "hourAgo": "{n} h ago",
-    "dayAgo": "{n} d ago"
+    "minAgo": {
+      "one": "{n} min ago",
+      "two": "{n} min ago",
+      "few": "{n} min ago",
+      "other": "{n} min ago"
+    },
+    "hourAgo": {
+      "one": "{n} h ago",
+      "two": "{n} h ago",
+      "few": "{n} h ago",
+      "other": "{n} h ago"
+    },
+    "dayAgo": {
+      "one": "{n} d ago",
+      "two": "{n} d ago",
+      "few": "{n} d ago",
+      "other": "{n} d ago"
+    }
   },
   "format": {
     "storage": "Storage",
@@ -28,13 +43,34 @@
     "lastRender": "Last render"
   },
   "roles": {
-    "owner":    { "name": "Account owner",  "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned." },
-    "admin":    { "name": "Administrator",  "hint": "Manages the system: adds roles, disables accounts, runs archival." },
-    "writer":   { "name": "Writer",         "hint": "Writes the first draft and sends it for editing." },
-    "editor":   { "name": "Editor",         "hint": "Edits the draft before it goes to review — reads and revises." },
-    "reviewer": { "name": "Reviewer",       "hint": "Decides whether the draft is ready to publish — approves or returns." },
-    "approver": { "name": "Final approver", "hint": "Signs off before publication — a step above the reviewer." },
-    "viewer":   { "name": "Viewer",         "hint": "Sees drafts but doesn't write — read-only role." }
+    "owner": {
+      "name": "Account owner",
+      "hint": "The person the agency subscription belongs to — one only, cannot be removed or reassigned."
+    },
+    "admin": {
+      "name": "Administrator",
+      "hint": "Manages the system: adds roles, disables accounts, runs archival."
+    },
+    "writer": {
+      "name": "Writer",
+      "hint": "Writes the first draft and sends it for editing."
+    },
+    "editor": {
+      "name": "Editor",
+      "hint": "Edits the draft before it goes to review — reads and revises."
+    },
+    "reviewer": {
+      "name": "Reviewer",
+      "hint": "Decides whether the draft is ready to publish — approves or returns."
+    },
+    "approver": {
+      "name": "Final approver",
+      "hint": "Signs off before publication — a step above the reviewer."
+    },
+    "viewer": {
+      "name": "Viewer",
+      "hint": "Sees drafts but doesn't write — read-only role."
+    }
   },
   "nav": {
     "workspace": "Workspace",
@@ -131,7 +167,34 @@
         "renderQueued": "Render queued...",
         "renderRunning": "Running...",
         "renderReady": "Output ready — open to download",
+        "renderAgeSince": "{age} ago",
+        "renderAgeSeconds": {
+          "one": "{n}s",
+          "two": "{n}s",
+          "few": "{n}s",
+          "other": "{n}s"
+        },
+        "renderAgeMinutes": {
+          "one": "{n}m",
+          "two": "{n}m",
+          "few": "{n}m",
+          "other": "{n}m"
+        },
+        "renderAgeHours": {
+          "one": "{n}h",
+          "two": "{n}h",
+          "few": "{n}h",
+          "other": "{n}h"
+        },
+        "renderStuckTitle": "Waiting too long — the request may be stuck",
+        "renderStuckBody": "In queue for {age} — beyond the normal window. Contact support with the incident code.",
+        "renderCancelBtn": "Cancel request",
+        "renderCancelling": "Cancelling…",
+        "renderCancelHint": "After cancel, you can export again.",
         "renderFailed": "Render failed",
+        "renderFailedGeneric": "Render failed — reason not recognised. Send the incident code to support.",
+        "renderFailedCode": "Error code:",
+        "renderIdLabel": "Incident id:",
         "transitions": "Available transitions",
         "noTransitions": "No transitions from this state.",
         "reasonLabel": "Transition reason (at least one line)",
@@ -199,7 +262,19 @@
         "imageChange": "Change",
         "imageRemove": "Remove",
         "imageSelected": "Image selected",
-        "fieldUnsupported": "Unsupported field type in this version"
+        "fieldUnsupported": "Unsupported field type in this version",
+        "fieldFallback": "Field",
+        "accentWrap": "Accent",
+        "accentWrapTitle": "Wrap selection in accent color",
+        "field": {
+          "headline": "Headline",
+          "kicker": "Kicker",
+          "subtitle": "Subtitle",
+          "source": "Source",
+          "byline": "Byline",
+          "caption": "Caption",
+          "image": "Image"
+        }
       },
       "editor2": {
         "noFields": "No fields in this template.",
@@ -404,9 +479,20 @@
           "cardMockup": "Position preview on the card"
         },
         "fontPicker": {
-          "emptyLibrary": "No fonts in your library — upload one from the Assets page and it will appear here.",
-          "chooseFromLibrary": "Choose a font from the library",
-          "assetIdHint": "The saved value is the asset id — the name is display only. Prevents \"unregistered font family\" (ticket §2.1 + _AMEND-100)."
+          "chooseAFont": "Choose a font…",
+          "builtinGroup": "Bundled fonts",
+          "uploadedGroup": "Uploaded fonts",
+          "uploadOwn": "Upload my own font…",
+          "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name."
+        },
+        "font": {
+          "weightsAvailable": "Weights available",
+          "weight": {
+            "light": "Light",
+            "regular": "Regular",
+            "bold": "Bold",
+            "extraBold": "ExtraBold"
+          }
         },
         "preview": {
           "title": "Live preview · Breaking card",
@@ -432,6 +518,7 @@
       "subtitle": "Card, Urgent, and Reel templates — public and your own.",
       "empty": "No templates yet",
       "emptyBody": "Templates are JSON files with fields you fill in to produce output.",
+      "emptyResetFilter": "Show all templates",
       "readOnly": "Read-only",
       "duplicate": "Duplicate",
       "duplicateSuffix": " — copy",
@@ -510,6 +597,7 @@
       "subtitle": "PNG and MP4 history per project, with the brand snapshot used.",
       "empty": "No renders yet",
       "emptyBody": "Every render saves the brand snapshot at request time (docs/16 §8).",
+      "emptyAction": "Start from a project",
       "col": {
         "id": "ID",
         "project": "Project",
@@ -543,6 +631,7 @@
       "subtitle": "What your agency exported: date · template · size · status · file.",
       "empty": "No exports yet",
       "emptyBody": "Your first export from the breaking composer or the brand-kit editor will appear here. The file downloads to you; the log stays here.",
+      "emptyAction": "Open the breaking composer",
       "col": {
         "date": "Date",
         "template": "Template",
@@ -691,21 +780,25 @@
     "delete": "Delete",
     "confirm": "Confirm",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "copy": "Copy",
+    "copied": "Copied ✓"
   },
   "table": {
     "empty": "No rows yet.",
-    "loading": "Loading…"
+    "loading": "Fetching the list — one moment"
   },
   "common": {
     "loading": "Loading…",
     "loadingList": "Fetching the list…",
+    "loadingProject": "Opening the project — may take seconds on a slow network",
+    "retry": "Retry",
     "sessionExpiredCTA": "Log in again"
   },
   "errors": {
-    "UNKNOWN": "Something went wrong.",
-    "UNAUTHENTICATED": "Your session expired. Please sign in again.",
-    "NETWORK_ERROR": "Can't reach the service.",
+    "UNKNOWN": "Something went wrong — retry, and if it persists refresh the page.",
+    "UNAUTHENTICATED": "Your session expired — sign in again to continue.",
+    "NETWORK_ERROR": "Can't reach the service — check your connection and retry.",
     "URL_EXPIRED": "Upload URL expired — retry will request a fresh one.",
     "UPLOAD_FAILED": "Upload failed — try again.",
     "UPLOAD_ABORTED": "Upload cancelled.",
@@ -716,6 +809,15 @@
     "TOKEN_INVALID": "Session token is invalid.",
     "SESSION_REVOKED": "Session revoked — please sign in again.",
     "REFRESH_TOKEN_INVALID": "Refresh token is invalid.",
+    "INVALID_REFRESH_TOKEN": "Invalid refresh token.",
+    "REFRESH_TOKEN_EXPIRED": "Refresh token expired — sign in again.",
+    "INVALID_EMAIL": "Invalid email address.",
+    "INVALID_TIMESTAMP": "Invalid timestamp.",
+    "INVALID_RESET_TOKEN": "Invalid reset link.",
+    "LIMIT_TOO_LARGE": "Requested limit is above the maximum — lower it.",
+    "CONFLICT": "Data conflict — reload the page, then try again.",
+    "PAYLOAD_TOO_LARGE": "Payload is above the allowed size.",
+    "METHOD_NOT_ALLOWED": "Method not allowed for this path.",
     "PASSWORD_TOO_WEAK": "Password too short — 12 characters minimum.",
     "EMAIL_INVALID": "Not a valid email address.",
     "EMAIL_TAKEN": "Email is already in use — sign in instead.",
@@ -730,6 +832,15 @@
     "LAST_OWNER": "Can't remove the agency's last owner.",
     "REASON_TOO_SHORT": "Reason is too short — 10 characters minimum.",
     "ACCOUNT_SUSPENDED": "Account is suspended — contact support.",
+    "action": {
+      "RETRY": "Try again.",
+      "CHECK_FIELD": "Review the highlighted field.",
+      "CHECK_BRAND_FONT": "Review the brand font in Brand Kit, then re-export.",
+      "CHECK_BRAND_ASSET": "Review logo and images in Brand Kit, then re-export.",
+      "CHECK_TEMPLATE": "The template is broken — try another or contact support.",
+      "QUOTA_UPGRADE": "You have hit your plan limit — upgrade to continue.",
+      "CONTACT_SUPPORT": "Contact support with the incident code."
+    },
     "UNSUPPORTED_KIND": "Asset kind not supported.",
     "UNSUPPORTED_CONTENT_TYPE_FOR_KIND": "File type doesn't match the asset kind.",
     "SIZE_TOO_LARGE": "File is larger than the allowed limit.",
@@ -826,7 +937,6 @@
     "CONTENT_TOO_LARGE": "Project content exceeds the allowed size — reduce fields or embedded images.",
     "EXPORTS_RATE_LIMIT": "Exports rate limit reached for this minute — retry shortly.",
     "TEMPLATE_SNAPSHOT_INVALID": "This template cannot be exported — choose another template or ask your administrator to review it.",
-    "TENANT_DATA_EXPORT_FAILED": "Could not prepare the tenant data export — try again, and contact support if it persists.",
     "INVALID_SIZE": "Requested size is not supported — pick one from the list.",
     "FONT_ASSET_MISSING": "Brand font isn't uploaded — re-upload from brand settings.",
     "FONT_ASSET_FETCH_FAILED": "Could not load the brand font — try again, and contact support if it persists.",

@@ -19,6 +19,8 @@ import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
 import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
+import { formatDateTime } from '@/src/format/datetime';
+import { useDigitStyle } from '@/src/format/settings';
 
 // S12 — قائمة المشاريع + إنشاء + حذف. المحرّر في /projects/[id].
 // **العقد المرجعي:** docs/16 §7.1 §7.3 §7.5 · §11.6 (currentState).
@@ -35,7 +37,8 @@ const STATE_TONE: Record<string, 'neutral' | 'success' | 'accent' | 'warning'> =
 };
 
 export default function ProjectsPage(): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { style: digitStyle } = useDigitStyle();
   const router = useRouter();
 
   const [rows, setRows] = useState<ProjectSummary[]>([]);
@@ -52,7 +55,11 @@ export default function ProjectsPage(): JSX.Element {
   const [createBusy, setCreateBusy] = useState(false);
   const [createErrorKey, setCreateErrorKey] = useState<string | null>(null);
 
-  // brand kits + templates (loaded on create-dialog open)
+  // brand kits + templates — تُحمَّل مرّةً واحدةً على المستوى الصفحيّ لا لكلّ صفّ.
+  // ٤١٠ §١: قبلاً كانت تُحمَّل عند فتح حوار الإنشاء فقط، فيعرض الجدول UUID خاماً
+  // للحقول `brand_kit_id` و`template_id` إلى أن يفتح المستخدم الحوار. الآن
+  // تُحمَّل مع أوّل عرض للقائمة، ويصبح fallback عند غياب الاسم شرطةً لا
+  // مفتاحَ قاعدة (docs/17 · L-XX «عمودٌ غائبٌ خيرٌ من عمودٍ يفضح البنية»).
   const [bkOptions, setBkOptions] = useState<{ id: string; name: string }[]>([]);
   const [tplOptions, setTplOptions] = useState<{ id: string; name: string }[]>([]);
   const [pickerErrorKey, setPickerErrorKey] = useState<string | null>(null);
@@ -78,10 +85,31 @@ export default function ProjectsPage(): JSX.Element {
     }
   }
 
+  async function loadPickers(): Promise<void> {
+    try {
+      const [bkPage, tplPage] = await Promise.all([
+        brandKits.list(),
+        templates.list(),
+      ]);
+      const visibleTemplates = REEL_TEMPLATE_ENABLED
+        ? tplPage.data
+        : tplPage.data.filter((tt) => tt.kind !== 'video');
+      setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
+      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
+    } catch {
+      // fallback عند فشل التحميل: يبقى الجدول قابلاً للقراءة — الاسم يظهر شرطة
+      // لا UUID خام (§١). سبب الفشل يُعرَض للمستخدم عند فتح حوار الإنشاء.
+    }
+  }
+
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  useEffect(() => {
+    void loadPickers();
+  }, []);
 
   async function openCreate(): Promise<void> {
     setCreateOpen(true);
@@ -101,8 +129,8 @@ export default function ProjectsPage(): JSX.Element {
         : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
       setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
-      setNewBrandKit(bkPage.data[0]?.id ?? '');
-      setNewTemplate(visibleTemplates[0]?.id ?? '');
+      setNewBrandKit((prev) => prev || bkPage.data[0]?.id || '');
+      setNewTemplate((prev) => prev || visibleTemplates[0]?.id || '');
     } catch (err) {
       setPickerErrorKey(err instanceof ApiError ? err.messageKey : 'errors.NETWORK_ERROR');
     }
@@ -179,7 +207,7 @@ export default function ProjectsPage(): JSX.Element {
       headerKey: 'pages.projects.col.brandKit',
       render: (r) => (
         <span className="text-fg-muted">
-          {bkName.get(r.brand_kit_id) ?? r.brand_kit_id}
+          {bkName.get(r.brand_kit_id) ?? '—'}
         </span>
       ),
     },
@@ -188,7 +216,7 @@ export default function ProjectsPage(): JSX.Element {
       headerKey: 'pages.projects.col.template',
       render: (r) => (
         <span className="text-fg-muted">
-          {tplName.get(r.template_id) ?? r.template_id}
+          {tplName.get(r.template_id) ?? '—'}
         </span>
       ),
     },
@@ -204,9 +232,12 @@ export default function ProjectsPage(): JSX.Element {
     {
       key: 'updatedAt',
       headerKey: 'pages.projects.col.updatedAt',
+      // ٤١٠ §٤: التاريخ يمرّ عبر `formatDateTime` — يحترم نمط الأرقام
+      // العربيّ-الهنديّ أو اللاتينيّ حسب إعداد المستخدم، ولا يعود سطراً
+      // لاتينيّاً خاماً على شاشة عربيّة.
       render: (r) => (
-        <span dir="ltr" className="text-xs text-fg-subtle">
-          {r.updatedAt.slice(0, 19).replace('T', ' ')}
+        <span dir="ltr" className="text-xs text-fg-subtle tabular">
+          {formatDateTime(r.updatedAt, { style: digitStyle, locale })}
         </span>
       ),
     },
@@ -260,12 +291,28 @@ export default function ProjectsPage(): JSX.Element {
         ))}
       </div>
 
-      {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
+      {listErrorKey && (
+        <div className="space-y-2">
+          <Alert kind="danger" titleKey={listErrorKey} />
+          {/* ٤٧٠ §٢ · فعلٌ صريحٌ للمستخدم: زرّ إعادة محاولة على الفور،
+             لا اضطرارٌ لإعادة تحميل الصفحة يدويّاً. */}
+          <div>
+            <Button variant="secondary" size="sm" onClick={() => void refresh()}>
+              {t('common.retry')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {!listErrorKey && !loading && rows.length === 0 && (
         <EmptyState
           titleKey="pages.projects.empty"
           bodyKey="pages.projects.emptyBody"
+          action={
+            <Button onClick={() => void openCreate()}>
+              {t('pages.projects.create')}
+            </Button>
+          }
         />
       )}
       {(loading || rows.length > 0) && (

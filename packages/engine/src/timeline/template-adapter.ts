@@ -145,7 +145,10 @@ export function templateToTimeline(args: TemplateToTimelineArgs): Timeline {
   const sourceAnim = anims['source'];
   const kickerAnim = anims['kicker'];
 
-  const tracks: Timeline['tracks'] = [];
+  // **نوع محلّيّ mutable للبنّاء:** `Timeline['tracks']` = `readonly Track[]`
+  // لصالح المستهلكين، لكنّ البنّاء يحتاج push. نُوَسِّع ضمنيّاً عند الإرجاع
+  // (Track[] ⊆ readonly Track[] · L-69 · 300 §١·٢).
+  const tracks: Array<Timeline['tracks'][number]> = [];
   const pulseAmount = pulseAmountOf(brand);
 
   // مسار لكل طبقة — index تصاعدي حسب فهرس الطبقة في القالب.
@@ -256,7 +259,9 @@ function buildLayerTrack(
     { t: 0, opacity: 0, y: anim.slideY, ease: 'easeOutCubic' as const },
     { t: anim.fade, opacity: 1, y: 0 },
   ];
-  const effects: Timeline['tracks'][number]['items'][number]['effects'] = [];
+  // نوع محلّيّ mutable — نفس منطق tracks أعلاه (300 §١·٢).
+  // `effects` على TrackItem اختياريّ; NonNullable لاستخراج type element.
+  const effects: Array<NonNullable<Timeline['tracks'][number]['items'][number]['effects']>[number]> = [];
   if (anim.pulse) {
     effects.push({
       type: 'pulse-around-center',

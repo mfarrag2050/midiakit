@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -13,6 +14,8 @@ import {
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, renders } from '@/src/api';
 import type { RenderRow, RenderStatus } from '@/src/api/endpoints/renders';
+import { formatDateTime } from '@/src/format/datetime';
+import { useDigitStyle } from '@/src/format/settings';
 
 // S17+S18 — قائمة التصديرات + إلغاء + رابط المخرَج.
 // **انحراف #S17-1:** POST /:id/cancel يعيد **202** مع
@@ -31,7 +34,8 @@ const STATUS_TONE: Record<RenderStatus, 'neutral' | 'warning' | 'success' | 'dan
 const TERMINAL: RenderStatus[] = ['succeeded', 'failed', 'cancelled'];
 
 export default function RendersPage(): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const { style: digitStyle } = useDigitStyle();
   const [rows, setRows] = useState<RenderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [listErrorKey, setListErrorKey] = useState<string | null>(null);
@@ -120,8 +124,8 @@ export default function RendersPage(): JSX.Element {
       key: 'created',
       headerKey: 'pages.renders.col.created',
       render: (r) => (
-        <span dir="ltr" className="text-xs text-fg-subtle">
-          {r.createdAt.slice(0, 19).replace('T', ' ')}
+        <span dir="ltr" className="text-xs text-fg-subtle tabular">
+          {formatDateTime(r.createdAt, { style: digitStyle, locale })}
         </span>
       ),
     },
@@ -188,6 +192,13 @@ export default function RendersPage(): JSX.Element {
         <EmptyState
           titleKey="pages.renders.empty"
           bodyKey="pages.renders.emptyBody"
+          action={
+            <Link href="/projects">
+              <Button variant="primary">
+                {t('pages.renders.emptyAction')}
+              </Button>
+            </Link>
+          }
         />
       )}
       {(loading || rows.length > 0) && (

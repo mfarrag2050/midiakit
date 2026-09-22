@@ -43,6 +43,18 @@ export function drawTextItemLines(
   brand: BrandKit,
   prep: PreparedHeadline
 ): void {
+  // **firstBaseline إلزاميّ لهذا المسار (300 §١·٣):** PreparedHeadline.
+  // firstBaseline اختياريّ لصالح card_kicker (L-69)، لكن رسم النصّ سطراً
+  // سطراً يحتاجه: y = firstBaseline + i × lineHeight. لو غاب لكان
+  // `NaN + i × lh = NaN` صمتاً · Canvas يتخطّى فراغاً بلا أثر — كذبةٌ
+  // بصريّة تشبه كذبات mk-worker (٢٩٠). نرمي رسالةً مفهومة بدل ذلك.
+  if (prep.firstBaseline === undefined) {
+    throw new Error(
+      '[drawTextItemLines] prep.firstBaseline غير معرَّف — استُدعيت الدالة على '
+      + 'PreparedHeadline بلا anchor (مسار card_kicker مثلاً). هذه الدالة '
+      + 'تحتاج prep مبنيّاً من prepareHeadline لا prepareHeadlineLayout.'
+    );
+  }
   const measure = createCanvasMeasurer(ctx, brand);
   const rightX = prep.rightX;
 
@@ -86,6 +98,13 @@ export function drawTextItemByWordRTL(
   stagger: number,
   fadeDuration: number
 ): void {
+  // firstBaseline إلزاميّ — انظر drawTextItemLines أعلاه (300 §١·٣).
+  if (prep.firstBaseline === undefined) {
+    throw new Error(
+      '[drawTextItemByWordRTL] prep.firstBaseline غير معرَّف — استُدعيت '
+      + 'الدالة على PreparedHeadline بلا anchor.'
+    );
+  }
   const measure = createCanvasMeasurer(ctx, brand);
   const rightX = prep.rightX;
   const baseAlpha = ctx.globalAlpha;
@@ -156,6 +175,13 @@ export function drawTextItemTypewriterRTL(
   localT: number,
   charStagger: number
 ): void {
+  // firstBaseline إلزاميّ — انظر drawTextItemLines أعلاه (300 §١·٣).
+  if (prep.firstBaseline === undefined) {
+    throw new Error(
+      '[drawTextItemTypewriterRTL] prep.firstBaseline غير معرَّف — استُدعيت '
+      + 'الدالة على PreparedHeadline بلا anchor.'
+    );
+  }
   const measure = createCanvasMeasurer(ctx, brand);
   const rightX = prep.rightX;
 

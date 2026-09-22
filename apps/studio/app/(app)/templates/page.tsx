@@ -203,7 +203,17 @@ export default function TemplatesPage(): JSX.Element {
       {actionErrorKey && <Alert kind="danger" titleKey={actionErrorKey} />}
 
       {!listErrorKey && !loading && rows.length === 0 && (
-        <EmptyState titleKey="pages.templates.empty" bodyKey="pages.templates.emptyBody" />
+        <EmptyState
+          titleKey="pages.templates.empty"
+          bodyKey="pages.templates.emptyBody"
+          action={
+            kind !== 'all' ? (
+              <Button variant="secondary" onClick={() => setKind('all')}>
+                {t('pages.templates.emptyResetFilter')}
+              </Button>
+            ) : undefined
+          }
+        />
       )}
       {(loading || rows.length > 0) && (
         <Table

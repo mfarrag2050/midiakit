@@ -17,6 +17,7 @@ import { applyLocaleToBrand, renderFrame, resolveBrand } from '@pf-mediakit/engi
 import type { BrandKit, Locale } from '@pf-mediakit/shared';
 import { DEFAULT_BRAND } from '@pf-mediakit/shared';
 import { resolveAssetImages } from './asset-loader';
+import { BUILTIN_FONT_FILES } from '@/src/lib/builtin-fonts';
 
 export interface PreviewInput {
   readonly template: unknown;
@@ -109,22 +110,8 @@ function toBrowserUrl(rawUrl: string): string {
   return `/api/fonts/${basename}`;
 }
 
-/** الخطوط المدمَجة في المستودع — للاستعمال حين تحمل الهوية الافتراضية
- * `url` فارغاً (DEFAULT_BRAND في packages/shared) أو تُشير إلى `source:
- * 'builtin'` بلا مسار. المفتاح: عائلة الخط. القيمة: خريطة weight ⇢ ملف
- * TTF المسموح في /api/fonts/[name] whitelist. */
-const BUILTIN_FONT_FILES: Record<string, Record<'light' | 'regular' | 'bold', string>> = {
-  'IBM Plex Sans Arabic': {
-    light: 'IBMPlexSansArabic-Light.ttf',
-    regular: 'IBMPlexSansArabic-Regular.ttf',
-    bold: 'IBMPlexSansArabic-Bold.ttf',
-  },
-  Almarai: {
-    light: 'Almarai-Light.ttf',
-    regular: 'Almarai-Regular.ttf',
-    bold: 'Almarai-Bold.ttf',
-  },
-};
+// 360b · الخريطة المدمَجة صارت مُستهلَكةً من `@/src/lib/builtin-fonts` —
+// مصدر واحد للحقيقة يستعمله المُنتقي في محرّر الهويّة أيضاً. لا تكرار.
 
 interface FontPrimary {
   readonly family: string;

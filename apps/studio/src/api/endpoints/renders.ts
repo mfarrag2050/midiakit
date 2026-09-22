@@ -19,6 +19,17 @@ export interface RenderCreated {
   readonly template_snapshot_id: string;
 }
 
+/**
+ * ٣٩٠ · `error` قناةٌ كانت مفتوحةً في الـAPI ومهملةً في الاستوديو (٧٢٠
+ * §١.٢ الصفّ B). الآن نقرأها ونعرضها. **لا نقرأ `message` الخام أبداً
+ * — نصٌّ إنجليزيٌّ خام لا يصل الشاشةَ.** الرمزُ (code) وحدَه هو المُترجَم
+ * عبر `errors.<CODE>` في `ar.json`. `field` يُتيح توجيه focus إن أُتيح.
+ */
+export interface RenderError {
+  readonly code: string;
+  readonly field: string | null;
+}
+
 export interface RenderRow {
   readonly id: string;
   readonly project_id: string;
@@ -32,6 +43,7 @@ export interface RenderRow {
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly completedAt: string | null;
+  readonly error?: RenderError;
 }
 
 export function create(

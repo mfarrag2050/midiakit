@@ -30,3 +30,6 @@ fixtures/audio/*-8k.wav
 
 # demo:live — مخرَج مولَّد لكل عرض حيّ · لا يُلتزَم
 demo/live/
+
+# مخبأ pnpm المحلّي — لا يُتَتبَّع أبداً.
+.pnpm-store/

@@ -244,7 +244,13 @@ export default function AiSettingsPage(): JSX.Element {
       {listErrorKey && <Alert kind="danger" titleKey={listErrorKey} />}
 
       {!listErrorKey && !loading && rows.length === 0 && (
-        <EmptyState titleKey="pages.ai.empty" bodyKey="pages.ai.emptyBody" />
+        <EmptyState
+          titleKey="pages.ai.empty"
+          bodyKey="pages.ai.emptyBody"
+          action={
+            <Button onClick={() => setAddOpen(true)}>{t('pages.ai.add')}</Button>
+          }
+        />
       )}
       {(loading || rows.length > 0) && (
         <Table

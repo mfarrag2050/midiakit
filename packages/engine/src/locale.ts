@@ -79,5 +79,19 @@ function maybeMirror(
 ): PlacementSpec | undefined {
   if (!spec) return spec;
   if (!shouldMirror) return spec;
-  return { ...spec, anchor: mirrorAnchorForLTR(spec.anchor, true) };
+  // 411ب-ج (2026-09-15) · L-138: كان يعكس `anchor` وحدَه ويترك `align`
+  // فيزيائيّاً في تخطيطٍ منطقيّ — نفسُ عيبِ استوديو الليلة (نداء
+  // فيزيائيّ في تخطيطٍ منطقيّ). الآن يعكس الاثنَين معاً حين
+  // `mirrorOnLTR=true`. أثرُه على العربيّة صفر (RTL لا يمرّ من هنا) —
+  // اللاتينيّة تنتقل من `physical-left` إلى `physical-right` في `source`
+  // كما يقتضي «نهاية القراءة» LTR.
+  const alignMirrored =
+    spec.align === 'left'  ? ('right'  as const) :
+    spec.align === 'right' ? ('left'   as const) :
+                             spec.align;
+  return {
+    ...spec,
+    anchor: mirrorAnchorForLTR(spec.anchor, true),
+    ...(alignMirrored !== undefined && { align: alignMirrored }),
+  };
 }
