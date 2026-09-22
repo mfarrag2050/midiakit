@@ -424,6 +424,16 @@ interface EffectContext {
   props: InterpolatedProps;
 }
 
+/**
+ * القاعدةُ الحاكمة لكلِّ `applyX` (mk/466 §١):
+ *
+ * > **معلَمةٌ واجبةٌ ناقصةٌ = رمي. أصلٌ غائبٌ = تخطٍّ موثَّق.**
+ * > الأوّلُ عطبُ صانعٍ يجب أن يُسمَع، والثاني حالةٌ مشروعةٌ في التحرير.
+ *
+ * الـ`as` هنا (سطر 430–446) يُسكت TypeScript على شكل الـeffect. كلُّ
+ * `apply` مسؤولٌ عن التحقّق من معلَماته المُوجَبة بنوعها، والرمي بخطأٍ
+ * يسمّي المؤثّرَ والقطعة. راجع `applyKenBurns` كنموذجٍ مرجعيّ.
+ */
 function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
   switch (effect.type) {
     case 'template-layer':
@@ -450,6 +460,25 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
   }
 }
 
+// mk/466 §١: مساعدٌ يُنشئ رسالةَ خطأٍ مُوحَّدة تسمّي المؤثّرَ والقطعة
+// والحقلَ الناقص. يُستدعى من كلّ `apply` عند فشل validation.
+function requireFinite(
+  effectName: string,
+  itemId: string,
+  fields: Readonly<Record<string, unknown>>
+): void {
+  const bad: string[] = [];
+  for (const [k, v] of Object.entries(fields)) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) bad.push(`${k}=${v}`);
+  }
+  if (bad.length > 0) {
+    throw new Error(
+      `[${effectName}] معلَمات ناقصة على المؤثّر (item="${itemId}" · ${bad.join(' · ')}). ` +
+        `المعلَماتُ الواجبة يجب أن تكون أعداداً منتهية.`
+    );
+  }
+}
+
 /**
  * طبقة قالب عادية — يُستدعى `executeLayer` داخل save/restore الحاضن.
  *
@@ -468,9 +497,18 @@ function dispatchEffect(effect: EffectRef, ectx: EffectContext): void {
  * لكل القوالب.
  */
 function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): void {
+  // mk/466 §١: تشديدٌ — `layerIndex` غيرُ منتهٍ ليس «طبقةً غيرَ موجودة» بل
+  // مؤثّرٌ مشوَّه. فهرسٌ صحيحٌ خارجَ المدى ⇒ تخطٍّ معلَن (سطر أدنى).
+  if (!Number.isInteger(effect.layerIndex)) {
+    throw new Error(
+      `[applyTemplateLayer] layerIndex غيرُ صحيحٍ منتهٍ ` +
+        `(item="${ectx.item.id}" · layerIndex=${effect.layerIndex}). ` +
+        `النوعُ يوجب integer.`
+    );
+  }
   if (ectx.props.opacity <= 0) return;
   const layer = ectx.template.layers[effect.layerIndex];
-  if (!layer) return;
+  if (!layer) return; // فهرسٌ صحيحٌ خارج المدى — تخطٍّ معلَن.
 
   // الاستهلاك من الخطة لطبقة headline إن كان `ectx.headlinePrep` متاحاً.
   //
@@ -514,6 +552,14 @@ function applyTemplateHeadline(
   effect: TemplateHeadlineEffect,
   ectx: EffectContext
 ): void {
+  // mk/466 §١: أخطر ثقبٍ صمتاً — سطرٌ ناقصٌ يسمّم alpha + transform لكلّ
+  // سطر عنوانٍ داخل item's save/restore. رمي قبل الحلقة يجعل الخطأ يُسمَع.
+  requireFinite('applyTemplateHeadline', ectx.item.id, {
+    stagger: effect.stagger,
+    fade: effect.fade,
+    slideY: effect.slideY,
+    startOffset: effect.startOffset,
+  });
   const prep = ectx.headlinePrep;
   if (!prep) return;
   const easing = getEasingFn('easeOutCubic');
@@ -546,12 +592,19 @@ function applyTemplateHeadline(
  * حيث p = localT/duration ضمن نافذة [0, duration]. خارج النافذة scale=1.
  */
 function applyPulseAroundCenter(effect: PulseEffect, ectx: EffectContext): void {
+  // mk/466 §١: توأمُ kenBurns حرفاً — يسمّم transform بلا خطأ.
+  requireFinite('applyPulseAroundCenter', ectx.item.id, {
+    amount: effect.amount,
+    duration: effect.duration,
+    startOffset: effect.startOffset,
+  });
   const local = ectx.itemLocalT - effect.startOffset;
   if (local < 0 || local >= effect.duration) return;
   const p = local / effect.duration;
   const bell = Math.sin(p * Math.PI);
   const scale = 1 + effect.amount * bell;
   if (scale === 1) return;
+  assertFiniteScale(scale, 'pulse-around-center', ectx.item.id);
   const { ctx, size } = ectx;
   ctx.translate(size.w / 2, size.h / 2);
   ctx.scale(scale, scale);
@@ -653,6 +706,12 @@ function applyTextItemByWord(
   effect: TextItemByWordEffect,
   ectx: EffectContext
 ): void {
+  // mk/466 §١: NaN داخل primitive يُنتج «الكلماتُ تظهر معاً» أو «لا كلمة
+  // تظهر» — مخرَجٌ خاطئ صامتٌ أسوأ من انهيار.
+  requireFinite('applyTextItemByWord', ectx.item.id, {
+    stagger: effect.stagger,
+    fadeDuration: effect.fadeDuration,
+  });
   const prep = ectx.itemPrep;
   if (!prep) return;
   drawTextItemByWordRTL(
@@ -669,6 +728,10 @@ function applyTextItemTypewriter(
   effect: TextItemTypewriterEffect,
   ectx: EffectContext
 ): void {
+  // mk/466 §١: مثلُ byWord — كسر توقيتٍ صامت داخل primitive.
+  requireFinite('applyTextItemTypewriter', ectx.item.id, {
+    charStagger: effect.charStagger,
+  });
   const prep = ectx.itemPrep;
   if (!prep) return;
   drawTextItemTypewriterRTL(
@@ -679,6 +742,11 @@ function applyTextItemTypewriter(
 
 /** تراكب أسود بشفافية متزايدة عند نهاية المسار. */
 function applyOutroOverlay(effect: OutroOverlayEffect, ectx: EffectContext): void {
+  // mk/466 §١: فيديو يفقد عتمةَ ختامه بلا إخطار = عيبُ تسليم.
+  requireFinite('applyOutroOverlay', ectx.item.id, {
+    startOffset: effect.startOffset,
+    duration: effect.duration,
+  });
   const local = ectx.itemLocalT - effect.startOffset;
   if (local <= 0 || effect.duration <= 0) return;
   const outroAlpha = Math.min(1, local / effect.duration);

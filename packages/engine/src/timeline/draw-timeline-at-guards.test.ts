@@ -57,6 +57,32 @@ function timelineWithMalformedKenBurns(): Timeline {
   };
 }
 
+// ── مساعد بناء عام (mk/466) ──
+function tlWithEffect(effect: unknown): Timeline {
+  return {
+    duration: 2,
+    fps: 30,
+    size: 'reel',
+    tracks: [
+      {
+        id: 'trk',
+        type: 'media',
+        index: 0,
+        items: [
+          { id: 'itm', start: 0, end: 2, effects: [effect as never] },
+        ],
+      },
+    ],
+  };
+}
+
+function draw(ctx: ReturnType<typeof createMockCtx>, timeline: Timeline, t = 1): void {
+  drawTimelineAt({
+    ctx, size: SIZE, timeline, brand,
+    template: emptyTemplate, content: {}, t,
+  });
+}
+
 describe('mk/465 · applyKenBurns · حارس NaN', () => {
   it('kenBurns بلا `from`/`to` ⇒ يرمي خطأً يسمّي المؤثّر · لا يصل NaN إلى ctx.scale', () => {
     const ctx = createMockCtx();
@@ -126,5 +152,99 @@ describe('mk/465 · applyKenBurns · حارس NaN', () => {
       expect(Number.isFinite(s.sx)).toBe(true);
       expect(Number.isFinite(s.sy)).toBe(true);
     }
+  });
+});
+
+// ── mk/466 §١: خمسةُ إغلاقاتٍ + تشديدٌ ──
+
+describe('mk/466 · template-headline · حارس معلَمات', () => {
+  it('بلا stagger/fade/slideY/startOffset ⇒ يرمي يسمّي المؤثّر والقطعة', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'th', type: 'template-headline', layerIndex: 0 })))
+      .toThrow(/applyTemplateHeadline.*itm/);
+  });
+  it('بمعلَمات صحيحة ⇒ لا يرمي (بلا headlinePrep يعود مبكّراً)', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'th', type: 'template-headline', layerIndex: 0,
+      stagger: 0.1, fade: 0.3, slideY: 20, startOffset: 0,
+    }))).not.toThrow();
+  });
+});
+
+describe('mk/466 · pulse-around-center · حارس معلَمات + assertFiniteScale', () => {
+  it('بلا amount/duration/startOffset ⇒ يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'p', type: 'pulse-around-center' })))
+      .toThrow(/applyPulseAroundCenter.*itm/);
+  });
+  it('بـamount/duration/startOffset صحيحة ⇒ لا يرمي · scale منتهٍ', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'p', type: 'pulse-around-center',
+      amount: 0.1, duration: 1, startOffset: 0,
+    }))).not.toThrow();
+    const scaleOps = ctx.ops.filter((o) => o.type === 'scale');
+    for (const op of scaleOps) {
+      const s = op as { type: 'scale'; sx: number; sy: number };
+      expect(Number.isFinite(s.sx)).toBe(true);
+      expect(Number.isFinite(s.sy)).toBe(true);
+    }
+  });
+});
+
+describe('mk/466 · outro-black-overlay · حارس معلَمات', () => {
+  it('بلا startOffset/duration ⇒ يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'o', type: 'outro-black-overlay' })))
+      .toThrow(/applyOutroOverlay.*itm/);
+  });
+  it('بمعلَمات صحيحة ⇒ لا يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'o', type: 'outro-black-overlay', startOffset: 1, duration: 0.5,
+    }))).not.toThrow();
+  });
+});
+
+describe('mk/466 · text-item-byWord · حارس معلَمات', () => {
+  it('بلا stagger/fadeDuration ⇒ يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'w', type: 'text-item-byWord' })))
+      .toThrow(/applyTextItemByWord.*itm/);
+  });
+  it('بمعلَمات صحيحة ⇒ لا يرمي (بلا prep يعود مبكّراً)', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'w', type: 'text-item-byWord', stagger: 0.05, fadeDuration: 0.1,
+    }))).not.toThrow();
+  });
+});
+
+describe('mk/466 · text-item-typewriter · حارس معلَمات', () => {
+  it('بلا charStagger ⇒ يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'tw', type: 'text-item-typewriter' })))
+      .toThrow(/applyTextItemTypewriter.*itm/);
+  });
+  it('بـcharStagger صحيح ⇒ لا يرمي', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'tw', type: 'text-item-typewriter', charStagger: 0.03,
+    }))).not.toThrow();
+  });
+});
+
+describe('mk/466 · template-layer · تشديد layerIndex', () => {
+  it('layerIndex غيرُ منتهٍ (NaN) ⇒ يرمي — مؤثّر مشوَّه', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({ ref: 'tl', type: 'template-layer' })))
+      .toThrow(/applyTemplateLayer.*itm/);
+  });
+  it('layerIndex صحيحٌ خارج المدى ⇒ لا يرمي (تخطٍّ معلَن)', () => {
+    const ctx = createMockCtx();
+    expect(() => draw(ctx, tlWithEffect({
+      ref: 'tl', type: 'template-layer', layerIndex: 99,
+    }))).not.toThrow();
   });
 });
