@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -13,8 +13,16 @@
 // بمكوّن `Ltr` — عطبُ bidi المقلوب (Z⌘) قيس قبل الإصلاح وسُدّ.
 // التحريكُ بلوحة المفاتيح (456 §٣): الأسهمُ تُزيح القطعةَ المختارة
 // (→ تقدّماً في الزمن — RTL قياساً لا افتراضاً)، و⇧ يوسّع الخطوة،
-// والقوسان يقصّان الحافّتين. كلُّها عبر `moveItem`/`trimItem` و`apply`
-// — لا منطقَ جديد، والكمّيّات من `labelStepFor` نفسها (كمّيّات المسطرة).
+// والقوسان يقصّان الحافّتين. كلُّها عبر `snapMove`/`snapTrim` (462:
+// الآمنُ + الالتصاق) و`apply` — لا منطقَ جديد، والكمّيّات من
+// `labelStepFor` نفسها (كمّيّات المسطرة).
+//
+// **462 · البابُ الثاني — الأسهمُ كالفأرة:** التحريكُ والقصُّ باللوحة
+// صارا على الآمنَين من timeline-snap: التصاقٌ بعتبةِ SNAP_PX/pxPerSec
+// ورأسُ القراءة مرساةً — كما في السحب تماماً. المقياسُ يصعدُ من
+// الشريط عبر onScaleChange. فُحص الباقي: `splitItem`/`removeItem` لا
+// يُنتجان تراكباً — الشطرُ لمسٌ عند نقطةٍ بلا فجوة، والحذفُ ينقصُ
+// ولا يزيد.
 //
 // **454:** الحالةُ كلُّها في `History` من الطبقة (أ) — لا مكدّسَ ثانٍ:
 // السحب/القصّ يصلان عبر `onTimelineChange` (من TimelineStrip) ويُطبَّقان
@@ -34,18 +42,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import type { Timeline } from '@pf-mediakit/shared';
-import { TimelineStrip, labelStepFor } from '@/src/reels/TimelineStrip';
+import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
 import {
   apply,
   createHistory,
-  moveItem,
   redo,
   removeItem,
   splitItem,
-  trimItem,
   undo,
   type History,
 } from '@/src/reels/timeline-ops';
+import { snapMove, snapTrim } from '@/src/reels/timeline-snap';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber } from '@/src/format/digits';
 import { DigitStyleSwitcher } from '@/src/format/DigitStyleSwitcher';
@@ -124,6 +131,10 @@ export default function ReelsTimelinePage(): JSX.Element {
   const [playheadSec, setPlayheadSec] = useState(4.5);
   const [playing, setPlaying] = useState(false);
   const [selected, setSelected] = useState<Selection | null>(null);
+  /** مقياس الشريط الحاليّ (pxPerSec) — يصعدُ عبر onScaleChange (462):
+   *  تُشتقُّ منه عتبةُ التصاقِ التحريك باللوحة. قبل القياس 0 — أي
+   *  عتبةَ صفرٍ: آمنٌ بلا التصاق. */
+  const [pxPerSec, setPxPerSec] = useState(0);
 
   const present = history.present;
 
@@ -138,6 +149,10 @@ export default function ReelsTimelinePage(): JSX.Element {
 
   const onSelectItem = useCallback((trackId: string, itemId: string): void => {
     setSelected({ trackId, itemId });
+  }, []);
+
+  const onScaleChange = useCallback((v: number): void => {
+    setPxPerSec(v);
   }, []);
 
   const onTimelineChange = useCallback((next: Timeline): void => {
@@ -183,16 +198,26 @@ export default function ReelsTimelinePage(): JSX.Element {
   const labelStep = labelStepFor(present.duration);
   const nudgeSmall = labelStep / 5;
   const nudgeLarge = labelStep;
+  // عتبةُ الالتصاق بالبكسل كمسار الفأرة (462): SNAP_PX/pxPerSec — وقبل
+  // قياس الشريط مقياسُه 0 فتكون عتبةَ صفرٍ (التصاقٌ معطَّل، آمنٌ باقٍ).
+  const snapThreshold = pxPerSec > 0 ? SNAP_PX / pxPerSec : 0;
 
   const nudgeSelected = useCallback(
     (deltaSec: number): void => {
       if (!selected) return;
       setHistory((h) => {
-        const next = moveItem(h.present, selected.trackId, selected.itemId, deltaSec);
+        const next = snapMove(
+          h.present,
+          selected.trackId,
+          selected.itemId,
+          deltaSec,
+          snapThreshold,
+          playheadSec,
+        ).timeline;
         return timelineEq(h.present, next) ? h : apply(h, () => next);
       });
     },
-    [selected],
+    [playheadSec, selected, snapThreshold],
   );
 
   const trimSelected = useCallback(
@@ -205,11 +230,19 @@ export default function ReelsTimelinePage(): JSX.Element {
         if (!it) return h;
         // القصّ = تقصير: البدايةُ تتقدّم والنهايةُ تتأخّر.
         const to = edge === 'start' ? it.start + stepSec : it.end - stepSec;
-        const next = trimItem(h.present, selected.trackId, selected.itemId, edge, to);
+        const next = snapTrim(
+          h.present,
+          selected.trackId,
+          selected.itemId,
+          edge,
+          to,
+          snapThreshold,
+          playheadSec,
+        ).timeline;
         return timelineEq(h.present, next) ? h : apply(h, () => next);
       });
     },
-    [selected],
+    [playheadSec, selected, snapThreshold],
   );
 
   // الاختصارات — لكلّ فعلٍ اختصار معلن (aria-keyshortcuts على الأزرار).
@@ -322,6 +355,7 @@ export default function ReelsTimelinePage(): JSX.Element {
             playheadSec={playheadSec}
             onSelectItem={onSelectItem}
             onTimelineChange={onTimelineChange}
+            onScaleChange={onScaleChange}
             {...(selected ? { selectedItemId: selected.itemId } : {})}
           />
         </div>

@@ -1,4 +1,4 @@
-// timeline-snap — الالتصاقُ ومنعُ التراكب (reels/459 · صُحِّح في 460).
+// timeline-snap — الالتصاقُ ومنعُ التراكب (reels/459 · صُحِّح في 460 · وُسِّع في 462).
 //
 // طبقةٌ خالصةٌ ثانية بجانب `timeline-ops`: لا حالة، لا تحويرٌ للمدخل،
 // والأنواعُ كلُّها من `@pf-mediakit/shared`. المسارُ تسلسلٌ لا طبقة —
@@ -6,6 +6,10 @@
 // الصفر، ولا تعبرُه مهما بلغتِ الإزاحة.
 //
 // المصدر الوحيد للصحّة: `timeline-snap.test.ts` (٢١ اختباراً).
+//
+// (462) فوق العقدِ تصديران: `snapMove`/`snapTrim` — التصاقٌ ثمّ الآمن،
+// مشتركُ مسارَي الفأرة والأسهم. تركيبٌ مباشرٌ للدوالّ الأربع المُحكَّمة،
+// لا منطقَ جديد بجانبها.
 
 import type { Timeline, TrackItem } from '@pf-mediakit/shared';
 import { trimItem } from './timeline-ops';
@@ -172,5 +176,72 @@ export const trimItemSafe = (
     tracks: base.tracks.map((tr) =>
       tr.id === trackId ? { ...tr, items: nextItems } : tr,
     ),
+  };
+};
+
+// ── التصاقٌ ثمّ الآمن — مشتركُ الفأرة واللوحة (462) ──────
+
+/** نتيجةُ التصاقٍ ثمّ عمليةٍ آمنة: الخطُّ الجديد + المرساةُ إن وقع. */
+export interface SnapResult {
+  readonly timeline: Timeline;
+  /** المرساةُ التي حُرِّف الالتصاقُ القيمةَ إليها — وإلا null. */
+  readonly anchor: number | null;
+}
+
+/** التصاقٌ ثمّ النقلُ الآمن. الحدّان يُجرَّبان وتفوز أقربُ مرساة —
+ *  الالتصاقُ بالجار من الجهتين لا بالبداية وحدها. `thresholdSec`
+ *  عتبةُ snapTime نفسها: و0 تُعطّل الالتصاقَ فتمرُّ القيمةُ خاماً. */
+export const snapMove = (
+  tl: Timeline,
+  trackId: string,
+  itemId: string,
+  deltaSec: number,
+  thresholdSec: number,
+  playheadSec: number,
+): SnapResult => {
+  const it = tl.tracks
+    .find((tr) => tr.id === trackId)
+    ?.items.find((i) => i.id === itemId);
+  if (!it) return { timeline: tl, anchor: null };
+  const snap = (raw: number): number =>
+    snapTime(tl, trackId, itemId, raw, {
+      threshold: thresholdSec,
+      playheadSec,
+    });
+  const dur = it.end - it.start;
+  const rawStart = it.start + deltaSec;
+  const rawEnd = it.end + deltaSec;
+  const sn = snap(rawStart);
+  const en = snap(rawEnd);
+  const dStart = sn !== rawStart ? Math.abs(sn - rawStart) : Infinity;
+  const dEnd = en !== rawEnd ? Math.abs(en - rawEnd) : Infinity;
+  const useEnd = dEnd < dStart;
+  const anchor = useEnd ? en : sn;
+  const start = useEnd ? en - dur : sn;
+  const raw = useEnd ? rawEnd : rawStart;
+  return {
+    timeline: moveItemSafe(tl, trackId, itemId, start - it.start),
+    anchor: anchor !== raw ? anchor : null,
+  };
+};
+
+/** التصاقٌ ثمّ القصُّ الآمن — حافّةٌ واحدة إلى الزمن المقترَح.
+ *  `thresholdSec` عتبةُ snapTime نفسها: و0 تُعطّل الالتصاقَ. */
+export const snapTrim = (
+  tl: Timeline,
+  trackId: string,
+  itemId: string,
+  edge: 'start' | 'end',
+  newTimeSec: number,
+  thresholdSec: number,
+  playheadSec: number,
+): SnapResult => {
+  const t = snapTime(tl, trackId, itemId, newTimeSec, {
+    threshold: thresholdSec,
+    playheadSec,
+  });
+  return {
+    timeline: trimItemSafe(tl, trackId, itemId, edge, t),
+    anchor: t !== newTimeSec ? t : null,
   };
 };

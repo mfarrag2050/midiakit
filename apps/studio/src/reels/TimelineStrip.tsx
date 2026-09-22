@@ -1,6 +1,6 @@
 'use client';
 
-// TimelineStrip — شريط الخطّ الزمني (reels/453 → 454 → 456 → 458 → 461).
+// TimelineStrip — شريط الخطّ الزمني (reels/453 → 454 → 456 → 458 → 461 → 462).
 //
 // **453:** مسارٌ واحد لكل Track بترتيب index (0 أسفل/خلف)، وكتلةٌ واحدة
 // لكل TrackItem بعرضٍ متناسب مع (end − start) وموضعٍ بحسب start مقابل
@@ -23,6 +23,12 @@
 // المرساة (لونُه لون ring-accent — bg-accent) لا يظهرُ إلا أثناءَ
 // السحب، ولا يُرسمُ إن لم تستقرَّ القطعةُ على المرساةِ فعلاً بعد
 // أسوار الجيران.
+//
+// **462 · البابُ الثاني — الأسهمُ كالفأرة:** منطقُ «التصاقٌ ثمّ آمن»
+// صعد إلى timeline-snap (snapMove/snapTrim) والشريطُ يستدعيه من هناك —
+// فمسارا الفأرة والأسهم واحدٌ لا اثنان. يُصدَّر SNAP_PX لصفحة dev،
+// والمقياسُ يصعدُ للأب عبر onScaleChange — وعتبةُ صفرٍ (Alt) تُعطّلُ
+// الالتصاقَ كما هي.
 //
 // **454 · البصر:** القطعة تُميَّز من الصفّ: تعبئةٌ ملوّنة خفيفة بلون
 // نوع المسار وحدٌّ ملوّن كامل، والصفُّ بحدٍّ أخفق (border-border 8%)
@@ -116,7 +122,7 @@ import type { Timeline, TrackType } from '@pf-mediakit/shared';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber } from '@/src/format/digits';
-import { moveItemSafe, snapTime, trimItemSafe } from './timeline-snap';
+import { snapMove, snapTrim, type SnapResult } from './timeline-snap';
 
 export interface TimelineStripProps {
   readonly timeline: Timeline;
@@ -125,6 +131,9 @@ export interface TimelineStripProps {
   readonly onSelectItem?: (trackId: string, itemId: string) => void;
   /** يُستدعى عند الإفلات بالخطّ الزمني الجديد (المعاينة النهائية). */
   readonly onTimelineChange?: (next: Timeline) => void;
+  /** يُبلِّغ بمقياس pxPerSec الحاليّ عند تغيّره — تُشتقُّ منه عتبةُ
+   *  التصاقِ التحريك باللوحة (SNAP_PX / pxPerSec، 462). */
+  readonly onScaleChange?: (pxPerSec: number) => void;
 }
 
 // ── هندسة الشريط ───────────────────────────────────────
@@ -164,8 +173,9 @@ const ZOOM_STEP = 2;
 const ZOOM_WHEEL_K = 0.002;
 
 /** عتبةُ الالتصاق بالبكسل لا بالثانية (ثوانيها = SNAP_PX / pxPerSec):
- *  الثابتُ بالثانية يصيرُ عند التقريب مساحةً هائلةً تبتلع كلَّ شيء. */
-const SNAP_PX = 8;
+ *  الثابتُ بالثانية يصيرُ عند التقريب مساحةً هائلةً تبتلع كلَّ شيء.
+ *  يُصدَّر لصفحة dev (462) — المصدرُ واحدٌ للمسارَين. */
+export const SNAP_PX = 8;
 
 /** يُصدَّر لصفحة التطوير: التحريكُ بلوحة المفاتيح يستعمل كمّيّات المسطرة
  *  عند «الملاءمة» (الخطوة الصغيرة = علامة صغرى، والكبيرة = علامة كبرى)
@@ -251,70 +261,59 @@ interface DragUi {
 }
 
 /** معاينةُ السحب: خطٌّ زمنيٌّ آمن + مرساةُ الالتصاق إن وقع. */
-interface DragPreview {
-  readonly timeline: Timeline;
-  readonly snapSec: number | null;
-}
 
-/** معاينة السحب عبر العمليّات الآمنة نفسها — لا قصٍّ موازٍ هنا. */
+/** هل استقرّت القطعةُ على المرساةِ فعلاً؟ أسوارُ الجيران قد تدفعُها
+ *  عنها — والخطُّ الذي يُخلفُ موعده كذبٌ على العين. */
+const landedOn = (
+  result: Timeline,
+  trackId: string,
+  itemId: string,
+  anchor: number,
+): boolean => {
+  const it = result.tracks
+    .find((tr) => tr.id === trackId)
+    ?.items.find((i) => i.id === itemId);
+  if (!it) return false;
+  return Math.abs(it.start - anchor) < 1e-9 || Math.abs(it.end - anchor) < 1e-9;
+};
+
+/** معاينة السحب عبر «التصاقٌ ثمّ آمن» المشترك (462) — لا قصٍّ موازٍ
+ *  هنا. Alt عتبةُ صفرٍ: الالتصاقُ معطَّلٌ والقيمةُ خاماً (461 §٢). */
 const previewAt = (
   st: DragGeometry,
   dx: number,
   altKey: boolean,
-): DragPreview => {
+): SnapResult => {
   // RTL: الإزاحة الفيزيائية يساراً (dx سالب) = تقدّمٌ في الزمن.
   const deltaSec = -dx / st.pxPerSec;
-  const threshold = SNAP_PX / st.pxPerSec;
-  /** Alt أثناء السحب يُطفئ الالتصاقَ — القيمةُ الخام (461 §٢). */
-  const snap = (raw: number): number =>
-    altKey
-      ? raw
-      : snapTime(st.base, st.trackId, st.itemId, raw, {
+  const threshold = altKey ? 0 : SNAP_PX / st.pxPerSec;
+  const core =
+    st.mode === 'move'
+      ? snapMove(
+          st.base,
+          st.trackId,
+          st.itemId,
+          deltaSec,
           threshold,
-          playheadSec: st.playheadSec,
-        });
-  /** هل استقرّت القطعةُ على المرساةِ فعلاً؟ أسوارُ الجيران قد تدفعُها
-   *  عنها — والخطُّ الذي يُخلفُ موعده كذبٌ على العين. */
-  const landedOn = (result: Timeline, anchor: number): boolean => {
-    const it = result.tracks
-      .find((tr) => tr.id === st.trackId)
-      ?.items.find((i) => i.id === st.itemId);
-    if (!it) return false;
-    return (
-      Math.abs(it.start - anchor) < 1e-9 || Math.abs(it.end - anchor) < 1e-9
-    );
+          st.playheadSec,
+        )
+      : snapTrim(
+          st.base,
+          st.trackId,
+          st.itemId,
+          st.mode === 'trim-start' ? 'start' : 'end',
+          (st.mode === 'trim-start' ? st.itemStart : st.itemEnd) + deltaSec,
+          threshold,
+          st.playheadSec,
+        );
+  return {
+    timeline: core.timeline,
+    anchor:
+      core.anchor !== null &&
+      landedOn(core.timeline, st.trackId, st.itemId, core.anchor)
+        ? core.anchor
+        : null,
   };
-  if (st.mode === 'move') {
-    // الحدّان يُجرَّبان وتفوز أقربُ مرساة — الالتصاقُ بالجار من
-    // الجهتين لا بالبداية وحدها.
-    const dur = st.itemEnd - st.itemStart;
-    const rawStart = st.itemStart + deltaSec;
-    const rawEnd = st.itemEnd + deltaSec;
-    const sn = snap(rawStart);
-    const en = snap(rawEnd);
-    const dStart = sn !== rawStart ? Math.abs(sn - rawStart) : Infinity;
-    const dEnd = en !== rawEnd ? Math.abs(en - rawEnd) : Infinity;
-    const useEnd = dEnd < dStart;
-    const anchor = useEnd ? en : sn;
-    const start = useEnd ? en - dur : sn;
-    const timeline = moveItemSafe(
-      st.base,
-      st.trackId,
-      st.itemId,
-      start - st.itemStart,
-    );
-    const raw = useEnd ? rawEnd : rawStart;
-    return {
-      timeline,
-      snapSec: anchor !== raw && landedOn(timeline, anchor) ? anchor : null,
-    };
-  }
-  const edge = st.mode === 'trim-start' ? 'start' : 'end';
-  const edgeTime = st.mode === 'trim-start' ? st.itemStart : st.itemEnd;
-  const raw = edgeTime + deltaSec;
-  const t = snap(raw);
-  const timeline = trimItemSafe(st.base, st.trackId, st.itemId, edge, t);
-  return { timeline, snapSec: t !== raw && landedOn(timeline, t) ? t : null };
 };
 
 export function TimelineStrip({
@@ -323,6 +322,7 @@ export function TimelineStrip({
   selectedItemId,
   onSelectItem,
   onTimelineChange,
+  onScaleChange,
 }: TimelineStripProps): JSX.Element {
   const duration = timeline.duration;
   const { t } = useLocale();
@@ -361,6 +361,13 @@ export function TimelineStrip({
   const fitPxPerSec = duration > 0 && viewportW > 0 ? viewportW / duration : 0;
   const pxPerSec = fitPxPerSec * zoom;
   const contentPx = duration * pxPerSec;
+
+  // المقياسُ يصعدُ للأب عند تغيّره — تحريكُ اللوحة في صفحة dev يشتقّ
+  // عتبةَ التصاقِ من SNAP_PX / pxPerSec نفسها (462): مسارا الفأرة
+  // والأسهم عتبةٌ واحدةٌ لا اثنتان.
+  useEffect(() => {
+    onScaleChange?.(pxPerSec);
+  }, [onScaleChange, pxPerSec]);
 
   const zoomBy = useCallback(
     (factor: number): void => {
@@ -511,7 +518,7 @@ export function TimelineStrip({
       lastPreviewRef.current = preview.timeline;
       setDrag((d) =>
         d
-          ? { ...d, preview: preview.timeline, snapSec: preview.snapSec }
+          ? { ...d, preview: preview.timeline, snapSec: preview.anchor }
           : d,
       );
     };
