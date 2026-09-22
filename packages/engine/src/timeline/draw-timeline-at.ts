@@ -566,14 +566,39 @@ function applyPulseAroundCenter(effect: PulseEffect, ectx: EffectContext): void 
  * 'top' → (w/2, 0)، 'top-left' → (0, 0)، إلخ.
  */
 function applyKenBurns(effect: KenBurnsEffect, ectx: EffectContext): void {
+  // mk/465 §١: `KenBurnsEffect` يُوجب `from: number` و`to: number`،
+  // لكنّ dispatch:438 يستعمل `as` فيمرّ كائنٌ ناقصٌ صامتاً — فيصلُ `NaN`
+  // إلى `ctx.scale` ويُسمِّم مصفوفة التحويل. الرمي هنا يجعل خطأً في
+  // الخطّ الزمنيّ يسقط بصوت عند البناء لا يُخفى بإطارٍ فارغ (دستور §٢
+  // «حارسٌ لا يُسكَت»).
+  if (!Number.isFinite(effect.from) || !Number.isFinite(effect.to)) {
+    throw new Error(
+      `[applyKenBurns] معلَمات ناقصة على المؤثّر ` +
+        `(item="${ectx.item.id}" · from=${effect.from} · to=${effect.to}). ` +
+        `KenBurnsEffect يوجب from:number و to:number منتهيَين.`
+    );
+  }
   const scale = effect.from + (effect.to - effect.from) * ectx.itemProgress;
   if (scale === 1) return;
+  assertFiniteScale(scale, 'kenBurns', ectx.item.id);
   const { ctx, size } = ectx;
   const origin = effect.origin ?? 'center';
   const [ax, ay] = originToAnchor(origin, size);
   ctx.translate(ax, ay);
   ctx.scale(scale, scale);
   ctx.translate(-ax, -ay);
+}
+
+// mk/465 §١: حارسٌ عامٌّ — عددٌ غيرُ منتهٍ لا يصلُ إلى `ctx.scale` أبداً.
+// يُستدعى من applyKenBurns بعد الحساب. سيُستدعى من applyPulseAroundCenter
+// أيضاً حين يقرّر المالكُ سدَّ ثقبِه (انظر جدول §٢ في تقرير 465).
+function assertFiniteScale(scale: number, effectName: string, itemId: string): void {
+  if (!Number.isFinite(scale)) {
+    throw new Error(
+      `[${effectName}] scale=${scale} غيرُ منتهٍ (item="${itemId}"). ` +
+        `عددٌ غيرُ منتهٍ لا يصلُ إلى ctx.scale.`
+    );
+  }
 }
 
 function originToAnchor(
