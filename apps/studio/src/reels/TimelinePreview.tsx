@@ -47,8 +47,8 @@ export const PREVIEW_SIZE = SIZE;
 // ── خريطةُ صناديقِ النصوص — للفحص الآليّ (469 §٣) ─────
 
 /** صندوقُ قطعةِ نصٍّ على القماش — إحداثيّاتٌ شاملةً `offset.x/y` (مرآةُ
- *  ما يُرسَم فعلاً)، وزمنُ نشاطِها. الصيغةُ مرآةُ كاشفِ التصادم في
- *  المحرّك مضافةً إليها المحورُ الأفقيّ (470 §٢: إصابةُ الفأرة). */
+ *  ما يُرسَم فعلاً)، وزمنُ نشاطِها، وعلمُ خروجِها عن الكادر (471 §١:
+ *  الخروجُ مسموحٌ لكن معلَنٌ — والبوّابةُ تمسكُ غيرَ المعلَم). */
 export interface TextBoxEntry {
   readonly trackId: string;
   readonly itemId: string;
@@ -58,6 +58,9 @@ export interface TextBoxEntry {
   readonly bottom: number;
   readonly left: number;
   readonly right: number;
+  /** أيُّ جزءٍ خارج [0,1080]×[0,1920]؟ — محسوبةٌ هنا لا في السكربت،
+   *  فتصلحُ مؤشّراً حيّاً وبوّابةً معاً. */
+  readonly outside: boolean;
 }
 
 /** نتيجةُ إطارٍ واحد: الصناديقُ كلُّها + أزواجُ التصادم كما حسبَها
@@ -82,15 +85,21 @@ const collectTextBoxes = (
     if (!bounds || !item) continue;
     const dx = item.offset?.x ?? 0;
     const dy = item.offset?.y ?? 0;
+    const left = bounds.left + dx;
+    const right = bounds.right + dx;
+    const top = bounds.top + dy;
+    const bottom = bounds.bottom + dy;
     out.push({
       trackId: entry.trackId,
       itemId: entry.itemId,
       start: item.start,
       end: item.end,
-      top: bounds.top + dy,
-      bottom: bounds.bottom + dy,
-      left: bounds.left + dx,
-      right: bounds.right + dx,
+      top,
+      bottom,
+      left,
+      right,
+      outside:
+        left < 0 || right > SIZE.w || top < 0 || bottom > SIZE.h,
     });
   }
   return out;
@@ -145,14 +154,20 @@ export interface TimelinePreviewProps {
    *  يعادَ الرسمُ من أجله. */
   readonly onTextLayout?: (info: TextLayoutInfo) => void;
   /** (470 §٢) صندوقُ القطعةِ النصّيّةِ المحدَّدة — يُحيطُه إطارٌ عند
-   *  التحويم وتُمسَكُ بالسحب. تُحدَّثُ قيمتُه أثناءَ السحب فتتبعه. */
+   *  التحويم وتُمسَكُ بالسحب. تُحدَّثُ قيمتُه أثناءَ السحب فتتبعه.
+   *  (471 §١) خارجَ الكادر يغيّرُ لونَه تحذيراً. */
   readonly dragBox?: TextBoxEntry | null;
+  /** عبارةٌ واحدةٌ تُعربُ أنّ جزءاً خارجَ الكادر — يمرّرها الأبُ من
+   *  i18n؛ المكوّنُ حاضرٌ لا يعرفُ القواميس. */
+  readonly outsideLabel?: string;
   /** الإمساكُ داخل الصندوق بدأ — التسجيلُ مرّةً عند الإفلات (عند الأب). */
   readonly onBoxDragStart?: () => void;
-  /** إزاحةُ الفأرة بوحدات القماشة (بعد معاملِ التحويل) منذ الإمساك. */
-  readonly onBoxDragMove?: (dxCanvas: number, dyCanvas: number) => void;
-  /** الإفلاتُ بالإزاحةِ الكلّيّةِ بوحدات القماشة — يُسجَّلُ مرّةً واحدة. */
-  readonly onBoxDragEnd?: (dxCanvas: number, dyCanvas: number) => void;
+  /** إزاحةُ الفأرة بوحدات القماشة (بعد معاملِ التحويل) منذ الإمساك —
+   *  ومعها Shift: الأبُ يحصرُ بها داخلَ الكادر (471 §١). */
+  readonly onBoxDragMove?: (dxCanvas: number, dyCanvas: number, shiftKey: boolean) => void;
+  /** الإفلاتُ بالإزاحةِ الكلّيّةِ بوحدات القماشة — يُسجَّلُ مرّةً واحدة،
+   *  والـShift ممرَّرةٌ كآخرِ حركةٍ كي يطابقَ الالتزامُ الإفلاتَ. */
+  readonly onBoxDragEnd?: (dxCanvas: number, dyCanvas: number, shiftKey: boolean) => void;
 }
 
 export function TimelinePreview({
@@ -162,6 +177,7 @@ export function TimelinePreview({
   maxWidthPx = 270,
   onTextLayout,
   dragBox,
+  outsideLabel,
   onBoxDragStart,
   onBoxDragMove,
   onBoxDragEnd,
@@ -326,7 +342,11 @@ export function TimelinePreview({
     const onMove = (ev: MouseEvent): void => {
       const g = boxDragRef.current;
       if (!g) return;
-      onBoxDragMove?.((ev.clientX - g.startX) * g.scaleX, (ev.clientY - g.startY) * g.scaleY);
+      onBoxDragMove?.(
+        (ev.clientX - g.startX) * g.scaleX,
+        (ev.clientY - g.startY) * g.scaleY,
+        ev.shiftKey,
+      );
     };
     const onUp = (ev: MouseEvent): void => {
       const g = boxDragRef.current;
@@ -334,7 +354,11 @@ export function TimelinePreview({
       setBoxDragging(false);
       document.body.style.cursor = '';
       if (!g) return;
-      onBoxDragEnd?.((ev.clientX - g.startX) * g.scaleX, (ev.clientY - g.startY) * g.scaleY);
+      onBoxDragEnd?.(
+        (ev.clientX - g.startX) * g.scaleX,
+        (ev.clientY - g.startY) * g.scaleY,
+        ev.shiftKey,
+      );
     };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -351,7 +375,7 @@ export function TimelinePreview({
       data-state={error ? 'error' : fontsReady ? 'ready' : 'loading'}
       className="flex flex-col items-center gap-2"
     >
-      {/* dir=ltr: فضاءُ القماشة فيزيائيٌّ لا يتّجاه — إحداثيّاتُه من
+{/* dir=ltr: فضاءُ القماشة فيزيائيٌّ لا يتّجاه — إحداثيّاتُه من
           اليسار، فالخصائصُ المنطقيّةُ تحلُّ يساراً داخلَه بلا انعكاس. */}
       <div dir="ltr" className="relative">
         <canvas
@@ -366,22 +390,47 @@ export function TimelinePreview({
             cursor: boxDragging ? 'grabbing' : boxHover && dragBox ? 'grab' : undefined,
           }}
         />
-        {/* إطارُ التحويم (470 §٢): ما سيُمسَك — رفيعٌ بلون التوكيد،
-            يتبعُ الصندوقَ الحيَّ أثناء السحب. */}
-        {dragBox && (boxHover || boxDragging) ? (
-          <div
-            aria-hidden
-            data-testid="reels-preview-box-outline"
-            className="pointer-events-none absolute z-10 border border-accent"
-            style={{
-              insetInlineStart: `${(dragBox.left * maxWidthPx) / SIZE.w}px`,
-              insetBlockStart: `${(dragBox.top * maxWidthPx) / SIZE.w}px`,
-              inlineSize: `${((dragBox.right - dragBox.left) * maxWidthPx) / SIZE.w}px`,
-              blockSize: `${((dragBox.bottom - dragBox.top) * maxWidthPx) / SIZE.w}px`,
-            }}
-          />
-        ) : null}
+        {/* إطارُ التحويم (470 §٢ · 471 §١): ما سيُمسَك — يتبعُ الصندوقَ
+            الحيَّ أثناء السحب، **مقصوصاً حسابيّاً عند حدودِ القماشة**
+            (تذكرة 471: "أو قصٌّ حسابيّ") — إطارٌ يطفو خارجَ الكادرِ
+            يكذبُ على العين، والقصُّ الحسابيُّ يجعلُ مستطيلَ الـDOM نفسِه
+            داخلَ الحدودِ فيصلحَ إثباتاً هندسيّاً. خارجٌ كليّاً ⇒ لا إطار. */}
+        {dragBox && (boxHover || boxDragging)
+          ? (() => {
+              const visLeft = Math.max(dragBox.left, 0);
+              const visRight = Math.min(dragBox.right, SIZE.w);
+              const visTop = Math.max(dragBox.top, 0);
+              const visBottom = Math.min(dragBox.bottom, SIZE.h);
+              if (visRight <= visLeft || visBottom <= visTop) return null;
+              const scale = maxWidthPx / SIZE.w;
+              return (
+                <div
+                  aria-hidden
+                  data-testid="reels-preview-box-outline"
+                  className={`pointer-events-none absolute z-10 border-2 ${
+                    dragBox.outside ? 'border-warning' : 'border-accent'
+                  }`}
+                  style={{
+                    insetInlineStart: `${visLeft * scale}px`,
+                    insetBlockStart: `${visTop * scale}px`,
+                    inlineSize: `${(visRight - visLeft) * scale}px`,
+                    blockSize: `${(visBottom - visTop) * scale}px`,
+                  }}
+                />
+              );
+            })()
+          : null}
       </div>
+      {/* مؤشّرُ التجاوز (471 §١): عبارةٌ واحدةٌ تُخبرُ أنّ جزءاً خارجَ
+          الكادر — تظهرُ ما دامَ المحدَّدُ خارجَه، سحباً كان أو حقولاً. */}
+      {dragBox?.outside ? (
+        <p
+          data-testid="reels-preview-overflow"
+          className="text-xs text-warning"
+        >
+          {outsideLabel}
+        </p>
+      ) : null}
       {error ? (
         <p data-testid="reels-preview-error" className="text-xs text-danger">
           {error}

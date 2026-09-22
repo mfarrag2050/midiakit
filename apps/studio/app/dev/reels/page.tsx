@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470 → 471).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -51,6 +51,16 @@
 // `present` لا من العيّنة — insert يُطيلُها فلا يكذبُ شريطُ الموضعِ
 // ولا القراءةُ ولا حلقةُ التشغيل.
 //
+// **471 · حافّةُ القماشة:** الخروجُ عن الحافّة ليس خطأً بذاته — محرّرو
+// المونتاج يُخرجون عمداً (bleed)؛ الخطأُ أن يقعَ بلا علمٍ ولا إشارة.
+// (١) مؤشّرُ تجاوزٍ: إطارُ التحويم يصفرُ إلى التحذيرِ وعبارةٌ واحدةٌ
+// تقولُ إنّ جزءاً خارجَ الكادر — إخبارٌ لا منع. (٢) Shift أثناءَ السحب
+// يحصرُ داخلَ الكادر (اصطلاحٌ عالميٌّ بلا مفتاحِ ترجمة). (٣) حاويةُ
+// القماشة تقصُّ الإطارَ (overflow-hidden) فلا يطفوَ خارجَها. والبوّابةُ
+// (§٢): كلُّ صندوقِ نصٍّ داخلُ [0,1080]×[0,1920] **أو معلَّمٌ bleed
+// بشهادةٍ سحبةٍ حرّة** — الشهادةُ تطابقُ القيمَ فلا تتقادم: تعديلٌ أو
+// تراجعٌ يُبطلُها، وخروجٌ بحقولٍ الرقمِ بلا شهادةٍ = فشلٌ صريح.
+//
 // **470 · اسحبْه حيث تشاء · وفاصلةٌ تخالف نقطة:** (١) حقولُ الأعداد
 // صارت نصّاً موحَّدَ الصيغة عبر مبدّل ١٢٣/123 القائم (formatFieldNumber
 // من مسار الأرقام، بلا تجميعٍ ألفيٍّ) — والقياسُ قبل الإصلاح أثبتَ أنّ
@@ -100,7 +110,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import type { Timeline, Track, TrackItem, TrackType } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
-import { TimelinePreview, PREVIEW_SIZE, type TextLayoutInfo } from '@/src/reels/TimelinePreview';
+import { TimelinePreview, PREVIEW_SIZE, type TextLayoutInfo, type TextBoxEntry } from '@/src/reels/TimelinePreview';
 import {
   apply,
   createHistory,
@@ -247,6 +257,24 @@ const round1 = (n: number): number => Math.round(n * 10) / 10;
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 
+/** حصرُ سحبةٍ داخل الكادر (471 §١): حوافُّ الصندوقِ لحظةَ الإمساك
+ *  + الإزاحة ⇒ الحدُّ الذي لا تتجاوزه بـShift. أدقُّ من حصرِ الـanchor:
+ *  الصندوقُ هو ما يُرى، وهو ما يجبُ أن يبقى داخلَ [0,1080]×[0,1920]. */
+const clampDragToCanvas = (
+  base: { readonly top0: number; readonly bottom0: number; readonly left0: number; readonly right0: number },
+  dx: number,
+  dy: number,
+  shiftKey: boolean,
+): { readonly dx: number; readonly dy: number } => {
+  if (!shiftKey) return { dx, dy };
+  const w = base.right0 - base.left0;
+  const h = base.bottom0 - base.top0;
+  return {
+    dx: Math.min(Math.max(dx, -base.left0), PREVIEW_SIZE.w - w - base.left0),
+    dy: Math.min(Math.max(dy, -base.top0), PREVIEW_SIZE.h - h - base.top0),
+  };
+};
+
 /** anchor كما يراه المُنزلِقُ والسحبُ (470): الكلماتُ على أقربِ طرفٍ،
  *  والتحريرُ يكتبُ نسبةً رقميّةً دائماً. */
 const anchorAsNumber = (a: TrackItem['anchor']): number =>
@@ -318,11 +346,24 @@ export default function ReelsTimelinePage(): JSX.Element {
     readonly itemId: string;
     readonly anchor0: number;
     readonly offsetX0: number;
+    /** حوافُّ الصندوقِ لحظةَ الإمساك بوحداتِ القماشة — لحصرِ Shift
+     *  (471 §١) ولشهادةِ bleed عند الإفلات (471 §٢). */
+    readonly top0: number;
+    readonly bottom0: number;
+    readonly left0: number;
+    readonly right0: number;
   } | null>(null);
   const [boxDragDelta, setBoxDragDelta] = useState<{
     readonly dx: number;
     readonly dy: number;
   } | null>(null);
+  /** شهاداتُ bleed (471 §٢): itemId ⇒ القيمُ التي أُفلتَ عليها السحبُ
+   *  خارجَ الكادر. الشهادةُ صحيحةٌ ما دامت قيمُ القطعةِ مطابقةً — أيُّ
+   *  تعديلٍ أو تراجعٍ يُبطلُها، فلا يتقادمُ العلامُ ولا يجمّلُ حالةً
+   *  لم يصنعها اليدُ عن علم. */
+  const [bleedMarks, setBleedMarks] = useState<
+    Readonly<Record<string, { readonly anchor: number; readonly offsetX: number }>>
+  >({});
 
   const present = history.present;
 
@@ -434,6 +475,38 @@ export default function ReelsTimelinePage(): JSX.Element {
     if (!track || track.type !== 'text') return null;
     return textLayout?.boxes.find((b) => b.itemId === selected.itemId) ?? null;
   }, [present, selected, textLayout]);
+
+  /** هل شهادةُ bleedُِ هذه القطعةِ ما زالت صحيحةً؟ الشهادةُ تطابقُ
+   *  القيمَ الملتزَمة — أيُّ تعديلٍ بعدها يُبطلُها (471 §٢). */
+  const isBleedCertified = useCallback(
+    (box: TextBoxEntry): boolean => {
+      const mark = bleedMarks[box.itemId];
+      if (!mark) return false;
+      const it = present.tracks
+        .find((tr) => tr.id === box.trackId)
+        ?.items.find((i) => i.id === box.itemId);
+      if (!it) return false;
+      return (
+        anchorAsNumber(it.anchor) === mark.anchor &&
+        (it.offset?.x ?? 0) === mark.offsetX
+      );
+    },
+    [bleedMarks, present],
+  );
+
+  /** نافذةُ القياس الكاملة (471 §٢): الصناديقُ مع علمِ outside (من
+   *  المعاينة) وشهادةِ bleed (من الحالة) — البوّابةُ تسألُ كلَّ صندوق:
+   *  داخلُ الكادرِ أو معلَّمٌ؟ خروجٌ بلا علامٍ فشلٌ صريح. */
+  const layoutWithBleed = useMemo(() => {
+    if (!textLayout) return null;
+    return {
+      ...textLayout,
+      boxes: textLayout.boxes.map((b) => ({
+        ...b,
+        bleed: isBleedCertified(b),
+      })),
+    };
+  }, [isBleedCertified, textLayout]);
 
   // قيمُ العرضِ للوحةِ الخصائص (469 §٤) — المسارُ الوحيدُ للأرقامِ
   // `formatNumber` في الموضع؛ وحقولُ الإدخالِ قيمٌ خامٌ بياناتٌ. الكلمات
@@ -644,41 +717,68 @@ export default function ReelsTimelinePage(): JSX.Element {
     [playheadSec, selected],
   );
 
-  // ── سحبُ النصّ على القماشة: المعالجات (470 §٢) — بعد editSelectedItem
-  //    لأنّ الإفلاتَ يُسجَّلُ عبره مرّةً واحدة. ──
+  // ── سحبُ النصّ على القماشة: المعالجات (470 §٢ · 471 §١) ──
   const onBoxDragStart = useCallback((): void => {
     if (!selected?.itemId) return;
     const it = present.tracks
       .find((tr) => tr.id === selected.trackId)
       ?.items.find((i) => i.id === selected.itemId);
-    if (!it) return;
+    const box = textLayout?.boxes.find((b) => b.itemId === selected.itemId);
+    if (!it || !box) return;
     setBoxDragBase({
       itemId: selected.itemId,
       anchor0: anchorAsNumber(it.anchor),
       offsetX0: it.offset?.x ?? 0,
+      top0: box.top,
+      bottom0: box.bottom,
+      left0: box.left,
+      right0: box.right,
     });
     setBoxDragDelta({ dx: 0, dy: 0 });
-  }, [present, selected]);
+  }, [present, selected, textLayout]);
 
-  const onBoxDragMove = useCallback((dx: number, dy: number): void => {
-    setBoxDragDelta({ dx, dy });
-  }, []);
+  const onBoxDragMove = useCallback(
+    (dx: number, dy: number, shiftKey: boolean): void => {
+      const base = boxDragBase;
+      if (!base) return;
+      setBoxDragDelta(clampDragToCanvas(base, dx, dy, shiftKey));
+    },
+    [boxDragBase],
+  );
 
   /** الإفلاتُ = تسجيلٌ واحد: editSelectedItem يطبّقُ apply مرّةً
-   *  ويمتنعُ عن السحبةِ التي لم تُحرّك شيئاً (سحبةٌ = تراجعٌ واحد). */
+   *  ويمتنعُ عن السحبةِ التي لم تُحرّك شيئاً (سحبةٌ = تراجعٌ واحد).
+   *  وإن أُفلتَ خارجَ الكادر بسحبةٍ حرّةٍ ⇒ شهادةُ bleed (471 §٢):
+   *  اليدُ رأتِ التحذيرَ وأصرّت — ذاك عمدٌ يُعلَم، لا حادثٌ يُهمَل. */
   const onBoxDragEnd = useCallback(
-    (dx: number, dy: number): void => {
+    (dx: number, dy: number, shiftKey: boolean): void => {
       const base = boxDragBase;
       setBoxDragBase(null);
       setBoxDragDelta(null);
       if (!base) return;
-      const anchor = clamp01(base.anchor0 + dy / PREVIEW_SIZE.h);
-      const offsetX = base.offsetX0 + dx;
+      const clamped = clampDragToCanvas(base, dx, dy, shiftKey);
+      const anchor = clamp01(base.anchor0 + clamped.dy / PREVIEW_SIZE.h);
+      const offsetX = base.offsetX0 + clamped.dx;
       editSelectedItem((it) => ({
         ...it,
         anchor,
         offset: { ...(it.offset ?? {}), x: offsetX },
       }));
+      const left = base.left0 + clamped.dx;
+      const right = base.right0 + clamped.dx;
+      const top = base.top0 + clamped.dy;
+      const bottom = base.bottom0 + clamped.dy;
+      const outside =
+        left < 0 || right > PREVIEW_SIZE.w || top < 0 || bottom > PREVIEW_SIZE.h;
+      setBleedMarks((prev) => {
+        const next = { ...prev };
+        if (outside) {
+          next[base.itemId] = { anchor, offsetX };
+        } else {
+          delete next[base.itemId];
+        }
+        return next;
+      });
     },
     [boxDragBase, editSelectedItem],
   );
@@ -866,6 +966,7 @@ export default function ReelsTimelinePage(): JSX.Element {
               playheadSec={playheadSec}
               onTextLayout={onTextLayout}
               dragBox={dragBox}
+              outsideLabel={t('pages.reels.outsideFrame')}
               onBoxDragStart={onBoxDragStart}
               onBoxDragMove={onBoxDragMove}
               onBoxDragEnd={onBoxDragEnd}
@@ -1238,11 +1339,12 @@ export default function ReelsTimelinePage(): JSX.Element {
         <Ltr>⌘</Ltr> {t('pages.reels.hintZoom')}
       </p>
 
-      {/* (469 §٣) نافذةُ القياس — صناديقُ النصوص من آخر إطارٍ كما
-          يحسبُها المحرّك، يقرؤها السكربتُ ويفحصُ تقاطعَ المتداخلَين
-          زمنيّاً. مقياسُ الصحّة لا الوجود. */}
+      {/* (469 §٣ · 471 §٢) نافذةُ القياس — صناديقُ النصوص من آخر إطارٍ
+          كما يحسبُها المحرّك، مع علمِ outside وشهادةِ bleed؛ يقرؤها
+          السكربتُ ويسألُ: داخلُ الكادرِ أو معلَّمٌ؟ مقياسُ الصحّةِ لا
+          الوجود. */}
       <span data-testid="reels-text-layout" hidden>
-        {textLayout ? JSON.stringify(textLayout) : ''}
+        {layoutWithBleed ? JSON.stringify(layoutWithBleed) : ''}
       </span>
 
       {/* قراءات — بياناتٌ فقط */}

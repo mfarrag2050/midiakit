@@ -125,6 +125,7 @@
       "ruler": "Ruler",
       "scrubber": "Position bar",
       "newItemText": "New text ready to edit",
+      "outsideFrame": "Partly outside the frame",
       "properties": "Clip properties",
       "start": "Start",
       "end": "End",
