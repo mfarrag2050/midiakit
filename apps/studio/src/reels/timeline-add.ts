@@ -11,6 +11,11 @@
 //   (٣) الترتيبُ kenBurns قبل draw-media — التحويلُ قبل الرسم
 //       (قِيس بالبايت في 466).
 //
+// **الحكمُ الثاني لا يسري على الصوت (حكمُ المالك 2026-09-22 · 468 §٣):**
+// المحرّكُ لا يرسمُ صوتاً أصلاً — يمرُّ عبر AudioPlan/audio-graph
+// لا عبر drawTimelineAt — فقطعةُ الصوتِ لا مؤثّرَ بصريَّ لها عمداً،
+// وتحملُ ما أتاها المستدعي كما هو.
+//
 // `insert`    — تنزلُ عند `start` وتدفعُ ما بعدها في المسار نفسِه وحدَه،
 //               وتشطرُ ما تقعُ داخلَه وتدفعُ ذيلَه، وتُطيلُ `duration`.
 // `overwrite` — تمحو ما تحتها ولا تُزحزحُ شيئاً ولا تُغيّرُ `duration`.
@@ -51,8 +56,9 @@ const takenIds = (track: Track, born: TrackItem): Set<string> =>
  *  المستدعي غيرُ الفارغة تُحترَمُ كما هي ولا تُستبدَل.
  *
  * الوسائط: kenBurns ثمّ draw-media — بهذا الترتيب، والرسمُ يستندُ إلى
- * `src` القطعة. النصُّ: text-item-lines. الصوتُ لا يُرسَم فلا مؤثّرَ
- * افتراضيَّ له معروف — يبقى على ما أتاه. */
+ * `src` القطعة. النصُّ: text-item-lines. والصوتُ لا يُرسَمُ أصلاً —
+ * يمرُّ عبر AudioPlan/audio-graph لا عبر drawTimelineAt (حكمُ المالك
+ * 2026-09-22) — فلا مؤثّرَ افتراضيَّ له ويبقى على ما أتاه. */
 const withDefaultEffects = (track: Track, item: TrackItem): TrackItem => {
   if (item.effects && item.effects.length > 0) return item;
   if (track.type === 'media') {

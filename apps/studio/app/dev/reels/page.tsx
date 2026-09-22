@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -38,6 +38,19 @@
 // ساكنةً للمقارنة. نقلُ قطعةٍ نصفَ ثانيةٍ **داخلَ نافذتها** يغيّرُ
 // الإطارَ الآن — هذا الاختبارُ الذي سقط في 464 وسببُهُ عندي.
 //
+// **468 · الإنشاءُ بالأزرار:** «أضِفْ مساراً» قائمةُ الأنواع الثلاثة
+// (وسائط · نصّ · صوت — مساران من نوعٍ واحدٍ مسموحان: هذه هي الطبقيّةُ
+// التي طلبها المالك)، و«أضِفْ قطعةً» على المسار المحدَّد عند رأس
+// القراءة — مدّةٌ افتراضيّةٌ ٣ ثوانٍ وبـinsert (قرارُ المالك 2026-09-22)،
+// وكلاهما عبر `apply` فيدخلان التراجعَ/الإعادة. الاختيارُ صار مساريّاً:
+// المسارُ المضافُ يُختارُ تلقائياً فتُبنى عليه القطعةُ (لا نقرَّ لمسارٍ
+// فارغ)، والقطعةُ المختارةُ تُبقي مسارَها. قطعةُ الوسائطِ تُولَدُ على
+// أصلِ عيّنةٍ قائمٍ (لا منتقيَ أصولَ بعد)، وقطعةُ الصوتِ بلا مؤثّراتٍ
+// عمداً — المحرّكُ لا يرسمُ صوتاً (AudioPlan/audio-graph)، والمؤثّرُ
+// الافتراضيُّ للوسائطِ والنصِّ يُلحِقُهُ addItem. والمدّةُ تُقرأُ الآنَ من
+// `present` لا من العيّنة — insert يُطيلُها فلا يكذبُ شريطُ الموضعِ
+// ولا القراءةُ ولا حلقةُ التشغيل.
+//
 // **462 · البابُ الثاني — الأسهمُ كالفأرة:** التحريكُ والقصُّ باللوحة
 // صارا على الآمنَين من timeline-snap: التصاقٌ بعتبةِ SNAP_PX/pxPerSec
 // ورأسُ القراءة مرساةً — كما في السحب تماماً. المقياسُ يصعدُ من
@@ -60,9 +73,9 @@
 // المبدّلُ يُسمّى من الخارج (`digits.switcher`): مكوّنه خارج بدل هذه
 // التذكرة، فالتسميةُ تغليفٌ هنا.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
-import type { Timeline } from '@pf-mediakit/shared';
+import type { Timeline, Track, TrackItem, TrackType } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
 import { TimelinePreview } from '@/src/reels/TimelinePreview';
 import {
@@ -75,6 +88,7 @@ import {
   type History,
 } from '@/src/reels/timeline-ops';
 import { snapMove, snapTrim } from '@/src/reels/timeline-snap';
+import { addTrack, addItem } from '@/src/reels/timeline-add';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber } from '@/src/format/digits';
 import { DigitStyleSwitcher } from '@/src/format/DigitStyleSwitcher';
@@ -149,6 +163,38 @@ const SAMPLE: Timeline = {
   ],
 };
 
+/** مدّة القطعة الجديدة بالثواني — قرارُ التذكرة 468 §٤. */
+const NEW_ITEM_SEC = 3;
+
+/** معرّفُ مسارٍ جديدٍ لا يصطدم بالقائم. مساران من نوعٍ واحدٍ مسموحان —
+ *  هذه هي الطبقيّةُ التي طلبها المالك — فالتسميةُ تُعِدُّ نوعَها:
+ *  trk-text-2 يعلو trk-text. */
+const freshTrackId = (tl: Timeline, type: TrackType): string => {
+  const taken = new Set(tl.tracks.map((tr) => tr.id));
+  let n = tl.tracks.filter((tr) => tr.type === type).length + 1;
+  while (taken.has(`trk-${type}-${n}`)) n += 1;
+  return `trk-${type}-${n}`;
+};
+
+/** معرّفُ قطعةٍ جديدٍ على تسميةِ العيّنة (clip-NN · title-NN · tone-NN) —
+ *  فرادتُه على الخطّ كلِّه لا على المسار وحدَه: القطعةُ تظهرُ في DOM
+ *  بمعرّفها (testid)، وتصادمُ المعرفاتِ بين مسارَين يُعمي القياسَ
+ *  و page.click معاً. */
+const freshItemId = (tl: Timeline, track: Track): string => {
+  const prefix =
+    track.type === 'media' ? 'clip' : track.type === 'text' ? 'title' : 'tone';
+  const taken = new Set(
+    tl.tracks.flatMap((tr) => tr.items.map((i) => i.id)),
+  );
+  let n = track.items.length + 1;
+  let id = `${prefix}-${String(n).padStart(2, '0')}`;
+  while (taken.has(id)) {
+    n += 1;
+    id = `${prefix}-${String(n).padStart(2, '0')}`;
+  }
+  return id;
+};
+
 /** مقارنة الحقول التي تمسّها العمليّات — تمنع دفع حالاتٍ متطابقة. */
 const timelineEq = (a: Timeline, b: Timeline): boolean =>
   a.duration === b.duration &&
@@ -173,9 +219,11 @@ const timelineEq = (a: Timeline, b: Timeline): boolean =>
 
 const round1 = (n: number): number => Math.round(n * 10) / 10;
 
+/** الاختيار (468): صار مساريّاً — القطعةُ تختارُ مسارَها، والمسارُ
+ *  المضافُ يُختارُ بلا قطعةٍ فتُبنى عليه القطعةُ التالية. */
 interface Selection {
   readonly trackId: string;
-  readonly itemId: string;
+  readonly itemId?: string;
 }
 
 export default function ReelsTimelinePage(): JSX.Element {
@@ -193,12 +241,20 @@ export default function ReelsTimelinePage(): JSX.Element {
 
   const present = history.present;
 
-  // الاختيار قد يفقد عنصره (حذف · تراجع) — يُنسف لا أن يُعلَّق.
+  // الاختيار قد يفقد عنصره (حذف · تراجع) — يتراجعُ إلى مساره لا أن
+  // يُعلَّق؛ وإن فقدَ المسارَ نفسَه يُنسف. (468: الاختيارُ مساريّ.)
   useEffect(() => {
     if (!selected) return;
     const track = present.tracks.find((tr) => tr.id === selected.trackId);
-    if (!track || !track.items.some((it) => it.id === selected.itemId)) {
+    if (!track) {
       setSelected(null);
+      return;
+    }
+    if (
+      selected.itemId !== undefined &&
+      !track.items.some((it) => it.id === selected.itemId)
+    ) {
+      setSelected({ trackId: selected.trackId });
     }
   }, [present, selected]);
 
@@ -217,7 +273,10 @@ export default function ReelsTimelinePage(): JSX.Element {
   const selectedTrack = selected
     ? present.tracks.find((tr) => tr.id === selected.trackId)
     : undefined;
-  const selectedItem = selectedTrack?.items.find((it) => it.id === selected?.itemId);
+  const selectedItem = selectedTrack?.items.find(
+    (it) => it.id === selected?.itemId,
+  );
+  const canAddItem = !!selectedTrack;
   const canSplit =
     !!selectedItem && playheadSec > selectedItem.start && playheadSec < selectedItem.end;
   const canDelete = !!selectedItem;
@@ -225,19 +284,66 @@ export default function ReelsTimelinePage(): JSX.Element {
   const canRedo = history.future.length > 0;
 
   const splitSelected = useCallback((): void => {
-    if (!selected) return;
+    if (!selected?.itemId) return;
+    const { trackId, itemId } = selected;
     setHistory((h) => {
-      const next = splitItem(h.present, selected.trackId, selected.itemId, playheadSec);
+      const next = splitItem(h.present, trackId, itemId, playheadSec);
       return timelineEq(h.present, next) ? h : apply(h, () => next);
     });
   }, [playheadSec, selected]);
 
   const deleteSelected = useCallback((): void => {
-    if (!selected) return;
+    if (!selected?.itemId) return;
     const { trackId, itemId } = selected;
     setHistory((h) => apply(h, (tl) => removeItem(tl, trackId, itemId)));
     setSelected(null);
   }, [selected]);
+
+  // ── الإنشاء (468 §٤) — عبر `apply` فيدخلان التراجعَ/الإعادة ──
+
+  /** مسارٌ جديدٌ من نوعٍ مختار — يُختارُ تلقائياً فتُبنى عليه القطعةُ
+   *  التالية بلا نقرٍ لا طريقَ إليه في مسارٍ فارغ. */
+  const addTrackByType = useCallback(
+    (type: TrackType): void => {
+      const trackId = freshTrackId(present, type);
+      const next = addTrack(present, { id: trackId, type });
+      setHistory((h) => (timelineEq(h.present, next) ? h : apply(h, () => next)));
+      setSelected({ trackId });
+    },
+    [present],
+  );
+
+  /** قائمةُ <details> الأصليّة: الاختيارُ يغلقُها — سلوكُ القوائم
+   *  المألوف، بلا حالةٍ تُدارُ يدويّاً. */
+  const addMenuRef = useRef<HTMLDetailsElement>(null);
+  const pickTrackType = useCallback(
+    (type: TrackType): void => {
+      if (addMenuRef.current) addMenuRef.current.open = false;
+      addTrackByType(type);
+    },
+    [addTrackByType],
+  );
+
+  /** قطعةٌ على المسار المحدَّد عند رأس القراءة — ٣ ثوانٍ وبـinsert
+   *  (قرارُ المالك): تُفسحُ في مسارها وحدَه وتُطيلُ المدّة. حقولُ النوعِ
+   *  من المسار: الوسائطُ على أصلِ عيّنةٍ قائمٍ (لا منتقيَ أصولَ بعد)،
+   *  والنصُّ بقيمةٍ من مفتاح i18n، والصوتُ بلا مؤثّراتٍ عمداً —
+   *  المؤثّرَ الافتراضيَّ للوسائطِ والنصِّ يُلحِقُهُ addItem. */
+  const addItemAtPlayhead = useCallback((): void => {
+    const track = present.tracks.find((tr) => tr.id === selected?.trackId);
+    if (!track) return;
+    const itemId = freshItemId(present, track);
+    const span = { start: playheadSec, end: playheadSec + NEW_ITEM_SEC };
+    const base: TrackItem =
+      track.type === 'media'
+        ? { id: itemId, ...span, src: 'asset:reel-a' }
+        : track.type === 'text'
+          ? { id: itemId, ...span, value: t('pages.reels.newItemText') }
+          : { id: itemId, ...span };
+    const next = addItem(present, track.id, base, 'insert');
+    setHistory((h) => (timelineEq(h.present, next) ? h : apply(h, () => next)));
+    setSelected({ trackId: track.id, itemId });
+  }, [playheadSec, present, selected, t]);
 
   const doUndo = useCallback((): void => {
     setHistory((h) => undo(h));
@@ -259,12 +365,13 @@ export default function ReelsTimelinePage(): JSX.Element {
 
   const nudgeSelected = useCallback(
     (deltaSec: number): void => {
-      if (!selected) return;
+      if (!selected?.itemId) return;
+      const { trackId, itemId } = selected;
       setHistory((h) => {
         const next = snapMove(
           h.present,
-          selected.trackId,
-          selected.itemId,
+          trackId,
+          itemId,
           deltaSec,
           snapThreshold,
           playheadSec,
@@ -277,18 +384,19 @@ export default function ReelsTimelinePage(): JSX.Element {
 
   const trimSelected = useCallback(
     (edge: 'start' | 'end', stepSec: number): void => {
-      if (!selected) return;
+      if (!selected?.itemId) return;
+      const { trackId, itemId } = selected;
       setHistory((h) => {
         const it = h.present.tracks
-          .find((tr) => tr.id === selected.trackId)
-          ?.items.find((i) => i.id === selected.itemId);
+          .find((tr) => tr.id === trackId)
+          ?.items.find((i) => i.id === itemId);
         if (!it) return h;
         // القصّ = تقصير: البدايةُ تتقدّم والنهايةُ تتأخّر.
         const to = edge === 'start' ? it.start + stepSec : it.end - stepSec;
         const next = snapTrim(
           h.present,
-          selected.trackId,
-          selected.itemId,
+          trackId,
+          itemId,
           edge,
           to,
           snapThreshold,
@@ -372,7 +480,9 @@ export default function ReelsTimelinePage(): JSX.Element {
     trimSelected,
   ]);
 
-  // تشغيل القراءة: rAF يقدّم playheadSec ويُعيد من الصفر عند المدّة.
+  // تشغيل القراءة: rAF يقدّم playheadSec ويُعيد من الصفر عند المدّة —
+  // والمدّةُ من `present` (468): insert يُطيلُها فلا تلفُ الحلقةُ قبل
+  // نهايةِ المقطعِ الحقيقيّة.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
@@ -382,7 +492,7 @@ export default function ReelsTimelinePage(): JSX.Element {
       last = now;
       setPlayheadSec((p) => {
         const next = p + dt;
-        return next >= SAMPLE.duration ? 0 : next;
+        return next >= present.duration ? 0 : next;
       });
       raf = requestAnimationFrame(step);
     };
@@ -390,7 +500,7 @@ export default function ReelsTimelinePage(): JSX.Element {
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [playing]);
+  }, [playing, present.duration]);
 
   const btn =
     'flex h-8 items-center gap-1.5 rounded-sm border border-border bg-surface-2 px-2.5 text-fg transition hover:border-fg-subtle disabled:opacity-40 disabled:hover:border-border';
@@ -447,9 +557,9 @@ export default function ReelsTimelinePage(): JSX.Element {
             aria-label={t('pages.reels.scrubber')}
             title={t('pages.reels.scrubber')}
             min={0}
-            max={SAMPLE.duration}
+            max={present.duration}
             step={1 / SAMPLE.fps}
-            value={Math.min(playheadSec, SAMPLE.duration)}
+            value={Math.min(playheadSec, present.duration)}
             onChange={(e) => {
               setPlayheadSec(Number(e.target.value));
             }}
@@ -469,8 +579,63 @@ export default function ReelsTimelinePage(): JSX.Element {
         </div>
       </section>
 
-      {/* التحرير — الشطر · الحذف · التراجع · الإعادة · التحريك */}
+      {/* التحرير — الإضافةُ · الشطر · الحذف · التراجع · الإعادة · التحريك */}
       <section className="mt-3 flex flex-wrap items-center gap-2">
+        {/* «أضِفْ مساراً» — قائمةُ الأنواع الثلاثة (468 §٤). <details>
+            الأصليّة: لا حالةَ قائمةٍ تُدارُ يدويّاً، والاختيارُ يغلقُها.
+            موضعُ اللوحةِ بخصائصَ منطقيّة (insetInline/insetBlock). */}
+        <details ref={addMenuRef} className="relative">
+          <summary
+            className={`${btn} list-none cursor-pointer [&::-webkit-details-marker]:hidden`}
+            data-testid="reels-add-track"
+            aria-haspopup="menu"
+            aria-label={t('actions.addTrack')}
+            title={t('actions.addTrack')}
+          >
+            <span aria-hidden className="text-sm leading-none">
+              ＋
+            </span>
+            <span className="text-xs">{t('actions.addTrack')}</span>
+          </summary>
+          <div
+            role="menu"
+            aria-label={t('actions.addTrack')}
+            className="absolute start-0 z-20 mt-1 flex flex-col rounded-sm border border-border bg-surface shadow-soft"
+            style={{ insetBlockStart: '100%' }}
+          >
+            {(['media', 'text', 'audio'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                role="menuitem"
+                data-testid={`reels-add-track-${type}`}
+                aria-label={`${t('actions.addTrack')} — ${t(`pages.reels.trackType.${type}`)}`}
+                title={`${t('actions.addTrack')} — ${t(`pages.reels.trackType.${type}`)}`}
+                onClick={() => pickTrackType(type)}
+                className="flex items-center px-3 py-1.5 text-start text-xs text-fg transition hover:bg-surface-2"
+              >
+                {t(`pages.reels.trackType.${type}`)}
+              </button>
+            ))}
+          </div>
+        </details>
+        {/* «أضِفْ قطعةً» — على المسار المحدَّد عند رأس القراءة، بـinsert
+            (قرارُ المالك). معطَّلٌ حتى يُختارَ مسارٌ — قطعةٌ بلا مسارٍ
+            لا معنى لها. */}
+        <button
+          type="button"
+          data-testid="reels-add-item"
+          aria-label={t('actions.addItem')}
+          title={t('actions.addItem')}
+          disabled={!canAddItem}
+          onClick={addItemAtPlayhead}
+          className={btn}
+        >
+          <span aria-hidden className="text-sm leading-none">
+            ▪
+          </span>
+          <span className="text-xs">{t('actions.addItem')}</span>
+        </button>
         <button
           type="button"
           data-testid="reels-split"
@@ -565,7 +730,7 @@ export default function ReelsTimelinePage(): JSX.Element {
             data-testid="reels-readout"
             className="tabular text-fg"
           >
-            {formatNumber(SAMPLE.duration, digitStyle)} ·{' '}
+            {formatNumber(present.duration, digitStyle)} ·{' '}
             {formatNumber(SAMPLE.fps, digitStyle)} ·{' '}
             {t(`pages.reels.size.${SAMPLE.size}`)}
           </span>
@@ -575,7 +740,11 @@ export default function ReelsTimelinePage(): JSX.Element {
             ✓
           </span>
           <span dir="ltr" className="tabular">
-            {selected ? `${selected.trackId} / ${selected.itemId}` : '—'}
+            {selected
+              ? selected.itemId
+                ? `${selected.trackId} / ${selected.itemId}`
+                : selected.trackId
+              : '—'}
           </span>
         </span>
       </section>

@@ -188,6 +188,36 @@ describe('addItem · overwrite — يمحو ولا يُزحزح', () => {
       }
     }
   });
+
+  // ── حراسةُ القاعدةِ التي قرّرها المنفّذ (reels/468 §١) ──
+  // المِحَكُّ الأصليّ صامتٌ عن مصير الجار حين يقع الدهسُ في وسطه،
+  // والقاعدةُ المختارةُ بلا حارسٍ تتغيّر صامتةً بعد شهر. الثلاثُ
+  // الآتيةُ تحرسُ القرار — حراسةٌ لا إرخاء: المدى المغطّى وحده يُمحى.
+
+  it('الدهسُ في وسط جارٍ يُبقي شطرَيه', () => {
+    const r = addItem(BASE, 'tr_media',
+      { id: 'n', start: 21, end: 23, src: 'asset:9' }, 'overwrite');
+    expect(spans(r, 'tr_media')).toEqual([[0, 8], [20, 21], [21, 23], [23, 26]]);
+  });
+
+  it('الشطرُ الأيسرُ يحفظ معرّفَ الجار والأيمنُ يشتقّ جديداً', () => {
+    const r = addItem(BASE, 'tr_media',
+      { id: 'n', start: 21, end: 23, src: 'asset:9' }, 'overwrite');
+    expect(it_(r, 'tr_media', 'c').end).toBe(21);
+    const ids = trk(r, 'tr_media').items.map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const right = trk(r, 'tr_media').items.find((i) => i.start === 23)!;
+    expect(right.id).not.toBe('c');
+  });
+
+  it('الشطران يحملان مؤثّراتِ الجارِ الأصليّة — الدهسُ لا يُعرّي', () => {
+    const r = addItem(BASE, 'tr_media',
+      { id: 'n', start: 21, end: 23, src: 'asset:9' }, 'overwrite');
+    const fx = it_(BASE, 'tr_media', 'c').effects;
+    const right = trk(r, 'tr_media').items.find((i) => i.start === 23)!;
+    expect(it_(r, 'tr_media', 'c').effects).toEqual(fx);
+    expect(right.effects).toEqual(fx);
+  });
 });
 
 // ── المؤثّرات — الحكمُ الثاني والثالث ──────────────────

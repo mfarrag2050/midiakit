@@ -125,6 +125,7 @@
       "playhead": "Playhead",
       "ruler": "Ruler",
       "scrubber": "Position bar",
+      "newItemText": "New text ready to edit",
       "trackType": {
         "media": "Media",
         "text": "Text",
@@ -810,6 +811,8 @@
     "search": "Search",
     "copy": "نسخ",
     "copied": "تُسِخ ✓",
+    "addTrack": "Add track",
+    "addItem": "Add item",
     "split": "Split",
     "undo": "Undo",
     "redo": "Redo",
