@@ -46,7 +46,10 @@ export interface CollisionWarning {
   readonly a: { readonly trackId: string; readonly itemId: string };
   readonly b: { readonly trackId: string; readonly itemId: string };
   readonly overlapSeconds: number;
+  /** سالب = تقاطع رأسيّ · موجب = فجوةٌ رأسيّة. */
   readonly yGapPixels: number;
+  /** سالب = تقاطع أفقيّ · موجب = فجوةٌ أفقيّة. */
+  readonly xGapPixels: number;
 }
 
 export interface TimelinePlan {
@@ -124,8 +127,9 @@ export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
     // eslint-disable-next-line no-console
     console.warn(
       `[buildTimelinePlan] تصادم مكاني/زماني: ${c.a.trackId}:${c.a.itemId} × ${c.b.trackId}:${c.b.itemId} — ` +
-      `تداخل زمني ${c.overlapSeconds.toFixed(2)}s، فارق رأسي ${c.yGapPixels.toFixed(0)}px (سالب = تقاطع). ` +
-      `عيّن item.anchor لكل عنصر (top/center/bottom أو نسبة).`
+      `تداخل زمني ${c.overlapSeconds.toFixed(2)}s، فارق رأسي ${c.yGapPixels.toFixed(0)}px، ` +
+      `فارق أفقي ${c.xGapPixels.toFixed(0)}px (سالب = تقاطع). ` +
+      `عيّن item.anchor أو item.offset لكل عنصر.`
     );
   }
 
@@ -191,7 +195,10 @@ function prepareTextItem(
  *   1. هل يتداخلان زمنياً؟ [a.start, a.end] ∩ [b.start, b.end] > 0
  *   2. هل صناديقهما الرأسية تتقاطع؟
  *      box.top = prep.bounds.top، box.bottom = prep.bounds.bottom
- * إن تحقّق الاثنان ⇒ تحذير.
+ *   3. هل صناديقهما الأفقية تتقاطع؟ (mk/468)
+ *      box.left = prep.bounds.left، box.right = prep.bounds.right
+ *      تشمل `item.offset?.x` كما تشمل الرأسية `item.offset?.y`.
+ * إن تحقّقت الثلاثة ⇒ تحذير. أيّ بُعدٍ لا يتقاطع ⇒ لا تحذير.
  *
  * **ليست خطأ صعباً:** بعض التصاميم تتراكب عمداً (ظلّ نص، تراكب مقصود).
  * التحذير يُلزم المصمّم بالتحقّق عن قصد أو خطأ.
@@ -229,17 +236,29 @@ function detectCollisions(
       const aBounds = a.prep.bounds;
       const bBounds = b.prep.bounds;
       if (!aBounds || !bBounds) continue;
-      const aTop = aBounds.top + (a.item.offset?.y ?? 0);
-      const aBot = aBounds.bottom + (a.item.offset?.y ?? 0);
-      const bTop = bBounds.top + (b.item.offset?.y ?? 0);
-      const bBot = bBounds.bottom + (b.item.offset?.y ?? 0);
+      const aDy = a.item.offset?.y ?? 0;
+      const bDy = b.item.offset?.y ?? 0;
+      const aTop = aBounds.top + aDy;
+      const aBot = aBounds.bottom + aDy;
+      const bTop = bBounds.top + bDy;
+      const bBot = bBounds.bottom + bDy;
       const yOverlap = Math.min(aBot, bBot) - Math.max(aTop, bTop);
-      if (yOverlap <= 0) continue; // لا تقاطع — سالم
+      if (yOverlap <= 0) continue; // لا تقاطع رأسيّ — سالم
+      // تقاطع أفقيّ (mk/468 — يشمل offset.x إن وُجد).
+      const aDx = a.item.offset?.x ?? 0;
+      const bDx = b.item.offset?.x ?? 0;
+      const aLeft = aBounds.left + aDx;
+      const aRight = aBounds.right + aDx;
+      const bLeft = bBounds.left + bDx;
+      const bRight = bBounds.right + bDx;
+      const xOverlap = Math.min(aRight, bRight) - Math.max(aLeft, bLeft);
+      if (xOverlap <= 0) continue; // لا تقاطع أفقيّ — سالم
       warnings.push({
         a: { trackId: a.trackId, itemId: a.item.id },
         b: { trackId: b.trackId, itemId: b.item.id },
         overlapSeconds: tOverlap,
         yGapPixels: -yOverlap, // سالب = تقاطع
+        xGapPixels: -xOverlap, // سالب = تقاطع
       });
     }
   }
