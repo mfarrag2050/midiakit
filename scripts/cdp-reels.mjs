@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// cdp-reels — لقطات محرّر الخطّ الزمني على /dev/reels (reels/454 → 456 → 458 → 463).
+// cdp-reels — لقطات محرّر الخطّ الزمني على /reels (reels/454 → 456 → 458 → 463).
 //
 // **الغطاء (458 §2.3 — ستُّ لقطات · و463 أضافت السابعة):**
 //   reels-01-idle.png           الشريط ساكناً
@@ -61,7 +61,7 @@ import { join } from 'node:path';
 const CHROME = '/Users/mdervis/.cache/puppeteer/chrome/mac_arm-146.0.7680.31/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
 const BASE = 'http://127.0.0.1:19050';
 const OUT = process.argv[2] ?? 'claude/reports/458-shots';
-// مدّة عيّنة /dev/reels — SAMPLE.duration في apps/studio/app/dev/reels/page.tsx
+// مدّة عيّنة /reels — SAMPLE.duration في apps/studio/app/(app)/reels/page.tsx
 const DURATION = 32;
 // فائضُ التمرير المهمل — يطابق SCROLL_SLACK_PX في TimelineStrip.tsx.
 const SCROLL_SLACK_PX = 8;
@@ -223,7 +223,14 @@ async function main() {
   const page = await browser.newPage();
   page.on('pageerror', (e) => process.stderr.write(`[pageerror] ${e.message}\n`));
 
-  await page.goto(`${BASE}/dev/reels`, { waitUntil: 'networkidle2' });
+  // (473) الصفحة صارت خلف AppShell في (app)/reels — فحصُ الجلسة عند
+  // البدء وجوديٌّ (لا استدعاء API): توكنٌّ محليٌّ يكفي للأغطية.
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    localStorage.setItem('pfmk.studio.session.access', 'cdp-local-token');
+    localStorage.setItem('pfmk.studio.session.refresh', 'cdp-local-token');
+  });
+  await page.goto(`${BASE}/reels`, { waitUntil: 'networkidle2' });
   await page.waitForSelector('[data-testid="reels-item-clip-01"]', { timeout: 10000 });
   await sleep(800);
 

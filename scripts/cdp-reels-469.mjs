@@ -135,7 +135,14 @@ async function main() {
     process.stderr.write(`[pageerror] ${e.message}\n`),
   );
 
-  await page.goto(`${BASE}/dev/reels`, { waitUntil: 'networkidle2' });
+  // (473) الصفحة صارت خلف AppShell في (app)/reels — فحصُ الجلسة عند
+  // البدء وجوديٌّ (لا استدعاء API): توكنٌّ محليٌّ يكفي للأغطية.
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    localStorage.setItem('pfmk.studio.session.access', 'cdp-local-token');
+    localStorage.setItem('pfmk.studio.session.refresh', 'cdp-local-token');
+  });
+  await page.goto(`${BASE}/reels`, { waitUntil: 'networkidle2' });
   await page.waitForSelector('[data-testid="reels-item-clip-01"]', {
     timeout: 10000,
   });

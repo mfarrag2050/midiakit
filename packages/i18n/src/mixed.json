@@ -76,6 +76,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "reels": "Reels editor",
     "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",

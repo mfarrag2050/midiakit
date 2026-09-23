@@ -33,6 +33,7 @@ interface NavItem {
 // فقط حين `NEXT_PUBLIC_SHOW_DESIGN_SYSTEM=true`. المسار يبقى قابلاً
 // للوصول بالكتابة المباشرة (لا حراسة على الصفحة).
 const NAV_ALL: readonly NavItem[] = [
+  { href: '/reels', labelKey: 'nav.reels', icon: '⟐' },
   { href: '/breaking', labelKey: 'nav.breaking', icon: '⚡' },
   { href: '/projects', labelKey: 'nav.projects', icon: '◫' },
   { href: '/brand-kits', labelKey: 'nav.brandKits', icon: '❋' },

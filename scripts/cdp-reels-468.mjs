@@ -28,7 +28,7 @@ const CHROME =
   '/Users/mdervis/.cache/puppeteer/chrome/mac_arm-146.0.7680.31/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
 const BASE = 'http://127.0.0.1:19050';
 const OUT = process.argv[2] ?? 'claude/reports/468-shots';
-// مدّةُ عيّنةِ /dev/reels قبل أيّ إضافة، ورأسُ القراءة الابتدائيّ.
+// مدّةُ عيّنةِ /reels قبل أيّ إضافة، ورأسُ القراءة الابتدائيّ.
 const DURATION0 = 32;
 const PLAYHEAD0 = 4.5;
 const NEW_ITEM_SEC = 3;
@@ -129,7 +129,14 @@ async function main() {
     process.stderr.write(`[pageerror] ${e.message}\n`),
   );
 
-  await page.goto(`${BASE}/dev/reels`, { waitUntil: 'networkidle2' });
+  // (473) الصفحة صارت خلف AppShell في (app)/reels — فحصُ الجلسة عند
+  // البدء وجوديٌّ (لا استدعاء API): توكنٌّ محليٌّ يكفي للأغطية.
+  await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(() => {
+    localStorage.setItem('pfmk.studio.session.access', 'cdp-local-token');
+    localStorage.setItem('pfmk.studio.session.refresh', 'cdp-local-token');
+  });
+  await page.goto(`${BASE}/reels`, { waitUntil: 'networkidle2' });
   await page.waitForSelector('[data-testid="reels-item-clip-01"]', {
     timeout: 10000,
   });
