@@ -1,6 +1,13 @@
 'use client';
 
-// /reels — محرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470 → 471 → 472 → 473).
+// /reels — محرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470 → 471 → 472 → 473 → 474).
+//
+// **474 · موضعٌ لا يتصادم:** القطعةُ النصّيّةُ الجديدةُ تُبحَثُ لها عن
+// موضعٍ بلا تحذيرٍ جديدٍ (top ← bottom ← center ← 0.3 ← 0.7) عبرَ خطّةٍ
+// يبنيها فحصٌ خارجُ الشاشةِ بالـctx نفسِه — الفحصُ في طبقةِ الواجهةِ لا
+// في addItem (التصادمُ بينَ المسارات، وaddItem لا ترى إلّا مساراً
+// واحداً). نفدتِ المرشَّحاتُ ⇒ center والشريطُ التحذيريُّ يقول.
+//
 // **473:** انتقلَ من `/dev/reels` إلى `(app)/reels` — بابُ التطوير
 // يُغلقُ 404 في الإنتاج (middleware على `/dev/*`)، والمنتجُ لا يسكنُ
 // عنوانَ أداةٍ. نقلٌ لا نسخ: `/dev/reels` حُذِفَ لا تحويلة.
@@ -135,6 +142,8 @@ import {
 } from '@/src/reels/timeline-ops';
 import { snapMove, snapTrim } from '@/src/reels/timeline-snap';
 import { addTrack, addItem } from '@/src/reels/timeline-add';
+import { addTextItemPlaced } from '@/src/reels/timeline-add-place';
+import { probeCollisions } from '@/src/reels/plan-probe';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber, formatFieldNumber, parseFieldNumber, type DigitStyle } from '@/src/format/digits';
 import { DigitStyleSwitcher } from '@/src/format/DigitStyleSwitcher';
@@ -595,10 +604,12 @@ export default function ReelsTimelinePage(): JSX.Element {
   /** قطعةٌ على المسار المحدَّد عند رأس القراءة — ٣ ثوانٍ وبـinsert
    *  (قرارُ المالك): تُفسحُ في مسارها وحدَه وتُطيلُ المدّة. حقولُ النوعِ
    *  من المسار: الوسائطُ على أصلِ عيّنةٍ قائمٍ (لا منتقيَ أصولَ بعد)،
-   *  والنصُّ بقيمةٍ من مفتاح i18n **وموضعٍ صريحٍ 0.8** (469 §١: بلا
-   *  anchor يهبطُ إلى المنتصف فيركبُ كلَّ من يتداخلُ معه)، والصوتُ بلا
-   *  مؤثّراتٍ عمداً — المؤثّرَ الافتراضيَّ للوسائطِ والنصِّ يُلحِقُهُ
-   *  addItem. */
+   *  والنصُّ بقيمةٍ من مفتاح i18n **وموضعٍ يُختارُ بلا تصادم** (474 §٣:
+   *  بلا anchor يهبطُ النصُّ إلى المنتصف — mapItemAnchor(undefined) —
+   *  فيركبُ كلَّ من يتداخلُ معه؛ 0.8 الثابتةُ في 469 كانت موضعاً واحداً
+   *  لكلِّ الإضافات، والآن يُبحَثُ عن أوّلِ موضعٍ لا يُنذرُ عبرَ خطةٍ
+   *  بالـctx نفسِه الذي يقيسُ به العرض)، والصوتُ بلا مؤثّراتٍ عمداً —
+   *  المؤثّرَ الافتراضيَّ للوسائطِ والنصِّ يُلحِقُهُ addItem. */
   const addItemAtPlayhead = useCallback((): void => {
     const track = present.tracks.find((tr) => tr.id === selected?.trackId);
     if (!track) return;
@@ -608,9 +619,14 @@ export default function ReelsTimelinePage(): JSX.Element {
       track.type === 'media'
         ? { id: itemId, ...span, src: 'asset:reel-a' }
         : track.type === 'text'
-          ? { id: itemId, ...span, anchor: 0.8, value: t('pages.reels.newItemText') }
+          ? { id: itemId, ...span, value: t('pages.reels.newItemText') }
           : { id: itemId, ...span };
-    const next = addItem(present, track.id, base, 'insert');
+    // (474 §٣) النصُّ وحدهُ يُبحثُ لهُ عن موضعٍ — الفحصُ بينَ المسارات
+    // لا يخصُّ الوسائطَ ولا الصوت.
+    const next =
+      track.type === 'text'
+        ? addTextItemPlaced(present, track.id, base, probeCollisions, 'insert')
+        : addItem(present, track.id, base, 'insert');
     setHistory((h) => (timelineEq(h.present, next) ? h : apply(h, () => next)));
     setSelected({ trackId: track.id, itemId });
   }, [playheadSec, present, selected, t]);
