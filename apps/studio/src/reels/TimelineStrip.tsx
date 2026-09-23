@@ -134,6 +134,9 @@ export interface TimelineStripProps {
   /** يُبلِّغ بمقياس pxPerSec الحاليّ عند تغيّره — تُشتقُّ منه عتبةُ
    *  التصاقِ التحريك باللوحة (SNAP_PX / pxPerSec، 462). */
   readonly onScaleChange?: (pxPerSec: number) => void;
+  /** (472 §١) القطعُ المتصادمةُ (تصادمَ المحرّكُ نفسُه) — تُميَّز
+   *  بحدٍّ تحذيريّ. إخبارٌ لا منع: التصادمُ قد يكون مقصوداً. */
+  readonly collidingItemIds?: readonly string[];
 }
 
 // ── هندسة الشريط ───────────────────────────────────────
@@ -323,10 +326,13 @@ export function TimelineStrip({
   onSelectItem,
   onTimelineChange,
   onScaleChange,
+  collidingItemIds,
 }: TimelineStripProps): JSX.Element {
   const duration = timeline.duration;
   const { t } = useLocale();
   const { style: digitStyle } = useDigitStyle();
+  // (472 §١) المتصادمون — مجموعةٌ للسؤالِ عن كلِّ قطعةٍ مرّةً واحدة.
+  const colliding = new Set(collidingItemIds ?? []);
 
   // index 0 أسفل/خلف — flex-col-reverse أدناه يقلب الترتيب البصريّ.
   const byIndex = [...timeline.tracks].sort((a, b) => a.index - b.index);
@@ -759,7 +765,14 @@ export function TimelineStrip({
                           className={`absolute flex items-center overflow-hidden rounded-sm border text-start ${
                             TRACK_BORDER[track.type]
                           } ${onTimelineChange ? 'cursor-grab' : 'cursor-default'}${
-                            selected ? ' z-10 ring-1 ring-accent' : ''
+                            // (472 §١) المتصادمُ أولى بالعينِ من التحديد:
+                            // إن تصادمَ المحدَّدُ ظهرَ التحذيرُ لا حلقةُ
+                            // التوكيد — الإنذارُ أحقُّ بالأولويّة.
+                            colliding.has(item.id)
+                              ? ' z-10 ring-2 ring-warning'
+                              : selected
+                                ? ' z-10 ring-1 ring-accent'
+                                : ''
                           }${dragged ? ' opacity-70' : ''}`}
                           style={geometry}
                         >

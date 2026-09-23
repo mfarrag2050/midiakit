@@ -1,6 +1,6 @@
 'use client';
 
-// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470 → 471).
+// /dev/reels — صفحة تطوير لمحرّر الخطّ الزمني (reels/453 → 454 → 456 → 458 → 462 → 463 → 464 → 466 → 468 → 469 → 470 → 471 → 472).
 //
 // **458:** مقاس الخطّ الزمني يُعرض بمفتاحٍ مترجَم (pages.reels.size.*)
 // — القيمة في البيانات تبقى TimelineSize كما هي؛ وسطرُ التلميحات
@@ -50,6 +50,16 @@
 // الافتراضيُّ للوسائطِ والنصِّ يُلحِقُهُ addItem. والمدّةُ تُقرأُ الآنَ من
 // `present` لا من العيّنة — insert يُطيلُها فلا يكذبُ شريطُ الموضعِ
 // ولا القراءةُ ولا حلقةُ التشغيل.
+//
+// **472 · سطرٌ حيث تشاء · وإنذارٌ كان يُطلَق ولا أحدَ يسمع:** المحرّكُ
+// يحذّرُ من تراكبِ النصوصِ منذ البداية (detectCollisions في الخطة،
+// وقرأنا collisions:[] في 464 وما انتبه أحد). فلا بوّابةَ جديدةَ —
+// **وصلةٌ بالشاشة**: شريطُ تنبيهٍ فوقَ القماشةِ يسمّي القطعَ المتصادمة
+// (كلمةٌ من i18n) والقطعُ في الشريطِ تحملُ حدّاً تحذيريّاً — إخبارٌ لا
+// منع. والكسرُ اليدويُّ مبنيٌّ في المحرّك (BreakToken عند \n واللفُّ
+// يطيعُه) — الناقصُ كان الواجهةَ: حقلُ النصّ صار textarea يدخلُ Enter
+// سطراً جديداً (ولا يُرسلُ شيئاً)، والمعاينةُ تتبدّلُ وأنت تكتب. وحجمُ
+// الخطّ لم يُمسس — قرارُ المالكِ ثلاثُ درجاتٍ فوق headlineFsRatio.
 //
 // **471 · حافّةُ القماشة:** الخروجُ عن الحافّة ليس خطأً بذاته — محرّرو
 // المونتاج يُخرجون عمداً (bleed)؛ الخطأُ أن يقعَ بلا علمٍ ولا إشارة.
@@ -508,6 +518,14 @@ export default function ReelsTimelinePage(): JSX.Element {
     };
   }, [isBleedCertified, textLayout]);
 
+  /** (472 §١) القطعُ المتصادمةُ كما حسبَها المحرّكُ نفسُه — تمرَّرُ
+   *  للشريطِ حدّاً تحذيريّاً، وتُسمّى في شريطِ التنبيهِ فوقَ القماشة. */
+  const collidingItemIds = useMemo(
+    () =>
+      (textLayout?.collisions ?? []).flatMap((c) => [c.aItemId, c.bItemId]),
+    [textLayout],
+  );
+
   // قيمُ العرضِ للوحةِ الخصائص (469 §٤) — المسارُ الوحيدُ للأرقامِ
   // `formatNumber` في الموضع؛ وحقولُ الإدخالِ قيمٌ خامٌ بياناتٌ. الكلمات
   // ('top'/'center'/'bottom') تُعرضُ على أقربِ طرفٍ للمُنزلِق، والتحريرُ
@@ -959,6 +977,20 @@ export default function ReelsTimelinePage(): JSX.Element {
           {t('pages.projects.preview.title')}
         </h2>
         <div className="mt-3 rounded-lg border border-border bg-surface p-4 shadow-soft">
+        {/* (472 §١) شريطُ تنبيهِ التصادم — إنذارُ المحرّكِ القائمُ
+            موصولٌ بالشاشة: يسمّي القطعَ المتصادمةَ ولا يمنعُ شيئاً. */}
+        {(textLayout?.collisions.length ?? 0) > 0 ? (
+          <div
+            role="alert"
+            data-testid="reels-collision-bar"
+            className="mb-2 rounded-sm border border-warning bg-surface-2 px-3 py-1.5 text-xs text-warning"
+          >
+            {t('pages.reels.collision')}{' '}
+            {textLayout?.collisions
+              .map((c) => `${c.aItemId} × ${c.bItemId}`)
+              .join(' · ')}
+          </div>
+        ) : null}
           {/* الزجاجُ الأماميّ فوق المقود (463) — العنوانُ يصدق */}
           <div className="mb-4 flex justify-center">
             <TimelinePreview
@@ -1015,11 +1047,16 @@ export default function ReelsTimelinePage(): JSX.Element {
                   <>
                     <label className={`${fieldLbl} col-span-2`}>
                       <span>{t('pages.reels.textValue')}</span>
-                      <input
-                        type="text"
+                      {/* (472 §٢) الكسرُ اليدويُّ: Enter يُدرجُ سطراً
+                          جديداً (الاصطلاحُ المختارُ — بلا «إرسال» في هذه
+                          اللوحةِ أصلاً، وShift+Enter سطرٌ كذلك). المحرّكُ
+                          يبني BreakToken عند \n واللفُّ يطيعُه؛ والمعاينةُ
+                          تتبدّلُ وأنت تكتبُ كما هي. */}
+                      <textarea
                         dir="auto"
+                        rows={2}
                         data-testid="reels-prop-value"
-                        className={fieldIn}
+                        className={`${fieldIn} resize-y`}
                         value={shownItem.value ?? ''}
                         onChange={(e) => {
                           setTextValue(e.target.value);
@@ -1145,6 +1182,7 @@ export default function ReelsTimelinePage(): JSX.Element {
             onSelectItem={onSelectItem}
             onTimelineChange={onTimelineChange}
             onScaleChange={onScaleChange}
+            collidingItemIds={collidingItemIds}
             {...(selected ? { selectedItemId: selected.itemId } : {})}
           />
         </div>

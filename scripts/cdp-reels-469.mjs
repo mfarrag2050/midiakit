@@ -89,15 +89,18 @@ function findOverlaps(info) {
 const boxOf = (info, itemId) =>
   (info?.boxes ?? []).find((b) => b.itemId === itemId);
 
-/** كتابةٌ في حقلِّ إدخالٍ عبر الـsetter الأصليّ — كما مسطرة 458. */
+/** كتابةٌ في حقلِّ إدخالٍ عبر الـsetter الأصليّ — كما مسطرة 458.
+ *  (472 §٢) حقلُ النصِّ صار textarea: الـsetter من prototypeٍ يطابقُ
+ *  نوعَ العنصر، وإلّا رمى «Illegal invocation». */
 async function setInput(page, testId, value) {
   await page.$eval(
     `[data-testid="${testId}"]`,
     (el, v) => {
-      const setter = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        'value',
-      ).set;
+      const proto =
+        el instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement
+          : HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(proto.prototype, 'value').set;
       setter.call(el, String(v));
       el.dispatchEvent(new Event('input', { bubbles: true }));
     },

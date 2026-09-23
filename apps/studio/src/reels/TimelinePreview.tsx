@@ -61,12 +61,26 @@ export interface TextBoxEntry {
   /** أيُّ جزءٍ خارج [0,1080]×[0,1920]؟ — محسوبةٌ هنا لا في السكربت،
    *  فتصلحُ مؤشّراً حيّاً وبوّابةً معاً. */
   readonly outside: boolean;
+  /** عددُ سطور prep بعد اللفّ — الكسرُ اليدويُّ (\n) يُحترَم في
+   *  linesJustified فلا يُعاد تقسيمُه (472 §٢: القياسُ بالرقم). */
+  readonly lines: number;
 }
 
-/** نتيجةُ إطارٍ واحد: الصناديقُ كلُّها + أزواجُ التصادم كما حسبَها
- *  المحرّك (تداخلٌ زمانيٌّ ومكانيٌّ معاً). */
+/** تصادمُ عنصرَي نصٍّ كما حسبَه المحرّك (plan.collisions — إنذارٌ قائمٌ
+ *  منذ 464، وصلُه 472 §١ بالشاشة: شريطٌ يسمّي القطعَ وحدٌّ تحذيريّ). */
+export interface TextCollision {
+  readonly aTrackId: string;
+  readonly aItemId: string;
+  readonly bTrackId: string;
+  readonly bItemId: string;
+}
+
+/** نتيجةُ إطارٍ واحد: الصناديقُ كلُّها + تصادماتُ المحرّك كما حسبَها
+ *  (تداخلٌ زمانيٌّ ومكانيٌّ معاً). `collisionPairs` صيغةٌ نصّيّةٌ
+ *  قديمةٌ تقرؤها أغطية 469+ كما هي. */
 export interface TextLayoutInfo {
   readonly boxes: readonly TextBoxEntry[];
+  readonly collisions: readonly TextCollision[];
   readonly collisionPairs: readonly string[];
 }
 
@@ -100,6 +114,7 @@ const collectTextBoxes = (
       right,
       outside:
         left < 0 || right > SIZE.w || top < 0 || bottom > SIZE.h,
+      lines: entry.prep.linesJustified.length,
     });
   }
   return out;
@@ -272,8 +287,15 @@ export function TimelinePreview({
       });
       // (469 §٣) نافذةُ القياس: الصناديقُ من الخطّة نفسِها + أزواجُ
       // تصادم المحرّك — بلا منطقٍ موازٍ، وبعدَ نجاحِ الرسم لا قبله.
+      // (472 §١) التصادماتُ مُهيكلَةٌ تصلُ الشاشة: شريطٌ وحدٌّ تحذيريّ.
       onTextLayout?.({
         boxes: collectTextBoxes(timeline, plan),
+        collisions: plan.collisions.map((c) => ({
+          aTrackId: c.a.trackId,
+          aItemId: c.a.itemId,
+          bTrackId: c.b.trackId,
+          bItemId: c.b.itemId,
+        })),
         collisionPairs: plan.collisions.map(
           (c) => `${c.a.trackId}:${c.a.itemId}×${c.b.trackId}:${c.b.itemId}`,
         ),

@@ -19,6 +19,12 @@ instructions. This file is the only source of limits.
   `TrackItem`. This is your data contract. Import the types; do not copy them,
   do not redefine them, do not widen them.
 
+**Standing read-only exception (granted by the owner, 2026-09-23) — and
+nothing else in the main tree:**
+- `/Users/mdervis/MediaKit/pf-mediakit/claude/inbox/mkreels/*.md` — read only.
+- `/Users/mdervis/MediaKit/pf-mediakit/claude/REELS-PAUSE-*.md` — read only.
+No write, edit or delete in the main worktree, ever.
+
 **Forbidden, without exception:**
 - `packages/engine/` — the typography engine. Do not read it, do not import it,
   do not copy from it. Nothing you build needs it.

@@ -127,6 +127,7 @@
       "scrubber": "Position bar",
       "newItemText": "New text ready to edit",
       "outsideFrame": "Partly outside the frame",
+      "collision": "Text collision:",
       "properties": "Clip properties",
       "start": "Start",
       "end": "End",
