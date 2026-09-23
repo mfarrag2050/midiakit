@@ -56,6 +56,39 @@ function hash12(content) {
   return createHash('sha256').update(content).digest('hex').slice(0, 12);
 }
 
+// mk/472b: يحاول أن يقرأ رأسَ الفرعِ بلا رمي؛ null إن غاب.
+function tryRevParseShort(ref) {
+  try {
+    return execSync(`git rev-parse --short ${ref}`, {
+      cwd: ROOT,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .toString('utf8')
+      .trim();
+  } catch {
+    return null;
+  }
+}
+
+// mk/472b: احتياطٌ ثلاثيّ لـfeat/reels — origin، ثمّ محلّيّ موسوم، ثمّ سقوط.
+// يعيد سطرَ Markdown كاملاً بدءاً من `**HEAD ...**` (بلا `> `).
+// أسماءُ الفروعِ ثابتة؛ لا تُقرأ من البيئة.
+const REELS_ORIGIN_REF = 'origin/feat/reels';
+const REELS_LOCAL_REF = 'feat/reels';
+function resolveReelsLine() {
+  const originHead = tryRevParseShort(REELS_ORIGIN_REF);
+  if (originHead) return `**HEAD (${REELS_ORIGIN_REF}):** \`${originHead}\``;
+  const localHead = tryRevParseShort(REELS_LOCAL_REF);
+  if (localHead) {
+    return `**HEAD (${REELS_LOCAL_REF}):** \`${localHead}\` — محلّيٌّ فقط · غير مدفوعٍ إلى origin`;
+  }
+  throw new SectionReadError(
+    'feat/reels HEAD',
+    `git rev-parse --short {${REELS_ORIGIN_REF}, ${REELS_LOCAL_REF}}`,
+    `الفرعُ غيرُ موجودٍ على origin ولا محلّيّاً.`
+  );
+}
+
 function build() {
   // (1) docs/*.md عدا BUNDLE.md نفسه
   const docsDir = join(ROOT, 'docs');
@@ -112,9 +145,9 @@ function build() {
   const head = shOrFail('git HEAD', 'git rev-parse --short HEAD').trim();
   const apiHead = shOrFail('git origin/feat/api HEAD', 'git rev-parse --short origin/feat/api').trim();
   const studioHead = shOrFail('git origin/feat/studio HEAD', 'git rev-parse --short origin/feat/studio').trim();
-  // mk/472: reels — نشطُ اليوم. غيابُه من المرجع المحلّيّ يُسقط
-  // shOrFail برسالةٍ تسمّي الفرعَ صراحةً، لا حقلٌ فارغٌ صامت.
-  const reelsHead = shOrFail('git origin/feat/reels HEAD', 'git rev-parse --short origin/feat/reels').trim();
+  // mk/472b: reels — احتياطٌ لا فشل. أوّلاً origin (كأختَيه)، وإن غاب
+  // فمحلّيّاً موسوماً. وإن غابَ الاثنان ⟵ سقوطٌ يسمّي الفرع.
+  const reelsLine = resolveReelsLine();
   const date = new Date().toISOString().slice(0, 10);
 
   // بناء المخرَج
@@ -132,7 +165,7 @@ function build() {
 > **HEAD (main):** \`${head}\`
 > **HEAD (origin/feat/api):** \`${apiHead}\`
 > **HEAD (origin/feat/studio):** \`${studioHead}\`
-> **HEAD (origin/feat/reels):** \`${reelsHead}\`
+> ${reelsLine}
 
 ## الفهرس
 
