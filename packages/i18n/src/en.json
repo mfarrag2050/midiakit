@@ -120,6 +120,7 @@
     },
     "reels": {
       "timeline": "Timeline",
+      "previewNotice": "Preview — work is not saved or exported yet.",
       "track": "Track",
       "clip": "Clip",
       "playhead": "Playhead",

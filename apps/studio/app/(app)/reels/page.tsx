@@ -990,6 +990,17 @@ export default function ReelsTimelinePage(): JSX.Element {
       <h1 className="text-lg font-semibold text-fg">
         {t('pages.projects.workspace.size.reel')}
       </h1>
+      {/* (475 §٢) الوسمُ الصادق: الصفحةُ مدخلٌ رئيسيٌّ في القائمةِ
+          وسطحُها لا يحفظُ ولا يُصدّرُ بعد — الخطُّ الزمنيُّ ثابتٌ في
+          الشفرةِ والأصولُ مفاتيحُ مخترَعة. الوسمُ ظاهرٌ لا تلميح،
+          بمفتاحٍ واحدٍ في القواميسِ الثلاثة: حين يصيرُ الحفظُ حقيقةً
+          يُحذَفُ بسطرٍ واحد. */}
+      <p
+        data-testid="reels-preview-notice"
+        className="mt-2 inline-block rounded-sm border border-warning bg-surface-2 px-2 py-1 text-xs text-warning"
+      >
+        {t('pages.reels.previewNotice')}
+      </p>
 
       <section className="mt-6">
         <h2 className="text-xs uppercase tracking-widest text-fg-subtle">
