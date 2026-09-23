@@ -110,6 +110,15 @@ export interface RenderFrameArgs {
    * أُضيف في WIRE-1-CLOSE (2026-09-09) — إغلاق ش٣(ب) بالخيار (ii).
    */
   readonly onHeadlinePrepared?: () => void;
+  /**
+   * mk/467 — إزاحةُ مدى `fsRange` بضربٍ في عاملٍ من ثلاثةٍ فقط
+   * (`0.8 · 1.0 · 1.2`). يُمرَّر من `prepareTextItem` بحسب `item.fsScale`،
+   * ولا يُستعمل في مسار headline المولَّد من القالب (يبقى `1`). المُحسِّن
+   * يبقى يبحث — لكن في مدًى مُزاح، لا نُعطِّله.
+   *
+   * غياب هذا الحقل ⇒ `1` ⇒ **صفرُ تغيّرٍ في أيِّ لقطةٍ قائمة**.
+   */
+  readonly fsScale?: number;
 }
 
 // ── حالة التخطيط بين الطبقات ─────────────────────────
@@ -575,10 +584,21 @@ export function computeHeadlineLayout(
     const t = i / (BW_STEPS - 1);
     boxWidthCandidates.push(Math.round(size.w * (bwMinR + t * (bwMaxR - bwMinR))));
   }
+  // mk/467 §١: إزاحةُ المدى بضربٍ بعامل ثلاثيٍّ مُغلَق (0.8 · 1.0 · 1.2).
+  // الافتراضي 1 ⇒ صفرُ تغيّرٍ على المسار المولَّد من القالب. القيمُ خارج
+  // الثلاثة تُرفَض في `prepareTextItem` — هنا مجرّد ضربٍ عدديّ.
+  //
+  // **ما يُزاح:** fsRange (تفضيلُ pickBest) **و** حدَّا البحث الفعليّان
+  // (`maxFont`/`minFont` الممرَّرَين إلى wrapOptimal). fsRange وحدَه لا
+  // يكفي — wrap-optimal يبحث في `[minFont, maxFont]` ويستعمل fsRange
+  // لترتيب المرشّحين فقط. المُحسِّن يبقى يبحث — لكن في نافذةٍ مُزاحة.
+  const fsScale = args.fsScale ?? 1;
   const fsRange: [number, number] = [
-    Math.round(size.w * fontCfg.headlineFsRatio[0]),
-    Math.round(size.w * fontCfg.headlineFsRatio[1]),
+    Math.round(size.w * fontCfg.headlineFsRatio[0] * fsScale),
+    Math.round(size.w * fontCfg.headlineFsRatio[1] * fsScale),
   ];
+  const scaledFontMax = Math.round(fontCfg.max * fsScale);
+  const scaledFontMin = Math.round(fontCfg.min * fsScale);
 
   const processed = preprocessBidi(text, {
     numerals: brand.typography.bidi.numerals,
@@ -593,8 +613,8 @@ export function computeHeadlineLayout(
   const wrap = wrapOptimal(
     tokens,
     fontCfg.boxWidth,
-    fontCfg.max,
-    fontCfg.min,
+    scaledFontMax,
+    scaledFontMin,
     false,
     fontCfg.maxLines,
     fontCfg.shortLineRatio,

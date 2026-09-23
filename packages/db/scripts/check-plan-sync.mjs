@@ -1,20 +1,38 @@
 #!/usr/bin/env node
 /**
- * check-plan-sync — يوازي check-template-sync (A13).
+ * check-plan-sync — يوازي check-template-sync (A13) بعد إصلاح 450.
  *
- * `plans` بيانات مرجعية عامة تُبذر من الهجرة (لا ملف JSON منفصل).
- * القيم في الهجرة `20260907030000_plans-a26.ts` هي مصدر الحقيقة.
- * الحارس يتحقّق أن كل صفّ في DB يحمل `definition_hash` يطابق
- * canonical hash لصفوفه الحالية (لا انزلاق صامت من تعديل SQL يدوي).
+ * **الحقيقة المُقاسة (٤٥٠):** الإصدار السابق حسبَ البصمة من DB نفسِها
+ * ثم قارنها بـ`row.definition_hash` — أي **مقارنةٌ لذاتِها**. لو
+ * عُدِّلت مصفوفة `PLANS` وأُعيد البذر بلا هجرة جديدة، القاعدةُ تبقى
+ * بالاسم القديم وبصمتُها تطابق قيَمَها القديمة ⇒ **الحارس يمرّ أخضر
+ * صامتاً**. عائلةُ عطبِ 950 نفسِه.
+ *
+ * **الإصلاح:** مصدرُ الحقيقةِ = `PLANS` المُصدَّرة من هجرة البذر
+ * الأصليّة `20260907030000_plans-a26.ts`. البصمةُ تُحسَب من كلّ عنصرٍ
+ * فيها (نفس `seedShape = {key, name_ar, name_en}` · نفس A28) وتُقارَن
+ * بـ`plans.definition_hash` في DB. اختلافٌ ⇒ RED صريح.
+ *
+ * **ملاحظاتٌ لسانيّة:**
+ *   - نستعمل `node --import tsx` كي نستورد `.ts` مباشرةً (نمط مستعمل
+ *     في scripts/ الأخرى — راجع package.json).
+ *   - قائمة الرموز في `plans` DB تُقارَن بمفاتيح `PLANS` — نبلّغ لو
+ *     كان في DB باقةٌ زائدة أو ناقصة (الأصل: تطابق تامّ).
+ *
+ * **L-46:** غيّرْ `name_ar` لأيّ باقة في المصدر بلا هجرة ⇒ `check` يسقط.
+ * أرجعِ التغيير ⇒ يعود أخضر. المخرَجان في تقرير 450 §٢.
  *
  * dev بلا DATABASE_URL ⇒ يُتخطّى بحرص (كما check-template-sync).
- *
- * اختبار وجود L-46: تعديل `plans.brand_kits_limit` مباشرة عبر SQL
- * ⇒ hash يختلف عن definition_hash المُسجَّل ⇒ الحارس يسقط.
  */
 import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { skipMissingResource } from './_lib/skip-guard.mjs';
+import { PLANS } from '../migrations/20260907030000_plans-a26.ts';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SOURCE_FILE = join(__dirname, '../migrations/20260907030000_plans-a26.ts');
 
 const DB_URL = process.env.DATABASE_URL ||
   process.env.DATABASE_URL_APP?.replace('app_user:dev_app_pass', 'migration_user:dev_migration_pass');
@@ -41,20 +59,18 @@ function canonicalHash(obj) {
   return createHash('sha256').update(JSON.stringify(sortKeysDeep(obj))).digest('hex');
 }
 
+/** الهوية A28 — نفس الشكل المستعمل في هجرة `20260908050000_a28-plans-identity-hash.ts`. */
+function seedShapeOf(plan) {
+  return { key: plan.key, name_ar: plan.name_ar, name_en: plan.name_en };
+}
+
 const pool = new pg.Pool({ connectionString: DB_URL, max: 1 });
 
-let rows;
+let dbRows;
 try {
-  const r = await pool.query(`
-    SELECT key, name_ar, name_en, price_usd_cents,
-           brand_kits_limit, seats_limit, videos_per_month_limit,
-           requests_per_minute_limit, concurrent_renders_limit,
-           definition_hash
-    FROM plans ORDER BY key
-  `);
-  rows = r.rows;
+  const r = await pool.query(`SELECT key, name_ar, name_en, definition_hash FROM plans ORDER BY key`);
+  dbRows = r.rows;
 } catch (err) {
-  // 142-SKIP-IS-NOT-PASS
   await pool.end();
   skipMissingResource({
     scriptName: 'check-plan-sync',
@@ -62,34 +78,45 @@ try {
     hint: 'تحقّق أنّ postgres شغّال + DATABASE_URL يشير إليه.',
   });
 }
+await pool.end();
+
+const dbByKey = new Map(dbRows.map((r) => [r.key, r]));
+const sourceByKey = new Map(PLANS.map((p) => [p.key, p]));
 
 const errors = [];
 let checked = 0;
 
-for (const row of rows) {
-  // A28: seedShape يحمل الهوية فقط. الحدود والسعر خارج الحارس (انظر
-  // رأس الملف لمبرِّرها).
-  const seedShape = {
-    key: row.key,
-    name_ar: row.name_ar,
-    name_en: row.name_en,
-  };
-  const currentHash = canonicalHash(seedShape);
-  if (currentHash !== row.definition_hash) {
-    errors.push(`  ✗ plans[${row.key}]: الهوية تختلف عن definition_hash المُسجَّل`);
-    errors.push(`      current=${currentHash.slice(0, 12)}… stored=${row.definition_hash.slice(0, 12)}…`);
+// (1) لكلّ باقة في المصدر: بصمة الملفّ ↔ بصمة DB.
+for (const plan of PLANS) {
+  const dbRow = dbByKey.get(plan.key);
+  if (!dbRow) {
+    errors.push(`  ✗ plans[${plan.key}]: في المصدر (${SOURCE_FILE}) ولا صفَّ في DB — هجرةُ بذرٍ لم تُطبَّق؟`);
+    continue;
+  }
+  const sourceHash = canonicalHash(seedShapeOf(plan));
+  if (sourceHash !== dbRow.definition_hash) {
+    errors.push(
+      `  ✗ plans[${plan.key}]: source ≠ db\n` +
+      `      source(${sourceHash.slice(0, 12)}…) = ${JSON.stringify(seedShapeOf(plan))}\n` +
+      `      db    (${dbRow.definition_hash.slice(0, 12)}…) = ${JSON.stringify({ key: dbRow.key, name_ar: dbRow.name_ar, name_en: dbRow.name_en })}`,
+    );
   }
   checked++;
 }
 
-await pool.end();
+// (2) صفوف في DB ليست في المصدر — باقةٌ حُذفت من `PLANS` بلا هجرةٍ تُسقطها.
+for (const dbRow of dbRows) {
+  if (!sourceByKey.has(dbRow.key)) {
+    errors.push(`  ✗ plans[${dbRow.key}]: في DB ولا في المصدر (${SOURCE_FILE}) — هجرةُ حذف مفقودة؟`);
+  }
+}
 
 if (errors.length > 0) {
-  console.error(`[check-plan-sync] ✗ ${errors.length / 2} انحراف — قيم plans تعدَّلت خارج الهجرات:`);
+  console.error(`[check-plan-sync] ✗ ${errors.length} انحراف — المصدر (PLANS في ${SOURCE_FILE}) لا يطابق DB:`);
   for (const e of errors) console.error(e);
-  console.error(`\n  الحل: هجرة جديدة تحدّث definition_hash + القيمة (لا SQL يدوي).`);
+  console.error(`\n  الحلّ: هجرة جديدة UPDATE plans SET name_ar/name_en/definition_hash (نظير 440 لـtemplates).`);
   process.exit(1);
 }
 
-console.log(`[check-plan-sync] ✓ ${checked} باقات، كل definition_hash يطابق قيم الصفّ.`);
+console.log(`[check-plan-sync] ✓ ${checked} باقات · مصدرُ الحقيقة (PLANS) يطابق DB بصمةً وقيَماً.`);
 process.exit(0);

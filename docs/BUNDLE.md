@@ -8,9 +8,9 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-21
-> **HEAD (main):** `e673f21`
-> **HEAD (origin/feat/api):** `665ab4f`
+> **تاريخ التوليد:** 2026-09-22
+> **HEAD (main):** `cce835b`
+> **HEAD (origin/feat/api):** `c80f534`
 > **HEAD (origin/feat/studio):** `fa96aaa`
 
 ## الفهرس
@@ -43,8 +43,8 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 403 | `4b62da02507c` | local |
-| `PHASES.md` | 1563 | `37fedfeec5f4` | local (main) |
+| `docs/SKILL-mediakit.md` | 403 | `50e0bf0772f2` | local |
+| `PHASES.md` | 1641 | `00f0438fa851` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
@@ -11322,7 +11322,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-21 · **HEAD:** `e673f21` (`main`)
+> **تاريخ التوليد:** 2026-09-22 · **HEAD:** `cce835b` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11369,7 +11369,7 @@ description: |
 ### محتويات المستودع — من main (`ls`)
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
-- **`demo/`:** 18 ملف
+- **`demo/`:** 17 ملف
 - **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- CROSS-BRANCH:START -->
@@ -11384,20 +11384,20 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `aa-internal` | `ee178ca` | 0 | 510 | 1 |
-| `feat/api` | `665ab4f` | 1 | 125 | 387 |
-| `feat/ci` | `7d6ee3f` | 0 | 116 | 395 |
-| `feat/dashboards` | `376077c` | 0 | 399 | 112 |
-| `feat/studio` | `fa96aaa` | 3 | 129 | 385 |
-| `origin/aa-internal` | `ee178ca` | 0 | 510 | 1 |
-| `origin/feat/api` | `665ab4f` | 1 | 125 | 387 |
-| `origin/feat/ci` | `033ac5b` | 0 | 122 | 389 |
-| `origin/feat/dashboards` | `376077c` | 0 | 399 | 112 |
-| `origin/feat/studio` | `fa96aaa` | 3 | 129 | 385 |
+| `feat/api` | `c80f534` | 3 | 0 | 523 |
+| `feat/ci` | `7d6ee3f` | 0 | 125 | 395 |
+| `feat/reels` | `5805673` | 10 | 8 | 522 |
+| `feat/studio` | `fa96aaa` | 3 | 138 | 385 |
+| `tmp/main-322` | `cce835b` | 0 | 0 | 520 |
+| `origin/aa-internal` | `ee178ca` | 0 | 519 | 1 |
+| `origin/feat/api` | `c80f534` | 3 | 0 | 523 |
+| `origin/feat/ci` | `033ac5b` | 0 | 131 | 389 |
+| `origin/feat/dashboards` | `376077c` | 0 | 408 | 112 |
+| `origin/feat/studio` | `fa96aaa` | 3 | 138 | 385 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
-- **feat/api (83):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:error-code-mirror` · `check:isolation-completeness` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:migration-timestamp-collision` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:renderer-error-codes` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `check:user-facing-devlang` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
+- **feat/api (94):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:builtin-fonts-license` · `check:builtin-fonts-license:self-test` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dark-safe-overlays` · `check:dark-safe-overlays:self-test` · `check:dashboard-not-published` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:error-code-mirror` · `check:fetch-states` · `check:fetch-states:self-test` · `check:isolation-completeness` · `check:jsx-i18n-keys` · `check:jsx-i18n-keys:self-test` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:migration-timestamp-collision` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:renderer-error-codes` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:snapshots-not-all-copies` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:test-wiring` · `check:typecheck` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `check:user-facing-devlang` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 - **feat/studio (91):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:builtin-fonts-license` · `check:builtin-fonts-license:self-test` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dark-safe-overlays` · `check:dark-safe-overlays:self-test` · `check:dashboard-not-published` · `check:dev-doors-guard` · `check:dev-doors-guard:self-test` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:error-code-mirror` · `check:fetch-states` · `check:fetch-states:self-test` · `check:isolation-completeness` · `check:jsx-i18n-keys` · `check:jsx-i18n-keys:self-test` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:migration-timestamp-collision` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:workflows`
 
 ### حالة المرحلة 4 — على feat/api و feat/studio (`PHASES-api.md` · `PHASES-studio.md`)
@@ -11704,7 +11704,82 @@ Opus يخطّط ← Muhammed يلصق ← Claude Code ينفّذ ← يعيد ا
 
 > ملف حيّ. يُحدَّث في نهاية كل جلسة عمل. الحقول: `☐` لم يبدأ · `◐` جارٍ · `☑` مكتمل.
 
-**آخر تحديث:** 2026-09-02 (مسح الميزات docs/12 مُنجَز — أحد عشر بنداً
+**آخر تحديث:** 2026-09-21 — كتبه Opus بأمرٍ صريحٍ من المالك، والملفُّ
+مقفولٌ عادةً على جلسة `mediakit` (انظر «تنبيه القفل» في نهاية هذا القسم).
+
+---
+
+## تحديث 2026-09-21 — تسعةَ عشرَ يوماً في قسمٍ واحد
+
+**الملفُّ كان متأخّراً تسعةَ عشرَ يوماً.** آخرُ تحديثٍ حقيقيٍّ قبل اليوم
+كان ٢ سبتمبر، و`main` تقدّم منذئذٍ **٣٣٢ التزاماً**. مرجعٌ لا يُجدَّد
+يكذب بثقة (`claude/DOCTRINE.md` §٣-ز) — وهذا الملفُّ كان أحدَ ضحاياه.
+
+### أ · رؤوس الفروع (مقيسةٌ لحظةَ الكتابة)
+
+| الفرع | الرأس | غيرُ مدموجٍ في main | متأخّرٌ عن main |
+|---|---|---|---|
+| `main` | `a58de1d` | — | — |
+| `feat/reels` | `0d3b073` | 3 | 5 |
+| `feat/studio` | `fa96aaa` | 3 | 135 |
+| `feat/api` | `665ab4f` | 1 | 131 |
+| `feat/ci` | `7d6ee3f` | 0 | 122 |
+
+**`feat/ci` مدموجٌ بالكامل** — لا شيءَ فيه ينتظر. أمّا الثلاثةُ الأخرى
+فمتأخّرةٌ تأخّراً خطِراً: جلسةٌ تقيس على فرعٍ متأخّرٍ بـ١٣١ التزاماً
+تقيس **شجرةً أخرى**، وقد وقعنا في ذلك فعلاً اليوم (مُوثَّقٌ في §٣-ز،
+الوجه السابع).
+
+### ب · CI — من خمسٍ حمراء إلى اثنتَين
+
+الحرّاسُ الآن **٤٩ `check:`** و**٤٥ `verify:`**. أُغلق اليوم ثلاثة:
+`check:skill-fresh` · `check:template-drift` · `verify:workflows`.
+
+الباقيان:
+- **`vitest run`** — ثلاثةُ اختباراتٍ في `hard-delete.test.ts` فقط. عند
+  `mk-api` (تذكرة `321-THE-HARD-DELETE-DOOR`).
+- **`verify:breaking-video`** — مرجعٌ مجمَّدٌ منذ ١١ سبتمبر و٣٤ التزاماً
+  على مسار الرندر بعده. قرارُ المالك (٢١ سبتمبر): **تعود الكشيدةُ إلى
+  ١٠ محارفِ تطويل**، بشرطِ ألّا يعودَ حرفُ الجرِّ اليتيم الذي عالجه
+  `23f1d90`. عند `mediakit` (تذكرة `462`).
+
+### ج · سطحُ تحرير الريلز — وُلد اليوم
+
+مسارٌ جديدٌ لم يكن في هذا الملفّ أصلاً. شجرةٌ منفصلة
+(`pf-mediakit-reels`، فرع `feat/reels`) تُبنى بنموذجٍ خارجيٍّ عبر
+بوّابة PrimeFlow المحلّية، والمراجعةُ والمِحَكّاتُ عند Opus.
+
+**المُنجَز:** طبقةُ منطقٍ خالصةٌ — `timeline-ops.ts` (تحريكٌ وقصٌّ
+وتحديد) و`timeline-snap.ts` (منعُ التراكب + الالتصاقُ بالمراسي).
+**٤٢ اختباراً خضراء**، والمِحَكّاتُ تُكتَب قبل الشفرة ولا تُعدَّل إلّا
+من Opus. وشريطٌ زمنيٌّ عربيٌّ (RTL) بزومٍ ومسطرةٍ صُحِّح اتّجاهُها.
+
+**المتبقّي في المسار:** وصلُ الوحدتَين بالواجهة · لوحةُ معاينةٍ فوق
+الأداة (قرارُ المالك ٢١ سبتمبر: «المفروض يكون فوق الأداة مكان لعرض
+الفيديو») · اللقطاتُ بعد فحصِ المالكِ بعينه.
+
+### د · الجاهزيّة — **الجدولُ أدناه لم يُعَد التحقّقُ منه منذ ٢٠٢٦-٠٩-٠٨**
+
+لم أغيّرْ فيه علامةً واحدة، لأنّي لم أقِسْ بنودَه اليوم. **اقرأه على
+أنّه آخرُ قياسٍ معروف، لا على أنّه الحالةُ الآن.** إعادةُ التحقّق منه
+تستحقّ تذكرةً مستقلّة — وهي أهمُّ تذكرةٍ في المشروع الآن، لأنّ البنودَ
+الأربعةَ الحمراء هي وحدها ما يقف بين المحرّك وأوّلِ عميل:
+MP4 يُرفَع فعلاً · المعاينة = المخرَج بكسليّاً · عيّنةٌ حيّةٌ بهويّة
+العميل الأوّل · نسخةٌ احتياطيّةٌ **مُختبَرة**.
+
+**والحكمُ الذي يستحقّ أن يُقال:** المحرّكُ أقوى ممّا يحتاجه أوّلُ عميل،
+والفجوةُ ليست تقنيّةً بل تسليميّة.
+
+### هـ · تنبيهُ القفل
+
+`PHASES.md` مقفولٌ على جلسة `mediakit` وحدَها. كتبتُ هذا القسمَ بنفسي
+بأمرٍ صريحٍ من المالك («حدّث هذا الملف فوراً») بينما `mediakit` تعمل على
+تذكرةٍ أخرى لا تمسّ هذا الملفّ. **لا يُطلَب من `mediakit` الكتابةُ هنا
+حتى تُقرَأ هذه السطور،** وإلّا تصادم كاتبان على ملفٍّ واحد.
+
+---
+
+**السابق (2026-09-02):** (مسح الميزات docs/12 مُنجَز — أحد عشر بنداً
 مصنّف؛ **المرحلة 3.8 جديدة** لامتدادات المحرك قبل المنصة؛ المرحلة 4
 موسَّعة).
 
@@ -11908,6 +11983,9 @@ Form على https://sina.birzeit.edu/wojood/ (يتطلّب تفاصيل مؤسس
   الأول (قرار المالك 2026-09-07).
 
 ### الجاهزية — من `docs/09 §جاهز للبيع` (11 بنداً)
+
+> ⚠️ **آخرُ قياسٍ: 2026-09-08.** لم يُعَد التحقّق منه منذُئذٍ رغم ٣٣٢
+> التزاماً على `main`. انظر §د من تحديث 2026-09-21.
 
 | # | البند | الحالة |
 |---|---|---|
