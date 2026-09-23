@@ -112,6 +112,9 @@ function build() {
   const head = shOrFail('git HEAD', 'git rev-parse --short HEAD').trim();
   const apiHead = shOrFail('git origin/feat/api HEAD', 'git rev-parse --short origin/feat/api').trim();
   const studioHead = shOrFail('git origin/feat/studio HEAD', 'git rev-parse --short origin/feat/studio').trim();
+  // mk/472: reels — نشطُ اليوم. غيابُه من المرجع المحلّيّ يُسقط
+  // shOrFail برسالةٍ تسمّي الفرعَ صراحةً، لا حقلٌ فارغٌ صامت.
+  const reelsHead = shOrFail('git origin/feat/reels HEAD', 'git rev-parse --short origin/feat/reels').trim();
   const date = new Date().toISOString().slice(0, 10);
 
   // بناء المخرَج
@@ -129,6 +132,7 @@ function build() {
 > **HEAD (main):** \`${head}\`
 > **HEAD (origin/feat/api):** \`${apiHead}\`
 > **HEAD (origin/feat/studio):** \`${studioHead}\`
+> **HEAD (origin/feat/reels):** \`${reelsHead}\`
 
 ## الفهرس
 
