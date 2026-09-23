@@ -296,8 +296,8 @@
         "imageSelected": "صورة مُختارة",
         "fieldUnsupported": "نوع حقل غير مدعوم في هذه النسخة",
         "fieldFallback": "حقل",
-        "accentWrap": "لون التأكيد",
-        "accentWrapTitle": "لفّ التحديد بلون التأكيد",
+        "accentWrap": "تمييز",
+        "accentWrapTitle": "أبرِز النصَّ المُحدَّد بلون الهوية",
         "field": {
           "headline": "العنوان",
           "kicker": "كيكر",

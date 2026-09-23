@@ -3,8 +3,10 @@
 // **الاستخدام:**
 //   pnpm render:mp4 -- --brand=default --template=breaking
 //   pnpm render:mp4 -- --brand=client-demo --template=breaking --out=my.mp4
+//   pnpm render:mp4 -- --template=reel --size=reel
 //
-// **الافتراضات:** brand=default · template=breaking · out=out/render-<brand>.mp4
+// **الافتراضات:** brand=default · template=breaking · size=portrait ·
+// out=out/render-<brand>-<template>.mp4
 
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -32,10 +34,33 @@ interface CliArgs {
   out?: string;
   fps: number;
   ffmpegPath?: string;
+  size: SizeName;
+}
+
+// mk/471: أسماء المقاسات المسموحة — لا رقمٌ حرّ (تجنّبُ سقوطٍ صامتٍ إلى الافتراضيّ).
+type SizeName = 'square' | 'portrait' | 'reel';
+const SIZE_PRESETS: Readonly<Record<SizeName, { readonly w: number; readonly h: number }>> = {
+  square: { w: 1080, h: 1080 },
+  portrait: { w: 1080, h: 1350 },
+  reel: { w: 1080, h: 1920 },
+};
+
+function resolveSize(name: string): { w: number; h: number } {
+  if (!(name in SIZE_PRESETS)) {
+    const allowed = (Object.keys(SIZE_PRESETS) as SizeName[])
+      .map((k) => `${k} (${SIZE_PRESETS[k].w}×${SIZE_PRESETS[k].h})`)
+      .join(' · ');
+    throw new Error(`[render:mp4] --size=${name} غير معروف. المتاح: ${allowed}.`);
+  }
+  const { w, h } = SIZE_PRESETS[name as SizeName];
+  if (w % 2 !== 0 || h % 2 !== 0) {
+    throw new Error(`[render:mp4] الأبعاد ${w}×${h} فردية — yuv420p لا يقبلها.`);
+  }
+  return { w, h };
 }
 
 function parseArgs(): CliArgs {
-  const args: CliArgs = { brand: 'default', template: 'breaking', fps: 30 };
+  const args: CliArgs = { brand: 'default', template: 'breaking', fps: 30, size: 'portrait' };
   for (const arg of process.argv.slice(2)) {
     const m = arg.match(/^--([^=]+)=(.+)$/);
     if (!m) continue;
@@ -46,6 +71,7 @@ function parseArgs(): CliArgs {
     else if (key === 'out') args.out = value;
     else if (key === 'fps') args.fps = parseInt(value, 10);
     else if (key === 'ffmpeg') args.ffmpegPath = value;
+    else if (key === 'size') args.size = value as SizeName; // يُتحقَّق منه في resolveSize.
   }
   return args;
 }
@@ -110,7 +136,7 @@ const outPath = cli.out
   ? (isAbsolute(cli.out) ? cli.out : pathResolve(ROOT, cli.out))
   : join(OUT_DIR, `render-${cli.brand}-${cli.template}.mp4`);
 
-const SIZE = { w: 1080, h: 1350 };
+const SIZE = resolveSize(cli.size);
 
 console.log(
   `[render:mp4] brand=${cli.brand} · template=${cli.template} · قماش=${SIZE.w}×${SIZE.h} · fps=${cli.fps}`
