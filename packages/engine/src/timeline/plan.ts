@@ -108,7 +108,7 @@ export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
     if (track.type !== 'text') continue;
     for (const item of track.items) {
       if (item.value === undefined || item.value === '') continue;
-      const prep = prepareTextItem(item, args);
+      const prep = prepareTextItem(item, args, track.id);
       if (prep) {
         preps.set(`${track.id}:${item.id}`, {
           itemId: item.id,
@@ -134,10 +134,26 @@ export function buildTimelinePlan(args: BuildTimelinePlanArgs): TimelinePlan {
 
 // ── التحضير المفرد لعنصر text ─────────────────────
 
+// mk/467 §١: الدرجاتُ الثلاثُ المسموحة لـ`item.fsScale` — لا رقمٌ حرّ.
+const ALLOWED_FS_SCALES: readonly number[] = [0.8, 1.0, 1.2];
+
+function requireValidFsScale(item: TrackItem, trackId: string): void {
+  if (item.fsScale === undefined) return;
+  if (!ALLOWED_FS_SCALES.includes(item.fsScale)) {
+    throw new Error(
+      `[prepareTextItem] fsScale=${item.fsScale} خارجُ المجموعة المسموحة ` +
+        `(item="${trackId}:${item.id}"). المسموح: ${ALLOWED_FS_SCALES.join(' · ')}.`
+    );
+  }
+}
+
 function prepareTextItem(
   item: TrackItem,
-  args: BuildTimelinePlanArgs
+  args: BuildTimelinePlanArgs,
+  trackId: string
 ): PreparedHeadline | null {
+  requireValidFsScale(item, trackId);
+
   const baseLayer = args.template.layers.find((l) => l.type === 'headline');
   if (!baseLayer || baseLayer.type !== 'headline') return null;
 
@@ -161,6 +177,8 @@ function prepareTextItem(
     brand: args.brand,
     content,
     ...(args.assets && { assets: args.assets }),
+    // mk/467 §١: تمريرُ fsScale — الغياب ⇒ 1 ⇒ صفرُ تغيّر.
+    ...(item.fsScale !== undefined && { fsScale: item.fsScale }),
   };
   const state: RenderState = {};
   return prepareHeadline(overriddenLayer, rfArgs, state);
