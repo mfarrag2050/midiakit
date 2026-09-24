@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "backup:pg": "node scripts/pg-dump.mjs",
+    "verify:pg-restore": "node scripts/pg-restore-verify.mjs",
     "dev": "node scripts/dev-launch.mjs api",
     "start": "node --import tsx src/server.ts",
     "typecheck": "tsc --noEmit",
