@@ -12,6 +12,31 @@
 
 ---
 
+## 464 — تجهيز dev للمشية (2026-09-24 · أذن Opus بالالتزام والدفع على feat/api)
+
+- `apps/api/dev-env.json`: إضافة `CORS_ORIGIN` الصريح لأصل `19051`؛ حارس
+  461 و`config.ts` لم يتغيرا. فحص OPTIONS الحي أعاد الأصل نفسه حرفياً.
+- `apps/api/scripts/dev-studio.mjs`: مشغّل مستقل من ملكية API، يشغّل
+  Studio من شجرته على `19051`؛ جلسة `mk-dev-studio`. يضبط `NEXT_PUBLIC_API_BASE`
+  المطلوب و`NEXT_PUBLIC_API_URL` الذي يقرأه العميل، ويفرض mock=false.
+  قياس HEAD بمهلة عشر ثوانٍ أعاد `307` إلى `/projects`.
+- `apps/api/scripts/walk-provision.mjs`: تسجيل مستأجر جديد باسم UTC
+  يبدأ بـ`walk-YYYYMMDD`، وتعديل حصته فقط بـ`WHERE id=$1 AND name=$2`،
+  ثم فحص `rowCount=1` قبل COMMIT وحفظ الاعتماد ذرياً بصلاحية `0600`.
+  قيم الحصّة 300 طلب/دقيقة و100 رندر متزامن من سكربت المشية السابق.
+  `apiKey` في عقد التسليم هو access token للتسجيل (صلاحية 15 دقيقة)،
+  والدخول اليدوي بالبريد وكلمة المرور يُنشئ جلسة جديدة.
+- `.gitignore`: تجاهل `apps/api/.local/`. المخرج المحلي يحمل الحقول
+  الأربعة؛ stdout لا يحمل قيماً. قبول التشغيل وls وjq تحقق فعلياً.
+- بيئة الطرفية حملت `PORT` مخالفاً؛ رفضها الحارس، ثم أُطلق API
+  والتحضير من أب محايد بـ`env -i` دون تعديل الحارس أو ملفات الأسرار.
+- لا تعديل لمصدر Studio أو `walk-proof.mjs`؛ §٣ البديلة تستبدل القسم
+  القديم كاملاً. الدفع إلى origin/feat/api مأذون؛ لا دمج ولا لمس show
+  ولا بوابات عامة ولا استئناف للمشية 551.
+- التقرير الحرفي في `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/464-DEV-STAGE-FOR-THE-WALK.md`.
+  فحص صياغة السكربتات و`git diff --check` نجحا؛ حكم Opus أجاز الالتزام والدفع.
+  تحديث PHASES.md وM1 يبقى لمسار M؛ هذه تهيئة dev وليست اعتماداً بصرياً.
+
 ## 462 — ETA من الطابور (2026-09-24 · أذن المالك بالالتزام دون دفع أو دمج)
 
 - `apps/api/src/queues/render-eta.ts`: تعداد `waiting + prioritized + delayed`
