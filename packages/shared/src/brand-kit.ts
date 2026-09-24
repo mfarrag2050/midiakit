@@ -159,6 +159,14 @@ export interface BrandColors {
   readonly locationBadge: string;
   readonly surface: string;
   readonly placeholder: readonly [string, string];
+  /**
+   * mk/478b: لونُ العنوانِ حينَ يُرسمُ على `urgentBg` (بطاقةُ العاجل).
+   * الغيابُ ⇒ يُستعمل `colors.text` (سلوكٌ سابقٌ محفوظ). الهويّةُ ذاتُ
+   * اللوحةِ الفاتحةِ (نصٌّ داكن) على `urgentBg` داكن يجب أن تحدّد
+   * `urgentText` فاتحاً، وإلّا سقطتِ التباينُ (docs/03 §الألوان — رفعٌ
+   * غيرُ منشور، هذه هي التذكرة نفسها).
+   */
+  readonly urgentText?: string;
 }
 
 // ── الشعار والعلامة المائية ────────────────────────────
@@ -514,6 +522,20 @@ export interface BrandGradient {
   readonly defaultReach: number;
   readonly shape: readonly GradientStop[];
   readonly band: readonly GradientStop[];
+  /**
+   * mk/478b: لونُ التدرّج (قناعُ التعتيم). الغيابُ ⇒ `#000000` — أي
+   * `rgba(0,0,0,α)` سلوكٌ سابقٌ محفوظٌ بايتاً ببايت. الهويّةُ ذاتُ اللوحةِ
+   * الفاتحةِ (سطحٌ فاتحٌ ونصٌّ داكن) يجبُ أن تعطيه لوناً فاتحاً كي لا
+   * يُغَمِّقَ التدرّجُ مكانَ النصِّ الداكن.
+   */
+  readonly color?: string;
+  /**
+   * mk/478b: لونُ التدرّج **على سطحِ العاجل** (`urgentBg`). الغيابُ ⇒
+   * يتراجعُ إلى `gradient.color ?? '#000000'`. مفيدٌ للهويّةِ الفاتحةِ التي
+   * تجعلُ `gradient.color` فاتحاً لبطاقاتِ السطحِ الفاتح، بينما سطحُ العاجلِ
+   * الداكنُ يحتاجُ لوناً داكناً لكيلا يُنعِمَه التدرّجُ ويُضِيعَ التباين.
+   */
+  readonly urgentColor?: string;
 }
 
 export interface ShadowConfig {
