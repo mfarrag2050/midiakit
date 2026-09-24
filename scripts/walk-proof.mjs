@@ -1,36 +1,170 @@
 #!/usr/bin/env node
-// 490 · سكربتُ مشيِ الإثبات — درَجُ العرض بترتيبِ `920 §١`
-//
-// من `/login` إلى «المعاينةُ الحيّة» على `/projects/[id]`. ما بعد ذلك
-// (تصدير · طوابير · تنزيل) يحتاجُ عاملاً حيّاً — لا يُقاس بمشيٍ صرف.
-//
-// متغيّرُ عنوانٍ واحدٌ: `STUDIO_HOST` — المضيفُ والمنفذُ لِواجهةِ الستوديو.
-//   محلّي:  STUDIO_HOST=http://127.0.0.1:19050 API_HOST=http://127.0.0.1:19086 node …
-//   شوروم: STUDIO_HOST=https://mkdemo.primeflow.co  node …
-//         (API مُخدَّم على نفس الأصل عبر proxy فلا حاجةَ إلى API_HOST)
-//
-// كلماتُ سرِّ المالك من `~/MediaKit/.show-owner-password`. البريد افتراضاً
-// `owner@qindeel.example` (من seed-showroom). كلاهما env-override.
-//
-// الاستخدام:
-//   STUDIO_HOST=http://127.0.0.1:19050 API_HOST=http://127.0.0.1:19086 \
-//       node scripts/walk-proof.mjs
+// 490 → 551c · مشية حيّة بالمستأجر الذي جهّزه walk-provision.
+// node scripts/walk-proof.mjs
+// المصادقة من walk-creds.json فقط؛ لا signup ولا SQL ولا تغيير حصّة.
+// RENDER_TIMEOUT_MS يحدّ الانتظار. العامل المطفأ يجب أن ينتهي بفشل صريح.
 
 import puppeteer from 'puppeteer-core';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
+
+const requireRenderer = createRequire(new URL('../apps/renderer/package.json', import.meta.url));
+const { Canvas, loadImage } = requireRenderer('skia-canvas');
+const WAIT_MS = Number(process.env.RENDER_TIMEOUT_MS || 180_000);
+if (!Number.isFinite(WAIT_MS) || WAIT_MS <= 0) throw new Error('INVALID_RENDER_TIMEOUT');
+const HEADLINE = 'مراسلنا: افتتاح مساحات خضراء جديدة في المدينة هذا الأسبوع';
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let accessToken;
+let activeBrowser;
+let browserPage;
+
+async function api(path, method = 'GET', body) {
+  const { status, ok, data } = await browserPage.evaluate(async ({ url, method, body, token }) => {
+    const response = await fetch(url, {
+      method, signal: AbortSignal.timeout(10_000), redirect: 'error',
+      headers: { 'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    return { status: response.status, ok: response.ok, data: await response.json() };
+  }, { url: `${API}/v1${path}`, method, body, token: accessToken });
+  if (!ok) throw new Error(`${method} ${path}: HTTP ${status} code=${data.error?.code || 'UNKNOWN'} field=${data.error?.field || '-'}`);
+  return data;
+}
+
+async function prepareProject() {
+  const credentialsPath = '/Users/mdervis/MediaKit/pf-mediakit-api/apps/api/.local/walk-creds.json';
+  const metadata = await stat(credentialsPath);
+  if ((metadata.mode & 0o777) !== 0o600) throw new Error('WALK_CREDENTIALS_MODE_MUST_BE_0600');
+  const credentials = JSON.parse(await readFile(credentialsPath, 'utf8'));
+  if (!credentials.tenantId || !credentials.apiKey || !credentials.email || !credentials.password) {
+    throw new Error('WALK_CREDENTIALS_INCOMPLETE');
+  }
+  const signedIn = await api('/auth/login', 'POST', {
+    email: credentials.email, password: credentials.password,
+  });
+  if (signedIn.tenant.id !== credentials.tenantId || !signedIn.tenant.name.startsWith('walk-')) {
+    throw new Error('WALK_TENANT_IDENTITY_MISMATCH');
+  }
+  accessToken = signedIn.session.accessToken;
+  const brand = await api('/brand-kits', 'POST', { name: 'هوية تجريبية', locale: 'ar' });
+  // ألوان مخترعة؛ الخط المضمّن IBM Plex Sans Arabic مرخّص SIL OFL-1.1 (assets/fonts/OFL.txt).
+  await api(`/brand-kits/${brand.id}`, 'PATCH', { colors: {
+    text: '#F6F2E9', accent: '#C8BA91', urgentBadge: '#326F69',
+    urgentBg: '#214C50', urgentBgTint: '#193D43', locationBadge: '#426E79',
+    surface: '#18383F', placeholder: ['#37616B', '#18383F'],
+  }});
+  const templates = await api('/templates?limit=100&filter[scope]=global');
+  let template;
+  for (const row of templates.data) {
+    const full = await api(`/templates/${row.id}`);
+    if (full.definition.id === 'breaking') { template = full; break; }
+  }
+  if (!template) throw new Error('BREAKING_TEMPLATE_NOT_FOUND');
+  const project = await api('/projects', 'POST', {
+    title: 'مساحات خضراء جديدة', brand_kit_id: brand.id, template_id: template.id,
+    content: { headline: 'عنوان أولي للمشروع', source: 'مراسلنا' }, locale: 'ar',
+  });
+  await writeFile(join(OUT, '_run.json'), JSON.stringify({
+    stamp: STAMP, tenant: { id: signedIn.tenant.id, name: signedIn.tenant.name }, projectId: project.id,
+    brandId: brand.id, templateId: template.id, template: template.definition.id,
+    studio: STUDIO, api: API, timeoutMs: WAIT_MS,
+  }, null, 2));
+  return { tokens: signedIn.session, projectId: project.id };
+}
+
+async function clickButton(page, label) {
+  const clicked = await page.evaluate((label) => {
+    const button = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === label && !b.disabled);
+    button?.click(); return Boolean(button);
+  }, label);
+  if (!clicked) throw new Error(`BUTTON_NOT_FOUND: ${label}`);
+}
+
+async function measure(file, format) {
+  const bytes = await readFile(file);
+  const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', file], { encoding: 'utf8' }));
+  const stream = probe.streams.find((s) => s.codec_type === 'video');
+  const duration = Number(probe.format.duration || 0);
+  const frame = format === 'mp4'
+    ? execFileSync('ffmpeg', ['-v', 'error', '-ss', String(duration / 2), '-i', file, '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'], { maxBuffer: 20 * 1024 * 1024 })
+    : bytes;
+  if (format === 'mp4') await writeFile(join(OUT, 'mp4-midpoint.png'), frame);
+  const img = await loadImage(frame); const canvas = new Canvas(img.width, img.height);
+  const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+  const pixels = ctx.getImageData(0, 0, img.width, img.height).data;
+  let black = 0; const colors = new Set();
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i] < 16 && pixels[i + 1] < 16 && pixels[i + 2] < 16) black++;
+    // عيّنة كل 100 بكسل، كما يصف تقرير 500؛ تعريف الأسود معلن هنا.
+    if (i % 400 === 0) colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
+  }
+  return { file, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length,
+    width: img.width, height: img.height, codec: stream.codec_name, profile: stream.profile,
+    pix_fmt: stream.pix_fmt, duration, blackPixels: black, totalPixels: img.width * img.height,
+    blackPercent: 100 * black / (img.width * img.height), uniqueColorsSample: colors.size,
+    colorSampleStride: 100, blackDefinition: 'R,G,B each <16', probe };
+}
+
+async function exportFile(page, shot, projectId, format) {
+  await page.click('[data-testid="size-reel"]');
+  await page.click(`[data-testid="format-${format}"]`);
+  await shot(`06-${format}-selected`, await autoChecks(page));
+  const responsePromise = page.waitForResponse((r) => r.url() === `${API}/v1/renders` && r.request().method() === 'POST', { timeout: 15_000 });
+  await clickButton(page, 'تصدير الآن');
+  const response = await responsePromise; const created = await response.json();
+  if (response.status() !== 202) throw new Error(`export-${format}: HTTP ${response.status()} code=${created.error?.code || 'UNKNOWN'}`);
+  await writeFile(join(OUT, `${format}-render.json`), JSON.stringify({ projectId, format, ...created }, null, 2));
+  await pause(1200); await shot(`07-${format}-waiting`, await autoChecks(page));
+  const deadline = Date.now() + WAIT_MS;
+  let row;
+  while (Date.now() < deadline) {
+    row = await api(`/renders/${created.id}`);
+    if (row.project_id !== projectId || row.format !== format) throw new Error('RENDER_IDENTITY_MISMATCH');
+    if (row.status === 'succeeded') break;
+    if (['failed', 'cancelled'].includes(row.status)) {
+      await shot(`08-${format}-failed`, await autoChecks(page));
+      throw new Error(`export-${format}: id=${row.id} status=${row.status} code=${row.error?.code || '-'} support=${row.error?.supportCode || '-'}`);
+    }
+    await pause(Math.min(1000, Math.max(0, deadline - Date.now())));
+  }
+  if (row?.status !== 'succeeded') {
+    await shot(`08-${format}-timeout`, await autoChecks(page));
+    throw new Error(`export-${format}: RENDER_TIMEOUT — لا عامل أكمل المهمة خلال المهلة ${WAIT_MS}ms؛ id=${created.id} status=${row?.status || 'unknown'}`);
+  }
+  await pause(1200); await shot(`08-${format}-succeeded`, await autoChecks(page));
+  const output = await api(`/renders/${created.id}/output`);
+  const target = new URL(output.url);
+  if (target.origin !== 'http://127.0.0.1:19043') throw new Error('OUTPUT_ORIGIN_IS_NOT_DEV_MINIO_19043');
+  const download = await fetch(output.url, { signal: AbortSignal.timeout(30_000), redirect: 'error' });
+  await writeFile(join(OUT, `${format}-download.json`), JSON.stringify({
+    origin: target.origin, pathname: target.pathname, status: download.status,
+    contentType: download.headers.get('content-type'), contentLength: download.headers.get('content-length'),
+  }, null, 2));
+  if (!download.ok) throw new Error(`download-${format}: HTTP ${download.status}`);
+  const file = join(OUT, `export.${format}`);
+  await writeFile(file, Buffer.from(await download.arrayBuffer()));
+  const metrics = await measure(file, format);
+  await writeFile(join(OUT, `${format}-metrics.json`), JSON.stringify({ renderId: created.id, ...metrics }, null, 2));
+  await shot(`09-${format}-downloaded`, await autoChecks(page));
+  process.stdout.write(`export-${format}: succeeded id=${created.id} file=${file} sha256=${metrics.sha256}\n`);
+}
+
 
 const CHROME =
   '/Users/mdervis/.cache/puppeteer/chrome/mac_arm-146.0.7680.31/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
 
-const STUDIO = process.env.STUDIO_HOST || 'http://127.0.0.1:19050';
-const API = process.env.API_HOST || STUDIO;
-const OWNER_EMAIL = process.env.OWNER_EMAIL || 'owner@qindeel.example';
-const PWFILE = process.env.OWNER_PWFILE || `${process.env.HOME}/MediaKit/.show-owner-password`;
-
+const STUDIO = process.env.STUDIO_HOST || 'http://127.0.0.1:19051';
+const API = process.env.API_HOST || 'http://127.0.0.1:19040';
+if (STUDIO !== 'http://127.0.0.1:19051' || API !== 'http://127.0.0.1:19040') {
+  throw new Error('WALK_551_REQUIRES_STUDIO_19051_API_19040');
+}
 const STAMP = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const OUT =
-  process.env.OUT || `/Users/mdervis/MediaKit/Claude outputs/walk-proof-${STAMP}`;
+  new URL(`../out/walk-551c-${STAMP}/`, import.meta.url).pathname;
 
 const DESK = { width: 1440, height: 900, deviceScaleFactor: 2, isMobile: false, hasTouch: false };
 
@@ -164,37 +298,20 @@ async function login(browser, tokens) {
 
 async function main() {
   await mkdir(OUT, { recursive: true });
-  const password = (await readFile(PWFILE, 'utf8')).trim();
   process.stdout.write(`STUDIO=${STUDIO} · API=${API} · OUT=${OUT}\n`);
-
-  // login عبر API — نحقنُ الرموزَ في localStorage لتفاديَ rate-limit.
-  const loginRes = await fetch(`${API}/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Origin': STUDIO },
-    body: JSON.stringify({ email: OWNER_EMAIL, password }),
-  });
-  if (!loginRes.ok) throw new Error(`login: ${loginRes.status} · ${(await loginRes.text()).slice(0, 200)}`);
-  const j = await loginRes.json();
-  const tokens = {
-    accessToken: j.session?.accessToken || j.accessToken,
-    refreshToken: j.session?.refreshToken || j.refreshToken,
-  };
-
-  // اختيار مشروعٍ للمشي بلا إنشاء.
-  const listRes = await fetch(`${API}/v1/projects`, { headers: { Authorization: `Bearer ${tokens.accessToken}` } });
-  const list = await listRes.json();
-  const items = list?.data || list?.items || list;
-  const projectId = Array.isArray(items) && items[0]?.id;
 
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'new',
-    args: ['--no-sandbox', '--disable-web-security', `--user-data-dir=/tmp/pptr-490-${Date.now()}`],
+    userDataDir: join(OUT, 'browser-profile'),
   });
-  await login(browser, tokens);
-
+  activeBrowser = browser;
   const page = await browser.newPage();
+  browserPage = page;
   await page.setViewport(DESK);
+  await page.goto(`${STUDIO}/login`, { waitUntil: 'networkidle2', timeout: 20_000 });
+  const { tokens, projectId } = await prepareProject();
+  await login(browser, tokens);
   await page.evaluateOnNewDocument(
     ({ a, r }) => {
       try {
@@ -255,19 +372,21 @@ async function main() {
 
     // ─── ٥) المعاينة الحيّة بعد كتابةِ عنوانٍ عربيٍّ حقيقيّ ───
     // نصٌّ مخترعٌ · قاعدة 394 · لا اسمَ مؤسّسةٍ حقيقيّة.
-    const HEADLINE = 'محلّل Nexoria Insights يتوقّع نموّاً 3.5% في #الأسهم_العربية';
     const titleSel = 'textarea[data-testid^="field-headline"], textarea[data-field="title"], textarea';
-    try {
-      await page.waitForSelector(titleSel, { timeout: 3000 });
-      await page.focus(titleSel);
-      await page.evaluate((s) => {
-        const el = document.querySelector(s);
-        if (el && 'value' in el) el.value = '';
-      }, titleSel);
-      await page.keyboard.type(HEADLINE, { delay: 10 });
-      await new Promise((r) => setTimeout(r, 2000));
-    } catch {}
+    await page.waitForSelector(titleSel, { timeout: 10_000 });
+    await page.focus(titleSel);
+    await page.$eval(titleSel, (el) => el.select());
+    await page.keyboard.type(HEADLINE, { delay: 10 });
+    const savedResponse = page.waitForResponse((r) => r.url() === `${API}/v1/projects/${projectId}` && r.request().method() === 'PATCH', { timeout: 15_000 });
+    await clickButton(page, 'حفظ');
+    const saved = await savedResponse;
+    if (!saved.ok()) throw new Error(`save: HTTP ${saved.status()}`);
+    const stored = await api(`/projects/${projectId}`);
+    if (stored.content.headline !== HEADLINE) throw new Error('HEADLINE_NOT_SAVED');
+    await pause(2000);
     await shot('05-preview', await autoChecks(page, '05-preview'));
+    await exportFile(page, shot, projectId, 'png');
+    await exportFile(page, shot, projectId, 'mp4');
   } else {
     process.stdout.write(`  … 04-editor · 05-preview: لا مشروعَ متاح — تخطّى\n`);
   }
@@ -308,7 +427,9 @@ async function main() {
   process.stdout.write(`[log] ${join(OUT, '_checks.json')}\n`);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   process.stderr.write(`FATAL: ${e.message}\n`);
-  process.exit(1);
+  await writeFile(join(OUT, '_failure.txt'), `${e.stack}\n`).catch(() => {});
+  await activeBrowser?.close();
+  process.exitCode = 1;
 });
