@@ -119,6 +119,12 @@
       }
     },
     "reels": {
+      "names": {
+        "clip": "Clip {n}",
+        "title": "Title {n}",
+        "audio": "Audio {n}",
+        "audioMain": "Main audio"
+      },
       "timeline": "Timeline",
       "previewNotice": "Preview — work is not saved or exported yet.",
       "track": "Track",

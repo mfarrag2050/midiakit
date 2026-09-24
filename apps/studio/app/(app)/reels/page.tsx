@@ -127,6 +127,7 @@
 // التذكرة، فالتسميةُ تغليفٌ هنا.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { itemName } from '@/src/reels/item-name';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import type { Timeline, Track, TrackItem, TrackType } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
@@ -977,6 +978,13 @@ export default function ReelsTimelinePage(): JSX.Element {
     };
   }, [playing, present.duration]);
 
+  const itemLabels = new Map(shownTimeline.tracks.flatMap((track) =>
+    track.items.map((clip, index) => {
+      const displayName = itemName(track, index);
+      return [clip.id, t(displayName.key, { n: formatNumber(displayName.n, digitStyle) })] as const;
+    }),
+  ));
+
   const btn =
     'flex h-8 items-center gap-1.5 rounded-sm border border-border bg-surface-2 px-2.5 text-fg transition hover:border-fg-subtle disabled:opacity-40 disabled:hover:border-border';
   const kbd = 'tabular text-[10px] text-fg-subtle';
@@ -1003,7 +1011,7 @@ export default function ReelsTimelinePage(): JSX.Element {
       </p>
 
       <section className="mt-6">
-        <h2 className="text-xs uppercase tracking-widest text-fg-subtle">
+        <h2 className="text-xs text-fg-subtle">
           {t('pages.projects.preview.title')}
         </h2>
         <div className="mt-3 rounded-lg border border-border bg-surface p-4 shadow-soft">
@@ -1017,7 +1025,7 @@ export default function ReelsTimelinePage(): JSX.Element {
           >
             {t('pages.reels.collision')}{' '}
             {textLayout?.collisions
-              .map((c) => `${c.aItemId} × ${c.bItemId}`)
+              .map((c) => `${itemLabels.get(c.aItemId) ?? t('pages.reels.clip')} × ${itemLabels.get(c.bItemId) ?? t('pages.reels.clip')}`)
               .join(' · ')}
           </div>
         ) : null}
@@ -1045,7 +1053,7 @@ export default function ReelsTimelinePage(): JSX.Element {
               aria-label={t('pages.reels.properties')}
               data-testid="reels-properties"
             >
-              <h2 className="text-xs uppercase tracking-widest text-fg-subtle">
+              <h2 className="text-xs text-fg-subtle">
                 {t('pages.reels.properties')}
               </h2>
               <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg border border-border bg-surface-2 p-3 shadow-soft md:grid-cols-4">
@@ -1232,7 +1240,10 @@ export default function ReelsTimelinePage(): JSX.Element {
           }}
           className="flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-surface-2 text-fg transition hover:border-fg-subtle"
         >
-          <span aria-hidden className="text-sm leading-none">
+          <span
+            aria-hidden
+            className={`text-sm leading-none${playing ? '' : ' rtl:scale-x-[-1]'}`}
+          >
             {playing ? '⏸' : '▶'}
           </span>
         </button>
@@ -1433,11 +1444,11 @@ export default function ReelsTimelinePage(): JSX.Element {
           <span aria-hidden className="text-success">
             ✓
           </span>
-          <span dir="ltr" className="tabular">
-            {selected
-              ? selected.itemId
-                ? `${selected.trackId} / ${selected.itemId}`
-                : selected.trackId
+          <span dir="auto" className="tabular">
+            {selectedTrack
+              ? selected?.itemId
+                ? itemLabels.get(selected.itemId) ?? t('pages.reels.clip')
+                : t(`pages.reels.trackType.${selectedTrack.type}`)
               : '—'}
           </span>
         </span>

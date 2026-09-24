@@ -122,6 +122,7 @@ import type { Timeline, TrackType } from '@pf-mediakit/shared';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber } from '@/src/format/digits';
+import { itemName } from './item-name';
 import { snapMove, snapTrim, type SnapResult } from './timeline-snap';
 
 export interface TimelineStripProps {
@@ -562,7 +563,7 @@ export function TimelineStrip({
       dir="rtl"
       role="group"
       aria-label={t('pages.reels.timeline')}
-      className="select-none font-mono text-xs"
+      className="select-none text-xs"
     >
       <div className="flex gap-2">
         {/* عمود التسميات — أعلى إلى أسفل = index تنازليّاً (مرآة المسارات) */}
@@ -689,7 +690,7 @@ export function TimelineStrip({
                       {m.major && (
                         <span
                           data-testid="reels-ruler-label"
-                          className="tabular absolute text-fg-subtle"
+                          className="tabular font-mono absolute text-fg-subtle"
                           style={{
                             insetBlockStart: 0,
                             insetInlineStart: `${xPx}px`,
@@ -725,7 +726,9 @@ export function TimelineStrip({
                       backgroundColor: 'color-mix(in srgb, var(--surface-2) 30%, transparent)',
                     }}
                   >
-                    {track.items.map((item) => {
+                    {track.items.map((item, index) => {
+                      const displayName = itemName(track, index);
+                      const itemLabel = t(displayName.key, { n: formatNumber(displayName.n, digitStyle) });
                       const startPx = secToPx(item.start, duration, pxPerSec);
                       const endPx = secToPx(item.end, duration, pxPerSec);
                       const widthPx = Math.max(0, endPx - startPx);
@@ -753,9 +756,9 @@ export function TimelineStrip({
                           type="button"
                           data-testid={`reels-item-${item.id}`}
                           aria-pressed={selected}
-                          aria-label={`${t('pages.reels.clip')} ${item.id}`}
+                          aria-label={itemLabel}
                           aria-keyshortcuts="ArrowRight ArrowLeft [ ]"
-                          title={item.id}
+                          title={itemLabel}
                           onClick={() => {
                             onSelectItem?.(track.id, item.id);
                           }}
@@ -778,11 +781,11 @@ export function TimelineStrip({
                         >
                           {showLabel && (
                             <span
-                              dir="ltr"
-                              title={item.id}
+                              dir="auto"
+                              title={itemLabel}
                               className="block truncate px-1 text-[10px] leading-4 text-fg"
                             >
-                              {item.id}
+                              {itemLabel}
                             </span>
                           )}
                           {/* مقابض القصّ — اليُمنى start في RTL */}

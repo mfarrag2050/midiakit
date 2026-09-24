@@ -120,6 +120,12 @@
       }
     },
     "reels": {
+      "names": {
+        "clip": "مقطع {n}",
+        "title": "عنوان {n}",
+        "audio": "صوت {n}",
+        "audioMain": "صوت رئيسي"
+      },
       "timeline": "Timeline",
       "previewNotice": "Preview — work is not saved or exported yet.",
       "track": "Track",
