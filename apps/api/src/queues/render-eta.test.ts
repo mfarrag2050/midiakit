@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Worker, type ConnectionOptions, type Job } from 'bullmq';
 import type { FastifyBaseLogger } from 'fastify';
 import { config } from '../config.js';
-import { closeQueues, getQueue, getRedis, type QueueName } from './index.js';
+import { closeQueues, getQueue, getRedis, type RenderQueueName as QueueName } from './index.js';
 import { getRenderEta } from './render-eta.js';
 
 const jobs: Job[] = [];

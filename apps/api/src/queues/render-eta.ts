@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import type { PoolClient } from 'pg';
 import type { Job } from 'bullmq';
-import { getQueue, QUEUE_NAMES, type QueueName, type RenderJobPayload } from './index.js';
+import { getQueue, RENDER_QUEUE_NAMES, type RenderQueueName as QueueName, type RenderJobPayload } from './index.js';
 
 // 462: display caps are independent of worker hard-kill deadlines.
 const ETA_CAP_SECONDS: Readonly<Record<QueueName, number>> = { urgent: 30, normal: 90, edit: 180, batch: 300 };
@@ -63,7 +63,7 @@ export async function getRenderEta(request: EtaRequest, log: FastifyBaseLogger):
 export async function getQueuedRenderEta(
   renderId: string, db: PoolClient, log: FastifyBaseLogger,
 ): Promise<RenderEta> {
-  for (const queueName of QUEUE_NAMES) {
+  for (const queueName of RENDER_QUEUE_NAMES) {
     const job = await getQueue(queueName).getJob(renderId);
     if (!job) continue;
     const payload = job.data as RenderJobPayload;

@@ -32,7 +32,9 @@ function bullmqOptions(): { connection: ConnectionOptions; prefix: string } {
 }
 
 // ── أسماء الطوابير (توأمة renderer) ─────────────────
-export const QUEUE_NAMES = ['urgent', 'normal', 'edit', 'batch'] as const;
+export const RENDER_QUEUE_NAMES = ['urgent', 'normal', 'edit', 'batch'] as const;
+export type RenderQueueName = (typeof RENDER_QUEUE_NAMES)[number];
+export const QUEUE_NAMES = [...RENDER_QUEUE_NAMES, 'backup'] as const;
 export type QueueName = (typeof QUEUE_NAMES)[number];
 
 const QUEUE_BULLMQ_NAMES: Readonly<Record<QueueName, string>> = {
@@ -40,6 +42,7 @@ const QUEUE_BULLMQ_NAMES: Readonly<Record<QueueName, string>> = {
   normal: 'render-normal',
   edit: 'render-edit',
   batch: 'render-batch',
+  backup: 'backup-daily',
 };
 
 const queues: Partial<Record<QueueName, Queue>> = {};
@@ -70,7 +73,7 @@ export interface RenderJobPayload {
 }
 
 // ── الحصة العادلة ───────────────────────────────────
-async function computePriority(queueName: QueueName, tenantId: string): Promise<number> {
+async function computePriority(queueName: RenderQueueName, tenantId: string): Promise<number> {
   const q = getQueue(queueName);
   const waiting = await q.getJobs(['waiting', 'delayed'], 0, -1);
   const sameTenant = waiting.filter((j) => (j.data as RenderJobPayload).tenantId === tenantId).length;
@@ -84,8 +87,8 @@ async function computePriority(queueName: QueueName, tenantId: string): Promise<
 export async function enqueueRender(
   payload: RenderJobPayload,
   priority: 'urgent' | 'normal',
-): Promise<{ jobId: string; queueName: QueueName; priority: number }> {
-  const queueName: QueueName = priority === 'urgent' ? 'urgent' : 'normal';
+): Promise<{ jobId: string; queueName: RenderQueueName; priority: number }> {
+  const queueName: RenderQueueName = priority === 'urgent' ? 'urgent' : 'normal';
   const jobPriority = await computePriority(queueName, payload.tenantId);
   const q = getQueue(queueName);
   const job = await q.add(`render-${payload.renderId}`, payload, {
@@ -116,7 +119,7 @@ export async function getWorkerCounts(): Promise<Record<QueueName, number>> {
 
 /** إزالة job (للـcancel — إن كان queued أو delayed). */
 export async function removeRenderJob(renderId: string): Promise<boolean> {
-  for (const name of QUEUE_NAMES) {
+  for (const name of RENDER_QUEUE_NAMES) {
     const q = getQueue(name);
     const job = await q.getJob(renderId);
     if (job) {

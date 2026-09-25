@@ -41,3 +41,24 @@
 السكربتان أداتا تشغيل يدوي/جدولة مقترحة؛ لا تدخلان سلسلة الاختبارات العامة.
 تقرير القياسات الحرفية:
 `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/465-BACKUP-AND-RESTORE.md`.
+
+## 468b — الجدولة الفعلية على dev (2026-09-25)
+
+- حلّ BullMQ محلّ اقتراح OS scheduler أعلاه؛ لا cron ولا launchd مثبت.
+- `node scripts/dev-launch.mjs backup` يشغّل العامل المستقل `backup-daily`؛
+  فرع backup يقدّم `/opt/homebrew/opt/libpq/bin` إلى PATH إن غاب.
+- التسجيل موصول بإقلاع API التالي في بيئة dev المحدّدة؛ أُثبت حيّاً الآن
+  عبر `node --import tsx scripts/backup-control.mjs register` دون إعادة إقلاع API.
+  الوظيفة واحدة عند 03:00 بتوقيت `Europe/Istanbul`؛ إعادة التسجيل حيادية.
+- `node --import tsx scripts/backup-control.mjs cancel` يلغي تكرار النسخ فقط؛
+  لا يقتل وظيفة نشطة. `manual` يضيف مهمة نسخ واحدة وينتظر نتيجتها.
+  الأداة تحتاج بيئة dev غير متعارضة؛ عند بيئة shell موروثة مختلفة:
+  `env -i HOME="$HOME" PATH="$PATH" node --import tsx scripts/backup-control.mjs status`.
+- الإبقاء التلقائي يخص العامل: أحدث 7 dump إجمالاً مع ملفات manifest،
+  ولا يبدأ الحذف إلا بعد نجاح التفريغ ونشر ملف جديد غير صفري.
+  استدعاء `backup:pg` المباشر يبقى بلا إبقاء تلقائي.
+- السجل `logs/backup.log`: start ثم end مع exit=0/1؛ فشل السياق أو التفريغ
+  لا يحذف النسخ السابقة. الاختبار بإيقاف postgres-dev أثبت ذلك ببصمات الملفات.
+- القياسات الستّة معتمدة بحكم 03:35Z الذي أذن بـcommit/push على feat/api؛
+  إثبات الدفع وإغلاق البند 11 في التقرير
+  `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/468b-BACKUP-VIA-BULLMQ-REPEAT.md`.
