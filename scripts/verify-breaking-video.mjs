@@ -16,14 +16,10 @@ import { readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// ── فحص المنصّة (GATE-2LAYER §٤ · 2026-09-11 · PLATFORM-2) ──
-if (process.platform !== 'linux') {
-  console.error('');
-  console.error(`✗ verify-breaking-video: هذا المرجع لينكس حصراً.`);
-  console.error(`  المنصّة الحاليّة: ${process.platform} · المطلوبة: linux`);
-  console.error(``);
-  console.error(`  الحل: ./bin/mk-ci`);
-  process.exit(1);
+// ── فحص المنصّة (487 · PLATFORM-SCOPED) ──
+if (process.platform === 'darwin' || process.arch !== 'x64') {
+  console.log(`SKIP verify:breaking-video (arch=${process.arch}, platform=${process.platform}) — CI enforces amd64 golden; local run is not authoritative.`);
+  process.exit(0);
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
