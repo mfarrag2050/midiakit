@@ -52,6 +52,8 @@ async function upload(
     payload: { kind, filename, sizeBytes: bytes.length, contentType },
   });
   if (uu.statusCode !== 200) throw new Error(`upload-url: ${uu.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   const { assetId } = J<{ assetId: string }>(uu as { body: string })!;
 
   // نجلب storage_key عبر migPool
@@ -86,6 +88,8 @@ beforeAll(async () => {
     },
   });
   if (suA.statusCode !== 201) throw new Error(`signup A: ${suA.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   const ctxA = J<{ tenant: { id: string }; user: { id: string }; session: { accessToken: string } }>(suA as { body: string })!;
   tenantAId = ctxA.tenant.id;
   userAId = ctxA.user.id;
@@ -115,6 +119,8 @@ beforeAll(async () => {
     },
   });
   if (suB.statusCode !== 201) throw new Error(`signup B: ${suB.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   const ctxB = J<{ tenant: { id: string }; session: { accessToken: string } }>(suB as { body: string })!;
   tenantBId = ctxB.tenant.id;
   tokenB = ctxB.session.accessToken;
@@ -231,6 +237,8 @@ describe('عزل التخزين بين المستأجرين · assets endpoints'
       payload: { kind: 'image', filename: 'from-b.png', sizeBytes: 16, contentType: 'image/png' },
     });
     expect(uu.statusCode).toBe(200);
+    await new Promise((res) => setTimeout(res, 50));
+
     const { assetId } = J<{ assetId: string }>(uu as { body: string })!;
 
     // نجلب storage_key عبر migPool (control_plane pool يعبر RLS كذلك)
