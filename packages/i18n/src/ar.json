@@ -153,6 +153,13 @@
           "few": "يبدأ بعد {n} ثوانٍ",
           "other": "يبدأ بعد {n} ثانية"
         },
+        "renderEtaStartsInMin": {
+          "one": "يبدأ بعد دقيقة",
+          "two": "يبدأ بعد دقيقتين",
+          "few": "يبدأ بعد {n} دقائق",
+          "other": "يبدأ بعد {n} دقيقة"
+        },
+        "renderEtaOverHour": "يبدأ بعد أكثر من ساعة",
         "renderEtaImminent": "يبدأ الآن…",
         "renderAgeSeconds": {
           "one": "ثانية",

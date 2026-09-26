@@ -174,6 +174,13 @@
           "few": "starts in {n}s",
           "other": "starts in {n}s"
         },
+        "renderEtaStartsInMin": {
+          "one": "starts in 1m",
+          "two": "starts in 2m",
+          "few": "starts in {n}m",
+          "other": "starts in {n}m"
+        },
+        "renderEtaOverHour": "starts in over an hour",
         "renderEtaImminent": "starting now…",
         "renderAgeSeconds": {
           "one": "{n}s",

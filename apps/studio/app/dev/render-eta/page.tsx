@@ -26,10 +26,13 @@ function futureIso(secondsAhead: number): string {
 
 function buildCases(): readonly Case[] {
   return [
-    { id: 'dev_q1', note: 'queued · مفرد', status: 'queued', etaOverride: futureIso(3) },
-    { id: 'dev_q2', note: 'queued · مثنّى', status: 'queued', etaOverride: futureIso(4) },
-    { id: 'dev_q7', note: 'queued · جمع القلّة', status: 'queued', etaOverride: futureIso(9) },
-    { id: 'dev_q45', note: 'queued · مفرد بعد العشرة', status: 'queued', etaOverride: futureIso(45) },
+    { id: 'dev_q1', note: 'queued · ثواني · مفرد', status: 'queued', etaOverride: futureIso(3) },
+    { id: 'dev_q2', note: 'queued · ثواني · مثنّى', status: 'queued', etaOverride: futureIso(4) },
+    { id: 'dev_q7', note: 'queued · ثواني · جمع القلّة', status: 'queued', etaOverride: futureIso(9) },
+    { id: 'dev_q45', note: 'queued · ثواني · مفرد بعد العشرة', status: 'queued', etaOverride: futureIso(45) },
+    { id: 'dev_m75',   note: 'queued · دقائق · ٧٥s → دقيقتين', status: 'queued', etaOverride: futureIso(75) },
+    { id: 'dev_m600',  note: 'queued · دقائق · ٦٠٠s → ١٠ دقائق', status: 'queued', etaOverride: futureIso(600) },
+    { id: 'dev_over',  note: 'queued · تجاوزَ الساعة · ٣٧٠٠s', status: 'queued', etaOverride: futureIso(3700) },
     { id: 'dev_run', note: 'running · نُخفي الرقم (لم يعُدْ ذا معنى)', status: 'running', etaOverride: futureIso(30) },
     { id: 'dev_ok', note: 'succeeded · نُخفي الرقم', status: 'succeeded', etaOverride: futureIso(0) },
     { id: 'dev_null', note: 'queued · الخادمُ لم يُرجِعْ ETA — يختفي بلا خطأ', status: 'queued', etaOverride: null },

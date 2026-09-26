@@ -13,13 +13,9 @@
 // اسمَ الملفّ يحوي «render» (حارس `check:digit-style-isolation`).
 
 import { useEffect, useState, type JSX } from 'react';
-import { arPluralCategory, useLocale } from '@pf-mediakit/i18n';
+import { useLocale } from '@pf-mediakit/i18n';
 import { get as getStoredEta, subscribe } from '@/src/api/renderEtaStore';
-
-const AR_INDIC_FMT = new Intl.NumberFormat('ar-EG-u-nu-arab');
-const LATIN_FMT = new Intl.NumberFormat('en-US');
-
-type TFn = (k: string, p?: Record<string, string | number>) => string;
+import { formatEta } from './eta-format';
 
 interface Props {
   readonly renderId: string;
@@ -28,13 +24,6 @@ interface Props {
    *  يمرّرُ الأبُ قيمةً (كما في المعرِض) نستعملُها مباشرةً. */
   readonly estimatedStartAtOverride?: string | null;
   readonly className?: string;
-}
-
-function etaText(secondsAhead: number, useLatin: boolean, t: TFn): string {
-  if (secondsAhead <= 0) return t('pages.projects.editor.renderEtaImminent');
-  const cat = arPluralCategory(secondsAhead);
-  const nStr = useLatin ? LATIN_FMT.format(secondsAhead) : AR_INDIC_FMT.format(secondsAhead);
-  return t(`pages.projects.editor.renderEtaStartsIn.${cat}`, { n: nStr });
 }
 
 export function RenderEtaLine({
@@ -80,7 +69,7 @@ export function RenderEtaLine({
 
   return (
     <span dir="rtl" className={className ?? 'text-xs text-fg-subtle tabular'}>
-      {etaText(secondsAhead, locale === 'en', t)}
+      {formatEta(secondsAhead, locale === 'en', t)}
     </span>
   );
 }
