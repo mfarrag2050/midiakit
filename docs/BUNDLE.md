@@ -9,10 +9,10 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-26
-> **HEAD (main):** `023244f`
+> **HEAD (main):** `ac2329f`
 > **HEAD (origin/feat/api):** `15f0e61`
 > **HEAD (origin/feat/studio):** `a4af623`
-> **HEAD (origin/feat/reels):** `b913d0c`
+> **HEAD (origin/feat/reels):** `4ba7c0e`
 
 ## الفهرس
 
