@@ -75,7 +75,7 @@ export interface RenderJobPayload {
 // ── الحصة العادلة ───────────────────────────────────
 async function computePriority(queueName: RenderQueueName, tenantId: string): Promise<number> {
   const q = getQueue(queueName);
-  const waiting = await q.getJobs(['waiting', 'delayed'], 0, -1);
+  const waiting = await q.getJobs(['waiting', 'delayed', 'prioritized'], 0, -1);
   const sameTenant = waiting.filter((j) => (j.data as RenderJobPayload).tenantId === tenantId).length;
   return sameTenant * 10 + 1;
 }
