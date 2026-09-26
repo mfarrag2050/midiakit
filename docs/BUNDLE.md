@@ -9,9 +9,9 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-26
-> **HEAD (main):** `ecc2673`
-> **HEAD (origin/feat/api):** `15f0e61`
-> **HEAD (origin/feat/studio):** `a4af623`
+> **HEAD (main):** `1e7626b`
+> **HEAD (origin/feat/api):** `033188b`
+> **HEAD (origin/feat/studio):** `52c1e83`
 > **HEAD (origin/feat/reels):** `4ba7c0e`
 
 ## الفهرس
@@ -44,10 +44,10 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 402 | `f0722bc86f50` | local |
+| `docs/SKILL-mediakit.md` | 402 | `20f43979cef0` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
-| `PHASES-api.md` | 940 | `b6d645a44db9` | git show origin/feat/api |
+| `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
 
 ---
@@ -11326,7 +11326,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `ecc2673` (`main`)
+> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `1e7626b` (`main`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11388,15 +11388,15 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `15f0e61` | 7 | 29 | 530 |
-| `feat/ci` | `ecc2673` | 0 | 0 | 552 |
-| `feat/reels` | `4ba7c0e` | 21 | 16 | 557 |
-| `feat/studio` | `a4af623` | 1 | 22 | 531 |
-| `origin/aa-internal` | `ee178ca` | 0 | 551 | 1 |
-| `origin/feat/api` | `15f0e61` | 7 | 29 | 530 |
-| `origin/feat/ci` | `ecc2673` | 0 | 0 | 552 |
-| `origin/feat/reels` | `4ba7c0e` | 21 | 16 | 557 |
-| `origin/feat/studio` | `a4af623` | 1 | 22 | 531 |
+| `feat/api` | `033188b` | 9 | 32 | 532 |
+| `feat/ci` | `ecc2673` | 0 | 3 | 552 |
+| `feat/reels` | `4ba7c0e` | 21 | 19 | 557 |
+| `feat/studio` | `52c1e83` | 1 | 24 | 532 |
+| `origin/aa-internal` | `ee178ca` | 0 | 554 | 1 |
+| `origin/feat/api` | `033188b` | 9 | 32 | 532 |
+| `origin/feat/ci` | `ecc2673` | 0 | 3 | 552 |
+| `origin/feat/reels` | `4ba7c0e` | 21 | 19 | 557 |
+| `origin/feat/studio` | `52c1e83` | 1 | 24 | 532 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
@@ -13606,6 +13606,30 @@ git branch --show-current
 > **قرار العزل:** `docs/02 §ADR-011`.
 
 ---
+
+## 469b — السقف والعدالة (2026-09-25 · متوقف قبل الالتزام؛ البند 6 ◐)
+
+**تحديث 04:38Z — الحكم الحالي:** أ مقبول للعينة بحكم 04:35Z. ب أُعيدت مرة واحدة
+بترتيب A₁,A₂,B₁,B₂,B₃,A₃,A₄,C₁ ثم C₂؛ ثبتت ثلاث prioritized في رصدين
+متتاليين بفاصل 106ms، منها A₄ وC₁. حصلت C₂ على أولوية 1 من enqueueRender
+ومن job.opts مع بقاء C₁ وA₄ prioritized بعد الإضافة. التسع completed/succeeded؛
+بدأت A₄ عند 04:38:50.870Z وC₂ عند 04:38:50.871Z.
+**اكتشاف PRIORITIZED_OMISSION_CONFIRMED؛ توقف بلا إصلاح أو التزام، لتقييم Opus.**
+الأثر: `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/469b-20260925T043848450Z-3ea7e924.jsonl`.
+البند 6 يبقى ◐، والفيديو لم يُختبر. لم يُحذف الصفان القديمان. التفاصيل أدناه تاريخ المحاولات السابقة:
+
+- 469 دُفع دون دمج: `15f0e613aa2804ac2de951e8f1cd9e68d1c568ec` على `feat/api`.
+- سكربت `apps/api/scripts/peak-load-cap.mjs`: خمس normal للمستأجر A؛
+  الخامسة capDelays=1 وبدء فعلي بعد 5075ms، والخمس completed/succeeded.
+  السقف 4 ثبت في هذه العينة، مستقلاً عن أولوية الإدراج.
+- ب: محاولتا PNG بحجمي x وinstagram؛ ست مهام A,A,A,B,B,C.
+  أقصى انتظار مرصود في الثانية 1 (C prioritized، خمس active)، لا ثلاث؛
+  لم تُدرج السابعة. أثر إغفال prioritized ما يزال غير محسوم سلوكياً.
+- أُنشئ 19 صفاً وأُرسلت 17 مهمة نجحت؛ صفا السابعة بقيَا queued بلا job.
+  normal فارغ بعد كل حمل؛ لا حذف بيانات، ولا تعديل إنتاج أو worker.
+- التقرير والأثر الخام: `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/469b-PEAK-FAIRNESS-AND-CAP.md`.
+  البند 6 ◐: العدالة معلقة بشرط انتظار غير متحقق، والفيديو لم يُختبر.
+  توقف قبل الالتزام؛ يحتاج حمل ب إلى تعديل تصميم معتمد.
 
 ## 469 — قياس تسع مهام على dev (2026-09-25 · GO commit+push 04:25Z؛ البند 6 ◐)
 
