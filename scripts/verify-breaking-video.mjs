@@ -63,7 +63,7 @@ console.log(`\n════════ بوابة breaking المرجعية ═
 console.log(`مرجعي: ${REFERENCE_MD5}`);
 console.log(`فعلي:  ${actualMd5}`);
 
-if (REFERENCE_MD5.split("\n").map(s => s.trim()).includes(actualMd5)) {
+if (actualMd5 === REFERENCE_MD5) {
   console.log(`\n✓ متطابق. المسار الحالي يعيد نفس مخرج breaking المرجعي.`);
 } else {
   console.error(`\n✗ اختلاف. المسار الحالي غيّر مخرج breaking.`);
