@@ -180,6 +180,7 @@
           "few": "starts in {n}m",
           "other": "starts in {n}m"
         },
+        "renderEtaInHour": "starts in 1h",
         "renderEtaOverHour": "starts in over an hour",
         "renderEtaImminent": "starting now…",
         "renderAgeSeconds": {

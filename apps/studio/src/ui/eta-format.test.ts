@@ -59,7 +59,9 @@ const CASES: readonly Row[] = [
   { s: 75,   ar: 'يبدأ بعد دقيقتين',         en: 'starts in 2m' },
   { s: 120,  ar: 'يبدأ بعد دقيقتين',         en: 'starts in 2m' },
   { s: 600,  ar: 'يبدأ بعد ١٠ دقائق',         en: 'starts in 10m' },
-  { s: 3599, ar: 'يبدأ بعد ٦٠ دقيقة',         en: 'starts in 60m' },
+  { s: 3540, ar: 'يبدأ بعد ٥٩ دقيقة',         en: 'starts in 59m' },
+  { s: 3541, ar: 'يبدأ بعد ساعة',             en: 'starts in 1h' },
+  { s: 3599, ar: 'يبدأ بعد ساعة',             en: 'starts in 1h' },
   { s: 3600, ar: 'يبدأ بعد أكثر من ساعة',    en: 'starts in over an hour' },
   { s: 3700, ar: 'يبدأ بعد أكثر من ساعة',    en: 'starts in over an hour' },
 ];

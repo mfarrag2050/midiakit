@@ -32,6 +32,8 @@ export function formatEta(secondsAhead: number, useLatin: boolean, t: EtaTFn): s
     });
   }
   const m = Math.ceil(secondsAhead / 60);
+  // ٥٦٠d · m=60 (نطاق 3541–3599s) يُقرأ «ساعة» لا «٦٠ دقيقة» — نصٌّ خاص.
+  if (m >= 60) return t('pages.projects.editor.renderEtaInHour');
   const cat = arPluralCategory(m);
   return t(`pages.projects.editor.renderEtaStartsInMin.${cat}`, {
     n: fmt.format(m),
