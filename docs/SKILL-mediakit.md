@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `51eaca8` (`feat/ci`)
+> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `63ae041` (`feat/ci`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -75,7 +75,7 @@ description: |
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
 - **`demo/`:** 17 ملف
-- **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
+- **`snapshots/`:** 18 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- CROSS-BRANCH:START -->
 <!--
@@ -89,15 +89,15 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `15f0e61` | 7 | 13 | 530 |
-| `feat/ci` | `51eaca8` | 2 | 0 | 538 |
-| `feat/reels` | `b913d0c` | 20 | 0 | 556 |
-| `feat/studio` | `a4af623` | 1 | 6 | 531 |
-| `origin/aa-internal` | `ee178ca` | 0 | 535 | 1 |
-| `origin/feat/api` | `15f0e61` | 7 | 13 | 530 |
-| `origin/feat/ci` | `829af03` | 1 | 0 | 537 |
-| `origin/feat/reels` | `b913d0c` | 20 | 0 | 556 |
-| `origin/feat/studio` | `a4af623` | 1 | 6 | 531 |
+| `feat/api` | `15f0e61` | 7 | 14 | 530 |
+| `feat/ci` | `63ae041` | 8 | 0 | 545 |
+| `feat/reels` | `4ba7c0e` | 21 | 1 | 557 |
+| `feat/studio` | `a4af623` | 1 | 7 | 531 |
+| `origin/aa-internal` | `ee178ca` | 0 | 536 | 1 |
+| `origin/feat/api` | `15f0e61` | 7 | 14 | 530 |
+| `origin/feat/ci` | `63ae041` | 8 | 0 | 545 |
+| `origin/feat/reels` | `4ba7c0e` | 21 | 1 | 557 |
+| `origin/feat/studio` | `a4af623` | 1 | 7 | 531 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
