@@ -9,9 +9,9 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-26
-> **HEAD (main):** `1e7626b`
+> **HEAD (main):** `e8d734f`
 > **HEAD (origin/feat/api):** `033188b`
-> **HEAD (origin/feat/studio):** `52c1e83`
+> **HEAD (origin/feat/studio):** `b56ca09`
 > **HEAD (origin/feat/reels):** `4ba7c0e`
 
 ## الفهرس
@@ -44,7 +44,7 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 402 | `20f43979cef0` | local |
+| `docs/SKILL-mediakit.md` | 403 | `abb1e6e4f268` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -11326,7 +11326,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `1e7626b` (`main`)
+> **تاريخ التوليد:** 2026-09-26 · **HEAD:** `e8d734f` (`merge/514b`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11388,15 +11388,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `033188b` | 9 | 32 | 532 |
-| `feat/ci` | `ecc2673` | 0 | 3 | 552 |
-| `feat/reels` | `4ba7c0e` | 21 | 19 | 557 |
-| `feat/studio` | `52c1e83` | 1 | 24 | 532 |
-| `origin/aa-internal` | `ee178ca` | 0 | 554 | 1 |
-| `origin/feat/api` | `033188b` | 9 | 32 | 532 |
-| `origin/feat/ci` | `ecc2673` | 0 | 3 | 552 |
-| `origin/feat/reels` | `4ba7c0e` | 21 | 19 | 557 |
-| `origin/feat/studio` | `52c1e83` | 1 | 24 | 532 |
+| `feat/api` | `033188b` | 9 | 33 | 532 |
+| `feat/ci` | `ecc2673` | 0 | 4 | 552 |
+| `feat/reels` | `4ba7c0e` | 21 | 20 | 557 |
+| `feat/studio` | `b56ca09` | 3 | 25 | 534 |
+| `merge/514b` | `e8d734f` | 10 | 0 | 566 |
+| `origin/aa-internal` | `ee178ca` | 0 | 555 | 1 |
+| `origin/feat/api` | `033188b` | 9 | 33 | 532 |
+| `origin/feat/ci` | `ecc2673` | 0 | 4 | 552 |
+| `origin/feat/reels` | `4ba7c0e` | 21 | 20 | 557 |
+| `origin/feat/studio` | `b56ca09` | 3 | 25 | 534 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
