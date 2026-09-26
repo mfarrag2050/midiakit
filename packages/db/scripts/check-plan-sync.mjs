@@ -95,12 +95,17 @@ for (const plan of PLANS) {
     errors.push(`  ✗ plans[${plan.key}]: في المصدر (${SOURCE_FILE}) ولا صفَّ في DB — هجرةُ بذرٍ لم تُطبَّق؟`);
     continue;
   }
-  const sourceHash = canonicalHash(seedShapeOf(plan));
-  if (sourceHash !== dbRow.definition_hash) {
+  const sourceShape = seedShapeOf(plan);
+  const sourceHash = canonicalHash(sourceShape);
+  const dbShape = seedShapeOf(dbRow);
+  const dbActualHash = canonicalHash(dbShape);
+
+  if (sourceHash !== dbRow.definition_hash || sourceHash !== dbActualHash) {
     errors.push(
       `  ✗ plans[${plan.key}]: source ≠ db\n` +
-      `      source(${sourceHash.slice(0, 12)}…) = ${JSON.stringify(seedShapeOf(plan))}\n` +
-      `      db    (${dbRow.definition_hash.slice(0, 12)}…) = ${JSON.stringify({ key: dbRow.key, name_ar: dbRow.name_ar, name_en: dbRow.name_en })}`,
+      `      source(${sourceHash.slice(0, 12)}…) = ${JSON.stringify(sourceShape)}\n` +
+      `      db    (${dbRow.definition_hash.slice(0, 12)}…) = ${JSON.stringify(dbShape)}` +
+      (sourceHash === dbRow.definition_hash ? ` (⚠️ تم تعديل الهوية يدوياً بلا مزامنة!)` : '')
     );
   }
   const rowHash = canonicalHash(seedShapeOf(dbRow));
