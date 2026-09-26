@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-26
-> **HEAD (main):** `ac2329f`
+> **HEAD (main):** `a7b818d`
 > **HEAD (origin/feat/api):** `15f0e61`
 > **HEAD (origin/feat/studio):** `a4af623`
 > **HEAD (origin/feat/reels):** `4ba7c0e`
@@ -20,7 +20,7 @@
 |---|---:|:---|:---|
 | `docs/01-product.md` | 94 | `e052dd8d96b9` | local |
 | `docs/02-architecture.md` | 418 | `5350e2e4e3c5` | local |
-| `docs/03-brand-kit-spec.md` | 448 | `381efb08c286` | local |
+| `docs/03-brand-kit-spec.md` | 451 | `d24396c6bdfc` | local |
 | `docs/04-template-spec.md` | 295 | `05baffe71130` | local |
 | `docs/05-engine-api.md` | 360 | `fb6c8717a10c` | local |
 | `docs/06-roadmap.md` | 179 | `f9022e8013a3` | local |
@@ -637,6 +637,7 @@ usage          tenant_id, period, renders_count, video_seconds
     "urgentBadge": "#C1012F",
     "urgentBg":    "#C82626",
     "urgentBgTint":"#C21C1C",
+    "urgentText":  "…",                // mk/478b · اختياريّ: لونُ العنوانِ على urgentBg. الغياب ⇒ colors.text. مطلوبٌ للهويّةِ الفاتحة (نصٌّ داكن على urgentBg داكن).
     "locationBadge":"#1D5FC4",
     "surface":     "#111111",
     "placeholder": ["#474C55", "#15171B"]
@@ -732,6 +733,8 @@ usage          tenant_id, period, renders_count, video_seconds
   "gradient": {
     "defaultOpacity": 0.72,
     "defaultReach": 0.90,
+    "color":       "…",                // mk/478b · اختياريّ: لونُ قناعِ التدرّج. الغياب ⇒ '#000000' (سلوكٌ سابقٌ محفوظٌ ببايت). فاتحٌ للهويّةِ الفاتحة كي لا يُغَمِّقَ التدرّجُ مكانَ النصِّ الداكن.
+    "urgentColor": "…",                // mk/478b · اختياريّ: لونُ التدرّج على سطحِ urgentBg. الغياب ⇒ يتراجعُ إلى color ثمّ '#000000'. داكنٌ للهويّةِ الفاتحةِ لكي يبقى سطحُ العاجلِ داكناً تحت التدرّج.
     "shape": [[0,1],[0.20,0.98],[0.40,0.82],[0.60,0.48],[0.80,0.06],[0.92,0]],
     "band":  [[0,0.08],[0.20,0.5],[0.36,0.92],[0.5,1.0],[0.64,0.92],[0.80,0.5],[1,0.08]]
   },
