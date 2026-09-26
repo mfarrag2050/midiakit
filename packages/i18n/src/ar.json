@@ -147,6 +147,13 @@
         "renderRunning": "قيد التنفيذ...",
         "renderReady": "المخرج جاهز — افتح للتحميل",
         "renderAgeSince": "منذ {age}",
+        "renderEtaStartsIn": {
+          "one": "يبدأ بعد ثانية",
+          "two": "يبدأ بعد ثانيتين",
+          "few": "يبدأ بعد {n} ثوانٍ",
+          "other": "يبدأ بعد {n} ثانية"
+        },
+        "renderEtaImminent": "يبدأ الآن…",
         "renderAgeSeconds": {
           "one": "ثانية",
           "two": "ثانيتين",

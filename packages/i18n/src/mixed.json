@@ -169,6 +169,13 @@
         "renderRunning": "Running...",
         "renderReady": "Output ready — open to download",
         "renderAgeSince": "منذ {age}",
+        "renderEtaStartsIn": {
+          "one": "يبدأ بعد ثانية",
+          "two": "يبدأ بعد ثانيتين",
+          "few": "يبدأ بعد {n} ثوانٍ",
+          "other": "يبدأ بعد {n} ثانية"
+        },
+        "renderEtaImminent": "يبدأ الآن…",
         "renderAgeSeconds": {
           "one": "ثانية",
           "two": "ثانيتين",

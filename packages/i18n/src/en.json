@@ -168,6 +168,13 @@
         "renderRunning": "Running...",
         "renderReady": "Output ready — open to download",
         "renderAgeSince": "{age} ago",
+        "renderEtaStartsIn": {
+          "one": "starts in 1s",
+          "two": "starts in 2s",
+          "few": "starts in {n}s",
+          "other": "starts in {n}s"
+        },
+        "renderEtaImminent": "starting now…",
         "renderAgeSeconds": {
           "one": "{n}s",
           "two": "{n}s",
