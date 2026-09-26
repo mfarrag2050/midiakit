@@ -38,13 +38,13 @@ VOLUME="pf-mediakit-ci-node-modules"
 # أسماء ومنافذ فريدة — لا تعارض dev/test/showroom
 CI_CONTAINER="pf-mediakit-ci"
 PG_CI_CONTAINER="pf-mediakit-ci-pg"
-PG_CI_PORT="19045"
+PG_CI_PORT="19055"
 REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
-REDIS_CI_PORT="19046"
+REDIS_CI_PORT="19056"
 # 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر (STORAGE_DRIVER=memory ⇒ mem:// ⇒
 # unknown scheme في undici). دلو خاصّ بالمِحَكّ = mk-assets-ci — لا dev ولا شوروم.
 MINIO_CI_CONTAINER="pf-mediakit-ci-minio"
-MINIO_CI_PORT="19047"
+MINIO_CI_PORT="19057"
 MINIO_CI_BUCKET="mk-assets-ci"
 CI_NETWORK="pf-mediakit-ci-net"
 
@@ -54,28 +54,30 @@ PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
 # (dev_migration_pass / dev_app_pass) — نفس السكربت يُنشئهما عبر init mount.
 
 if [[ "${1:-}" == "--regen-refs" ]]; then
-  # 411ب (2026-09-15) — إعادة توليد snapshots/ و snapshots-semantic/ من
-  # preview.mjs مباشرةً · لا نسخٌ بينهما · حارسُ فخّ النسخ في الذيل.
   echo "[mk-ci --regen-refs] Linux container · preview.mjs × 4 (2 هويّتَين × 2 وضعَي دلالي)"
   echo "[mk-ci --regen-refs] المسار: preview.mjs → out/{nosemantic,semantic}/ → snapshots/ و snapshots-semantic/"
   echo ""
   set +e
+  
+  echo "[regen · حاوية] بناء صورة الحاوية..."
+  docker build -t pf-mediakit-ci-image -f - . << 'EOF'
+FROM node:20.18.1-bookworm-slim
+WORKDIR /work
+RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+COPY . /work/
+RUN pnpm install --frozen-lockfile
+EOF
+
   docker run --rm \
     --name "${CI_CONTAINER}-regen" \
     --platform linux/arm64 \
-    -v "${ROOT}:/work" \
-    -v "${VOLUME}:/work/node_modules" \
+    -v "${ROOT}/snapshots:/work/snapshots" \
+    -v "${ROOT}/snapshots-semantic:/work/snapshots-semantic" \
     -w /work \
-    "${IMAGE}" \
+    pf-mediakit-ci-image \
     bash -c '
       set -e
-      echo "[regen · حاوية] apt install …"
-      apt-get update -qq > /dev/null 2>&1
-      apt-get install -qq -y --no-install-recommends git > /dev/null 2>&1
-      corepack enable > /dev/null 2>&1
-      corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
-      echo "[regen · حاوية] pnpm install --frozen-lockfile …"
-      pnpm install --frozen-lockfile 2>&1 | tail -3
       echo "[regen · حاوية] preview.mjs × 4 …"
       for brand in default client-demo; do
         for semantic in off on; do
@@ -231,8 +233,18 @@ AI_KEY=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypt
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
 PLATFORM_JWT=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
 
-echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (${IMAGE})"
-echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · volume ${VOLUME} لـnode_modules"
+echo "[mk-ci] بناء صورة الحاوية..."
+docker build -t pf-mediakit-ci-image -f - . << 'EOF'
+FROM node:20.18.1-bookworm-slim
+WORKDIR /work
+RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+COPY . /work/
+RUN pnpm install --frozen-lockfile
+EOF
+
+echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (الصورة المبنيّة)"
+echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · بدون ربط المضيف (عزل كامل)"
 echo ""
 
 # ── حاوية الاختبار ──────────────────────────────────
@@ -241,8 +253,6 @@ docker run --rm \
   --name "${CI_CONTAINER}" \
   --network "${CI_NETWORK}" \
   --platform linux/arm64 \
-  -v "${ROOT}:/work" \
-  -v "${VOLUME}:/work/node_modules" \
   -e DATABASE_URL="${DB_URL_MIGRATION}" \
   -e DATABASE_URL_APP="${DB_URL_APP}" \
   -e DATABASE_URL_TEST="${DB_URL_MIGRATION}" \
@@ -260,16 +270,9 @@ docker run --rm \
   -e S3_ACCESS_KEY_ID="${MINIO_USER}" \
   -e S3_SECRET_ACCESS_KEY="${MINIO_PASS}" \
   -w /work \
-  "${IMAGE}" \
+  pf-mediakit-ci-image \
   bash -c '
     set -e
-    echo "[mk-ci · حاوية] apt install …"
-    apt-get update -qq > /dev/null 2>&1
-    apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
-    corepack enable > /dev/null 2>&1
-    corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
-    echo "[mk-ci · حاوية] pnpm install --frozen-lockfile …"
-    pnpm install --frozen-lockfile 2>&1 | tail -3
     # 276-THE-GATE-RUNS-AS-THE-WRONG-USER §٣ · التوزيع الصحيح المُقاس:
     #   DATABASE_URL      = migration_user (لـscaffolding الفاحصات mjs · لـmigrate)
     #   DATABASE_URL_APP  = app_user       (اتّصال المنتج · api / vitest fastify inject)
