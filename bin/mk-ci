@@ -36,17 +36,34 @@ IMAGE="node:20.18.1-bookworm-slim"
 VOLUME="pf-mediakit-ci-node-modules"
 
 # أسماء ومنافذ فريدة — لا تعارض dev/test/showroom
+# mk/516: المنافذ قابلةٌ للضبط عبر البيئة — الافتراضاتُ خارجَ ما تحجزه
+# حاويات dev (19041-19045 · 19062-19065 · 19082-19087). عند تصادم، غيّرْ
+# بـMK_CI_PG_PORT/MK_CI_REDIS_PORT/MK_CI_MINIO_PORT بدل قتل حاويةِ dev.
 CI_CONTAINER="pf-mediakit-ci"
 PG_CI_CONTAINER="pf-mediakit-ci-pg"
-PG_CI_PORT="19055"
+PG_CI_PORT="${MK_CI_PG_PORT:-19055}"
 REDIS_CI_CONTAINER="pf-mediakit-ci-redis"
-REDIS_CI_PORT="19056"
+REDIS_CI_PORT="${MK_CI_REDIS_PORT:-19056}"
 # 274-THE-STORAGE-ROOT §٢ · خزن MinIO عابر (STORAGE_DRIVER=memory ⇒ mem:// ⇒
 # unknown scheme في undici). دلو خاصّ بالمِحَكّ = mk-assets-ci — لا dev ولا شوروم.
 MINIO_CI_CONTAINER="pf-mediakit-ci-minio"
-MINIO_CI_PORT="19057"
+MINIO_CI_PORT="${MK_CI_MINIO_PORT:-19057}"
 MINIO_CI_BUCKET="mk-assets-ci"
 CI_NETWORK="pf-mediakit-ci-net"
+
+# mk/516: فحصُ منفذٍ قبل الإقلاع — إن كان محجوزاً على 127.0.0.1، رسالةٌ
+# تسمّي الحامل (إن أمكن) ثمّ خروجٌ غير صفر. لا قتلَ لأيّ عمليّة.
+check_port_free() {
+  local port="$1" label="$2" envvar="$3"
+  if lsof -nP -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null | tail -n +2 | grep -q .; then
+    echo "[mk-ci] ✗ المنفذ ${port} (${label}) محجوز على 127.0.0.1."
+    echo "[mk-ci]   الحامل (lsof):"
+    lsof -nP -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null | sed 's/^/    /'
+    echo "[mk-ci]   الحلّ: صدِّرْ ${envvar}=<منفذ حرّ من 19000-19099>"
+    echo "[mk-ci]   مثال: ${envvar}=19058 ./bin/mk-ci"
+    exit 2
+  fi
+}
 
 # كلمات سرّ dev-only (تنتهي مع الحاوية)
 PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
@@ -118,6 +135,11 @@ docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker rm -f "${REDIS_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker rm -f "${MINIO_CI_CONTAINER}" > /dev/null 2>&1 || true
 docker network rm "${CI_NETWORK}" > /dev/null 2>&1 || true
+
+# ── فحص المنافذ قبل رفع أيّ شيء (mk/516) ─────────────
+check_port_free "${PG_CI_PORT}"    "pg"    "MK_CI_PG_PORT"
+check_port_free "${REDIS_CI_PORT}" "redis" "MK_CI_REDIS_PORT"
+check_port_free "${MINIO_CI_PORT}" "minio" "MK_CI_MINIO_PORT"
 
 # ── الشبكة ─────────────────────────────────────────
 docker network create "${CI_NETWORK}" > /dev/null
