@@ -1,0 +1,33 @@
+{
+  "environment": {
+    "NODE_ENV": "development",
+    "API_HOST": "127.0.0.1",
+    "PORT": "19040",
+    "CORS_ORIGIN": "http://127.0.0.1:19051",
+    "STORAGE_DRIVER": "s3",
+    "S3_ENDPOINT": "http://127.0.0.1:19043",
+    "S3_PUBLIC_ENDPOINT": "http://127.0.0.1:19043",
+    "S3_BUCKET": "mk-assets-dev",
+    "S3_REGION": "us-east-1",
+    "REDIS_URL": "redis://127.0.0.1:19045/0",
+    "BULLMQ_PREFIX": "pf-mediakit"
+  },
+  "localFiles": [".env", ".env.local"],
+  "localKeys": [
+    "DATABASE_URL_APP",
+    "DATABASE_URL_PLATFORM",
+    "SESSION_JWT_SECRET",
+    "AI_KEY_ENCRYPTION_KEY",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY"
+  ],
+  "database": {
+    "hostname": "127.0.0.1",
+    "port": "19041",
+    "pathname": "/mediakit",
+    "roles": {
+      "DATABASE_URL_APP": "app_user",
+      "DATABASE_URL_PLATFORM": "control_plane_user"
+    }
+  }
+}

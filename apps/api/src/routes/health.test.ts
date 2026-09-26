@@ -45,8 +45,8 @@ describe('260 · /v1/health يعلن الشجرة', () => {
     expect(body.commit === null || /^[a-f0-9]{40}$/.test(body.commit)).toBe(true);
     // cwd مسار مطلق
     expect(body.cwd).toMatch(/^\//);
-    // workers: 4 مفاتيح · قيَم أعداد
-    expect(Object.keys(body.workers).sort()).toEqual(['batch', 'edit', 'normal', 'urgent']);
+    // workers: 5 مفاتيح · قيَم أعداد
+    expect(Object.keys(body.workers).sort()).toEqual(['backup', 'batch', 'edit', 'normal', 'urgent']);
     for (const v of Object.values(body.workers)) {
       expect(typeof v).toBe('number');
       expect(v).toBeGreaterThanOrEqual(0);

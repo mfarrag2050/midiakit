@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --import tsx --watch src/server.ts",
+    "backup:pg": "node scripts/pg-dump.mjs",
+    "verify:pg-restore": "node scripts/pg-restore-verify.mjs",
+    "dev": "node scripts/dev-launch.mjs api",
     "start": "node --import tsx src/server.ts",
     "typecheck": "tsc --noEmit",
     "smoke:auth": "node --import tsx scripts/smoke-auth.ts",
@@ -35,7 +37,8 @@
     "verify:cover-write-5": "node --import tsx scripts/verify-cover-write-5.mjs",
     "verify:cover-bucket-2": "node --import tsx scripts/verify-cover-bucket-2.mjs",
     "verify:font-metrics-upload": "STORAGE_DRIVER=memory node --import tsx scripts/verify-font-metrics-upload.mjs",
-    "alerts:worker": "node --import tsx src/limits/alerts-worker.ts"
+    "alerts:worker": "node --import tsx src/limits/alerts-worker.ts",
+    "worker": "node scripts/dev-launch.mjs worker"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.717.0",
