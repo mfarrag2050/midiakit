@@ -18,10 +18,16 @@
  * ══════════════════════════════════════════════════════════════
  * ممنوع تشغيله على العرض الحيّ (mkdemo.primeflow.co · 19070).
  * ══════════════════════════════════════════════════════════════
- * بعد promote، يشغّله المالك من مضيفه هكذا:
+ * بعد promote، يشغّله المالك على الميني (بجانب حاويّة العرض) هكذا:
  *
  *   DEMO_EMAIL='...' DEMO_PASSWORD='...' \
- *     node scripts/demo-path.mjs --base-url https://mkdemo.primeflow.co
+ *   DEMO_OWNER=1 DEMO_HOST_ACK=1 \
+ *     node scripts/demo-path.mjs --base-url http://127.0.0.1:19070
+ *
+ * ملاحظة: `https://mkdemo.primeflow.co` خلف Cloudflare Access (يعيد 302
+ * إلى صفحة تسجيل الدخول)، ولا يصل إليه هذا السكربت بدون Service Token
+ * غيرِ متوفّرٍ الآن. المسار المحلّيّ على الميني يتخطّى CF ويصل إلى API
+ * العرض مباشرة.
  *
  * السكربت يرفض أيّ base-url يشير إلى 19062/19063/19064/mkdemo إن كان يعمل
  * من خارج سياق المالك (متغيّرَي بيئة DEMO_OWNER=1 + DEMO_HOST_ACK=1 معاً).
@@ -284,7 +290,7 @@ try {
       const r = await api('GET', `/v1/renders/${reelRenderId}`, { token });
       const errCode = r.data?.error?.code ?? null;
       if (errCode === 'RENDER_FAILED') {
-        throw new SkipStep(`reel template لا يرندر MP4 اليوم (MP4_UNSUPPORTED_TEMPLATE · 90-REEL-IMAGES معلَّق) — يصير ✓ تلقائيّاً عند وصول الميزة.`);
+        throw new SkipStep(`الريلز: معاينة فقط في هذا الإصدار — تصدير MP4 غير متاح (90-REEL-IMAGES معلَّق).`);
       }
       throw err;
     }
