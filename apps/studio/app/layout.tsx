@@ -6,6 +6,9 @@ import { LocaleProvider } from '@pf-mediakit/i18n';
 export const metadata: Metadata = {
   title: 'Media Kit — Studio',
   description: 'محرّر Media Kit — محرّك الطباعة العربية للوكالات.',
+  // ٥٦٦c: صفحاتُ الاستوديو كانت تُرجع 404 على /favicon.ico لغياب أيقونة.
+  // نُشير إلى icon.svg الذي يخدمه Next من `app/icon.svg` — يُغني عن ico.
+  icons: { icon: '/icon.svg' },
 };
 
 export default function RootLayout({
