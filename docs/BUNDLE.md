@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-27
-> **HEAD (main):** `7e07458`
+> **HEAD (main):** `83a5afb`
 > **HEAD (origin/feat/api):** `edd9e0b`
 > **HEAD (origin/feat/studio):** `2324351`
 > **HEAD (origin/feat/reels):** `bd064d2`
@@ -44,7 +44,7 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 409 | `aacf45c4f254` | local |
+| `docs/SKILL-mediakit.md` | 409 | `4e107a787044` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -11326,7 +11326,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `7e07458` (`merge/526`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `83a5afb` (`merge/565`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11388,22 +11388,22 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `exp/486-threads1` | `1a9eb73` | 1 | 0 | 619 |
-| `feat/api` | `edd9e0b` | 5 | 0 | 623 |
-| `feat/ci` | `ecc2673` | 0 | 66 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 23 | 595 |
-| `feat/studio` | `2324351` | 2 | 4 | 616 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 4 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 2 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 0 | 618 |
-| `merge/521` | `59e4bfa` | 0 | 6 | 612 |
-| `merge/526` | `7e07458` | 6 | 0 | 624 |
-| `origin/aa-internal` | `ee178ca` | 0 | 617 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 0 | 619 |
-| `origin/feat/api` | `edd9e0b` | 5 | 0 | 623 |
-| `origin/feat/ci` | `ecc2673` | 0 | 66 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 23 | 595 |
-| `origin/feat/studio` | `2324351` | 2 | 4 | 616 |
+| `exp/486-threads1` | `1a9eb73` | 1 | 7 | 619 |
+| `feat/api` | `72aa544` | 0 | 0 | 625 |
+| `feat/ci` | `ecc2673` | 0 | 73 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 30 | 595 |
+| `feat/studio` | `2324351` | 2 | 11 | 616 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 11 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 9 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 7 | 618 |
+| `merge/521` | `59e4bfa` | 0 | 13 | 612 |
+| `merge/565` | `83a5afb` | 3 | 0 | 628 |
+| `origin/aa-internal` | `ee178ca` | 0 | 624 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 7 | 619 |
+| `origin/feat/api` | `edd9e0b` | 0 | 2 | 623 |
+| `origin/feat/ci` | `ecc2673` | 0 | 73 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 30 | 595 |
+| `origin/feat/studio` | `2324351` | 2 | 11 | 616 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 

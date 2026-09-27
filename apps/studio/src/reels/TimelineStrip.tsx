@@ -120,6 +120,7 @@ import {
 } from 'react';
 import type { Timeline, TrackType } from '@pf-mediakit/shared';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
+import { timelineDirFor } from './direction';
 import { useDigitStyle } from '@/src/format/settings';
 import { formatNumber } from '@/src/format/digits';
 import { itemName } from './item-name';
@@ -330,7 +331,8 @@ export function TimelineStrip({
   collidingItemIds,
 }: TimelineStripProps): JSX.Element {
   const duration = timeline.duration;
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const timelineDir = timelineDirFor(locale);
   const { style: digitStyle } = useDigitStyle();
   // (472 §١) المتصادمون — مجموعةٌ للسؤالِ عن كلِّ قطعةٍ مرّةً واحدة.
   const colliding = new Set(collidingItemIds ?? []);
@@ -560,7 +562,7 @@ export function TimelineStrip({
 
   return (
     <div
-      dir="rtl"
+      dir={timelineDir}
       role="group"
       aria-label={t('pages.reels.timeline')}
       className="select-none text-xs"
@@ -695,9 +697,15 @@ export function TimelineStrip({
                             insetBlockStart: 0,
                             insetInlineStart: `${xPx}px`,
                             // التوسيط على العلامة — إلا تسميةَ الصفر:
-                            // تجلس كاملةً داخل الحافة اليُمنى (458).
+                            // تجلس كاملةً داخل الحافة عند inline-start (458).
+                            // ٥٦٥: translateX فيزيائيّ لا منطقيّ ⇒ نعكسُ
+                            // الإشارةَ حين يصير الشريطُ LTR (en).
                             transform:
-                              m.sec === 0 ? undefined : 'translateX(50%)',
+                              m.sec === 0
+                                ? undefined
+                                : timelineDir === 'rtl'
+                                  ? 'translateX(50%)'
+                                  : 'translateX(-50%)',
                           }}
                         >
                           {markLabel(m.sec)}
