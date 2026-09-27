@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-27
-> **HEAD (main):** `8e8f3d1`
+> **HEAD (main):** `7e94970`
 > **HEAD (origin/feat/api):** `0a9e3aa`
 > **HEAD (origin/feat/studio):** `7ece4ad`
 > **HEAD (origin/feat/reels):** `bd064d2`
@@ -38,13 +38,13 @@
 | `docs/GATE-RECIPES.md` | 160 | `863ffdd02034` | local |
 | `docs/INVENTORY.md` | 174 | `52330c4e5048` | local |
 | `docs/KNOWN-DEFECTS.md` | 18 | `f027aa28ef7b` | local |
-| `docs/LESSONS.md` | 3022 | `0060c1836277` | local |
+| `docs/LESSONS.md` | 3035 | `3057668efe0f` | local |
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 410 | `c91a0be19c19` | local |
+| `docs/SKILL-mediakit.md` | 409 | `95f5ed2ec531` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -10254,11 +10254,24 @@ _المصدر:_ `claude/bin/mk-watch-core.sh`
 
 ---
 
+## L-143 — حتميّةُ libx264 تتطلّب تعطيلَ threading **و** SIMD معاً
+
+فرضيّةُ 486ب: `-threads 1` يُنتج md5 موحَّداً. أثبتَتْها 5/5 على runner CI مشترك (base cd42774). لكنّ 486ج على قاعدةٍ أحدث (117f15e8): تشغيلان بـ`-threads 1` أعطيا هاشَين مختلفَين (`4444f7e9` و `892ddf64`) — نفسُ الاثنيّة قبل الإصلاح، بقيمَتَين جديدتَين.
+
+**الجذرُ الأعمق:** libx264 يوزّع مساراتِ assembly (SSE/AVX/AVX2) بحسب `cpuid` runtime. runner GitHub المشترك يتذبذب في السمات المُبلَّغة ⇒ اختيارُ مسارٍ مختلفٍ ⇒ بايتاتٌ مختلفة، حتى بلا threading.
+
+**القاعدةُ:** md5-حتميّةٌ صارمةٌ للفيديو على runner متعدّد تحتاج **الاثنَين**: `-x264-params no-asm:threads=1` (~5-10× أبطأ · CI فقط لا الإنتاج)، أو runner ذو CPU ثابت (self-hosted). كلاهما مؤجَّل لما بعد العرض — سياسةُ 519 (`.md5` + `.md5.alt` + قبول قيمتَين) تكفي مؤقّتاً.
+
+**القرار المرتبط:** 486 يُغلَق كـ«جذرٌ مفهوم، لا إصلاح قبل العرض». اقرأ `claude/reports/486-BREAKING-MD5-DUALITY.md`.
+_المصدر:_ CI runs على exp/486-threads1 (5/5) و merge/mk-486c (2/2 مختلفان) · تقرير 486.
+
+---
+
 ## §414-حصاد · بوّابة الدفتر
 
 | المقياس | العدد |
 |---|---|
-| دروسٌ حُصدت (L-79..L-142) | 42 |
+| دروسٌ حُصدت (L-79..L-143) | 43 |
 | أرقامٌ بقيت مفقودةً | 22 |
 
 **المفقودات:** 95 · 96 · 97 · 98 · 99 · 104 · 105 · 107 · 108 · 109 · 110 · 111 · 112 · 113 · 114 · 115 · 117 · 118 · 119 · 122 · 128 · 130.
@@ -11326,7 +11339,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `8e8f3d1` (`merge/528`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `7e94970` (`fix/mk-486e-close-doc`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11359,8 +11372,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-142
-- **العدد الفريد:** 137 · **الإدخالات:** 137
+- **المدى:** L-1 → L-143
+- **العدد الفريد:** 138 · **الإدخالات:** 138
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -11388,23 +11401,22 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `0a9e3aa` | 2 | 0 | 631 |
-| `feat/ci` | `ecc2673` | 0 | 77 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 34 | 595 |
-| `feat/studio` | `7ece4ad` | 1 | 0 | 630 |
-| `fix/mk-486c-x264-threads` | `348e63e` | 4 | 0 | 633 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 15 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 13 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 11 | 618 |
-| `merge/521` | `59e4bfa` | 0 | 17 | 612 |
-| `merge/528` | `8e8f3d1` | 3 | 0 | 632 |
-| `origin/aa-internal` | `ee178ca` | 0 | 628 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 11 | 619 |
-| `origin/feat/api` | `0a9e3aa` | 2 | 0 | 631 |
-| `origin/feat/ci` | `ecc2673` | 0 | 77 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 34 | 595 |
-| `origin/feat/studio` | `7ece4ad` | 1 | 0 | 630 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 0 | 633 |
+| `feat/api` | `0a9e3aa` | 0 | 2 | 631 |
+| `feat/ci` | `ecc2673` | 0 | 81 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 38 | 595 |
+| `feat/studio` | `7ece4ad` | 1 | 4 | 630 |
+| `fix/mk-486e-close-doc` | `7e94970` | 1 | 0 | 634 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 19 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 17 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 15 | 618 |
+| `merge/521` | `59e4bfa` | 0 | 21 | 612 |
+| `origin/aa-internal` | `ee178ca` | 0 | 632 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 15 | 619 |
+| `origin/feat/api` | `0a9e3aa` | 0 | 2 | 631 |
+| `origin/feat/ci` | `ecc2673` | 0 | 81 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 38 | 595 |
+| `origin/feat/studio` | `7ece4ad` | 1 | 4 | 630 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 4 | 633 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 

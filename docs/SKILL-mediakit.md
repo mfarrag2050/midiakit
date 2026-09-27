@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `8e8f3d1` (`merge/528`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `7e94970` (`fix/mk-486e-close-doc`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -60,8 +60,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-142
-- **العدد الفريد:** 137 · **الإدخالات:** 137
+- **المدى:** L-1 → L-143
+- **العدد الفريد:** 138 · **الإدخالات:** 138
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -89,23 +89,22 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `0a9e3aa` | 2 | 0 | 631 |
-| `feat/ci` | `ecc2673` | 0 | 77 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 34 | 595 |
-| `feat/studio` | `7ece4ad` | 1 | 0 | 630 |
-| `fix/mk-486c-x264-threads` | `348e63e` | 4 | 0 | 633 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 15 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 13 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 11 | 618 |
-| `merge/521` | `59e4bfa` | 0 | 17 | 612 |
-| `merge/528` | `8e8f3d1` | 3 | 0 | 632 |
-| `origin/aa-internal` | `ee178ca` | 0 | 628 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 11 | 619 |
-| `origin/feat/api` | `0a9e3aa` | 2 | 0 | 631 |
-| `origin/feat/ci` | `ecc2673` | 0 | 77 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 34 | 595 |
-| `origin/feat/studio` | `7ece4ad` | 1 | 0 | 630 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 0 | 633 |
+| `feat/api` | `0a9e3aa` | 0 | 2 | 631 |
+| `feat/ci` | `ecc2673` | 0 | 81 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 38 | 595 |
+| `feat/studio` | `7ece4ad` | 1 | 4 | 630 |
+| `fix/mk-486e-close-doc` | `7e94970` | 1 | 0 | 634 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 19 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 17 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 15 | 618 |
+| `merge/521` | `59e4bfa` | 0 | 21 | 612 |
+| `origin/aa-internal` | `ee178ca` | 0 | 632 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 15 | 619 |
+| `origin/feat/api` | `0a9e3aa` | 0 | 2 | 631 |
+| `origin/feat/ci` | `ecc2673` | 0 | 81 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 38 | 595 |
+| `origin/feat/studio` | `7ece4ad` | 1 | 4 | 630 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 4 | 633 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
