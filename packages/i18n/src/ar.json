@@ -147,6 +147,21 @@
         "renderRunning": "قيد التنفيذ...",
         "renderReady": "المخرج جاهز — افتح للتحميل",
         "renderAgeSince": "منذ {age}",
+        "renderEtaStartsIn": {
+          "one": "يبدأ بعد ثانية",
+          "two": "يبدأ بعد ثانيتين",
+          "few": "يبدأ بعد {n} ثوانٍ",
+          "other": "يبدأ بعد {n} ثانية"
+        },
+        "renderEtaStartsInMin": {
+          "one": "يبدأ بعد دقيقة",
+          "two": "يبدأ بعد دقيقتين",
+          "few": "يبدأ بعد {n} دقائق",
+          "other": "يبدأ بعد {n} دقيقة"
+        },
+        "renderEtaInHour": "يبدأ بعد ساعة",
+        "renderEtaOverHour": "يبدأ بعد أكثر من ساعة",
+        "renderEtaImminent": "يبدأ الآن…",
         "renderAgeSeconds": {
           "one": "ثانية",
           "two": "ثانيتين",
