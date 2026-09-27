@@ -308,15 +308,15 @@ function drawGenericIcon(
   const dy = shaftEndY - shaftStartY;
   const len = Math.hypot(dx, dy);
   const angle = Math.atan2(dy, dx);
-  // بدلاً من rotate (غير مصرَّح به في CanvasDrawContext)، نستعمل
-  // transform يدوية: نُخفف — نرسم خطاً بمستطيلين أفقي/عمودي +
-  // بقعة ديناميكية. الأبسط: نرسم الخط بمستطيلات صغيرة على طوله.
-  const steps = Math.max(2, Math.round(len / stroke));
-  for (let i = 0; i < steps; i++) {
-    const px = (dx * i) / steps;
-    const py = (dy * i) / steps;
-    ctx.fillRect(px - stroke / 2, py - stroke / 2, stroke, stroke);
-  }
+  // mk/526ب: خطٌّ ناعمٌ عبر stroke بدل السلسلة القديمة من fillRect
+  // المتراكِبة (كانت تنتج مظهراً «مبكسلاً» على reel 1080×1920 عند
+  // iconSize 48 — 3-4× staircase artifact).
+  ctx.beginPath();
+  ctx.strokeStyle = brand.colors.text;
+  ctx.lineWidth = stroke;
+  ctx.moveTo(0, 0);
+  ctx.lineTo(dx, dy);
+  ctx.stroke();
   // رأس السهم — مثلث مبني كمثلث RIGHT + TOP عند نقطة النهاية
   //   نبني رأس السهم من ثلاث نقاط:
   //     نقطة رأس السهم (النهاية)، ونقطتان تكوّنان القاعدة.

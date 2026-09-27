@@ -100,14 +100,11 @@ else
 fi
 
 # ═════ [3] docker context ═══════════════════════════════════════════════════
-step "docker context · لا نلمس شيئاً خارج $DOCKER_CTX"
-
-curr_ctx="$(docker context show 2>/dev/null || echo none)"
-[ "$curr_ctx" = "$DOCKER_CTX" ] || {
-  info "context الحاليّ = $curr_ctx — أبدّله إلى $DOCKER_CTX"
-  docker context use "$DOCKER_CTX" >/dev/null 2>&1 || fail "تعذّر تبديل السياق"
-}
-pass "docker context = $DOCKER_CTX"
+# 526ج٤ · نُصدِّر DOCKER_CONTEXT لكلّ أمرٍ لاحقٍ من هذا السكربت. لا `docker
+# context use` (يبدّل الافتراضيَّ للمستخدم — تسرّبٌ خارج نطاق العمليّة).
+step "docker context · $DOCKER_CTX (عبر DOCKER_CONTEXT · لا تبديل عالميّ)"
+export DOCKER_CONTEXT="$DOCKER_CTX"
+pass "DOCKER_CONTEXT=$DOCKER_CTX (نطاق العمليّة فقط)"
 
 # ═════ [4] mk-show up (مع اكتشاف الحالة الجزئيّة · §٦) ═══════════════════
 step "mk-show up · حاويّات + api + studio + seed (مع استرجاع الحالة الجزئيّة)"
@@ -139,8 +136,17 @@ fi
 # ═════ [5] العامل · فحصٌ صارمٌ في الفرعَين (§٢·§٣) ═══════════════════════
 step "العامل · $WORKER_DIR · .env.show · بادئة=$EXPECTED_PREFIX"
 
-# جميعُ المطابقات — لا head -1
-matches="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | tr '\n' ' ' | sed 's/  *$//')"
+# 526ج٣ · pgrep وحدَه يلتقط `src/api-worker.ts` في أيّ worktree (dev + show)،
+# ⇒ فشل heal كاذبٌ عندما يعمل عامل dev بجانب show. نُصفّي بـcwd = $WORKER_DIR
+# عبر lsof (يقرأ cwd من kernel · نفسُ الأسلوب في verify_worker_live).
+match_workers_by_cwd() {
+  local pid live_cwd
+  for pid in $(pgrep -f 'src/api-worker.ts' 2>/dev/null); do
+    live_cwd="$(lsof -a -p "$pid" -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
+    [ "$live_cwd" = "$WORKER_DIR" ] && printf '%s ' "$pid"
+  done
+}
+matches="$(match_workers_by_cwd | sed 's/  *$//')"
 match_count=0
 [ -n "$matches" ] && match_count="$(printf '%s' "$matches" | wc -w | tr -d ' ')"
 
@@ -196,7 +202,8 @@ else
   ) || fail ".env.show / BULLMQ_PREFIX (المتوقّع $EXPECTED_PREFIX) / إطلاق العامل — فشل داخل subshell · راجع $WORKER_LOG"
   sleep 4
 
-  new_matches="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | tr '\n' ' ' | sed 's/  *$//')"
+  # 526ج٣ · نفس تصفية cwd هنا أيضاً — عامل dev لن يظهر.
+  new_matches="$(match_workers_by_cwd | sed 's/  *$//')"
   new_count=0
   [ -n "$new_matches" ] && new_count="$(printf '%s' "$new_matches" | wc -w | tr -d ' ')"
   if [ "$new_count" -gt 1 ]; then
