@@ -123,7 +123,10 @@ function ffmpegArgs(
 
   args.push(
     // output: H.264 + yuv420p + AAC 128k
+    // mk/486b · تجربة: -threads 1 لعزل تأثير libx264 threading على تذبذب md5.
+    // تجربةٌ فقط على exp/486-threads1 — لا تُدمج.
     '-c:v', 'libx264',
+    '-threads', '1',
     '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart',
     '-color_primaries', 'bt709',
