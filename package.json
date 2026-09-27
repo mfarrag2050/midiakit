@@ -79,6 +79,7 @@
     "verify:transitions-gate": "node --import tsx scripts/verify-transitions-gate.mjs",
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts",
     "demo:live": "node --import tsx scripts/demo-live.mjs",
+    "demo:path": "node scripts/demo-path.mjs",
     "measure-font": "node scripts/measure-font-metrics.mjs",
     "check:no-paddle-outside-payments": "node scripts/check-no-paddle-outside-payments.mjs",
     "check:no-ai-provider-outside-ai": "node scripts/check-no-ai-provider-outside-ai.mjs",
