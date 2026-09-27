@@ -20,6 +20,8 @@ import {
   NotFound, RevisionNotFound, ReasonTooShort, InvalidFilterField,
 } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 export type ResourceType = 'brand_kit' | 'project' | 'template' | 'user' | 'asset';
 
 export interface RevisionRoutesConfig {
@@ -219,6 +221,7 @@ export function makeRevisionsPlugin(cfg: RevisionRoutesConfig): FastifyPluginAsy
 
       // ارجع المورد المحدَّث
       const r2 = await req.dbClient!.query(`SELECT * FROM ${cfg.table} WHERE id = $1`, [id]);
+      await commitTx(req);
       return r2.rows[0];
     });
   };

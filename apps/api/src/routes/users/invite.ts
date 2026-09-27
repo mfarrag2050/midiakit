@@ -26,6 +26,8 @@ import { getEffectiveLimits } from '../../config/effective-limits.js';
 import { getEmailer } from '../../emailer.js';
 import { config } from '../../config.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   email: z.string().email(),
   role: z.enum(['admin', 'writer', 'editor', 'reviewer', 'approver', 'viewer']),
@@ -115,6 +117,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       req.log.warn({ err, email: parsed.email }, 'invite email failed');
     }
 
+    await commitTx(req);
     reply.status(201).send({
       id: inv.id,
       email: inv.email,

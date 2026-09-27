@@ -11,6 +11,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { NotFound, ReasonTooShort } from '../../errors.js';
 import { getPaymentsProvider } from '../../payments/index.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({ reason: z.string() });
 
 interface SubRow {
@@ -45,6 +47,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     const updated = await req.dbClient!.query<{ plan: string; status: string; current_period_end: Date | null }>(
       `SELECT plan, status, current_period_end FROM subscriptions WHERE id = $1`, [sub.id]);
     const r = updated.rows[0]!;
+    await commitTx(req);
     return {
       plan: r.plan, status: r.status,
       currentPeriodEnd: r.current_period_end?.toISOString() ?? null,

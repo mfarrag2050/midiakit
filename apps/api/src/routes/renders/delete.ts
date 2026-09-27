@@ -9,6 +9,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { getStorage } from '../../storage/index.js';
 import { NotFound, RenderRunning } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -27,6 +29,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       try { await getStorage().deleteObject(row.output_storage_key); }
       catch (err) { req.log.warn({ err, key: row.output_storage_key }, 'render delete: storage clean failed'); }
     }
+    await commitTx(req);
     reply.status(204).send();
   });
 };

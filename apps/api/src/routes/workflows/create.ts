@@ -8,6 +8,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { toFull, type DbWorkflowRow } from './shared/mapper.js';
 import { validateWorkflowDefinition } from './shared/schema.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   name: z.string().min(1).max(200),
   kind: z.enum(['individual', 'small-team', 'full-agency', 'custom']),
@@ -40,6 +42,7 @@ const route: FastifyPluginAsync = async (fastify) => {
         body.isDefault ?? false,
       ],
     );
+    await commitTx(req);
     reply.status(201).send(toFull(ins.rows[0]!));
   });
 };

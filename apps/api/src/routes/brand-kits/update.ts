@@ -27,6 +27,8 @@ import { toFull, type DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
 import { ImmutableField, NotFound, ValidationFailed, InvalidFontMetrics } from '../../errors.js';
 import type { PoolClient } from 'pg';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 // dot-notation، `*` = wildcard على أيّ مفتاح مستوى.
@@ -122,6 +124,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        RETURNING id, tenant_id, name, config, created_at, updated_at`,
       [id, nextName, mergedConfig],
     );
+    await commitTx(req);
     return toFull(updated.rows[0]!);
   });
 };

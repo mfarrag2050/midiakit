@@ -11,6 +11,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { getStorage } from '../../storage/index.js';
 import { NotFound, AssetInUseByBrandKit } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 interface DbRow { storage_key: string }
@@ -48,6 +50,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       req.log.warn({ storageKey, err }, 'assets:delete — storage delete failed after DB delete');
     }
 
+    await commitTx(req);
     reply.status(204).send();
   });
 };

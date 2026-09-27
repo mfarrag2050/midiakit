@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -24,6 +26,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     if (r.rowCount === 0) throw NotFound();
 
     // بند مؤجَّل: موديل الكشف يُوصَل في مرحلة لاحقة. تُعاد قائمة فارغة.
+    await commitTx(req);
     return { faces: [] };
   });
 };

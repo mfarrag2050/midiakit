@@ -17,6 +17,8 @@ import {
 } from '../../errors.js';
 import { ApiError } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 interface DbTenantRow {
   id: string;
   name: string;
@@ -89,6 +91,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 
     // seats بنفس منطق GET
     const seatsR = await req.dbClient!.query<{ n: string }>(`SELECT count(*)::bigint AS n FROM users`);
+    await commitTx(req);
     return {
       id: updated.id,
       name: updated.name,

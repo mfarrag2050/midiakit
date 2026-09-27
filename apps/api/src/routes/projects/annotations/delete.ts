@@ -6,6 +6,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { NotFound, InsufficientRole } from '../../../errors.js';
 
+import { commitTx } from '../../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid(), aid: z.string().uuid() });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -23,6 +25,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     if (!isAdminPlus && !isAuthor) throw InsufficientRole();
 
     await req.dbClient!.query(`DELETE FROM annotations WHERE id = $1`, [aid]);
+    await commitTx(req);
     reply.status(204).send();
   });
 };

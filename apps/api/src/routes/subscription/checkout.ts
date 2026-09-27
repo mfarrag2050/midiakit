@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { getPaymentsProvider } from '../../payments/index.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   targetPlan: z.enum(['starter', 'studio', 'agency', 'api']),
   billingCycle: z.enum(['monthly', 'yearly']),
@@ -35,6 +37,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       );
       if ((existing.rowCount ?? 0) > 0) {
         const r = existing.rows[0]!;
+        await commitTx(req);
         return { checkoutUrl: r.checkout_url, expiresAt: r.expires_at.toISOString() };
       }
     }
@@ -52,6 +55,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        result.checkoutUrl, result.expiresAt, req.auth!.userId],
     );
 
+    await commitTx(req);
     return { checkoutUrl: result.checkoutUrl, expiresAt: result.expiresAt.toISOString() };
   });
 };
