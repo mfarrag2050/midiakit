@@ -31,6 +31,10 @@ import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 // mk/457 §٢: مسارات مُشتقّة من موقع السكربت لا من cwd متغيّر ولا من
 // مسار مطلقٍ مثبَّت لآلة المطوّر. CI ليس فيه `pf-mediakit-api`.

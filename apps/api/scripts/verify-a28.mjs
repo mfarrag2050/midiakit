@@ -33,6 +33,10 @@ import { closeQueues } from '../src/queues/index.js';
 import { clearPlanLimitsCache } from '../src/plugins/plan-limits-cache.js';
 import { getEffectiveLimits } from '../src/config/effective-limits.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 process.env.RATE_LIMIT_DISABLE = '1';
 process.env.AI_PROVIDER = 'fake';

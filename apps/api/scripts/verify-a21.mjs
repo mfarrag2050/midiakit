@@ -28,6 +28,10 @@ import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { resetPaymentsProvider } from '../src/payments/index.js';
 import { hashPassword } from '../src/auth/session.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 

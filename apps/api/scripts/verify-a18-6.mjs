@@ -22,6 +22,10 @@ import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { getStorage } from '../src/storage/index.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));

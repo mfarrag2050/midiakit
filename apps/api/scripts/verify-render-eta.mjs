@@ -4,6 +4,10 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { cleanDevEnvironment, readLocalEnvironment } from './dev-environment.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 Object.assign(process.env, cleanDevEnvironment(process.env, readLocalEnvironment()));
 const { getQueue, getRedis, closeQueues, getWorkerCounts } = await import('../src/queues/index.ts');
