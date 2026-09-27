@@ -24,6 +24,10 @@ import { buildServer } from '../src/server.js';
 import { closePool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { hashPassword } from '../src/auth/session.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 

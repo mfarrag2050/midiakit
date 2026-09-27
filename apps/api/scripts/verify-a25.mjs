@@ -27,6 +27,10 @@ import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 process.env.RATE_LIMIT_DISABLE = '1';
 process.env.AI_PROVIDER = 'fake';

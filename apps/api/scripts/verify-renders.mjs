@@ -26,6 +26,10 @@ import { getStorage } from '../src/storage/index.js';
 import { config } from '../src/config.js';
 import { hashPassword } from '../src/auth/session.js';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 

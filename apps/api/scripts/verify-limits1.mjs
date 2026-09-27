@@ -39,6 +39,10 @@ import { runOrphanSweep } from '../src/limits/orphan-sweep.js';
 import { getStorage, __resetStorage } from '../src/storage/index.js';
 import { TEMP_SPACE_LIMIT_BYTES } from '@pf-mediakit/renderer/alerts';
 import { bumpTenantLimits } from './lib/tenant-limits.mjs';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 process.env.RATE_LIMIT_DISABLE = '1';
 process.env.AI_PROVIDER = 'fake';

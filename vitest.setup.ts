@@ -18,6 +18,10 @@
 //      حيث لا node_modules workspace-scoped).
 import { afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
+import { assertNotShowroomEnv } from './apps/api/src/test-guard.js';
+
+// (٠) 518 · حارس بيئة العرض · يُرمى قبل أيّ setup آخر إن كانت البيئة ملوَّثة.
+assertNotShowroomEnv();
 
 // (١) اضبط prefix فريد قبل أيّ import آخر يقرأ الـenv.
 const TEST_PREFIX = `pf-mediakit-test-${process.pid}-${Date.now()}`;
