@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `65893b3` (`main`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `211e133` (`merge/564`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -89,15 +89,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `55b6b1a` | 5 | 0 | 577 |
-| `feat/ci` | `ecc2673` | 0 | 20 | 552 |
-| `feat/reels` | `bd064d2` | 23 | 0 | 595 |
-| `feat/studio` | `b56ca09` | 0 | 38 | 534 |
-| `origin/aa-internal` | `ee178ca` | 0 | 571 | 1 |
-| `origin/feat/api` | `55b6b1a` | 5 | 0 | 577 |
-| `origin/feat/ci` | `ecc2673` | 0 | 20 | 552 |
-| `origin/feat/reels` | `bd064d2` | 23 | 0 | 595 |
-| `origin/feat/studio` | `b56ca09` | 0 | 38 | 534 |
+| `feat/api` | `fcb46bd` | 7 | 0 | 584 |
+| `feat/ci` | `ecc2673` | 0 | 25 | 552 |
+| `feat/reels` | `bd064d2` | 23 | 5 | 595 |
+| `feat/studio` | `b56ca09` | 0 | 43 | 534 |
+| `merge/564` | `211e133` | 24 | 0 | 601 |
+| `origin/aa-internal` | `ee178ca` | 0 | 576 | 1 |
+| `origin/feat/api` | `fcb46bd` | 7 | 0 | 584 |
+| `origin/feat/ci` | `ecc2673` | 0 | 25 | 552 |
+| `origin/feat/reels` | `bd064d2` | 23 | 5 | 595 |
+| `origin/feat/studio` | `b56ca09` | 0 | 43 | 534 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
