@@ -70,6 +70,18 @@ export interface RenderVideoArgs {
    * الخلفيّة (لأنّ ذلك يخفي عطباً في الحمولة).
    */
   readonly assets?: RenderAssetsInput;
+  /**
+   * mk/486c — عددُ threads لِـlibx264:
+   *   • `undefined` (الافتراض) ⇒ لا `-threads` (سلوك libx264 auto — أسرع، غير حتميّ
+   *     البايت عبر runners بعدد نوى مختلف).
+   *   • `1` ⇒ حتميّةٌ بايت-ببايت (slice-based threading معطَّل).
+   *   • أعداد أخرى ⇒ تُمرَّر كما هي.
+   *
+   * **الإنتاج (تصدير المستخدم · العرض): يترك `undefined`** — سرعة كاملة.
+   * **التحقّق (verify:breaking-video وأشباهه): يمرّر `1`** — الهاشُ ثابت.
+   * راجع claude/reports/486-BREAKING-MD5-DUALITY.md.
+   */
+  readonly encodeThreads?: number;
 }
 
 export interface RenderVideoResult {
@@ -93,11 +105,12 @@ export interface RenderVideoResult {
  *   • مع audioPlan: input 0 = rawvideo/stdin، inputs 1..N = lavfi (synth)،
  *     filter_complex يجمع → [aout]، ثم map [0:v] + [aout].
  */
-function ffmpegArgs(
+export function ffmpegArgs(
   size: { w: number; h: number },
   fps: number,
   outPath: string,
-  audioPlan?: AudioPlan
+  audioPlan?: AudioPlan,
+  encodeThreads?: number
 ): readonly string[] {
   const args: string[] = [
     '-y', '-hide_banner', '-loglevel', 'error',
@@ -124,6 +137,12 @@ function ffmpegArgs(
   args.push(
     // output: H.264 + yuv420p + AAC 128k
     '-c:v', 'libx264',
+  );
+  // mk/486c · صريحٌ عند التمرير · صمتٌ عند الغياب (لسلوك auto الأصليّ).
+  if (encodeThreads !== undefined) {
+    args.push('-threads', String(encodeThreads));
+  }
+  args.push(
     '-pix_fmt', 'yuv420p',
     '-movflags', '+faststart',
     '-color_primaries', 'bt709',
@@ -178,7 +197,7 @@ export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoRes
 
   const ffmpeg: ChildProcessWithoutNullStreams = spawn(
     args.ffmpegPath ?? 'ffmpeg',
-    ffmpegArgs(args.size, fps, args.outPath, args.audioPlan),
+    ffmpegArgs(args.size, fps, args.outPath, args.audioPlan, args.encodeThreads),
     { stdio: ['pipe', 'inherit', 'inherit'] }
   ) as unknown as ChildProcessWithoutNullStreams;
 

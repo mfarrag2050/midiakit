@@ -35,6 +35,7 @@ interface CliArgs {
   fps: number;
   ffmpegPath?: string;
   size: SizeName;
+  encodeThreads?: number;
 }
 
 // mk/471: أسماء المقاسات المسموحة — لا رقمٌ حرّ (تجنّبُ سقوطٍ صامتٍ إلى الافتراضيّ).
@@ -72,6 +73,12 @@ function parseArgs(): CliArgs {
     else if (key === 'fps') args.fps = parseInt(value, 10);
     else if (key === 'ffmpeg') args.ffmpegPath = value;
     else if (key === 'size') args.size = value as SizeName; // يُتحقَّق منه في resolveSize.
+    else if (key === 'threads') args.encodeThreads = parseInt(value, 10);
+  }
+  // mk/486c · env fallback — أي مسار (CI/local) بلا تعديل CLI.
+  if (args.encodeThreads === undefined && process.env.MK_X264_THREADS) {
+    const n = parseInt(process.env.MK_X264_THREADS, 10);
+    if (Number.isFinite(n) && n > 0) args.encodeThreads = n;
   }
   return args;
 }
@@ -151,6 +158,7 @@ const result = await renderVideo({
   outPath,
   fps: cli.fps,
   ...(cli.ffmpegPath && { ffmpegPath: cli.ffmpegPath }),
+  ...(cli.encodeThreads !== undefined && { encodeThreads: cli.encodeThreads }),
   onProgress: (f, total) => {
     if (f === 1 || f === total || f % 30 === 0) {
       process.stderr.write(`\r[render:mp4] ${f}/${total} إطار`);

@@ -2,13 +2,16 @@
 //
 // **العلّة (2026-09-02):** verify-timeline-equivalence.mjs قارن مسار
 // v2 بمسار @legacy — بعد حذف legacy، لم يعد له معنى. البديل: مقارنة
-// مخرج breaking بـmd5 مرجعي محفوظ (snapshots-video/breaking.md5)
-// أُخِذ بينما كان @legacy مصدر الحقيقة الأوحد قبل الحذف. أي انحدار
-// في timeline v2 (أو الأدابتر أو أي primitives يستدعيها) يبرز فوراً.
+// مخرج breaking بـmd5 مرجعي محفوظ (snapshots-video/breaking.md5).
 //
 // **دور المرجع:** لقطة ذهبية دائمة — كما snapshots/*.png للبطاقات
 // الثابتة، snapshots-video/breaking.mp4 للفيديو. يُحدَّث فقط بقرار
 // مالك واضح بتحسين المخرج.
+//
+// **mk/486c · حتميّةٌ في التحقّق فقط:** نُمرِّر `--threads=1` إلى CLI
+// لِـlibx264 (يعطّل slice-based threading الذي يتذبذب بحسب عدد نوى
+// runner). الإنتاج (تصدير المستخدم · العرض) يبقى `auto` — أسرع بلا
+// تغيير سلوك. راجع claude/reports/486-BREAKING-MD5-DUALITY.md.
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,8 +30,7 @@ const ROOT = join(__dirname, '..');
 const OUT_DIR = join(ROOT, 'out');
 if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
 
-// 519: قراءةُ ملفَّي المرجع الأساسيّ والبديل. كلّ ملفٍّ = سطرٌ واحد يحمل
-// 32 حرف hex بالضبط. أيّ خللٍ في الشكل ⇒ فشلٌ فوريّ (يمنع التسامح البنيويّ).
+// 486c: قراءةُ ملفِّ المرجع (سطرٌ واحد · 32 hex بالضبط).
 function readMd5(path, label) {
   const raw = readFileSync(path, 'utf8').trim();
   if (!/^[0-9a-f]{32}$/.test(raw)) {
@@ -42,14 +44,10 @@ const REFERENCE_MD5 = readMd5(
   join(ROOT, 'snapshots-video/breaking.md5'),
   'breaking.md5'
 );
-const REFERENCE_MD5_ALT = readMd5(
-  join(ROOT, 'snapshots-video/breaking.md5.alt'),
-  'breaking.md5.alt'
-);
 
 const outMp4 = join(OUT_DIR, 'verify-breaking.mp4');
 
-console.log(`[verify-breaking-video] رندر breaking عبر المسار الحالي …`);
+console.log(`[verify-breaking-video] رندر breaking عبر المسار الحالي (threads=1) …`);
 const r = spawnSync(
   'node',
   [
@@ -57,6 +55,7 @@ const r = spawnSync(
     join(ROOT, 'apps/renderer/src/cli.ts'),
     '--brand=default',
     '--template=breaking',
+    '--threads=1',
     `--out=${outMp4}`,
   ],
   { cwd: ROOT, encoding: 'utf8', stdio: 'inherit' }
@@ -71,18 +70,15 @@ const actualMd5 = createHash('md5')
   .digest('hex');
 
 console.log(`\n════════ بوابة breaking المرجعية ════════`);
-console.log(`primary: ${REFERENCE_MD5}`);
-console.log(`alt:     ${REFERENCE_MD5_ALT}`);
-console.log(`فعلي:    ${actualMd5}`);
+console.log(`مرجعي: ${REFERENCE_MD5}`);
+console.log(`فعلي:  ${actualMd5}`);
 
-// 519: مطابقةٌ حرفيّةٌ === مع كلٍّ من القيمتَين الموثّقتَين (486 مفتوحة).
-// قيمةٌ ثالثة ⇒ فشل — الانحدار الحقيقيّ لا يختبئ.
+// 486c: مطابقةٌ حرفيّةٌ === (المرجعُ حتميٌّ الآن بفضل threads=1 في CI و
+// mk-ci محلّيّاً). قيمةٌ مختلفةٌ = انحدارٌ حقيقيّ.
 if (actualMd5 === REFERENCE_MD5) {
-  console.log(`\n✓ متطابق (primary). المسار الحالي يعيد نفس مخرج breaking المرجعي.`);
-} else if (actualMd5 === REFERENCE_MD5_ALT) {
-  console.log(`\n✓ متطابق (alt). المسار يعيد قيمة CI الثانية الموثّقة — 486 مفتوحة.`);
+  console.log(`\n✓ متطابق. المسار الحالي يعيد نفس مخرج breaking المرجعي.`);
 } else {
-  console.error(`\n✗ اختلاف. المسار الحالي أنتج قيمةً ثالثة ليست primary ولا alt.`);
+  console.error(`\n✗ اختلاف. المسار الحالي غيّر مخرج breaking.`);
   console.error(`  إن كان مقصوداً (تحسين معتمَد)، انسخ ${outMp4} إلى`);
   console.error(`  snapshots-video/breaking.mp4، وحدّث snapshots-video/breaking.md5.`);
   process.exit(1);
