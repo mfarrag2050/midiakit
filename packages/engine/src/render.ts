@@ -815,6 +815,26 @@ export function drawHeadlineLine(
   return null;
 }
 
+/**
+ * mk/524b — مصدرٌ واحدٌ لقاعدة «مبادلة `colors.text ← colors.urgentText`
+ * على سطحِ العاجل» (478b). يستعملُها `runHeadline` (المسار الثابت) و
+ * `applyTemplateLayer` (المسار السريع في المخطَّط · draw-timeline-at.ts)
+ * — لئلّا ينجرفا ثانية (523 · manara breaking = فارغ).
+ *
+ * الشرط: `state.surfaceIsUrgent && brand.colors.urgentText` — كلاهما.
+ * الغياب ⇒ الهويّةُ الأصليّة بلا نسخ (صفر تغيّرِ بايت لِـdefault وسائرِ
+ * الهويّات التي لا تُعرِّف `urgentText`).
+ */
+export function headlineBrandFor(brand: BrandKit, state: RenderState): BrandKit {
+  if (state.surfaceIsUrgent && brand.colors.urgentText) {
+    return {
+      ...brand,
+      colors: { ...brand.colors, text: brand.colors.urgentText },
+    };
+  }
+  return brand;
+}
+
 function runHeadline(
   layer: HeadlineLayer,
   args: RenderFrameArgs,
@@ -822,16 +842,7 @@ function runHeadline(
 ): void {
   const prep = prepareHeadline(layer, args, state);
   if (!prep) return;
-  // mk/478b: سطحُ العاجل + `urgentText` مقدَّمٌ ⇒ نبدّلُ `colors.text`
-  // ونمرِّرُ هويّةً مُعدَّلةً إلى دوالِّ الرسم. غيابُ `urgentText` أو غيابُ
-  // سطحِ العاجل ⇒ لا تغيير (سلوكٌ سابقٌ محفوظ ببايت).
-  const useUrgent = state.surfaceIsUrgent && args.brand.colors.urgentText;
-  const drawBrand = useUrgent
-    ? {
-        ...args.brand,
-        colors: { ...args.brand.colors, text: args.brand.colors.urgentText! },
-      }
-    : args.brand;
+  const drawBrand = headlineBrandFor(args.brand, state);
   const accentSpans: AccentSpanBounds[] = [];
   for (let i = 0; i < prep.linesJustified.length; i++) {
     const span = drawHeadlineLine(args.ctx, drawBrand, prep, i);
