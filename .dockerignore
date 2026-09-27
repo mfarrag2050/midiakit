@@ -4,3 +4,5 @@ node_modules
 .git
 *.tsbuildinfo
 out
+**/.venv
+
