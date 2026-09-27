@@ -1,0 +1,5 @@
+{
+  "asset:reel-a": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1080\" height=\"1920\" viewBox=\"0 0 1080 1920\"><defs><linearGradient id=\"sky\" x2=\"1\" y2=\"1\"><stop stop-color=\"#082F49\"/><stop offset=\"1\" stop-color=\"#0D9488\"/></linearGradient></defs><path fill=\"url(#sky)\" d=\"M0 0h1080v1920H0z\"/></svg>",
+  "asset:reel-b": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1080\" height=\"1920\" viewBox=\"0 0 1080 1920\"><defs><linearGradient id=\"dusk\" x2=\"1\" y2=\"1\"><stop stop-color=\"#4C1D95\"/><stop offset=\"1\" stop-color=\"#BE185D\"/></linearGradient></defs><path fill=\"url(#dusk)\" d=\"M0 0h1080v1920H0z\"/></svg>",
+  "asset:reel-c": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1080\" height=\"1920\" viewBox=\"0 0 1080 1920\"><defs><linearGradient id=\"sunset\" x2=\"1\" y2=\"1\"><stop stop-color=\"#7C2D12\"/><stop offset=\"1\" stop-color=\"#D97706\"/></linearGradient></defs><path fill=\"url(#sunset)\" d=\"M0 0h1080v1920H0z\"/></svg>"
+}

@@ -13,7 +13,8 @@
   "digits": {
     "label": "Digits",
     "latin": "123",
-    "arabicIndic": "١٢٣"
+    "arabicIndic": "١٢٣",
+    "switcher": "Digits switcher"
   },
   "time": {
     "now": "الآن",
@@ -75,6 +76,7 @@
   },
   "nav": {
     "workspace": "Workspace",
+    "reels": "Reels editor",
     "breaking": "Compose breaking",
     "projects": "Projects",
     "brandKits": "Brand Kits",
@@ -115,6 +117,53 @@
           "noTemplate": "قالب «بطاقة عاجل» غير متاح.",
           "noHeadline": "اكتب عنواناً أوّلاً — no export without headline."
         }
+      }
+    },
+    "reels": {
+      "names": {
+        "clip": "مقطع {n}",
+        "title": "عنوان {n}",
+        "audio": "صوت {n}",
+        "audioMain": "صوت رئيسي"
+      },
+      "timeline": "Timeline",
+      "previewNotice": "Preview — work is not saved or exported yet.",
+      "track": "Track",
+      "clip": "Clip",
+      "playhead": "Playhead",
+      "ruler": "Ruler",
+      "scrubber": "Position bar",
+      "newItemText": "New text ready to edit",
+      "outsideFrame": "Partly outside the frame",
+      "collision": "Text collision:",
+      "properties": "Clip properties",
+      "start": "Start",
+      "end": "End",
+      "textValue": "Text",
+      "anchor": "Vertical position",
+      "offsetX": "Horizontal offset (px)",
+      "offsetY": "Vertical offset (px)",
+      "assetName": "Asset name",
+      "kenBurns": "kenBurns zoom",
+      "from": "From",
+      "to": "To",
+      "gain": "Gain",
+      "trackType": {
+        "media": "Media",
+        "text": "Text",
+        "audio": "Audio"
+      },
+      "kbdSpace": "Space",
+      "hintPlay": "Play or pause the playhead.",
+      "hintNudge": "Arrows nudge the selected clip where they point: ← forward in time, → back; ⇧ widens the step.",
+      "hintTrim": "Square brackets trim the selected clip's edges: the first the start edge, the second the end edge; ⇧ widens the step.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "hintZoom": "The wheel alone scrolls the strip; with ⌘ it zooms in and out.",
+      "size": {
+        "square": "Square",
+        "portrait": "Portrait",
+        "reel": "Reel"
       }
     },
     "projects": {
@@ -798,7 +847,14 @@
     "close": "Close",
     "search": "Search",
     "copy": "نسخ",
-    "copied": "تُسِخ ✓"
+    "copied": "تُسِخ ✓",
+    "addTrack": "Add track",
+    "addItem": "Add item",
+    "split": "Split",
+    "undo": "Undo",
+    "redo": "Redo",
+    "play": "Play",
+    "pause": "Pause"
   },
   "table": {
     "empty": "No rows yet.",
