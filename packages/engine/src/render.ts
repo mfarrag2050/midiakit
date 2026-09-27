@@ -168,6 +168,13 @@ export interface RenderState {
   headline?: HeadlineBounds;
   kicker?: KickerBounds;
   headlineAccentSpans?: readonly AccentSpanBounds[];
+  /**
+   * mk/478b: يُفعِّلُه `runSolid` حين يرسمُ سطحاً باللونِ `urgentBg`.
+   * يقرؤه `runHeadline` ليختارَ `colors.urgentText` بدلَ `colors.text`
+   * (إن قُدِّم). لا وسيلةَ أخرى داخل خطِّ التنفيذِ الطبقاتيِّ لمعرفةِ
+   * «هذا سطحُ عاجل».
+   */
+  surfaceIsUrgent?: boolean;
 }
 
 // ── مساعدات ────────────────────────────────────────────
@@ -218,17 +225,23 @@ function evalCondition(cond: LayerOnlyIf, args: RenderFrameArgs): boolean {
 
 // ── منفّذو الطبقات ────────────────────────────────────
 
-function runSolid(layer: SolidLayer, args: RenderFrameArgs): void {
+function runSolid(layer: SolidLayer, args: RenderFrameArgs, state: RenderState): void {
   const fill = asString(args.brand, layer.fill, 'solid.fill');
   args.ctx.fillStyle = fill;
   args.ctx.fillRect(0, 0, args.size.w, args.size.h);
+  // mk/478b: نُعلمُ `runHeadline` أنّ السطحَ عاجلٌ. الفحصُ على النصِّ
+  // الأصليِّ (`layer.fill`) لتفادي المقارنةِ بالقيمِ المتغيّرةِ بين الهويّات.
+  if (layer.fill === 'brand.colors.urgentBg') state.surfaceIsUrgent = true;
 }
 
-function runGradient(layer: GradientLayer, args: RenderFrameArgs): void {
+function runGradient(layer: GradientLayer, args: RenderFrameArgs, state: RenderState): void {
   drawGradient(args.ctx, args.size, args.brand, {
     direction: layer.direction as GradientDirection,
     ...(layer.opacity !== undefined && { opacity: layer.opacity }),
     ...(layer.reach !== undefined && { reach: layer.reach }),
+    // mk/478b: يُقرأ من `state.surfaceIsUrgent` (يضعه `runSolid`).
+    // غيابُ الحالة ⇒ سلوكٌ سابقٌ محفوظ (`onUrgentSurface` = undefined).
+    ...(state.surfaceIsUrgent && { onUrgentSurface: true }),
   });
 }
 
@@ -809,9 +822,19 @@ function runHeadline(
 ): void {
   const prep = prepareHeadline(layer, args, state);
   if (!prep) return;
+  // mk/478b: سطحُ العاجل + `urgentText` مقدَّمٌ ⇒ نبدّلُ `colors.text`
+  // ونمرِّرُ هويّةً مُعدَّلةً إلى دوالِّ الرسم. غيابُ `urgentText` أو غيابُ
+  // سطحِ العاجل ⇒ لا تغيير (سلوكٌ سابقٌ محفوظ ببايت).
+  const useUrgent = state.surfaceIsUrgent && args.brand.colors.urgentText;
+  const drawBrand = useUrgent
+    ? {
+        ...args.brand,
+        colors: { ...args.brand.colors, text: args.brand.colors.urgentText! },
+      }
+    : args.brand;
   const accentSpans: AccentSpanBounds[] = [];
   for (let i = 0; i < prep.linesJustified.length; i++) {
-    const span = drawHeadlineLine(args.ctx, args.brand, prep, i);
+    const span = drawHeadlineLine(args.ctx, drawBrand, prep, i);
     if (span) accentSpans.push(span);
   }
   state.headline = prep.bounds;
@@ -1147,10 +1170,10 @@ export function executeLayer(
 
   switch (layer.type) {
     case 'solid':
-      runSolid(layer, args);
+      runSolid(layer, args, state);
       return;
     case 'gradient':
-      runGradient(layer, args);
+      runGradient(layer, args, state);
       return;
     case 'image': {
       // runImage يعالج fallback داخلياً عند غياب الصورة

@@ -59,32 +59,46 @@ if (!existsSync(BUNDLE_PATH)) {
   process.exit(1);
 }
 
+const GIT_EXISTS = existsSync(join(ROOT, '.git'));
+
 // (ب) الشجرة نظيفة على هذا الملف — dirty ⇒ فشل قبل أي مقارنة.
 // السبب: توليد بلا التزام يعني أنّ المنشور (HEAD) خلف الشجرة.
-let porcelain;
-try {
-  porcelain = sh(`git status --porcelain -- ${BUNDLE_REL}`).trim();
-} catch (err) {
-  console.error('[check-docs-bundle-fresh] ✗ git status فشل:');
-  console.error(err.stderr ? err.stderr.toString() : err.message);
-  process.exit(1);
-}
-if (porcelain) {
-  console.error(`[check-docs-bundle-fresh] ✗ docs/BUNDLE.md معدَّل وغير مُلتزَم:`);
-  console.error(`  ${porcelain}`);
-  console.error('  توليد بلا التزام يعني أنّ المنشور خلف الشجرة. التزم أوّلاً.');
-  process.exit(1);
+if (GIT_EXISTS) {
+  let porcelain;
+  try {
+    porcelain = sh(`git status --porcelain -- ${BUNDLE_REL}`).trim();
+  } catch (err) {
+    console.error('[check-docs-bundle-fresh] ✗ git status فشل:');
+    console.error(err.stderr ? err.stderr.toString() : err.message);
+    process.exit(1);
+  }
+  if (porcelain) {
+    console.error(`[check-docs-bundle-fresh] ✗ docs/BUNDLE.md معدَّل وغير مُلتزَم:`);
+    console.error(`  ${porcelain}`);
+    console.error('  توليد بلا التزام يعني أنّ المنشور خلف الشجرة. التزم أوّلاً.');
+    process.exit(1);
+  }
 }
 
 // (أ) المولَّد الآن ≠ git show HEAD:docs/BUNDLE.md
 // **تمييزٌ صريح (417 §١):** فشلُ الفاحصِ ذاتِه ≠ الحزمةُ بائتة. الرسالتان مختلفتان.
 let headContent;
-try {
-  headContent = sh(`git show HEAD:${BUNDLE_REL}`);
-} catch (err) {
-  console.error('[check-docs-bundle-fresh] ✗ تعذّر الفحصُ — قراءةُ HEAD:docs/BUNDLE.md فشلت (ليس عطبَ طزاجة، عطبٌ في الفاحص):');
-  console.error(`  ${err.code === 'ENOBUFS' ? 'ENOBUFS — الحزمةُ فاضت maxBuffer.' : (err.stderr ? err.stderr.toString() : err.message)}`);
-  process.exit(2);
+if (GIT_EXISTS) {
+  try {
+    headContent = sh(`git show HEAD:${BUNDLE_REL}`);
+  } catch (err) {
+    console.error('[check-docs-bundle-fresh] ✗ تعذّر الفحصُ — قراءةُ HEAD:docs/BUNDLE.md فشلت (ليس عطبَ طزاجة، عطبٌ في الفاحص):');
+    console.error(`  ${err.code === 'ENOBUFS' ? 'ENOBUFS — الحزمةُ فاضت maxBuffer.' : (err.stderr ? err.stderr.toString() : err.message)}`);
+    process.exit(2);
+  }
+} else {
+  try {
+    headContent = readFileSync(BUNDLE_PATH, 'utf8');
+  } catch (err) {
+    console.error('[check-docs-bundle-fresh] ✗ تعذّر الفحصُ — قراءةُ docs/BUNDLE.md من القرص فشلت:');
+    console.error(`  ${err.message}`);
+    process.exit(2);
+  }
 }
 
 let fresh;

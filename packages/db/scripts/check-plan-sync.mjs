@@ -11,7 +11,9 @@
  * **الإصلاح:** مصدرُ الحقيقةِ = `PLANS` المُصدَّرة من هجرة البذر
  * الأصليّة `20260907030000_plans-a26.ts`. البصمةُ تُحسَب من كلّ عنصرٍ
  * فيها (نفس `seedShape = {key, name_ar, name_en}` · نفس A28) وتُقارَن
- * بـ`plans.definition_hash` في DB. اختلافٌ ⇒ RED صريح.
+ * بـ`plans.definition_hash` في DB. ونحسب بصمة هوية الصف الفعلية
+ * ونقارنها بالمخزّنة أيضاً، لكشف تعديل الاسم بلا مزامنة (٤٨٤).
+ * اختلافٌ في أيّ مقارنة ⇒ RED صريح.
  *
  * **ملاحظاتٌ لسانيّة:**
  *   - نستعمل `node --import tsx` كي نستورد `.ts` مباشرةً (نمط مستعمل
@@ -93,12 +95,25 @@ for (const plan of PLANS) {
     errors.push(`  ✗ plans[${plan.key}]: في المصدر (${SOURCE_FILE}) ولا صفَّ في DB — هجرةُ بذرٍ لم تُطبَّق؟`);
     continue;
   }
-  const sourceHash = canonicalHash(seedShapeOf(plan));
-  if (sourceHash !== dbRow.definition_hash) {
+  const sourceShape = seedShapeOf(plan);
+  const sourceHash = canonicalHash(sourceShape);
+  const dbShape = seedShapeOf(dbRow);
+  const dbActualHash = canonicalHash(dbShape);
+
+  if (sourceHash !== dbRow.definition_hash || sourceHash !== dbActualHash) {
     errors.push(
       `  ✗ plans[${plan.key}]: source ≠ db\n` +
-      `      source(${sourceHash.slice(0, 12)}…) = ${JSON.stringify(seedShapeOf(plan))}\n` +
-      `      db    (${dbRow.definition_hash.slice(0, 12)}…) = ${JSON.stringify({ key: dbRow.key, name_ar: dbRow.name_ar, name_en: dbRow.name_en })}`,
+      `      source(${sourceHash.slice(0, 12)}…) = ${JSON.stringify(sourceShape)}\n` +
+      `      db    (${dbRow.definition_hash.slice(0, 12)}…) = ${JSON.stringify(dbShape)}` +
+      (sourceHash === dbRow.definition_hash ? ` (⚠️ تم تعديل الهوية يدوياً بلا مزامنة!)` : '')
+    );
+  }
+  const rowHash = canonicalHash(seedShapeOf(dbRow));
+  if (rowHash !== dbRow.definition_hash) {
+    errors.push(
+      `  ✗ plans[${plan.key}]: row identity ≠ stored hash\n` +
+      `      row(${rowHash.slice(0, 12)}…) = ${JSON.stringify(seedShapeOf(dbRow))}\n` +
+      `      stored(${dbRow.definition_hash.slice(0, 12)}…)`,
     );
   }
   checked++;

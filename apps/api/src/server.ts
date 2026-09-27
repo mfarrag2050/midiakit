@@ -119,6 +119,7 @@ import aiDeleteRoute from './routes/ai/delete.js';
 import aiInvokeRoute from './routes/ai/invoke.js';
 import { closePool, closePlatformPool } from './db.js';
 import { closeQueues } from './queues/index.js';
+import { isDevBackupTarget, registerDailyBackup } from './queues/backup.js';
 
 // 317: `loggerOverride` يسمح للـtests بحقن pino instance يكتب إلى Writable
 // stream لاستخراج السطور · لا مسّ لسلوك الإنتاج (default كما هو حين لا override).
@@ -403,6 +404,7 @@ async function main(): Promise<void> {
   process.on('SIGINT', () => shutdown('SIGINT'));
 
   try {
+    if (isDevBackupTarget()) await registerDailyBackup();
     await fastify.listen({ port: config.PORT, host: config.API_HOST });
     fastify.log.info(`▶ mk-api listening on http://${config.API_HOST}:${config.PORT}`);
 

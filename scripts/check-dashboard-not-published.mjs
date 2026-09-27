@@ -19,7 +19,7 @@
 //
 // **مصدر النطاق:** git ls-files — يعزل الفحص عن node_modules/out/.
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,12 +73,37 @@ const DEPLOY_PATTERNS = [
 ];
 
 let tracked = [];
-try {
-  tracked = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
-    .split('\n')
-    .filter(Boolean);
-} catch (err) {
-  fail(`فشل استدعاء git ls-files: ${String(err.message ?? err)}`);
+if (existsSync(join(ROOT, '.git'))) {
+  try {
+    tracked = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean);
+  } catch (err) {
+    fail(`فشل استدعاء git ls-files: ${String(err.message ?? err)}`);
+  }
+} else {
+  const IGNORE_DIRS = ['node_modules', '.next', 'dist', 'out', 'snapshots', '.git'];
+  function walk(dir) {
+    let results = [];
+    const list = readdirSync(dir);
+    for (const file of list) {
+      if (IGNORE_DIRS.includes(file)) continue;
+      const fullPath = join(dir, file);
+      const stat = statSync(fullPath);
+      if (stat.isDirectory()) {
+        results = results.concat(walk(fullPath));
+      } else {
+        // احفظ المسار النسبي بالنسبة للجذر
+        results.push(fullPath.slice(ROOT.length + 1));
+      }
+    }
+    return results;
+  }
+  try {
+    tracked = walk(ROOT);
+  } catch (err) {
+    fail(`فشل استدعاء مشية fs: ${String(err.message ?? err)}`);
+  }
 }
 
 const deployFiles = tracked.filter((f) => DEPLOY_PATTERNS.some((re) => re.test(f)));

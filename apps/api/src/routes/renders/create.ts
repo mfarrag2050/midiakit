@@ -16,6 +16,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { enqueueRender } from '../../queues/index.js';
+import { getQueuedRenderEta } from '../../queues/render-eta.js';
 import { validateTemplate, TemplateValidationError } from '@pf-mediakit/templates';
 import {
   NotFound, QuotaExceededRenders, QuotaExceededVideos,
@@ -82,10 +83,14 @@ const route: FastifyPluginAsync = async (fastify) => {
       );
       if ((existing.rowCount ?? 0) > 0) {
         const r = existing.rows[0]!;
+        const eta = r.status === 'queued'
+          ? await getQueuedRenderEta(r.id, req.dbClient!, req.log)
+          : { eta_seconds: 0, saturated: false };
         reply.status(202).send({
           id: r.id, status: 'queued',
           queuedAt: r.created_at.toISOString(),
-          estimatedStartAt: new Date(r.created_at.getTime() + 5000).toISOString(),
+          estimatedStartAt: new Date(Date.now() + eta.eta_seconds * 1000).toISOString(),
+          ...eta,
           brand_snapshot_id: r.id,
           template_snapshot_id: r.id,
         });
@@ -205,15 +210,18 @@ const route: FastifyPluginAsync = async (fastify) => {
         content: proj.content ?? {},
       }, body.priority);
     } catch (err) {
-      req.log.error({ err, renderId: r.id }, 'enqueue failed — render سيبقى queued (سيُستعاد بعد ذلك)');
-      // نُبقي الصف queued — retry job منفصل ممكن. لا نفشل الاستجابة.
+      req.log.error({ err, renderId: r.id }, 'enqueue failed');
+      // No queue state means no honest numeric ETA; let the request roll back.
+      throw err;
     }
 
+    const eta = await getQueuedRenderEta(r.id, req.dbClient!, req.log);
     reply.status(202).send({
       id: r.id,
       status: 'queued',
       queuedAt: r.created_at.toISOString(),
-      estimatedStartAt: new Date(r.created_at.getTime() + 5000).toISOString(),
+      estimatedStartAt: new Date(Date.now() + eta.eta_seconds * 1000).toISOString(),
+      ...eta,
       brand_snapshot_id: r.id,
       template_snapshot_id: r.id,
     });

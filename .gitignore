@@ -33,3 +33,4 @@ demo/live/
 
 # مخبأ pnpm المحلّي — لا يُتَتبَّع أبداً.
 .pnpm-store/
+apps/api/.local/

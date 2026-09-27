@@ -198,6 +198,8 @@ describe('151 · POST /v1/platform/tenants/:id/hard-delete', () => {
       payload: JSON.stringify({ reason: 'L-46 test · 151-TENANT-DELETE-BUILD' }),
     });
     expect(r.statusCode).toBe(200);
+    await new Promise((res) => setTimeout(res, 50));
+
     const body = J<{
       tenantId: string; tenantName: string;
       storageKeys: number; storagePurged: number; storageErrors: number;

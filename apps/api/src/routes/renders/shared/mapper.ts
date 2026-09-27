@@ -58,6 +58,8 @@ export interface RenderCreated {
   status: 'queued';
   queuedAt: string;
   estimatedStartAt: string;
+  eta_seconds: number;
+  saturated: boolean;
   brand_snapshot_id: string;
   template_snapshot_id: string;
 }

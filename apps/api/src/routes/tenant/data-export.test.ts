@@ -51,6 +51,8 @@ beforeAll(async () => {
     },
   });
   if (suA.statusCode !== 201) throw new Error(`signup A: ${suA.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   const ctxA = J<{ tenant: { id: string }; session: { accessToken: string } }>(suA as { body: string })!;
   tenantAId = ctxA.tenant.id;
   tokenA = ctxA.session.accessToken;
@@ -62,6 +64,8 @@ beforeAll(async () => {
     payload: { name: `bk-a-${suffix}` },
   });
   if (bkA.statusCode !== 201) throw new Error(`bk A: ${bkA.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   brandKitAId = J<{ id: string }>(bkA as { body: string })!.id;
 
   // مشروع لـA (يحتاج template — نستعمل الأوّل من list)
@@ -84,6 +88,8 @@ beforeAll(async () => {
     },
   });
   if (projA.statusCode !== 201) throw new Error(`proj A: ${projA.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   projectAId = J<{ id: string }>(projA as { body: string })!.id;
 
   // مستأجر B (بلا محتوى إضافيّ — signup يخلق tenant + user واحد)
@@ -96,6 +102,8 @@ beforeAll(async () => {
     },
   });
   if (suB.statusCode !== 201) throw new Error(`signup B: ${suB.body}`);
+  await new Promise((res) => setTimeout(res, 50));
+
   const ctxB = J<{ tenant: { id: string }; session: { accessToken: string } }>(suB as { body: string })!;
   tenantBId = ctxB.tenant.id;
   tokenB = ctxB.session.accessToken;

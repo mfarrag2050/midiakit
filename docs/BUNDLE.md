@@ -8,11 +8,11 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-23
-> **HEAD (main):** `42fadd8`
-> **HEAD (origin/feat/api):** `c80f534`
-> **HEAD (origin/feat/studio):** `9bfb67f`
-> **HEAD (feat/reels):** `2a61aca` — محلّيٌّ فقط · غير مدفوعٍ إلى origin
+> **تاريخ التوليد:** 2026-09-27
+> **HEAD (main):** `3e984fa`
+> **HEAD (origin/feat/api):** `033188b`
+> **HEAD (origin/feat/studio):** `b56ca09`
+> **HEAD (origin/feat/reels):** `4ba7c0e`
 
 ## الفهرس
 
@@ -20,7 +20,7 @@
 |---|---:|:---|:---|
 | `docs/01-product.md` | 94 | `e052dd8d96b9` | local |
 | `docs/02-architecture.md` | 418 | `5350e2e4e3c5` | local |
-| `docs/03-brand-kit-spec.md` | 448 | `381efb08c286` | local |
+| `docs/03-brand-kit-spec.md` | 451 | `d24396c6bdfc` | local |
 | `docs/04-template-spec.md` | 295 | `05baffe71130` | local |
 | `docs/05-engine-api.md` | 360 | `fb6c8717a10c` | local |
 | `docs/06-roadmap.md` | 179 | `f9022e8013a3` | local |
@@ -44,10 +44,10 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 402 | `1bc28941580d` | local |
+| `docs/SKILL-mediakit.md` | 403 | `8f430c9754e4` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
-| `PHASES-api.md` | 825 | `18487b9370c5` | git show origin/feat/api |
+| `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
 | `PHASES-studio.md` | 1490 | `214bd59e65fe` | git show origin/feat/studio |
 
 ---
@@ -637,6 +637,7 @@ usage          tenant_id, period, renders_count, video_seconds
     "urgentBadge": "#C1012F",
     "urgentBg":    "#C82626",
     "urgentBgTint":"#C21C1C",
+    "urgentText":  "…",                // mk/478b · اختياريّ: لونُ العنوانِ على urgentBg. الغياب ⇒ colors.text. مطلوبٌ للهويّةِ الفاتحة (نصٌّ داكن على urgentBg داكن).
     "locationBadge":"#1D5FC4",
     "surface":     "#111111",
     "placeholder": ["#474C55", "#15171B"]
@@ -732,6 +733,8 @@ usage          tenant_id, period, renders_count, video_seconds
   "gradient": {
     "defaultOpacity": 0.72,
     "defaultReach": 0.90,
+    "color":       "…",                // mk/478b · اختياريّ: لونُ قناعِ التدرّج. الغياب ⇒ '#000000' (سلوكٌ سابقٌ محفوظٌ ببايت). فاتحٌ للهويّةِ الفاتحة كي لا يُغَمِّقَ التدرّجُ مكانَ النصِّ الداكن.
+    "urgentColor": "…",                // mk/478b · اختياريّ: لونُ التدرّج على سطحِ urgentBg. الغياب ⇒ يتراجعُ إلى color ثمّ '#000000'. داكنٌ للهويّةِ الفاتحةِ لكي يبقى سطحُ العاجلِ داكناً تحت التدرّج.
     "shape": [[0,1],[0.20,0.98],[0.40,0.82],[0.60,0.48],[0.80,0.06],[0.92,0]],
     "band":  [[0,0.08],[0.20,0.5],[0.36,0.92],[0.5,1.0],[0.64,0.92],[0.80,0.5],[1,0.08]]
   },
@@ -11323,7 +11326,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-23 · **HEAD:** `42fadd8` (`main`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `3e984fa` (`merge/561`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11371,7 +11374,7 @@ description: |
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
 - **`demo/`:** 17 ملف
-- **`snapshots/`:** 12 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
+- **`snapshots/`:** 18 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- CROSS-BRANCH:START -->
 <!--
@@ -11385,15 +11388,16 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `c80f534` | 0 | 9 | 523 |
-| `feat/ci` | `7d6ee3f` | 0 | 137 | 395 |
-| `feat/reels` | `2a61aca` | 18 | 7 | 543 |
-| `feat/studio` | `9bfb67f` | 0 | 2 | 530 |
-| `origin/aa-internal` | `ee178ca` | 0 | 531 | 1 |
-| `origin/feat/api` | `c80f534` | 0 | 9 | 523 |
-| `origin/feat/ci` | `033ac5b` | 0 | 143 | 389 |
-| `origin/feat/dashboards` | `376077c` | 0 | 420 | 112 |
-| `origin/feat/studio` | `9bfb67f` | 0 | 2 | 530 |
+| `feat/api` | `89e8588` | 0 | 0 | 567 |
+| `feat/ci` | `ecc2673` | 0 | 15 | 552 |
+| `feat/reels` | `4ba7c0e` | 21 | 31 | 557 |
+| `feat/studio` | `b56ca09` | 3 | 36 | 534 |
+| `merge/561` | `3e984fa` | 4 | 0 | 571 |
+| `origin/aa-internal` | `ee178ca` | 0 | 566 | 1 |
+| `origin/feat/api` | `033188b` | 0 | 35 | 532 |
+| `origin/feat/ci` | `ecc2673` | 0 | 15 | 552 |
+| `origin/feat/reels` | `4ba7c0e` | 21 | 31 | 557 |
+| `origin/feat/studio` | `b56ca09` | 3 | 36 | 534 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
@@ -13603,6 +13607,145 @@ git branch --show-current
 > **قرار العزل:** `docs/02 §ADR-011`.
 
 ---
+
+## 469b — السقف والعدالة (2026-09-25 · متوقف قبل الالتزام؛ البند 6 ◐)
+
+**تحديث 04:38Z — الحكم الحالي:** أ مقبول للعينة بحكم 04:35Z. ب أُعيدت مرة واحدة
+بترتيب A₁,A₂,B₁,B₂,B₃,A₃,A₄,C₁ ثم C₂؛ ثبتت ثلاث prioritized في رصدين
+متتاليين بفاصل 106ms، منها A₄ وC₁. حصلت C₂ على أولوية 1 من enqueueRender
+ومن job.opts مع بقاء C₁ وA₄ prioritized بعد الإضافة. التسع completed/succeeded؛
+بدأت A₄ عند 04:38:50.870Z وC₂ عند 04:38:50.871Z.
+**اكتشاف PRIORITIZED_OMISSION_CONFIRMED؛ توقف بلا إصلاح أو التزام، لتقييم Opus.**
+الأثر: `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/469b-20260925T043848450Z-3ea7e924.jsonl`.
+البند 6 يبقى ◐، والفيديو لم يُختبر. لم يُحذف الصفان القديمان. التفاصيل أدناه تاريخ المحاولات السابقة:
+
+- 469 دُفع دون دمج: `15f0e613aa2804ac2de951e8f1cd9e68d1c568ec` على `feat/api`.
+- سكربت `apps/api/scripts/peak-load-cap.mjs`: خمس normal للمستأجر A؛
+  الخامسة capDelays=1 وبدء فعلي بعد 5075ms، والخمس completed/succeeded.
+  السقف 4 ثبت في هذه العينة، مستقلاً عن أولوية الإدراج.
+- ب: محاولتا PNG بحجمي x وinstagram؛ ست مهام A,A,A,B,B,C.
+  أقصى انتظار مرصود في الثانية 1 (C prioritized، خمس active)، لا ثلاث؛
+  لم تُدرج السابعة. أثر إغفال prioritized ما يزال غير محسوم سلوكياً.
+- أُنشئ 19 صفاً وأُرسلت 17 مهمة نجحت؛ صفا السابعة بقيَا queued بلا job.
+  normal فارغ بعد كل حمل؛ لا حذف بيانات، ولا تعديل إنتاج أو worker.
+- التقرير والأثر الخام: `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/469b-PEAK-FAIRNESS-AND-CAP.md`.
+  البند 6 ◐: العدالة معلقة بشرط انتظار غير متحقق، والفيديو لم يُختبر.
+  توقف قبل الالتزام؛ يحتاج حمل ب إلى تعديل تصميم معتمد.
+
+## 469 — قياس تسع مهام على dev (2026-09-25 · GO commit+push 04:25Z؛ البند 6 ◐)
+
+- سكربتا `apps/api/scripts/peak-load.mjs` و`peak-load-fixtures.mjs` جهّزا
+  ثلاثة مستأجرين اصطناعيين وصفوف رندر حقيقية؛ `normal` و`urgent` عبر
+  `enqueueRender`، و`edit` عبر طابوره المستقل. لا تعديل للإنتاج أو العامل.
+- تشغيل 04:08Z: تسع مهام خلال 1012ms؛ تسع غير منتهية معاً، وأقصى نشاط
+  BullMQ/رندر فعلي 8. عند دفع العاجل: normal=5 active +1 prioritized.
+- بدء العاجل من timestamp إلى DB started_at: 928ms و927ms؛ ومنه إلى
+  processedOn: 266ms و490ms. edit بدأ فعلياً خلال 11ms. التسع completed
+  وDB succeeded، مع مخرج S3 لكل منها حجمه 53438 بايت؛ لا stalled مرصود.
+- العدالة لم تُثبت: الأولويات كلها 1، وترتيب normal هو A,A,B,B,C,C؛ لا
+  cap delays. العينة لا تختبر تجاوز سقف 4 لكل مستأجر. لا إصلاح ولا إغلاق
+  للبند 6؛ التقرير يفصل قياس البدء الناجح عن العدالة غير المحسومة.
+- الطوابير الأربعة خلت بعد الحمل. بيانات التجربة ومخرجاتها باقية للمراجعة،
+  ومعرّفاتها في التقرير؛ لا حذف. أذن المالك بالالتزام والدفع دون دمج في 04:25Z.
+- التقرير الكامل: `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/469-PEAK-LOAD-NINE-JOBS.md`.
+  اعتمد المالك العيّنة بصرياً للحمل الاصطناعي في 04:25Z.
+- يبقى البند 6 ◐: حمولة PNG فقط بلا تحرير فيديو؛ cap=4 لم يُستفزّ
+  (أقصى تداخل لكل مستأجر 3)؛ أثر إغفال prioritized في computePriority
+  معلّق سلوكياً لأن العينة لم تضف مهمة لاحقة للمستأجر C. المتابعة في 469b.
+
+## 468b — جدولة النسخ عبر BullMQ (2026-09-25 · القياسات معتمدة؛ GO commit+push)
+
+- البند 11: اجتازت القياسات الستّة على dev@19041؛ طابور `backup-daily`
+  مستقل، عامل واحد، وظيفة واحدة عند `0 3 * * *` بتوقيت `Europe/Istanbul`.
+  الإلغاء 1→0 وإعادة التسجيل مرتين 1→1؛ الموعد التالي المقيس 2026-09-26 03:00 +03:00.
+- تنفيذان تلقائيان بفاصل 60s أنتجا نسختين، كل منهما 2290521 بايت؛
+  الإبقاء 15 قديمة + نسخة جديدة → أحدث 7 إجمالاً. فشل PostgreSQL أبقى
+  بصمات الملفات جميعها، واستُعيدت الخدمة في finally؛ حارس السياق الخاطئ رفض التنفيذ.
+- `dev-launch.mjs backup` يضيف مسار libpq إلى PATH لفرع backup فقط.
+  التسجيل عند إقلاع API موصول في المصدر؛ API الحي بقي على `e79819dc` دون إعادة إقلاع.
+  التقرير الحرفي في `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/468b-BACKUP-VIA-BULLMQ-REPEAT.md`.
+  اعتمد المالك القياسات وأذن بالالتزام والدفع على feat/api في حكم 03:35Z؛
+  البند 11 يُغلق بعد وصول الدفع، وإثبات الإغلاق في التقرير.
+
+## 465 — نسخ PostgreSQL واستعادة (2026-09-24 · بانتظار حكم قبل commit)
+
+- أُنجزت القياسات الثلاث على dev@19041: تطابق 28 جدولاً، كشف التلف
+  بخروج 1، وSIGINT بخروج 130 مع عدم بقاء قاعدة الاستعادة. العينة 2290521
+  بايت. لا جدولة مثبتة ولا commit أو push؛ البند 11 بانتظار اعتماد المالك.
+- العقد المحدّث: محاولة التفريغ بدور migration_user رفضت الصلاحية؛ نجح
+  البديل postgres داخل الحاوية. الإدارة عبر Unix socket حصراً، بلا تصدير
+  اعتماد الإدارة أو تعديل الأدوار؛ finally حذف قاعدة الاختبار وملف الحاوية.
+- التشغيل والجدولة المقترحة في [apps/api/PHASES-api.md](apps/api/PHASES-api.md)،
+  والمخرجات الكاملة في تقرير 465 بالمسار المطلق في الشجرة الرئيسية.
+  تحديث PHASES.md وM1 من ملكية M؛ الحقائق المقيسة مرفقة بالتقرير.
+
+## 464 — تجهيز dev للمشية (2026-09-24 · أذن Opus بالالتزام والدفع على feat/api)
+
+- `apps/api/dev-env.json`: إضافة `CORS_ORIGIN` الصريح لأصل `19051`؛ حارس
+  461 و`config.ts` لم يتغيرا. فحص OPTIONS الحي أعاد الأصل نفسه حرفياً.
+- `apps/api/scripts/dev-studio.mjs`: مشغّل مستقل من ملكية API، يشغّل
+  Studio من شجرته على `19051`؛ جلسة `mk-dev-studio`. يضبط `NEXT_PUBLIC_API_BASE`
+  المطلوب و`NEXT_PUBLIC_API_URL` الذي يقرأه العميل، ويفرض mock=false.
+  قياس HEAD بمهلة عشر ثوانٍ أعاد `307` إلى `/projects`.
+- `apps/api/scripts/walk-provision.mjs`: تسجيل مستأجر جديد باسم UTC
+  يبدأ بـ`walk-YYYYMMDD`، وتعديل حصته فقط بـ`WHERE id=$1 AND name=$2`،
+  ثم فحص `rowCount=1` قبل COMMIT وحفظ الاعتماد ذرياً بصلاحية `0600`.
+  قيم الحصّة 300 طلب/دقيقة و100 رندر متزامن من سكربت المشية السابق.
+  `apiKey` في عقد التسليم هو access token للتسجيل (صلاحية 15 دقيقة)،
+  والدخول اليدوي بالبريد وكلمة المرور يُنشئ جلسة جديدة.
+- `.gitignore`: تجاهل `apps/api/.local/`. المخرج المحلي يحمل الحقول
+  الأربعة؛ stdout لا يحمل قيماً. قبول التشغيل وls وjq تحقق فعلياً.
+- بيئة الطرفية حملت `PORT` مخالفاً؛ رفضها الحارس، ثم أُطلق API
+  والتحضير من أب محايد بـ`env -i` دون تعديل الحارس أو ملفات الأسرار.
+- لا تعديل لمصدر Studio أو `walk-proof.mjs`؛ §٣ البديلة تستبدل القسم
+  القديم كاملاً. الدفع إلى origin/feat/api مأذون؛ لا دمج ولا لمس show
+  ولا بوابات عامة ولا استئناف للمشية 551.
+- التقرير الحرفي في `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/464-DEV-STAGE-FOR-THE-WALK.md`.
+  فحص صياغة السكربتات و`git diff --check` نجحا؛ حكم Opus أجاز الالتزام والدفع.
+  تحديث PHASES.md وM1 يبقى لمسار M؛ هذه تهيئة dev وليست اعتماداً بصرياً.
+
+## 462 — ETA من الطابور (2026-09-24 · أذن المالك بالالتزام دون دفع أو دمج)
+
+- `apps/api/src/queues/render-eta.ts`: تعداد `waiting + prioritized + delayed`
+  بالأولوية نفسها أو أعلى، مع استبعاد المهمة نفسها و`active`. المتوسط من آخر
+  20 رندر ناجح بهوية القالب المجمدة، ضمن RLS للمستأجر؛ fallback ‏8/45 ثانية.
+- `POST /v1/renders` يعيد `eta_seconds` و`saturated`، ويشتق `estimatedStartAt`
+  من الحساب. إعادة الطلب تستخدم طابور المهمة الفعلي؛ المهام غير queued تعيد
+  صفراً للانتظار. غياب مهمة الطابور يرمي خطأ ولا ينتج ETA مختلقاً.
+- سقوف العرض 30/90/180/300، وعتبات `warn` للمهمة النشطة 45/270/900/1800؛
+  مهلات العامل وسياسة `computePriority` لم تتغيرا.
+- القياس الحي بأداة `apps/api/scripts/verify-render-eta.mjs`: فارغ = 1.5؛
+  مهمة سابقة نشطة منذ 271.006 ثانية لا تزيد ETA وتنتج تحذيراً؛ batch بسبع
+  مهام ×45 +1.5 =316.5 يُعرض 300 مع `saturated: true`. أُرفقت استجابة curl.
+- `apps/api/src/queues/render-eta.test.ts`: تسعة اختبارات Redis نجحت؛ حذف
+  prioritized عمداً أسقط خمسة، ثم نجحت التسعة بعد الاستعادة. فحص أنواع API
+  يفشل بالمخرج نفسه حرفياً عند 4fc1a2e وبعد التعديل؛ لا يُعلن ناجحاً.
+- التقرير والأدلة في `/Users/mdervis/MediaKit/pf-mediakit/claude/reports/462-REAL-ETA.md`.
+  أذن المالك بالالتزام على feat/api دون دفع أو دمج. البند 7 يبقى ◐ حتى وصل
+  مستهلك الواجهة بعد 551. مخاطرة Redis قبل PostgreSQL معلنة غير مقيسة؛
+  قياسها مؤجل إلى 462b وفق الحكم. تحديث PHASES.md وM1 يبقى لمسار M.
+
+## 461 — مصدر إقلاع dev معزول (2026-09-24)
+
+- `apps/api/dev-env.json` يثبت إعدادات dev وأسماء الأسرار المقروءة من
+  `apps/api/.env` ثم `.env.local`؛ الأخير له الأولوية في الأسرار فقط.
+  `DATABASE_URL_PLATFORM` أُضيف محلياً من افتراض dev القائم، بلا تغيير الدور.
+- `pnpm dev` و`pnpm worker` من الجذر، و`dev`/`worker` داخل API، و`worker`
+  داخل renderer تمرّ عبر `apps/api/scripts/dev-launch.mjs`. التشغيل عملية
+  مباشرة؛ `dev` لم يعد يستعمل `--watch`، ويحتاج إعادة تشغيل عند تعديل الشفرة.
+- المشغّل يرفض تعارض إعداد dev الموروث قبل قراءة الأسرار، ثم يمرّر قائمة
+  محددة من المتغيّرات للطفل. `dev-startup.mjs` يتحقق قبل تحميل التطبيق،
+  ويطبع شهادة بلا اعتمادات ويفشل عند غياب Redis المحدد بلا fallback.
+- تحقق 461: عشرة اختبارات في `dev-launch.test.mjs` موصولة ببداية `pnpm test`.
+  حقنة وراثة البيئة كاملة جعلت الاختبار يفشل، واستُعيد التنفيذ الصحيح.
+  الرفض الفعلي لـ`S3_PUBLIC_ENDPOINT` المخالف وغياب Redis أُثبتا بالخروج 1.
+- رحلة dev فعلية عبر أوامر pnpm من طرفية جديدة: رفع HTTP 200 (273 بايت)،
+  رندر ناجح، تنزيل HTTP 200 (18425 بايت)، توقيع PNG صحيح. نُظّف مستأجر القياس
+  وكائناه. القياس لا يغلق بوابة الجودة البصرية L-17.
+- فحص أنواع API ما زال يفشل بـ25 خطأ؛ أُعيد على `c80f534` بشجرة نظيفة
+  فكان الخرج كاملاً مطابقاً والخروج 2 في الحالتين. لا تعديل لملفات العطب.
+- التقرير والأداة والأثر الكامل: `claude/reports/461-DEV-ENV-STOPS-INHERITING.md`
+  في الشجرة الرئيسية؛ التقرير خارج شجرة API. لا دمج إلى main.
 
 ## القاعدة الحاكمة (2026-09-04) — لا BYPASSRLS إطلاقاً
 

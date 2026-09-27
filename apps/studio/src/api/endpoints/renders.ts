@@ -1,6 +1,7 @@
 // /v1/renders — docs/16 §8. brand_snapshot + template_snapshot ذرّيان.
 
 import { request, requestPage, type Page } from '../client';
+import { record as recordEta } from '../renderEtaStore';
 
 export type RenderStatus =
   | 'queued'
@@ -61,6 +62,10 @@ export function create(
     method: 'POST',
     body: input,
     ...(idempotencyKey ? { idempotencyKey } : {}),
+  }).then((r) => {
+    // ٥٦٠ · نلتقط `estimatedStartAt` هنا لأنّ GET/list لا يعيدانه.
+    recordEta(r.id, r.estimatedStartAt);
+    return r;
   });
 }
 

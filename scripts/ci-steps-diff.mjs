@@ -26,7 +26,7 @@ const CI_YML = resolve(ROOT, '.github/workflows/ci.yml');
 // الغرض: يفشل السكربت إن تغيّر العدد بلا تحديث الجدول أدناه، فيجبرنا على
 // مراجعة إعلان العمى.
 // آخر تحديث: 260 · أضاف «تهيئة الأدوار + الامتدادات» → 11→12.
-const EXPECTED_CI_STEP_COUNT = 12;
+const EXPECTED_CI_STEP_COUNT = 13;
 
 // ما يشغّله bin/mk-ci — قائمة مكتوبة يدويّاً بأسماء الخطوات كما تظهر في
 // ci.yml (تُقارَن بـstring includes). كلّ خطوة هنا يعرف mk-ci كيف يشغّلها
@@ -35,6 +35,8 @@ const MK_CI_COVERS = [
   'apt install',                           // ✓ (داخل bash -c في bin/mk-ci)
   'corepack pnpm',                          // ✓
   'تخبئة متجر pnpm',                        // ~ (node_modules volume — بديل)
+  'توليد أسرار عابرة',                        // ✓ (bin/mk-ci يمررها كمتغيرات بيئة)
+
   'pnpm install (frozen)',                  // ✓
   'تهيئة الأدوار + الامتدادات',           // ~ (bin/mk-ci يمنت init/*.sql عبر docker-entrypoint-initdb.d — بديل bootstrap)
   'تشغيل الهجرات على postgres',            // ✓ (bin/mk-ci يرفع pg ephemeral + pnpm db:migrate بعد دمج 250)

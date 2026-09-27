@@ -16,7 +16,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "api-worker": "node --import tsx src/api-worker.ts"
+    "api-worker": "node --import tsx src/api-worker.ts",
+    "worker": "node ../api/scripts/dev-launch.mjs worker"
   },
   "devDependencies": {
     "@types/pg": "8.11.10",

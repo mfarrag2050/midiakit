@@ -16,6 +16,7 @@ import { ApiError, renders } from '@/src/api';
 import type { RenderRow, RenderStatus } from '@/src/api/endpoints/renders';
 import { formatDateTime } from '@/src/format/datetime';
 import { useDigitStyle } from '@/src/format/settings';
+import { RenderEtaLine } from '@/src/ui/RenderEtaLine';
 
 // S17+S18 — قائمة التصديرات + إلغاء + رابط المخرَج.
 // **انحراف #S17-1:** POST /:id/cancel يعيد **202** مع
@@ -101,9 +102,12 @@ export default function RendersPage(): JSX.Element {
       key: 'status',
       headerKey: 'pages.renders.col.status',
       render: (r) => (
-        <Badge tone={STATUS_TONE[r.status] ?? 'neutral'}>
-          {t(`pages.renders.status.${r.status}`)}
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge tone={STATUS_TONE[r.status] ?? 'neutral'}>
+            {t(`pages.renders.status.${r.status}`)}
+          </Badge>
+          <RenderEtaLine renderId={r.id} status={r.status} />
+        </div>
       ),
     },
     {
