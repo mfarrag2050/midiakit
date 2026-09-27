@@ -181,6 +181,15 @@ describe('240 · حدود التصدير', () => {
       [tidR, bk.rows[0].id, tpl.rows[0].id, uidR]);
     const prjRid = prjR.rows[0].id;
 
+    // 521 · rate-limit نافذةٌ ثابتة (60_000 ms · plugins/rate-limit-by-plan.ts:60).
+    // 21 طلباً ~1s؛ إن سقط بعضها في نافذةٍ وبعضها في التالية، لا نصل إلى 429.
+    // انتظرْ إلى بداية دقيقة جديدة إن كان المتبقّي < 10 ثوانٍ (headroom لـCI).
+    const msIntoMinute = Date.now() % 60_000;
+    const msLeftInMinute = 60_000 - msIntoMinute;
+    if (msLeftInMinute < 10_000) {
+      await new Promise((r) => setTimeout(r, msLeftInMinute + 250));
+    }
+
     let lastCode: string | undefined;
     let lastStatus = 0;
     for (let i = 0; i < 21; i++) {
