@@ -46,6 +46,7 @@ import {
   drawHeadlineLine,
   executeLayer,
   finalizePreparedHeadline,
+  headlineBrandFor,
   type RenderFrameArgs,
   type RenderState,
   type PreparedHeadline,
@@ -527,9 +528,12 @@ function applyTemplateLayer(effect: TemplateLayerEffect, ectx: EffectContext): v
     const prep = ectx.headlinePrep.firstBaseline !== undefined
       ? ectx.headlinePrep
       : finalizePreparedHeadline(ectx.headlinePrep, layer, ectx.rfArgs, ectx.state);
-    const { ctx, brand, state } = ectx;
+    const { ctx, state } = ectx;
+    // mk/524b: مبادلةُ 478b تُطبَّق هنا أيضاً (كانت مقصورةً على runHeadline
+    // في المسار الثابت — 523 manara breaking = فارغ).
+    const drawBrand = headlineBrandFor(ectx.brand, state);
     for (let i = 0; i < prep.linesJustified.length; i++) {
-      drawHeadlineLine(ctx, brand, prep, i);
+      drawHeadlineLine(ctx, drawBrand, prep, i);
     }
     if (prep.bounds) state.headline = prep.bounds;
     return;
@@ -563,7 +567,9 @@ function applyTemplateHeadline(
   const prep = ectx.headlinePrep;
   if (!prep) return;
   const easing = getEasingFn('easeOutCubic');
-  const { ctx, brand } = ectx;
+  const { ctx } = ectx;
+  // mk/524b: نفسُ مبادلة 478b — سطحُ العاجل يبدّل نصَّ العنوان.
+  const drawBrand = headlineBrandFor(ectx.brand, ectx.state);
 
   for (let i = 0; i < prep.linesJustified.length; i++) {
     const lineStart = effect.startOffset + i * effect.stagger;
@@ -578,7 +584,7 @@ function applyTemplateHeadline(
     ctx.save();
     ctx.globalAlpha = ctx.globalAlpha * alpha;
     if (dy !== 0) ctx.translate(0, dy);
-    drawHeadlineLine(ctx, brand, prep, i);
+    drawHeadlineLine(ctx, drawBrand, prep, i);
     ctx.restore();
   }
 }

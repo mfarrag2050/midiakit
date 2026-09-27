@@ -51,22 +51,29 @@ function log(msg) {
 
 // **قراءة قيمة `KEY=VALUE` من bin/mk-show — مصدرٌ واحد.**
 // نتعامل مع القيَم المحاطة بعلامتَي اقتباس + التعليقات الترجمانيّة بعدها.
+//
+// **526ج١:** مطابقة دلالة `source`: الإسنادُ الأخير غيرُ الفارغ يفوز.
+// قبله كان يعيد أوّل تطابقٍ ⇒ سطرُ `API_PORT=""` (السطر 45 في mk-show)
+// كان يعطي فارغاً فيفشل smoke بـexit=99 كاذباً بينما الإسناد الحقيقيّ
+// (19070/19086) يجيء داخل فرع `if`.
 function readMkShowVar(treePath, key) {
   const p = join(treePath, 'bin/mk-show');
   if (!existsSync(p)) return null;
   const src = readFileSync(p, 'utf8');
-  const m = src.match(new RegExp(`^\\s*${key}=(.+?)\\s*$`, 'm'));
-  if (!m) return null;
-  let v = m[1];
-  // نقتطع تعليق shell إن وُجد بعد قيمة.
-  const hashIdx = v.indexOf('#');
-  if (hashIdx >= 0) v = v.slice(0, hashIdx);
-  v = v.trim();
-  // نُزيل الاقتباس من الطرفَين إن كان يحيط بالقيمة كاملةً.
-  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-    v = v.slice(1, -1);
+  const re = new RegExp(`^\\s*${key}=(.+?)\\s*$`, 'gm');
+  let lastNonEmpty = null;
+  for (const m of src.matchAll(re)) {
+    let v = m[1];
+    const hashIdx = v.indexOf('#');
+    if (hashIdx >= 0) v = v.slice(0, hashIdx);
+    v = v.trim();
+    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+      v = v.slice(1, -1);
+    }
+    v = v.trim();
+    if (v !== '') lastNonEmpty = v;
   }
-  return v.trim();
+  return lastNonEmpty;
 }
 
 // HTTP بسيط عبر fetch (Node 20+).
