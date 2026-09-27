@@ -14,6 +14,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { toFull, type DbTemplateRow } from './shared/mapper.js';
 import { TemplateSchemaViolation } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   name: z.string().min(1).max(200),
   kind: z.string().min(1).max(50),
@@ -39,6 +41,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        RETURNING *`,
       [req.auth!.tenantId, parsed.kind, parsed.name, JSON.stringify(parsed.definition)],
     );
+    await commitTx(req);
     reply.status(201).send(toFull(ins.rows[0]!));
   });
 };

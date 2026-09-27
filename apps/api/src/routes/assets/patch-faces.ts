@@ -12,6 +12,8 @@ import { config } from '../../config.js';
 import { toAssetResponse, type DbAssetRow } from './shared/mapper.js';
 import { NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const faceSchema = z.object({
@@ -40,6 +42,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 
     // نعيد الأصل الكامل + publicUrl جديد
     const dl = await getStorage().presignDownload(row.storage_key, config.S3_PRESIGN_TTL_SECONDS);
+    await commitTx(req);
     return toAssetResponse(row, dl.publicUrl);
   });
 };

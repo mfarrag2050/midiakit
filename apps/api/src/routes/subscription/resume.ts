@@ -7,6 +7,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { NotFound } from '../../errors.js';
 import { getPaymentsProvider } from '../../payments/index.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 interface SubRow { id: string; external_subscription_id: string | null }
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -28,6 +30,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     const updated = await req.dbClient!.query<{ plan: string; status: string; current_period_end: Date | null }>(
       `SELECT plan, status, current_period_end FROM subscriptions WHERE id = $1`, [sub.id]);
     const r = updated.rows[0]!;
+    await commitTx(req);
     return {
       plan: r.plan, status: r.status,
       currentPeriodEnd: r.current_period_end?.toISOString() ?? null,

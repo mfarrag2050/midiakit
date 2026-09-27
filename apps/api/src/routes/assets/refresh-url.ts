@@ -8,6 +8,8 @@ import { getStorage } from '../../storage/index.js';
 import { config } from '../../config.js';
 import { NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 interface DbRow { storage_key: string }
@@ -21,6 +23,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     if (r.rowCount === 0) throw NotFound();
 
     const dl = await getStorage().presignDownload(r.rows[0]!.storage_key, config.S3_PRESIGN_TTL_SECONDS);
+    await commitTx(req);
     return { publicUrl: dl.publicUrl, expiresAt: dl.expiresAt.toISOString() };
   });
 };

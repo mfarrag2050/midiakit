@@ -6,6 +6,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { NotFound, InsufficientRole } from '../../../errors.js';
 
+import { commitTx } from '../../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid(), aid: z.string().uuid() });
 const bodySchema = z.object({
   body: z.string().min(1).max(2000).optional(),
@@ -52,6 +54,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       params,
     );
     const row = upd.rows[0]!;
+    await commitTx(req);
     return {
       id: row.id, authorId: row.author_id, target: row.target, body: row.body,
       resolved: row.resolved, createdAt: row.created_at.toISOString(),

@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ provider: z.string().min(1).max(50) });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -16,6 +18,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     const r = await req.dbClient!.query(
       `DELETE FROM ai_integrations WHERE provider = $1`, [provider]);
     if ((r.rowCount ?? 0) === 0) throw NotFound();
+    await commitTx(req);
     reply.status(204).send();
   });
 };

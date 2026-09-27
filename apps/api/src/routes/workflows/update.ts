@@ -12,6 +12,8 @@ import { toFull, type DbWorkflowRow } from './shared/mapper.js';
 import { validateWorkflowDefinition } from './shared/schema.js';
 import { NotFound, WorkflowInUseImmutableField } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const bodySchema = z.object({
@@ -90,6 +92,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       `UPDATE workflows SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params,
     );
+    await commitTx(req);
     return toFull(upd.rows[0]!);
   });
 };

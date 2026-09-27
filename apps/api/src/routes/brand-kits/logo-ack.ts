@@ -11,6 +11,8 @@ import {
 } from '../../errors.js';
 import type { DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const PLATFORMS = ['tiktok', 'x', 'instagram', 'youtube', 'telegram', 'facebook'] as const;
 type Platform = typeof PLATFORMS[number];
 
@@ -84,6 +86,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       );
 
       const updatedAttr = (upd.rows[0]!.config as { attribution: { logoAcks: Record<string, unknown> } }).attribution;
+      await commitTx(req);
       return { platform, logoAck: updatedAttr.logoAcks[platform] };
     },
   );

@@ -12,6 +12,8 @@ import {
   ApiKeyValidationError, type ProviderName,
 } from '../../ai/index.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const VALID_PROVIDERS: readonly ProviderName[] = [
   'gemini', 'openai', 'claude', 'elevenlabs', 'google-tts', 'azure',
 ];
@@ -67,6 +69,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        JSON.stringify(body.capabilities), req.auth!.userId],
     );
     const row = r.rows[0]!;
+    await commitTx(req);
     reply.status(201).send({
       provider: row.provider,
       apiKeyRef: row.api_key_ref,

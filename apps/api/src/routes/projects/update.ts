@@ -20,6 +20,8 @@ import {
 } from '../../errors.js';
 import { serializeAndCheckContentSize } from './shared/content-size.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'es', 'de'] as const;
 const FORBIDDEN_KEYS = new Set(['id', 'tenant_id', 'createdAt', 'currentState', 'state']);
 
@@ -100,6 +102,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       `UPDATE projects SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params,
     );
+    await commitTx(req);
     return toFull(upd.rows[0]!);
   });
 };
