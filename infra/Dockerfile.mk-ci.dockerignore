@@ -1,0 +1,10 @@
+# mk/516b: تجاوزٌ خاصٌّ بـmk-ci — نسخة الجذر بلا .git.
+# BuildKit يستعمل <path/to/Dockerfile>.dockerignore حين يكون موجوداً،
+# ويتجاهل .dockerignore الجذر لهذا البناء وحدَه. الغرض: check-skill-fresh
+# داخل الحاوية يحتاج git status — لا نُدخل .git في صور الإنتاج الأخرى.
+node_modules
+**/*/node_modules
+.pnpm-store
+*.tsbuildinfo
+out
+**/.venv

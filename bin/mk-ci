@@ -77,14 +77,17 @@ if [[ "${1:-}" == "--regen-refs" ]]; then
   set +e
   
   echo "[regen · حاوية] بناء صورة الحاوية..."
-  docker build -t pf-mediakit-ci-image -f - . << 'EOF'
-FROM node:20.18.1-bookworm-slim
-WORKDIR /work
-RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
-RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
-COPY . /work/
-RUN pnpm install --frozen-lockfile
-EOF
+  # mk/516b: مبادلةُ .dockerignore الجذر بنسخةِ CI لحظةَ البناء.
+  # المتغيّرات معرَّفة أدنى (خارج فرع --regen-refs) — نُعرِّفها هنا كذلك.
+  MK_CI_IGNORE_ROOT_R="${ROOT}/.dockerignore"
+  MK_CI_IGNORE_BAK_R="${ROOT}/.dockerignore.mk-ci-bak"
+  MK_CI_IGNORE_CI_R="${ROOT}/infra/Dockerfile.mk-ci.dockerignore"
+  cp "${MK_CI_IGNORE_ROOT_R}" "${MK_CI_IGNORE_BAK_R}"
+  cp "${MK_CI_IGNORE_CI_R}" "${MK_CI_IGNORE_ROOT_R}"
+  docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${ROOT}"
+  build_exit=$?
+  mv "${MK_CI_IGNORE_BAK_R}" "${MK_CI_IGNORE_ROOT_R}"
+  [ "$build_exit" -eq 0 ] || { echo "[regen] فشل البناء (رمز=$build_exit)" ; exit "$build_exit" ; }
 
   docker run --rm \
     --name "${CI_CONTAINER}-regen" \
@@ -117,9 +120,24 @@ EOF
   exit $exit_code
 fi
 
+# mk/516b: مبادلةُ .dockerignore حول البناء — العزلُ نفسُه دون buildx.
+# BuildKit مفقودٌ على مضيف هذه البيئة؛ classic builder لا يقرأ إلّا
+# .dockerignore الجذر. نستبدلُه بنسخةِ CI (بلا .git) لحظةَ البناء ونعيدُه
+# فوراً. الاستعادة عبر trap لضمانها حتى مع فشل البناء أو Ctrl-C.
+MK_CI_IGNORE_ROOT="${ROOT}/.dockerignore"
+MK_CI_IGNORE_BAK="${ROOT}/.dockerignore.mk-ci-bak"
+MK_CI_IGNORE_CI="${ROOT}/infra/Dockerfile.mk-ci.dockerignore"
+
+restore_ignore() {
+  if [ -f "${MK_CI_IGNORE_BAK}" ]; then
+    mv "${MK_CI_IGNORE_BAK}" "${MK_CI_IGNORE_ROOT}"
+  fi
+}
+
 # ── trap · تنظيف بلا استثناء ───────────────────────
 cleanup() {
   local ec=$?
+  restore_ignore
   echo ""
   echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
   docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
@@ -256,14 +274,12 @@ JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("c
 PLATFORM_JWT=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
 
 echo "[mk-ci] بناء صورة الحاوية..."
-docker build -t pf-mediakit-ci-image -f - . << 'EOF'
-FROM node:20.18.1-bookworm-slim
-WORKDIR /work
-RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
-RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
-COPY . /work/
-RUN pnpm install --frozen-lockfile
-EOF
+# mk/516b: مبادلةُ .dockerignore الجذر بنسخةِ CI لحظةَ البناء (يُدخل .git،
+# لا يدخل .venv). الاستعادةُ عبر trap.
+cp "${MK_CI_IGNORE_ROOT}" "${MK_CI_IGNORE_BAK}"
+cp "${MK_CI_IGNORE_CI}" "${MK_CI_IGNORE_ROOT}"
+docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${ROOT}"
+restore_ignore
 
 echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (الصورة المبنيّة)"
 echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · بدون ربط المضيف (عزل كامل)"

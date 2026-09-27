@@ -1,0 +1,6 @@
+FROM node:20.18.1-bookworm-slim
+WORKDIR /work
+RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
+COPY . /work/
+RUN pnpm install --frozen-lockfile
