@@ -129,6 +129,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { itemName } from '@/src/reels/item-name';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
+import { arrowKeyStep, timelineDirFor } from '@/src/reels/direction';
 import type { Timeline, Track, TrackItem, TrackType } from '@pf-mediakit/shared';
 import { TimelineStrip, SNAP_PX, labelStepFor } from '@/src/reels/TimelineStrip';
 import { TimelinePreview, PREVIEW_SIZE, type TextLayoutInfo, type TextBoxEntry } from '@/src/reels/TimelinePreview';
@@ -277,7 +278,8 @@ interface Selection {
 }
 
 export default function ReelsTimelinePage(): JSX.Element {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const timelineDir = timelineDirFor(locale);
   const { style: digitStyle } = useDigitStyle();
 
   const [history, setHistory] = useState<History>(() => createHistory(SAMPLE));
@@ -827,15 +829,17 @@ export default function ReelsTimelinePage(): JSX.Element {
         return;
       }
       if (inField) return;
-      // التحريك: الأسهمُ تمضي حيث تشير — ← تقدّماً في الزمن (شريط RTL)
-      // و→ عَكساً (463: السهمُ يدٌ تدفعُ جسماً، لا كلمةٌ تُقرأ) · ⇧ خطوة
-      // أوسع. القوسان يقصّان الحافّتين (e.code لا e.key — فالقوسُ مع ⇧
-      // يصير «{»).
+      // التحريك: الأسهمُ تمضي حيث تشير · بحسب اتّجاه الشريط الفعّال
+      // (٤٦٣: السهمُ يدٌ تدفعُ جسماً، لا كلمةٌ تُقرأ). في LTR (en) →
+      // تقدّماً في الزمن؛ في RTL (ar/mixed) ← تقدّماً. الإشارةُ من
+      // `arrowKeyStep`. ⇧ خطوة أوسع. القوسان يقصّان الحافّتين (e.code لا
+      // e.key — فالقوسُ مع ⇧ يصير «{»).
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         if (!selectedItem) return;
+        const sign = arrowKeyStep(e.key, timelineDir);
+        if (sign === 0) return;
         e.preventDefault();
-        const step = (e.shiftKey ? nudgeLarge : nudgeSmall) *
-          (e.key === 'ArrowRight' ? -1 : 1);
+        const step = (e.shiftKey ? nudgeLarge : nudgeSmall) * sign;
         nudgeSelected(step);
         return;
       }
@@ -881,6 +885,7 @@ export default function ReelsTimelinePage(): JSX.Element {
     selectedItem,
     selected,
     splitSelected,
+    timelineDir,
     trimSelected,
   ]);
 
@@ -1170,7 +1175,9 @@ export default function ReelsTimelinePage(): JSX.Element {
         >
           <span
             aria-hidden
-            className={`text-sm leading-none${playing ? '' : ' rtl:scale-x-[-1]'}`}
+            // ٥٦٥b · أيقونة التشغيل إعلاميّة — لا تُعكسُ في RTL
+            // (Material/Apple). ▶ في كلّ اللغات.
+            className="text-sm leading-none"
           >
             {playing ? '⏸' : '▶'}
           </span>

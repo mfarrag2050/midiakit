@@ -154,7 +154,7 @@
       },
       "kbdSpace": "Space",
       "hintPlay": "Play or pause the playhead.",
-      "hintNudge": "Arrows nudge the selected clip where they point: ← forward in time, → back; ⇧ widens the step.",
+      "hintNudge": "Arrows nudge the selected clip where they point: → forward in time, ← back; ⇧ widens the step.",
       "hintTrim": "Square brackets trim the selected clip's edges: the first the start edge, the second the end edge; ⇧ widens the step.",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
