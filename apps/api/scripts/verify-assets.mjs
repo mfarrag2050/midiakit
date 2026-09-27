@@ -24,6 +24,10 @@ import { config } from '../src/config.js';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { hashPassword } from '../src/auth/session.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 

@@ -19,6 +19,10 @@ import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
 import { getStorage, __resetStorage } from '../src/storage/index.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 // STORAGE_DRIVER=memory يُضبَط في package.json script (imports تُقرأ config قبل هذا السطر)

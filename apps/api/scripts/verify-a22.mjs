@@ -27,6 +27,10 @@ import pg from 'pg';
 import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 const MIGRATION_URL = process.env.DATABASE_URL ||

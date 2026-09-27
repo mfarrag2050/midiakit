@@ -18,6 +18,10 @@ import { SignJWT } from 'jose';
 import pg from 'pg';
 import { buildServer } from '../src/server.js';
 import { closePool } from '../src/db.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 

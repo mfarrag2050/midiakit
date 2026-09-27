@@ -26,6 +26,10 @@ import { fileURLToPath } from 'node:url';
 import { buildServer } from '../src/server.js';
 import { closePool } from '../src/db.js';
 import { hashPassword } from '../src/auth/session.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -20,6 +20,10 @@ import { execSync } from 'node:child_process';
 import { buildServer } from '../src/server.js';
 import { closePool, closePlatformPool } from '../src/db.js';
 import { closeQueues } from '../src/queues/index.js';
+import { assertNotShowroomEnv } from '../src/test-guard.js';
+
+assertNotShowroomEnv();
+
 
 const { Pool } = pg;
 process.env.RATE_LIMIT_DISABLE = '1';
