@@ -41,9 +41,22 @@ const BASELINE = {
   reviewAfter: '2026-10-04',
   measuredEnv: 'macOS Darwin 25.5.0 · Node v20.18.1 · M-series CPU',
   buildRenderPlan_p95_ms: 300,   // مُقاس على 100 استدعاء — انظر «قياس أوّلي» أدناه
-  toleranceFactor: 1.3,          // ×1.3 = هامش 30% فوق الأساس
+  toleranceFactor: 1.3,          // ×1.3 = هامش 30% فوق الأساس ⇒ 390ms صارم على المرجع (mini)
   iterations: 100,
 };
+
+// mk/529p · تسامحُ runners المستضافة (نمط mk/528 لـverify:render-video):
+// الميني (M-series ثابت النوى) يعطي p95=286-295ms — 25%+ تحت السقف.
+// runner GitHub ubuntu-latest المشترك رصدَ 407ms على Nightly (Nightly
+// نفسه على runner مشترك · لا self-hosted). التذبذب معروف عبر runners
+// (L-143 لـmd5 · نفسُ الفئة هنا). عاملُ تسامحٍ 1.15× (→ 448ms) يستوعب
+// التذبذب دون إخفاء انحدارات مستقبليّة (لو انزلق p95 إلى 470 مثلاً).
+const PERF_CAP_MS = BASELINE.buildRenderPlan_p95_ms * BASELINE.toleranceFactor; // 390
+const HOSTED_TOLERANCE = 1.15;
+const HOSTED_CAP_MS = Math.round(PERF_CAP_MS * HOSTED_TOLERANCE); // 448
+// CI=true تُصدَّر تلقائيّاً من GitHub Actions (CI و Nightly كليهما — كلاهما
+// على runner مشترك). الميني عبر mk-ci محلّيّاً لا يُصدِّرها ⇒ صارم 390.
+const IS_HOSTED_RUNNER = process.env.CI === 'true' || process.env.CI === '1';
 
 // **قياس أوّلي (2026-09-04):**
 // أوّل تشغيل على السكربت (بعد warm-up 10 استدعاءات) أعطى:
@@ -94,7 +107,11 @@ function percentile(sortedAsc, p) {
 }
 
 console.log('════════ G3 — ميزانية أداء buildRenderPlan ════════');
-console.log(`   الأساس (${BASELINE.baselineDate}): p95 ≤ ${BASELINE.buildRenderPlan_p95_ms}ms × ${BASELINE.toleranceFactor} = ${(BASELINE.buildRenderPlan_p95_ms * BASELINE.toleranceFactor).toFixed(2)}ms`);
+if (IS_HOSTED_RUNNER) {
+  console.log(`   الأساس: p95 ≤ ${PERF_CAP_MS}ms صارم / ${HOSTED_CAP_MS}ms متسامَح على runner مستضاف (mk/529p)`);
+} else {
+  console.log(`   الأساس (${BASELINE.baselineDate}): p95 ≤ ${PERF_CAP_MS}ms (${BASELINE.buildRenderPlan_p95_ms}ms × ${BASELINE.toleranceFactor})`);
+}
 console.log(`   البيئة الأولى: ${BASELINE.measuredEnv}`);
 console.log(`   المدخل: breaking × default × «${CONTENT.headline}»`);
 if (SLOW_TEST_MS > 0) {
@@ -117,16 +134,20 @@ console.log('');
 console.log(`   قياس اليوم على ${BASELINE.iterations} استدعاء:`);
 console.log(`      p50=${p50.toFixed(3)}ms · mean=${mean.toFixed(3)}ms · p95=${p95.toFixed(3)}ms · p99=${p99.toFixed(3)}ms`);
 
-const budget = BASELINE.buildRenderPlan_p95_ms * BASELINE.toleranceFactor;
-const withinBudget = p95 <= budget;
+// mk/529p · ثلاث حالات على runner مستضاف · حالتان على الميني:
+const hardCap = IS_HOSTED_RUNNER ? HOSTED_CAP_MS : PERF_CAP_MS;
 
 console.log('');
-if (withinBudget) {
-  console.log(`   ✓ p95=${p95.toFixed(3)}ms ≤ الأساس × ${BASELINE.toleranceFactor} = ${budget.toFixed(2)}ms`);
+if (p95 <= PERF_CAP_MS) {
+  console.log(`   ✓ p95=${p95.toFixed(3)}ms ≤ الأساس ${PERF_CAP_MS}ms`);
   console.log('════════ G3 ✓ ════════');
   process.exit(0);
+} else if (IS_HOSTED_RUNNER && p95 <= HOSTED_CAP_MS) {
+  console.log(`   ⚠ p95=${p95.toFixed(3)}ms تجاوز الصارم ${PERF_CAP_MS}ms لكن ضمن المتسامَح ${HOSTED_CAP_MS}ms (SLOW-CI · tolerated · mk/529p · runner throttle)`);
+  console.log('════════ G3 ⚠ (tolerated) ════════');
+  process.exit(0);
 } else {
-  console.log(`   ✗ p95=${p95.toFixed(3)}ms > الأساس × ${BASELINE.toleranceFactor} = ${budget.toFixed(2)}ms`);
+  console.log(`   ✗ p95=${p95.toFixed(3)}ms > ${hardCap}ms`);
   console.log('   انحدار أداء — راجع آخر تعديلات على `buildRenderPlan` أو تبعياته.');
   console.log(`   إن كان الارتفاع مقصوداً (توسّع ميزات)، حدّث BASELINE في هذا السكربت بسبب موثَّق.`);
   console.log('════════ G3 ✗ ════════');
