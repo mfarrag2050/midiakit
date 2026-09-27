@@ -46,6 +46,7 @@ import { AssetPicker } from '@/src/ui/AssetPicker';
 import type { AssetListItem } from '@/src/api/endpoints/assets';
 import { RenderFailureAlert } from '@/src/ui/RenderFailureAlert';
 import { RenderPendingAlert } from '@/src/ui/RenderPendingAlert';
+import { RenderEtaLine } from '@/src/ui/RenderEtaLine';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -1156,16 +1157,19 @@ export default function ProjectEditorPage(): JSX.Element {
               />
             )}
             {renderRow && (renderRow.status === 'queued' || renderRow.status === 'running') && (
-              <RenderPendingAlert
-                row={renderRow}
-                onCancel={async (id) => {
-                  // ٤٠١ §٣ — مخرج «إلغاء». `renders.cancel` مبنيّةٌ في
-                  // `endpoints/renders.ts:93` — كانت غيرَ موصَّلة.
-                  await renders.cancel(id);
-                  setRenderRow(null);
-                  if (pollTimer.current) clearInterval(pollTimer.current);
-                }}
-              />
+              <>
+                <RenderPendingAlert
+                  row={renderRow}
+                  onCancel={async (id) => {
+                    // ٤٠١ §٣ — مخرج «إلغاء». `renders.cancel` مبنيّةٌ في
+                    // `endpoints/renders.ts:93` — كانت غيرَ موصَّلة.
+                    await renders.cancel(id);
+                    setRenderRow(null);
+                    if (pollTimer.current) clearInterval(pollTimer.current);
+                  }}
+                />
+                <RenderEtaLine renderId={renderRow.id} status={renderRow.status} />
+              </>
             )}
             {renderRow?.status === 'succeeded' && renderRow.output_url && (
               <div className="text-xs text-fg-muted">
