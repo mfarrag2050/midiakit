@@ -45,17 +45,16 @@ const BASELINE = {
   iterations: 100,
 };
 
-// mk/529p · تسامحُ runners المستضافة (نمط mk/528 لـverify:render-video):
-// الميني (M-series ثابت النوى) يعطي p95=286-295ms — 25%+ تحت السقف.
-// runner GitHub ubuntu-latest المشترك رصدَ 407ms على Nightly (Nightly
-// نفسه على runner مشترك · لا self-hosted). التذبذب معروف عبر runners
-// (L-143 لـmd5 · نفسُ الفئة هنا). عاملُ تسامحٍ 1.15× (→ 448ms) يستوعب
-// التذبذب دون إخفاء انحدارات مستقبليّة (لو انزلق p95 إلى 470 مثلاً).
+// mk/529q · runners المستضافة استشاريّة (لا تُسقط التشغيل):
+// الميني (M-series ثابت النوى) يعطي p95=286-295ms — المرجع الحقيقيّ.
+// runner GitHub المستضاف: تشغيلان متتاليان على نفس main أعطيا 407ms
+// و 846ms (تباينٌ 2× في نفس البيئة · لا معنى لأيّ أساسٍ مبنيٍّ منه ·
+// L-143 لـmd5 · نفسُ الفئة هنا). قرارُ mk/529q: على أيّ runner مستضاف
+// نطبع p95 والنسبة إلى الأساس ونكتبها في GITHUB_STEP_SUMMARY ⇒ exit 0
+// دائماً (استشاريّ). الحكم الصارم 390ms يبقى على mk-ci المحلّيّ (الميني).
 const PERF_CAP_MS = BASELINE.buildRenderPlan_p95_ms * BASELINE.toleranceFactor; // 390
-const HOSTED_TOLERANCE = 1.15;
-const HOSTED_CAP_MS = Math.round(PERF_CAP_MS * HOSTED_TOLERANCE); // 448
-// CI=true تُصدَّر تلقائيّاً من GitHub Actions (CI و Nightly كليهما — كلاهما
-// على runner مشترك). الميني عبر mk-ci محلّيّاً لا يُصدِّرها ⇒ صارم 390.
+// CI=true تُصدَّرها GitHub Actions تلقائيّاً (CI + Nightly). mk-ci المحلّيّ
+// لا يصدّرها ⇒ صارم 390ms.
 const IS_HOSTED_RUNNER = process.env.CI === 'true' || process.env.CI === '1';
 
 // **قياس أوّلي (2026-09-04):**
@@ -108,7 +107,8 @@ function percentile(sortedAsc, p) {
 
 console.log('════════ G3 — ميزانية أداء buildRenderPlan ════════');
 if (IS_HOSTED_RUNNER) {
-  console.log(`   الأساس: p95 ≤ ${PERF_CAP_MS}ms صارم / ${HOSTED_CAP_MS}ms متسامَح على runner مستضاف (mk/529p)`);
+  console.log(`   وضعُ التشغيل: runner مستضاف · استشاريّ (mk/529q · لا يُسقط)`);
+  console.log(`   الأساس المرجعيّ (mini): p95 ≤ ${PERF_CAP_MS}ms — لا يُطبَّق هنا`);
 } else {
   console.log(`   الأساس (${BASELINE.baselineDate}): p95 ≤ ${PERF_CAP_MS}ms (${BASELINE.buildRenderPlan_p95_ms}ms × ${BASELINE.toleranceFactor})`);
 }
@@ -134,22 +134,37 @@ console.log('');
 console.log(`   قياس اليوم على ${BASELINE.iterations} استدعاء:`);
 console.log(`      p50=${p50.toFixed(3)}ms · mean=${mean.toFixed(3)}ms · p95=${p95.toFixed(3)}ms · p99=${p99.toFixed(3)}ms`);
 
-// mk/529p · ثلاث حالات على runner مستضاف · حالتان على الميني:
-const hardCap = IS_HOSTED_RUNNER ? HOSTED_CAP_MS : PERF_CAP_MS;
-
 console.log('');
+
+// mk/529q · runner مستضاف = استشاريّ (يطبع p95 + النسبة إلى الأساس ·
+// يكتب سطراً إلى GITHUB_STEP_SUMMARY · لا يُسقط). الحكم الصارم على mini فقط.
+if (IS_HOSTED_RUNNER) {
+  const ratio = (p95 / PERF_CAP_MS).toFixed(2);
+  const advisory = `⚠ استشاريّ (mk/529q · runner مستضاف): p95=${p95.toFixed(0)}ms — ${ratio}× من أساس mini ${PERF_CAP_MS}ms. لا يُسقط.`;
+  console.log(`   ${advisory}`);
+  console.log('════════ G3 (advisory · hosted) ════════');
+  // سطرٌ في ملخّص التشغيل — يظهر في تبويب Summary لـGitHub Actions.
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    const line = `**verify:perf** (advisory · hosted runner): p95=${p95.toFixed(0)}ms · p50=${p50.toFixed(0)}ms · p99=${p99.toFixed(0)}ms — ${ratio}× من أساس mini ${PERF_CAP_MS}ms\n`;
+    try {
+      const { appendFileSync } = await import('node:fs');
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, line);
+    } catch {
+      // ملخّص التشغيل ليس متاحاً — نتجاهل بصمت.
+    }
+  }
+  process.exit(0);
+}
+
+// mini · صارم:
 if (p95 <= PERF_CAP_MS) {
   console.log(`   ✓ p95=${p95.toFixed(3)}ms ≤ الأساس ${PERF_CAP_MS}ms`);
   console.log('════════ G3 ✓ ════════');
   process.exit(0);
-} else if (IS_HOSTED_RUNNER && p95 <= HOSTED_CAP_MS) {
-  console.log(`   ⚠ p95=${p95.toFixed(3)}ms تجاوز الصارم ${PERF_CAP_MS}ms لكن ضمن المتسامَح ${HOSTED_CAP_MS}ms (SLOW-CI · tolerated · mk/529p · runner throttle)`);
-  console.log('════════ G3 ⚠ (tolerated) ════════');
-  process.exit(0);
-} else {
-  console.log(`   ✗ p95=${p95.toFixed(3)}ms > ${hardCap}ms`);
-  console.log('   انحدار أداء — راجع آخر تعديلات على `buildRenderPlan` أو تبعياته.');
-  console.log(`   إن كان الارتفاع مقصوداً (توسّع ميزات)، حدّث BASELINE في هذا السكربت بسبب موثَّق.`);
-  console.log('════════ G3 ✗ ════════');
-  process.exit(1);
 }
+
+console.log(`   ✗ p95=${p95.toFixed(3)}ms > ${PERF_CAP_MS}ms`);
+console.log('   انحدار أداء — راجع آخر تعديلات على `buildRenderPlan` أو تبعياته.');
+console.log(`   إن كان الارتفاع مقصوداً (توسّع ميزات)، حدّث BASELINE في هذا السكربت بسبب موثَّق.`);
+console.log('════════ G3 ✗ ════════');
+process.exit(1);
