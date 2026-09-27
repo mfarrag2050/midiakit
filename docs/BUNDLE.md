@@ -9,8 +9,8 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-27
-> **HEAD (main):** `83a5afb`
-> **HEAD (origin/feat/api):** `edd9e0b`
+> **HEAD (main):** `5a3c33d`
+> **HEAD (origin/feat/api):** `0a9e3aa`
 > **HEAD (origin/feat/studio):** `2324351`
 > **HEAD (origin/feat/reels):** `bd064d2`
 
@@ -38,13 +38,13 @@
 | `docs/GATE-RECIPES.md` | 160 | `863ffdd02034` | local |
 | `docs/INVENTORY.md` | 174 | `52330c4e5048` | local |
 | `docs/KNOWN-DEFECTS.md` | 18 | `f027aa28ef7b` | local |
-| `docs/LESSONS.md` | 3022 | `0060c1836277` | local |
+| `docs/LESSONS.md` | 3031 | `329c5bfa69a6` | local |
 | `docs/M1-marketing-assets.md` | 454 | `14a87b39cf0b` | local |
 | `docs/M2-launch-collateral.md` | 149 | `dc3170784524` | local |
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 409 | `4e107a787044` | local |
+| `docs/SKILL-mediakit.md` | 408 | `3ab788f13772` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -10254,11 +10254,20 @@ _المصدر:_ `claude/bin/mk-watch-core.sh`
 
 ---
 
+## L-143 — md5 الفيديو يحتاج `threads=1` في التحقّق فقط · الإنتاج auto
+
+libx264 الافتراضيّ يستعمل slice-based threading بعدد النوى المُبلَّغة. runner CI المشترك يتذبذب بين 2 و4 vCPU ⇒ macroblock partitioning يختلف ⇒ بايتاتٌ مختلفة على نفس الالتزام. 5 تشغيلات ذهبت مرّةً إلى `021cb8d…` ومرّاتٍ إلى `3675ec…` قبل أن تُغلَق التذكرة 486ب بالإثبات: `-threads 1` = 5/5 مطابقة (`892ddf64…`).
+
+**القاعدةُ:** التحقّق (`verify:breaking-video` وأشباهه) يُمرِّر `-threads 1` صريحاً. الإنتاج (تصدير المستخدم · العرض) يترك `undefined` = auto = سرعة كاملة. المُعامل مصدرٌ واحد: `RenderVideoArgs.encodeThreads` في `apps/renderer/src/index.ts` + `--threads` في CLI + env `MK_X264_THREADS`.
+_المصدر:_ `claude/reports/486-BREAKING-MD5-DUALITY.md` · تجربة exp/486-threads1 (5 CI runs).
+
+---
+
 ## §414-حصاد · بوّابة الدفتر
 
 | المقياس | العدد |
 |---|---|
-| دروسٌ حُصدت (L-79..L-142) | 42 |
+| دروسٌ حُصدت (L-79..L-143) | 43 |
 | أرقامٌ بقيت مفقودةً | 22 |
 
 **المفقودات:** 95 · 96 · 97 · 98 · 99 · 104 · 105 · 107 · 108 · 109 · 110 · 111 · 112 · 113 · 114 · 115 · 117 · 118 · 119 · 122 · 128 · 130.
@@ -11326,7 +11335,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `83a5afb` (`merge/565`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `5a3c33d` (`fix/mk-486c-x264-threads`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11359,8 +11368,8 @@ description: |
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
-- **المدى:** L-1 → L-142
-- **العدد الفريد:** 137 · **الإدخالات:** 137
+- **المدى:** L-1 → L-143
+- **العدد الفريد:** 138 · **الإدخالات:** 138
 - **فجوات:** L-37 · L-38 · L-39 · L-43 · L-44
 - **تكرار:** (لا تكرار)
 
@@ -11374,7 +11383,7 @@ description: |
 
 - **`packages/`:** `db` · `engine` · `i18n` · `shared` · `templates` · `tts` · `ui`
 - **`demo/`:** 17 ملف
-- **`snapshots/`:** 18 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 4
+- **`snapshots/`:** 18 · **`snapshots-semantic/`:** 12 · **`snapshots-video/`:** 2
 
 <!-- CROSS-BRANCH:START -->
 <!--
@@ -11388,22 +11397,21 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `exp/486-threads1` | `1a9eb73` | 1 | 7 | 619 |
-| `feat/api` | `72aa544` | 0 | 0 | 625 |
-| `feat/ci` | `ecc2673` | 0 | 73 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 30 | 595 |
-| `feat/studio` | `2324351` | 2 | 11 | 616 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 11 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 9 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 7 | 618 |
-| `merge/521` | `59e4bfa` | 0 | 13 | 612 |
-| `merge/565` | `83a5afb` | 3 | 0 | 628 |
-| `origin/aa-internal` | `ee178ca` | 0 | 624 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 7 | 619 |
-| `origin/feat/api` | `edd9e0b` | 0 | 2 | 623 |
-| `origin/feat/ci` | `ecc2673` | 0 | 73 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 30 | 595 |
-| `origin/feat/studio` | `2324351` | 2 | 11 | 616 |
+| `feat/api` | `0a9e3aa` | 2 | 0 | 631 |
+| `feat/ci` | `ecc2673` | 0 | 77 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 34 | 595 |
+| `feat/studio` | `7ece4ad` | 1 | 0 | 630 |
+| `fix/mk-486c-x264-threads` | `5a3c33d` | 1 | 0 | 630 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 15 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 13 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 11 | 618 |
+| `merge/521` | `59e4bfa` | 0 | 17 | 612 |
+| `origin/aa-internal` | `ee178ca` | 0 | 628 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 11 | 619 |
+| `origin/feat/api` | `0a9e3aa` | 2 | 0 | 631 |
+| `origin/feat/ci` | `ecc2673` | 0 | 77 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 34 | 595 |
+| `origin/feat/studio` | `2324351` | 0 | 13 | 616 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
