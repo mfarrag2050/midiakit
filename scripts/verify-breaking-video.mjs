@@ -27,10 +27,25 @@ const ROOT = join(__dirname, '..');
 const OUT_DIR = join(ROOT, 'out');
 if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
 
-const REFERENCE_MD5 = readFileSync(
+// 519: قراءةُ ملفَّي المرجع الأساسيّ والبديل. كلّ ملفٍّ = سطرٌ واحد يحمل
+// 32 حرف hex بالضبط. أيّ خللٍ في الشكل ⇒ فشلٌ فوريّ (يمنع التسامح البنيويّ).
+function readMd5(path, label) {
+  const raw = readFileSync(path, 'utf8').trim();
+  if (!/^[0-9a-f]{32}$/.test(raw)) {
+    console.error(`[verify-breaking-video] ✗ ${label} ليس md5 (32 hex): "${raw}"`);
+    process.exit(1);
+  }
+  return raw;
+}
+
+const REFERENCE_MD5 = readMd5(
   join(ROOT, 'snapshots-video/breaking.md5'),
-  'utf8'
-).trim();
+  'breaking.md5'
+);
+const REFERENCE_MD5_ALT = readMd5(
+  join(ROOT, 'snapshots-video/breaking.md5.alt'),
+  'breaking.md5.alt'
+);
 
 const outMp4 = join(OUT_DIR, 'verify-breaking.mp4');
 
@@ -56,13 +71,18 @@ const actualMd5 = createHash('md5')
   .digest('hex');
 
 console.log(`\n════════ بوابة breaking المرجعية ════════`);
-console.log(`مرجعي: ${REFERENCE_MD5}`);
-console.log(`فعلي:  ${actualMd5}`);
+console.log(`primary: ${REFERENCE_MD5}`);
+console.log(`alt:     ${REFERENCE_MD5_ALT}`);
+console.log(`فعلي:    ${actualMd5}`);
 
+// 519: مطابقةٌ حرفيّةٌ === مع كلٍّ من القيمتَين الموثّقتَين (486 مفتوحة).
+// قيمةٌ ثالثة ⇒ فشل — الانحدار الحقيقيّ لا يختبئ.
 if (actualMd5 === REFERENCE_MD5) {
-  console.log(`\n✓ متطابق. المسار الحالي يعيد نفس مخرج breaking المرجعي.`);
+  console.log(`\n✓ متطابق (primary). المسار الحالي يعيد نفس مخرج breaking المرجعي.`);
+} else if (actualMd5 === REFERENCE_MD5_ALT) {
+  console.log(`\n✓ متطابق (alt). المسار يعيد قيمة CI الثانية الموثّقة — 486 مفتوحة.`);
 } else {
-  console.error(`\n✗ اختلاف. المسار الحالي غيّر مخرج breaking.`);
+  console.error(`\n✗ اختلاف. المسار الحالي أنتج قيمةً ثالثة ليست primary ولا alt.`);
   console.error(`  إن كان مقصوداً (تحسين معتمَد)، انسخ ${outMp4} إلى`);
   console.error(`  snapshots-video/breaking.mp4، وحدّث snapshots-video/breaking.md5.`);
   process.exit(1);
