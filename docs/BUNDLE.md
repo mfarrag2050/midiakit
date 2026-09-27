@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-09-27
-> **HEAD (main):** `5a3c33d`
+> **HEAD (main):** `e25e21e`
 > **HEAD (origin/feat/api):** `0a9e3aa`
 > **HEAD (origin/feat/studio):** `2324351`
 > **HEAD (origin/feat/reels):** `bd064d2`
@@ -44,7 +44,7 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 408 | `3ab788f13772` | local |
+| `docs/SKILL-mediakit.md` | 409 | `7fead8400cdd` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -11335,7 +11335,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `5a3c33d` (`fix/mk-486c-x264-threads`)
+> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `e25e21e` (`fix/mk-486c-x264-threads`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11401,7 +11401,7 @@ description: |
 | `feat/ci` | `ecc2673` | 0 | 77 | 552 |
 | `feat/reels` | `bd064d2` | 0 | 34 | 595 |
 | `feat/studio` | `7ece4ad` | 1 | 0 | 630 |
-| `fix/mk-486c-x264-threads` | `5a3c33d` | 1 | 0 | 630 |
+| `fix/mk-486c-x264-threads` | `e25e21e` | 3 | 0 | 632 |
 | `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 15 | 614 |
 | `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 13 | 616 |
 | `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 11 | 618 |
@@ -11412,6 +11412,7 @@ description: |
 | `origin/feat/ci` | `ecc2673` | 0 | 77 | 552 |
 | `origin/feat/reels` | `bd064d2` | 0 | 34 | 595 |
 | `origin/feat/studio` | `2324351` | 0 | 13 | 616 |
+| `origin/merge/mk-486c` | `15d86e6` | 2 | 0 | 631 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
