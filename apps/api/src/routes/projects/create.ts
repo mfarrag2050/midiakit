@@ -24,6 +24,8 @@ import {
 import { getEffectiveLimits } from '../../config/effective-limits.js';
 import { serializeAndCheckContentSize } from './shared/content-size.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'es', 'de'] as const;
 
 // 420 · CONTENT_MAX_BYTES نُقل إلى shared/content-size.ts — إعادة تصدير
@@ -96,6 +98,7 @@ const route: FastifyPluginAsync = async (fastify) => {
         req.auth!.userId,
       ],
     );
+    await commitTx(req);
     reply.status(201).send(toFull(ins.rows[0]!));
   });
 };

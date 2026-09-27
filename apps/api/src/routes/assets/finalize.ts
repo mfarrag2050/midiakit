@@ -25,6 +25,8 @@ import {
 } from '../../errors.js';
 import { extractFontMetrics } from '../../services/font-metrics.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const bodySchema = z.object({
@@ -141,6 +143,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     // 6. presignDownload
     const dl = await getStorage().presignDownload(updated.storage_key, config.S3_PRESIGN_TTL_SECONDS);
 
+    await commitTx(req);
     reply.status(200).send(toAssetResponse(updated, dl.publicUrl));
   });
 };

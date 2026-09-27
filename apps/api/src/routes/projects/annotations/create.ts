@@ -9,6 +9,8 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { NotFound, LayerNotFound, InvalidSegmentIndex } from '../../../errors.js';
 
+import { commitTx } from '../../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 const bodySchema = z.object({
   target: z.object({
@@ -56,6 +58,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       [req.auth!.tenantId, id, req.auth!.userId, JSON.stringify(body.target), body.body],
     );
     const row = ins.rows[0]!;
+    await commitTx(req);
     reply.status(201).send({
       id: row.id,
       authorId: row.author_id,

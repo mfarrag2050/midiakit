@@ -14,6 +14,8 @@ import {
   NotFound, LastOwner, ImmutableField,
 } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 // A10 يقبل 6 أدوار (owner مستثنى — نقل ملكية بند لاحق)
@@ -68,6 +70,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       [parsed.role, id],
     );
     const u = upd.rows[0]!;
+    await commitTx(req);
     return { id: u.id, email: u.email, role: u.role, createdAt: u.created_at.toISOString() };
   });
 };

@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { removeRenderJob } from '../../queues/index.js';
 import { NotFound, RenderAlreadyTerminal, InsufficientRole } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const TERMINAL = new Set(['succeeded', 'failed', 'canceled']);
@@ -44,6 +46,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     const r2 = await req.dbClient!.query(
       `SELECT id, status FROM renders WHERE id = $1`, [id],
     );
+    await commitTx(req);
     reply.status(202).send(r2.rows[0]);
   });
 };

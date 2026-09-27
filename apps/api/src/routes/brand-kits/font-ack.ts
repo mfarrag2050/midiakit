@@ -11,6 +11,8 @@ import { requireRoleIn } from '../../shared/role-guard.js';
 import { LicenseAckMustBeTrue, FontNotUploaded, NotFound } from '../../errors.js';
 import type { DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({
   id: z.string().uuid(),
   family: z.string().min(1).max(100),
@@ -81,6 +83,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       [req.auth!.tenantId, id, family, body.acknowledgedBy, req.ip ?? null, body.notes ?? null],
     );
 
+    await commitTx(req);
     return { fonts: { primary: (upd.rows[0]!.config as { fonts: { primary: unknown } }).fonts.primary } };
   });
 };

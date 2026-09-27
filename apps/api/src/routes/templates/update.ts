@@ -16,6 +16,8 @@ import {
   NotFound, GlobalTemplateReadonly, TemplateSchemaViolation,
 } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const bodySchema = z.object({
@@ -64,6 +66,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       `UPDATE templates SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params,
     );
+    await commitTx(req);
     return toFull(upd.rows[0]!);
   });
 };

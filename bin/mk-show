@@ -248,12 +248,11 @@ require_show_worktree() {
 }
 
 require_docker_context() {
-  local cur
-  cur="$(docker context show 2>/dev/null || echo none)"
-  [[ "$cur" == "$EXPECTED_DOCKER_CTX" ]] \
-    || die "السياق الحالي: $cur — المتوقع: $EXPECTED_DOCKER_CTX
-        colima start mediakit --cpu 4 --memory 8 --disk 80
-        docker context use $EXPECTED_DOCKER_CTX"
+  # 526ج٤ · نصدّر DOCKER_CONTEXT لكلّ أوامر docker/compose التالية —
+  # صريحٌ لا عالميّ (لا `docker context use` الذي يبدّل الافتراضيَّ
+  # للمستخدم). إن لم يكن السياقُ موجوداً على الجهاز، أوّلُ استدعاءٍ لـ
+  # docker يفشل برسالةٍ واضحة.
+  export DOCKER_CONTEXT="$EXPECTED_DOCKER_CTX"
 }
 
 # ═════ preflight: رفضٌ صريح لا اصطدامٌ صامت (_AMEND-SHOWROOM-PORTS §2) ═══
@@ -441,6 +440,9 @@ cmd_up() {
 
   # 3) API أوّلاً — seed يحتاجه (signup عبر HTTP). فشلُه هنا يُبلَّغ فوراً.
   start_api
+
+  # 3ب) 526ج٢ · عاملُ الرندر — الطلبات من API تحتاجه لإخراج MP4/PNG.
+  start_render_worker
 
   # 4) seed — يتخطّى إن كان الحساب موجوداً؛ يطبع الكلمة مرّةً إن أنشأها
   say "أشغّل seed العرض (يتخطّى إن كانت البذرة موجودة) …"
@@ -638,6 +640,70 @@ stop_proc() {
   rm -f "$pidf"
 }
 
+# 526ج٢ · عاملُ الرندر — يُطلَق مع mk-show up ويُقتَل مع down. المطابقةُ
+# بـcwd (لا pgrep وحدَه · كما في mk-boot ج٣) حتى لا يُخلَط بعامل dev.
+render_worker_pids_by_cwd() {
+  local expected="$SHOW_ROOT/apps/renderer"
+  local pid live_cwd
+  for pid in $(pgrep -f 'src/api-worker.ts' 2>/dev/null); do
+    live_cwd="$(lsof -a -p "$pid" -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
+    [ "$live_cwd" = "$expected" ] && printf '%s ' "$pid"
+  done
+}
+
+start_render_worker() {
+  local pidf logf worker_dir node_bin
+  pidf="$(state_dir)/render-worker.pid"
+  logf="$REPO/claude/reports/_show-worker.log"
+  worker_dir="$SHOW_ROOT/apps/renderer"
+  node_bin="$HOME/.nvm/versions/node/v20.18.1/bin/node"
+
+  # فحص «لا عامل قائم» بمطابقة cwd (لا pidfile وحدَه).
+  local existing
+  existing="$(render_worker_pids_by_cwd | sed 's/  *$//')"
+  if [[ -n "$existing" ]]; then
+    say "render-worker يعمل مسبقاً (PID(s)=$existing · cwd=$worker_dir) — أتركه."
+    printf '%s' "${existing%% *}" > "$pidf"
+    return
+  fi
+
+  [[ -x "$node_bin" ]] || die "node 20.18.1 مفقود في .nvm — nvm install 20.18.1"
+  [[ -f "$worker_dir/src/api-worker.ts" ]] || die "$worker_dir/src/api-worker.ts مفقود"
+
+  say "أشغّل render-worker (node 20.18.1 · cwd=$worker_dir · log=$logf) …"
+  mkdir -p "$(dirname "$logf")"
+  ( set -a; . "$(env_file)"; set +a
+    cd "$worker_dir"
+    nohup "$node_bin" --import tsx src/api-worker.ts >"$logf" 2>&1 &
+    echo $! > "$pidf" )
+  sleep 3
+  kill -0 "$(cat "$pidf")" 2>/dev/null \
+    || die "render-worker فشل الإقلاع — راجع $logf"
+  say "render-worker جاهز (PID $(cat "$pidf"))"
+}
+
+stop_render_worker() {
+  local pidf="$(state_dir)/render-worker.pid"
+  # نعتمد المطابقة بـcwd حتى إن كان pidfile قديماً/يشير إلى pid منتحل.
+  local pids
+  pids="$(render_worker_pids_by_cwd | sed 's/  *$//')"
+  if [[ -z "$pids" ]]; then
+    rm -f "$pidf"
+    return 0
+  fi
+  say "أُطفئ render-worker (PID(s)=$pids · cwd=$SHOW_ROOT/apps/renderer) …"
+  local pid
+  for pid in $pids; do
+    kill "$pid" 2>/dev/null || true
+    local i=0
+    while kill -0 "$pid" 2>/dev/null && (( i < 3 )); do
+      sleep 1; ((i++)) || true
+    done
+    kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+  done
+  rm -f "$pidf"
+}
+
 # ═════ reset — حذف .env.show + volumes للبدء من صفر ═════════════════════════
 # يُستخدم عند upgrade من إصدار قديم (مثل v1 مع منافذ 19060/19061) لأنّ
 # volumes postgres تحوي أدواراً بكلمات قديمة، وإعادة init لا تُشغَّل إلّا
@@ -683,6 +749,7 @@ cmd_down() {
 
   stop_proc studio
   stop_proc api
+  stop_render_worker
   say "أُطفئ containers (data volumes تبقى) …"
   compose down
   say "✓ الشووروم مُطفَأ. القاعدة والبذرة محفوظتان."

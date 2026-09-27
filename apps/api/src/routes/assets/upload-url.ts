@@ -19,6 +19,8 @@ import {
 } from '../../errors.js';
 import { getEffectiveLimits } from '../../config/effective-limits.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   kind: z.string(),
   filename: z.string().min(1).max(500),
@@ -82,6 +84,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       storageKey, parsed.contentType, parsed.sizeBytes, config.S3_PRESIGN_TTL_SECONDS,
     );
 
+    await commitTx(req);
     reply.status(200).send({
       uploadUrl: presign.uploadUrl,
       assetId,

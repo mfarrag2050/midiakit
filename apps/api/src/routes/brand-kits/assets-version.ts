@@ -14,6 +14,8 @@ import {
 } from '../../errors.js';
 import type { DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const VERSION_RE = /^\d{4}\.(0[1-9]|1[0-2])$/;
@@ -60,6 +62,7 @@ const route: FastifyPluginAsync = async (fastify) => {
         [id, nextConfig],
       );
       const updated = (upd.rows[0]!.config as { assets: { version: string; autoUpdate: boolean } }).assets;
+      await commitTx(req);
       return { assets: updated };
     },
   );

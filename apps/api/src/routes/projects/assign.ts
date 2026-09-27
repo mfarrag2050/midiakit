@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 const bodySchema = z.object({
   assigneeId: z.string().uuid().nullable(),
@@ -36,6 +38,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     );
     const p = p2.rows[0]!;
 
+    await commitTx(req);
     return {
       projectId: id,
       workflowId: p.workflow_id,

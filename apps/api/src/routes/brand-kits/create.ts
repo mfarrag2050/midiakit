@@ -14,6 +14,8 @@ import { toFull, type DbBrandKitRow } from '../../shared/brand-kit-mapper.js';
 import { PlanLimitReached } from '../../errors.js';
 import { getEffectiveLimits } from '../../config/effective-limits.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   name: z.string().min(1).max(100),
   direction: z.enum(['rtl', 'ltr']).default('rtl'),
@@ -51,6 +53,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        RETURNING id, tenant_id, name, config, created_at, updated_at`,
       [id, req.auth!.tenantId, parsed.name, config],
     );
+    await commitTx(req);
     reply.status(201).send(toFull(r.rows[0]!));
   });
 };

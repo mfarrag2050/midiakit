@@ -11,6 +11,8 @@ import {
   NotFound, InsufficientRole, ProjectHasRenders,
 } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -39,6 +41,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     await req.dbClient!.query(
       `UPDATE projects SET deleted_at = now() WHERE id = $1`, [id],
     );
+    await commitTx(req);
     reply.status(204).send();
   });
 };

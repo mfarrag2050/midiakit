@@ -31,6 +31,8 @@ const SOURCE_MAX_CHARS = 100;
 const EXPORTS_PER_MINUTE = 20;
 import { getEffectiveLimits } from '../../config/effective-limits.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const bodySchema = z.object({
   project_id: z.string().uuid(),
   size: z.enum(['x', 'instagram', 'feed', 'reel']),
@@ -86,6 +88,7 @@ const route: FastifyPluginAsync = async (fastify) => {
         const eta = r.status === 'queued'
           ? await getQueuedRenderEta(r.id, req.dbClient!, req.log)
           : { eta_seconds: 0, saturated: false };
+        await commitTx(req);
         reply.status(202).send({
           id: r.id, status: 'queued',
           queuedAt: r.created_at.toISOString(),
@@ -216,6 +219,7 @@ const route: FastifyPluginAsync = async (fastify) => {
     }
 
     const eta = await getQueuedRenderEta(r.id, req.dbClient!, req.log);
+    await commitTx(req);
     reply.status(202).send({
       id: r.id,
       status: 'queued',

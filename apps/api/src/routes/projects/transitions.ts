@@ -20,6 +20,8 @@ import {
 } from '../../errors.js';
 import type { WorkflowTransition } from '../workflows/shared/schema.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const bodySchema = z.object({
@@ -114,6 +116,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        FROM transitions WHERE project_id = $1 ORDER BY at ASC`, [id],
     );
 
+    await commitTx(req);
     return {
       projectId: id,
       workflowId: np.workflow_id,

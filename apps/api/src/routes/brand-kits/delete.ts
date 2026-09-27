@@ -11,6 +11,8 @@ import { z } from 'zod';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { BrandKitInUse, LastBrandKit, NotFound } from '../../errors.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -40,6 +42,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 
     // 4. DELETE
     await req.dbClient!.query(`DELETE FROM brand_kits WHERE id = $1`, [id]);
+    await commitTx(req);
     reply.status(204).send();
   });
 };

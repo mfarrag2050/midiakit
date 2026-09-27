@@ -24,6 +24,8 @@ import {
   ProviderError, ProviderTimeoutError, type ProviderName, type Capability,
 } from '../../ai/index.js';
 
+import { commitTx } from '../../plugins/tenant-tx.js';
+
 const paramsSchema = z.object({ capability: z.string() });
 const bodySchema = z.object({
   input: z.record(z.unknown()).optional().default({}),
@@ -97,6 +99,7 @@ const route: FastifyPluginAsync = async (fastify) => {
       [tenantId, result.tokensIn, result.tokensOut],
     );
 
+    await commitTx(req);
     return {
       output: result.output,
       provider: result.provider,
