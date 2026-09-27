@@ -567,7 +567,7 @@ export function TimelineStrip({
     >
       <div className="flex gap-2">
         {/* عمود التسميات — أعلى إلى أسفل = index تنازليّاً (مرآة المسارات) */}
-        <div className="flex w-24 shrink-0 flex-col" style={{ rowGap: ROW_GAP }}>
+        <div className="flex w-14 shrink-0 flex-col sm:w-24" style={{ rowGap: ROW_GAP }}>
           <div style={{ blockSize: ZOOM_BAR_BLOCK + RULER_BLOCK }} />
           {[...byIndex].reverse().map((track) => (
             <div

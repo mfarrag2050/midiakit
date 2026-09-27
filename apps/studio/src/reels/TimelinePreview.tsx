@@ -36,6 +36,7 @@ import {
   drawTimelineAt,
   resolveBrand,
 } from '@pf-mediakit/engine';
+import { loadSampleBackgrounds } from './sample-backgrounds';
 
 const SIZE = { w: 1080, h: 1920 } as const;
 
@@ -120,36 +121,6 @@ const collectTextBoxes = (
   return out;
 };
 
-/** صورةُ مكانٍ لكلّ مفتاح أصلٍ في مسارات الوسائط — قماشةٌ خارج الشاشة
- *  بتدرّجٍ من زوجِ `placeholder` في ألوان الهويّة (464: لا تنزيلَ ولا
- *  ملفّاً ثنائيّاً في المستودع؛ ImageLike هي {width, height} والقماشةُ
- *  تحملُهما وتصلحُ للرسم). */
-const buildPlaceholderImages = (
-  timeline: Timeline,
-  brand: ReturnType<typeof resolveBrand>,
-): Record<string, HTMLCanvasElement> => {
-  const images: Record<string, HTMLCanvasElement> = {};
-  for (const track of timeline.tracks) {
-    if (track.type !== 'media') continue;
-    for (const item of track.items) {
-      const key = item.src;
-      if (!key || key in images) continue;
-      const c = document.createElement('canvas');
-      c.width = SIZE.w;
-      c.height = SIZE.h;
-      const g = c.getContext('2d');
-      if (!g) continue;
-      const grad = g.createLinearGradient(0, 0, 0, c.height);
-      grad.addColorStop(0, brand.colors.placeholder[0]);
-      grad.addColorStop(1, brand.colors.placeholder[1]);
-      g.fillStyle = grad;
-      g.fillRect(0, 0, c.width, c.height);
-      images[key] = c;
-    }
-  }
-  return images;
-};
-
 /** أوزانُ الخطّ الثلاثة من نفس المسار المسموح في `/api/fonts`. */
 const FONT_FILES = {
   light: 'IBMPlexSansArabic-Light.ttf',
@@ -199,10 +170,20 @@ export function TimelinePreview({
 }: TimelinePreviewProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [fontsReady, setFontsReady] = useState(false);
+  const [images, setImages] = useState<Record<string, HTMLImageElement> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const brandBase = brandProp ?? DEFAULT_BRAND;
   const family = brandBase.fonts.primary.family;
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadSampleBackgrounds().then(
+      (loaded) => { if (!cancelled) setImages(loaded); },
+      () => { if (!cancelled) setError('sample-image-load-failed'); },
+    );
+    return () => { cancelled = true; };
+  }, []);
 
   // ── ١) الخطّ أوّلاً — لا رسمَ قبله (ADR-006) ────────────────
   useEffect(() => {
@@ -236,7 +217,7 @@ export function TimelinePreview({
 
   // ── ٢) الرسم — عند كلّ تغيّرٍ في الخطّ الزمنيّ أو رأس القراءة ──
   useEffect(() => {
-    if (!fontsReady) return;
+    if (!fontsReady || !images) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -259,7 +240,7 @@ export function TimelinePreview({
       };
       // (464) draw-media يقرأُ صورتَه من assets.images[assetKey] —
       // مفاتيحُها مفاتيحُ src في العيّنة نفسُها.
-      const assets = { images: buildPlaceholderImages(timeline, brand) };
+      const assets = { images };
 
       // الخطّةُ تُبنى مرّةً لكلّ إطار هنا — مقبولٌ في المعاينة
       // (إطارٌ واحد لا ثلاثون في الثانية). إن ثقُلت، تُرفَع إلى
@@ -307,7 +288,7 @@ export function TimelinePreview({
       ctx.clearRect(0, 0, SIZE.w, SIZE.h);
       setError(e instanceof Error ? e.message : 'draw-failed');
     }
-  }, [fontsReady, timeline, playheadSec, brandBase, onTextLayout]);
+  }, [fontsReady, images, timeline, playheadSec, brandBase, onTextLayout]);
 
   // ── ٣) السحبُ على القماشة (470 §٢) — إصابةٌ بمعاملِ التحويل ──
   // القماشةُ معروضةٌ مصغَّرةً (maxWidthPx ≠ 1080): إحداثيّاتُ الفأرة
@@ -394,7 +375,7 @@ export function TimelinePreview({
   return (
     <div
       data-testid="reels-preview"
-      data-state={error ? 'error' : fontsReady ? 'ready' : 'loading'}
+      data-state={error ? 'error' : fontsReady && images ? 'ready' : 'loading'}
       className="flex flex-col items-center gap-2"
     >
 {/* dir=ltr: فضاءُ القماشة فيزيائيٌّ لا يتّجاه — إحداثيّاتُه من
