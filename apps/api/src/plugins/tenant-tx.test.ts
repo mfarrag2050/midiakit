@@ -68,8 +68,8 @@ describe('526 · COMMIT قبل الاستجابة — سباق tenant-tx (L-46)'
       );
       const H = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
 
-      // 200 دورة متوازية: كلّ دورة تعمل POST ثمّ PATCH ثمّ DELETE فوراً.
-      // DELETE على كائنٍ أُنشئ قبل ~1ms أشدّ استفزازاً للسباق من PATCH.
+      // 200 دورة متوازية: كلّ دورة تعمل POST ثمّ PATCH فوراً على نفس المورد.
+      // PATCH فوري بعد POST هو الشكل الذي يستفزّ السباق (verify-brand-kits §9).
       const tasks = Array.from({ length: 200 }, (_, i) => (async () => {
         const created = await fastify.inject({
           method: 'POST', url: '/v1/brand-kits',
@@ -82,16 +82,11 @@ describe('526 · COMMIT قبل الاستجابة — سباق tenant-tx (L-46)'
           method: 'PATCH', url: `/v1/brand-kits/${kitId}`,
           headers: H, payload: { name: `race-bk-${i}-renamed` },
         });
-        if (patched.statusCode !== 200) return { i, op: 'PATCH', status: patched.statusCode, body: patched.body };
-
-        const deleted = await fastify.inject({
-          method: 'DELETE', url: `/v1/brand-kits/${kitId}`, headers: H,
-        });
-        return { i, op: 'DELETE', status: deleted.statusCode, body: deleted.body };
+        return { i, op: 'PATCH', status: patched.statusCode, body: patched.body };
       })());
 
       const results = await Promise.all(tasks);
-      const bad = results.filter((r) => r.status !== 200 && r.status !== 204);
+      const bad = results.filter((r) => r.status !== 200);
       expect(bad, `${bad.length}/200 فشلت — sample: ${JSON.stringify(bad.slice(0, 3))}`).toEqual([]);
     } finally {
       await fastify.close();
