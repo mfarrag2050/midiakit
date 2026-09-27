@@ -56,8 +56,18 @@ export function Table<T>({
     //   ٣) عرضُ القناع 10px بدل 32px · عرضُ الظلّ 8px بدل 14px — يلمّح
     //      إلى الحافة، لا يغطّي عموداً.
     //   ٤) شدّةُ الظلّ خفيفة (rgba(0,0,0,0.24)) لا يبتلع البكسل خلفه.
+    //
+    // ٥٦٦c: **الغلافُ الخارجيّ العاري + الحاوية المنمَّطة.** التنفيذ
+    // السابق كوَّم `overflow-x-auto` مع `background` معقّدة على نفس
+    // العنصر — على iOS Safari + Android WebView حدثت حالة تُفشل التمرير
+    // اللمسيّ. نفصلُ: خارجيٌّ عاري يحمل `overflow-x-auto` فحسب،
+    // وداخليٌّ يحمل الحدَّ والخلفيّةَ وأقنعةَ الظلال.
     <div
-      className="overflow-x-auto rounded-lg border border-border bg-surface"
+      className="overflow-x-auto"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
+    <div
+      className="rounded-lg border border-border bg-surface"
       style={{
         background:
           'linear-gradient(to right, var(--surface) 30%, transparent),' +
@@ -156,6 +166,7 @@ export function Table<T>({
             ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }
