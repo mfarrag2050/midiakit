@@ -95,6 +95,28 @@ jobs:
       - name: pnpm install (frozen)
         run: pnpm install --frozen-lockfile
 
+      # 528-NIGHTLY-CONFIG · verify:alerts-wire يبني fastify server ⇒ يقرأ
+      # config كامل (DATABASE_URL_APP + JWT secrets + AI key). ci.yml
+      # يوفّرها عبر bootstrap + migrate + توليد أسرار عابرة. ننسخ النمط
+      # هنا كي لا تسقط nightly على env config بدل الاختبار الفعليّ.
+      - name: تهيئة الأدوار + الامتدادات (bootstrap · قبل migrate)
+        env:
+          DATABASE_URL_ADMIN: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+        run: pnpm db:bootstrap
+
+      - name: تشغيل الهجرات على postgres
+        env:
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+        run: pnpm db:migrate
+
+      - name: توليد أسرار عابرة للاختبار (437 · نمط ci.yml)
+        if: always()
+        run: |
+          gen_hex32() { openssl rand -hex 32; }
+          S=$(gen_hex32); echo "::add-mask::$S"; echo "SESSION_JWT_SECRET=$S"   >> "$GITHUB_ENV"
+          P=$(gen_hex32); echo "::add-mask::$P"; echo "PLATFORM_JWT_SECRET=$P"  >> "$GITHUB_ENV"
+          A=$(gen_hex32); echo "::add-mask::$A"; echo "AI_KEY_ENCRYPTION_KEY=$A" >> "$GITHUB_ENV"
+
       - name: "verify:perf (~32s محلّيّاً)"
         # L-46 injection: إن `inject_break==perf`، نصنع عطلاً بمتغيّر مبالَغ
         # فيه يخنق أداء skia (SKIA_CANVAS_FONT_LIMIT=0 — مثال قابل للحقن).
@@ -114,11 +136,13 @@ jobs:
       - name: "verify:alerts-wire (~18s محلّيّاً)"
         if: always()
         env:
-          DATABASE_URL: postgres://postgres:${{ secrets.CI_POSTGRES_BOOTSTRAP_PASSWORD }}@postgres:5432/mediakit
+          # 528-NIGHTLY-CONFIG · نفس توزيع ci.yml (خطوة 20-verifier):
+          # migration_user لـDATABASE_URL (scaffolding) + app_user لـ_APP.
+          # JWT secrets تُوَرَّث من خطوة «توليد أسرار عابرة» — لا سرَّ ثابت.
+          DATABASE_URL: postgres://migration_user:dev_migration_pass@postgres:5432/mediakit
+          DATABASE_URL_APP: postgres://app_user:dev_app_pass@postgres:5432/mediakit
+          DATABASE_URL_PLATFORM: postgres://control_plane_user:dev_control_plane_pass@postgres:5432/mediakit
           REDIS_URL: redis://redis:6379/3
           BULLMQ_PREFIX: pf-mediakit
-          SESSION_JWT_SECRET: ${{ secrets.CI_SESSION_JWT_SECRET }}
-          PLATFORM_JWT_SECRET: ${{ secrets.CI_PLATFORM_JWT_SECRET }}
-          AI_KEY_ENCRYPTION_KEY: ${{ secrets.CI_AI_KEY_ENCRYPTION_KEY }}
         run: |
           pnpm verify:alerts-wire
