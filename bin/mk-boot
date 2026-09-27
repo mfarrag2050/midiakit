@@ -175,18 +175,25 @@ if [ "$match_count" -eq 1 ]; then
 else
   # count == 0 · إطلاقٌ جديد
   info "لا عامل حيّ — أُشغِّلُه من $WORKER_DIR"
-  set -a
-  # shellcheck disable=SC1091
-  . "$SHOW_TREE/.env.show"
-  set +a
-  [ "${BULLMQ_PREFIX:-}" = "$EXPECTED_PREFIX" ] \
-    || fail ".env.show أعطى BULLMQ_PREFIX=${BULLMQ_PREFIX:-<فارغة>} لا $EXPECTED_PREFIX"
 
+  # mk/517: تحميلُ .env.show وفحصُ BULLMQ_PREFIX داخل subshell.
+  # قبلاً كان `set -a; . .env.show; set +a` في الـshell الرئيسي فيتسرّبُ
+  # إلى خادم tmux وكلّ نوافذه (raced tests → live show · 514j).
+  # الآن: كلُّ متغيّرات .env.show محبوسةٌ في العمليّة الابنة وحدَها.
+  # الفحص يخرج بغير صفر داخل subshell ⇒ `|| fail` في الأمّ يُبلِّغ.
   (
+    set -a
+    # shellcheck disable=SC1091
+    . "$SHOW_TREE/.env.show"
+    set +a
+    if [ "${BULLMQ_PREFIX:-}" != "$EXPECTED_PREFIX" ]; then
+      echo "MK_BOOT_PREFIX_MISMATCH=${BULLMQ_PREFIX:-<فارغة>}" >&2
+      exit 91
+    fi
     cd "$WORKER_DIR"
     nohup node --import tsx src/api-worker.ts > "$WORKER_LOG" 2>&1 &
     disown 2>/dev/null || true
-  )
+  ) || fail ".env.show / BULLMQ_PREFIX (المتوقّع $EXPECTED_PREFIX) / إطلاق العامل — فشل داخل subshell · راجع $WORKER_LOG"
   sleep 4
 
   new_matches="$(pgrep -f 'src/api-worker.ts' 2>/dev/null | tr '\n' ' ' | sed 's/  *$//')"
