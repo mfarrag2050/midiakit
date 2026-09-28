@@ -80,6 +80,7 @@
     "render:mp4": "node --import tsx apps/renderer/src/cli.ts",
     "demo:live": "node --import tsx scripts/demo-live.mjs",
     "demo:path": "node scripts/demo-path.mjs",
+    "brand:add": "node scripts/brand-add.mjs",
     "measure-font": "node scripts/measure-font-metrics.mjs",
     "check:no-paddle-outside-payments": "node scripts/check-no-paddle-outside-payments.mjs",
     "check:no-ai-provider-outside-ai": "node scripts/check-no-ai-provider-outside-ai.mjs",
