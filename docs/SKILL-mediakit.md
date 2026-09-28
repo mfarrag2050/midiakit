@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-27 · **HEAD:** `d603acb` (`merge/529`)
+> **تاريخ التوليد:** 2026-09-28 · **HEAD:** `f815945` (`merge/531`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -89,24 +89,24 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `3ea3b56` | 4 | 2 | 645 |
-| `feat/ci` | `ecc2673` | 0 | 91 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 48 | 595 |
-| `feat/studio` | `4e16731` | 0 | 12 | 631 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 29 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 27 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 25 | 618 |
-| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 2 | 641 |
-| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 0 | 643 |
-| `merge/521` | `59e4bfa` | 0 | 31 | 612 |
-| `merge/529` | `d603acb` | 5 | 0 | 648 |
-| `origin/aa-internal` | `ee178ca` | 0 | 642 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 25 | 619 |
-| `origin/feat/api` | `3ea3b56` | 4 | 2 | 645 |
-| `origin/feat/ci` | `ecc2673` | 0 | 91 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 48 | 595 |
-| `origin/feat/studio` | `4e16731` | 0 | 12 | 631 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 14 | 633 |
+| `feat/api` | `ef6fd3c` | 1 | 0 | 651 |
+| `feat/ci` | `ecc2673` | 0 | 98 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 55 | 595 |
+| `feat/studio` | `4e16731` | 0 | 19 | 631 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 36 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 34 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 32 | 618 |
+| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 9 | 641 |
+| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 7 | 643 |
+| `merge/521` | `59e4bfa` | 0 | 38 | 612 |
+| `merge/531` | `f815945` | 2 | 0 | 652 |
+| `origin/aa-internal` | `ee178ca` | 0 | 649 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 32 | 619 |
+| `origin/feat/api` | `ef6fd3c` | 1 | 0 | 651 |
+| `origin/feat/ci` | `ecc2673` | 0 | 98 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 55 | 595 |
+| `origin/feat/studio` | `4e16731` | 0 | 19 | 631 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 21 | 633 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
