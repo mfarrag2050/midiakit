@@ -643,12 +643,19 @@ stop_proc() {
 # 526ج٢ · عاملُ الرندر — يُطلَق مع mk-show up ويُقتَل مع down. المطابقةُ
 # بـcwd (لا pgrep وحدَه · كما في mk-boot ج٣) حتى لا يُخلَط بعامل dev.
 render_worker_pids_by_cwd() {
+  # mk/530 · إصلاحٌ عاجل: كان آخرُ أمرٍ في الدالّة `[ … ] && printf …`،
+  # وحين لا يطابق آخر PID (worktree غير show) تعود الدالّة بـexit=1.
+  # مع set -euo pipefail في bin/mk-show، $() المُحتوي يسقط والسكربت
+  # يخرج صامتاً في منتصف down/promote/rollback. الحلّ: if…fi + return 0.
   local expected="$SHOW_ROOT/apps/renderer"
   local pid live_cwd
   for pid in $(pgrep -f 'src/api-worker.ts' 2>/dev/null); do
     live_cwd="$(lsof -a -p "$pid" -d cwd -F n 2>/dev/null | tail -1 | sed 's/^n//')"
-    [ "$live_cwd" = "$expected" ] && printf '%s ' "$pid"
+    if [ "$live_cwd" = "$expected" ]; then
+      printf '%s ' "$pid"
+    fi
   done
+  return 0
 }
 
 start_render_worker() {
@@ -969,8 +976,11 @@ cmd_promote() {
   git -C "$DEV_ROOT" push origin "$new_tag" >/dev/null 2>&1 || warn "push للوسم فشل — الوسم محلّيّ حتّى تدفعه يدوياً."
 
   # نقل الـworktree إلى الوسم الجديد (يوقف الخوادم أوّلاً)
+  # mk/530 · لا بدّ من stop_render_worker قبل checkout — العامل القديم
+  # يبقى على الكود القديم بعد التبديل إن لم يُقتل هنا.
   stop_proc studio
   stop_proc api
+  stop_render_worker
   say "أنقل $SHOW_ROOT إلى $new_tag …"
   git -C "$SHOW_ROOT" fetch --tags origin >/dev/null 2>&1 || true
   git -C "$SHOW_ROOT" checkout --detach "refs/tags/$new_tag"
@@ -995,6 +1005,7 @@ cmd_rollback() {
 
   stop_proc studio
   stop_proc api
+  stop_render_worker  # mk/530 · نفس السبب كما في cmd_promote
   say "أُرجع $SHOW_ROOT من $current إلى $prev …"
   git -C "$SHOW_ROOT" checkout --detach "refs/tags/$prev"
 
