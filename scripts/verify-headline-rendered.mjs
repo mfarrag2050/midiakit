@@ -40,6 +40,14 @@ const CONTENT = {
   sourceName: 'مركز قنديل',
 };
 
+// mk/534 · محتوى قصير مخصَّص لاختبار طبقة source (headline قصير ⇒ ≤2 سطر
+// ⇒ لا تداخل مع شريط source عند y=0.75). نستعمله فقط للقوالب التي فيها
+// طبقة source (breaking + بعض cards).
+const SOURCE_TEST_CONTENT = {
+  headline: 'خبر تجريبيّ قصير للفحص فقط',
+  source: 'رصد للأخبار',
+};
+
 const SIZE = { w: 1080, h: 1350 };
 const REEL_SIZE = { w: 1080, h: 1920 };
 
@@ -53,30 +61,47 @@ function colorDist(a, b) {
   return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
 }
 
-async function extractHeadlineBandPixels(mp4Path, size) {
+// mk/534 · مساعدٌ يقيس بكسلات غير الخلفيّة داخل مستطيلٍ نسبيّ.
+function countNonBgInBand(ctx, size, centerRatio, halfRatio, xStart = 0, xEnd = 1) {
+  const bandCenter = Math.round(size.h * centerRatio);
+  const bandHalfHeight = Math.round(size.h * halfRatio);
+  const bandY = Math.max(0, bandCenter - bandHalfHeight);
+  const bandH = Math.min(size.h - bandY, bandHalfHeight * 2);
+  const x0 = Math.max(0, Math.round(size.w * xStart));
+  const w = Math.min(size.w - x0, Math.round(size.w * (xEnd - xStart)));
+  const data = ctx.getImageData(x0, bandY, w, bandH).data;
+  const bg = [data[0], data[1], data[2]];
+  let nonBg = 0;
+  const total = w * bandH;
+  for (let i = 0; i < data.length; i += 4) {
+    const px = [data[i], data[i + 1], data[i + 2]];
+    if (colorDist(px, bg) > COLOR_DIFF_THRESHOLD) nonBg++;
+  }
+  return { nonBg, total, ratio: nonBg / total };
+}
+
+async function extractFrame(mp4Path, size) {
   const pngPath = join(OUT_DIR, 'frame.png');
-  // t = 15% من المدّة — بعد fade-in، قبل أيّ ختامٍ.
   const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', '1.2', '-i', mp4Path, '-frames:v', '1', pngPath], { encoding: 'utf8' });
   if (r.status !== 0) throw new Error(`ffmpeg failed: ${r.stderr}`);
   const img = await loadImage(pngPath);
   const canvas = new Canvas(size.w, size.h);
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0);
-  // شريطٌ أفقيٌّ حول verticalAnchor=0.62 (breaking/card) أو 0.66 (reel).
-  const bandCenter = Math.round(size.h * 0.62);
-  const bandHalfHeight = Math.round(size.h * 0.18); // ~18% من الارتفاع
-  const bandY = Math.max(0, bandCenter - bandHalfHeight);
-  const bandH = Math.min(size.h - bandY, bandHalfHeight * 2);
-  const data = ctx.getImageData(0, bandY, size.w, bandH).data;
-  // لون الخلفيّة = بكسل الركن الأعلى الأيسر (ركن نظيف تاريخيّاً).
-  const bg = [data[0], data[1], data[2]];
-  let nonBg = 0;
-  const total = size.w * bandH;
-  for (let i = 0; i < data.length; i += 4) {
-    const px = [data[i], data[i + 1], data[i + 2]];
-    if (colorDist(px, bg) > COLOR_DIFF_THRESHOLD) nonBg++;
-  }
-  return { nonBg, total, ratio: nonBg / total, bg };
+  return ctx;
+}
+
+async function extractHeadlineBandPixels(mp4Path, size) {
+  const ctx = await extractFrame(mp4Path, size);
+  return countNonBgInBand(ctx, size, 0.62, 0.18);
+}
+
+// mk/534 · شريطُ المصدر — headline قصير (SOURCE_TEST_CONTENT) ⇒ source
+// يقع عند y≈0.70 (headline يستغرق سطرَين أعلى). النصف الأيسر (source
+// left-aligned)، حتى y=0.30 من العرض لاستبعاد attribution/logo.
+async function extractSourceBandPixels(mp4Path, size) {
+  const ctx = await extractFrame(mp4Path, size);
+  return countNonBgInBand(ctx, size, 0.71, 0.02, 0, 0.30);
 }
 
 async function loadBrand(name) {
@@ -110,10 +135,29 @@ for (const brandName of brandNames) {
       continue;
     }
     const { nonBg, total, ratio } = await extractHeadlineBandPixels(mp4, size);
-    const pass = ratio >= MIN_NON_BG_RATIO;
+    const hpass = ratio >= MIN_NON_BG_RATIO;
+    // mk/534 · طبقة source — نفحصها فقط للقوالب التي تحملها. نُعيد الرندر
+    // بمحتوى قصير مخصَّص (SOURCE_TEST_CONTENT) لضمان أنّ شريط y=0.75
+    // يُلتقط source فقط لا آخر سطر headline. العتبة 0.15% أدنى من العنوان.
+    const hasSource = template.layers.some((l) => l.type === 'source');
+    let spass = true, sratio = null;
+    if (hasSource) {
+      const srcMp4 = join(OUT_DIR, `${brandName}-${tplName}-source.mp4`);
+      try {
+        await renderVideo({ template, brand, content: SOURCE_TEST_CONTENT, size, outPath: srcMp4, fps: 30 });
+        const src = await extractSourceBandPixels(srcMp4, size);
+        sratio = src.ratio;
+        spass = sratio >= 0.0015;
+      } catch (err) {
+        console.log(`    ⚠ فشل رندر source-test: ${err.message.slice(0, 60)}`);
+        spass = false;
+      }
+    }
+    const pass = hpass && spass;
     const mark = pass ? '✓' : '✗';
-    console.log(`  ${mark} ${brandName.padEnd(16)} × ${tplName.padEnd(14)} · شريط=${(ratio * 100).toFixed(2)}% (${nonBg}/${total})`);
-    if (!pass) failures.push({ brand: brandName, template: tplName, ratio });
+    const srcTxt = hasSource ? ` · مصدر=${(sratio * 100).toFixed(3)}%` : ' · بلا مصدر';
+    console.log(`  ${mark} ${brandName.padEnd(16)} × ${tplName.padEnd(14)} · عنوان=${(ratio * 100).toFixed(2)}%${srcTxt}`);
+    if (!pass) failures.push({ brand: brandName, template: tplName, ratio, sratio, reason: !hpass ? 'headline' : 'source' });
   }
 }
 
@@ -121,9 +165,12 @@ try { rmSync(OUT_DIR, { recursive: true }); } catch {}
 
 console.log();
 if (failures.length > 0) {
-  console.error(`✗ verify-headline-rendered FAILED — ${failures.length} تركيبة بلا عنوان مرسوم:`);
-  for (const f of failures) console.error(`  ${f.brand} × ${f.template} · شريط=${(f.ratio * 100).toFixed(3)}%`);
+  console.error(`✗ verify-headline-rendered FAILED — ${failures.length} تركيبة بها طبقة غير مرسومة:`);
+  for (const f of failures) {
+    const src = f.sratio !== null && f.sratio !== undefined ? ` · مصدر=${(f.sratio * 100).toFixed(3)}%` : '';
+    console.error(`  ${f.brand} × ${f.template} · سبب=${f.reason} · عنوان=${(f.ratio * 100).toFixed(3)}%${src}`);
+  }
   process.exit(1);
 }
-console.log(`✓ verify-headline-rendered PASSED — كلُّ التركيبات (${brandNames.length}×${templatesWithHeadline.length}) رسمت طبقة headline.`);
+console.log(`✓ verify-headline-rendered PASSED — كلُّ التركيبات (${brandNames.length}×${templatesWithHeadline.length}) رسمت طبقات headline + source.`);
 process.exit(0);

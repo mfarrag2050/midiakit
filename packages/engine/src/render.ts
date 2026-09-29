@@ -346,7 +346,9 @@ function runKicker(
   const verticalAnchor = layer.verticalAnchor ?? 0.4;
   const baselineY = size.h * verticalAnchor;
 
-  ctx.fillStyle = brand.colors.text;
+  // mk/534 · نفس مبادلة 478b تحسّباً لقالب urgent يحمل كيكر مستقبلاً.
+  // اليوم لا قالب يجمعهما، فلا تغيّر بايت لأيّ لقطة قائمة.
+  ctx.fillStyle = headlineBrandFor(brand, state).colors.text;
   ctx.direction = 'rtl';
   ctx.textBaseline = 'alphabetic';
   if (layer.align === 'right') {
@@ -1046,7 +1048,10 @@ function runSource(
   const fontCfg = resolveRef(args.brand, layer.font) as SourceFontCfg;
   const family = `"${args.brand.fonts.primary.family}", ${args.brand.fonts.fallback}`;
   args.ctx.font = `${fontCfg.weight} ${fontCfg.size}px ${family}`;
-  args.ctx.fillStyle = args.brand.colors.text;
+  // mk/534 · نفس مبادلة 478b — سطحُ العاجل يبدّل نصَّ المصدر أيضاً.
+  // في manara colors.text=#1A2733 (كحليّ) = urgentBg ⇒ حبر مخفيّ على
+  // خلفيّة كحليّة قبل الإصلاح.
+  args.ctx.fillStyle = headlineBrandFor(args.brand, state).colors.text;
   args.ctx.textBaseline = 'alphabetic';
 
   const isStructural = layer.anchor === 'below-headline';
