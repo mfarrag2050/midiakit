@@ -661,7 +661,9 @@ render_worker_pids_by_cwd() {
 start_render_worker() {
   local pidf logf worker_dir node_bin
   pidf="$(state_dir)/render-worker.pid"
-  logf="$REPO/claude/reports/_show-worker.log"
+  # mk/534 · REPO غير معرَّف في mk-show ⇒ مع set -u يسقط up. نستعمل
+  # state_dir (per-target) للسجلّ — يوازي pidfile ولا يتسرّب خارج الطقم.
+  logf="$(state_dir)/render-worker.log"
   worker_dir="$SHOW_ROOT/apps/renderer"
   node_bin="$HOME/.nvm/versions/node/v20.18.1/bin/node"
 
