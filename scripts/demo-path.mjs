@@ -22,19 +22,26 @@
  *
  *   DEMO_EMAIL='...' DEMO_PASSWORD='...' \
  *   DEMO_OWNER=1 DEMO_HOST_ACK=1 \
- *     node scripts/demo-path.mjs --base-url http://127.0.0.1:19070
+ *     node scripts/demo-path.mjs --base-url http://127.0.0.1:19070 \
+ *                                --s3-direct http://127.0.0.1:19064
  *
  * ملاحظة: `https://mkdemo.primeflow.co` خلف Cloudflare Access (يعيد 302
  * إلى صفحة تسجيل الدخول)، ولا يصل إليه هذا السكربت بدون Service Token
  * غيرِ متوفّرٍ الآن. المسار المحلّيّ على الميني يتخطّى CF ويصل إلى API
- * العرض مباشرة.
+ * العرض مباشرة. الروابط الموقَّعة (SigV4) للتخزين تُعاد بمضيف
+ * mkdemo.primeflow.co (S3_PUBLIC_ENDPOINT)، فتُحوَّل إلى CF Access أيضاً.
+ * `--s3-direct` يمرّر التنزيل إلى MinIO المحلّيّ ويُبقي Host header
+ * كما وقّعه S3 (SigV4 لا يُكسَر لأنّ التوقيع على path+query+Host).
  *
  * السكربت يرفض أيّ base-url يشير إلى 19062/19063/19064/mkdemo إن كان يعمل
  * من خارج سياق المالك (متغيّرَي بيئة DEMO_OWNER=1 + DEMO_HOST_ACK=1 معاً).
  * كل خطوة ✗ ⇒ exit 1 مع رسالة واضحة (بلا رمي stack raw).
  */
 import { execFileSync } from 'node:child_process';
+import http from 'node:http';
+import https from 'node:https';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { writeFileSync } from 'node:fs';
 
 const args = new Map();
 for (let i = 2; i < process.argv.length; i++) {
@@ -47,6 +54,7 @@ for (let i = 2; i < process.argv.length; i++) {
 }
 
 const BASE_URL = args.get('base-url') ?? process.env.DEMO_BASE_URL ?? 'http://127.0.0.1:19040';
+const S3_DIRECT = args.get('s3-direct') ?? null; // مثل http://127.0.0.1:19064
 const EMAIL = process.env.DEMO_EMAIL;
 const PASSWORD = process.env.DEMO_PASSWORD;
 const OWNER_MODE = process.env.DEMO_OWNER === '1' && process.env.DEMO_HOST_ACK === '1';
@@ -137,11 +145,46 @@ function ffprobeDurationSeconds(bytesPath) {
   return d;
 }
 
-async function downloadTo(tempPath, url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`GET ${url.slice(0, 80)}… → ${r.status}`);
-  const buf = Buffer.from(await r.arrayBuffer());
-  const { writeFileSync } = await import('node:fs');
+// 533 · GET رابطٍ موقَّع (SigV4) — مع دعم --s3-direct لتخطّي CF Access.
+// إذا S3_DIRECT ضُبط، نبدّل origin (host+port+protocol) بينما نُبقي path+query
+// كما هو، ونُرسل ترويسة Host = مضيف الرابط الأصليّ (SigV4 يتحقّق منها).
+// نستعمل node:http/https مباشرةً لأنّ fetch يمنع override ترويسة Host.
+async function downloadTo(tempPath, signedUrl) {
+  const orig = new URL(signedUrl);
+  const target = S3_DIRECT ? new URL(S3_DIRECT) : null;
+  const lib = (target ?? orig).protocol === 'https:' ? https : http;
+  const options = {
+    hostname: (target ?? orig).hostname,
+    port: (target ?? orig).port || ((target ?? orig).protocol === 'https:' ? 443 : 80),
+    method: 'GET',
+    path: orig.pathname + orig.search,
+    // Host header يبقى مضيف الرابط الأصليّ — SigV4 وقّع عليه.
+    headers: { Host: orig.host },
+  };
+  const { status, buf, contentType } = await new Promise((resolveP, rejectP) => {
+    const req = lib.request(options, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolveP({
+        status: res.statusCode ?? 0,
+        buf: Buffer.concat(chunks),
+        contentType: String(res.headers['content-type'] ?? ''),
+      }));
+    });
+    req.on('error', rejectP);
+    req.end();
+  });
+  if (status !== 200) {
+    throw new Error(`GET ${orig.host}${orig.pathname.slice(0, 60)}… → ${status}`);
+  }
+  // كشف صفحة CF Access — الرابط الموقَّع يمرّ عبر بوّابة تعيد HTML.
+  const looksLikeHtml = /^text\/html/i.test(contentType) || (buf.length > 0 && buf[0] === 0x3c /* '<' */);
+  if (looksLikeHtml) {
+    throw new Error(
+      `الرابط خلف CF Access (استلم text/html بدل البايتات) — استعمل ` +
+      `--s3-direct http://127.0.0.1:19064 لتخطّي البوّابة والوصول إلى MinIO المحلّيّ.`
+    );
+  }
   writeFileSync(tempPath, buf);
   return buf;
 }
