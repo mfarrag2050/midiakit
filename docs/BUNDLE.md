@@ -8,9 +8,9 @@
 > **يُولَّد بـ`pnpm docs:bundle`.** لا يُحرَّر يدوياً. يُرفَع مع
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
-> **تاريخ التوليد:** 2026-09-28
-> **HEAD (main):** `d98e3ed`
-> **HEAD (origin/feat/api):** `cf5c35e`
+> **تاريخ التوليد:** 2026-09-29
+> **HEAD (main):** `74f62f3`
+> **HEAD (origin/feat/api):** `54a5951`
 > **HEAD (origin/feat/studio):** `4e16731`
 > **HEAD (origin/feat/reels):** `bd064d2`
 
@@ -44,7 +44,7 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 411 | `0e51ae5a329c` | local |
+| `docs/SKILL-mediakit.md` | 411 | `a7401d8e716f` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -11339,7 +11339,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-09-28 · **HEAD:** `d98e3ed` (`merge/532`)
+> **تاريخ التوليد:** 2026-09-29 · **HEAD:** `74f62f3` (`merge/533`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11401,24 +11401,24 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `cf5c35e` | 1 | 2 | 652 |
-| `feat/ci` | `ecc2673` | 0 | 101 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 58 | 595 |
-| `feat/studio` | `4e16731` | 0 | 22 | 631 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 39 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 37 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 35 | 618 |
-| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 12 | 641 |
-| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 10 | 643 |
-| `merge/521` | `59e4bfa` | 0 | 41 | 612 |
-| `merge/532` | `d98e3ed` | 2 | 0 | 655 |
-| `origin/aa-internal` | `ee178ca` | 0 | 652 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 35 | 619 |
-| `origin/feat/api` | `cf5c35e` | 1 | 2 | 652 |
-| `origin/feat/ci` | `ecc2673` | 0 | 101 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 58 | 595 |
-| `origin/feat/studio` | `4e16731` | 0 | 22 | 631 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 24 | 633 |
+| `feat/api` | `54a5951` | 1 | 4 | 653 |
+| `feat/ci` | `ecc2673` | 0 | 104 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 61 | 595 |
+| `feat/studio` | `4e16731` | 0 | 25 | 631 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 42 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 40 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 38 | 618 |
+| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 15 | 641 |
+| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 13 | 643 |
+| `merge/521` | `59e4bfa` | 0 | 44 | 612 |
+| `merge/533` | `74f62f3` | 2 | 0 | 658 |
+| `origin/aa-internal` | `ee178ca` | 0 | 655 | 1 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 38 | 619 |
+| `origin/feat/api` | `54a5951` | 1 | 4 | 653 |
+| `origin/feat/ci` | `ecc2673` | 0 | 104 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 61 | 595 |
+| `origin/feat/studio` | `4e16731` | 0 | 25 | 631 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 27 | 633 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
