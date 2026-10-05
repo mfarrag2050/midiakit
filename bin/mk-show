@@ -137,7 +137,33 @@ run_smoke() {
     warn "scripts/mk-show-smoke.mjs غير موجود في $SHOW_ROOT — لا فحصَ زائر."
     return 0
   fi
-  node "$script" "$TARGET_NAME"
+  # mk/535 ب) · نمرِّرُ القيَم كـMK_SMOKE_* بدل أن يُعيدَ smoke تحليلَ bin/mk-show.
+  # السبب: readMkShowVar كان يُعيد قيَم shownext (19086) حين يُطلَب show
+  # (19070) — ترتيبُ الكتل في المصدر يحكمُ `matchAll` لا تدفّق التنفيذ.
+  # الحلّ الأمتن = تمريرُ القيَم من الـshell في الذاكرة (مصدرٌ واحدٌ لا
+  # اثنان) · smoke تستهلك `MK_SMOKE_*` أصلاً (السطور 123-125 منه).
+  MK_SMOKE_API_PORT="$API_PORT" \
+  MK_SMOKE_STUDIO_PORT="$STUDIO_PORT" \
+  MK_SMOKE_OWNER_EMAIL="$OWNER_EMAIL" \
+    node "$script" "$TARGET_NAME"
+}
+
+cmd_dry_config() {
+  # mk/535 ب) · وضعٌ جافّ: يطبع الإعدادَ المحسوم لـtarget دون أيّ طلبِ
+  # شبكة أو docker. يُستعمل لتأكيد صحّة القيَم (API/STUDIO/EMAIL) قبل
+  # الوثوق بأنّ smoke سيستهلك الصحيح.
+  cat <<DRY
+target        = $TARGET_NAME
+show_root     = $SHOW_ROOT
+api_port      = $API_PORT
+studio_port   = $STUDIO_PORT
+owner_email   = $OWNER_EMAIL
+pg_port       = $PG_PORT
+redis_port    = $REDIS_PORT
+minio_port    = $MINIO_PORT
+compose_file  = $COMPOSE_FILE_RELATIVE
+docker_ctx    = $EXPECTED_DOCKER_CTX
+DRY
 }
 
 cmd_smoke() {
@@ -1134,6 +1160,7 @@ case "$cmd" in
   seed)     cmd_seed ;;
   mode)     cmd_mode "$@" ;;
   smoke)    cmd_smoke ;;
+  dry-config) cmd_dry_config ;;
   ""|-h|--help) usage ;;
   *) die "أمر غير معروف: $cmd — bin/mk-show $target --help" ;;
 esac
