@@ -34,6 +34,12 @@ import type {
 import type { BrandKit, PlatformKey, UrgentBadge } from '@pf-mediakit/shared';
 
 import { resolve } from './brand/resolve.js';
+import {
+  getVerticalSafeArea,
+  badgeReserveAbove,
+  sourceReserveBelow,
+  clampHeadlineAnchorToSafeArea,
+} from './vertical-fit.js';
 import { loadDefaultLexicon, type Lexicon } from './arabic-lexicon/index.js';
 import {
   drawAccentBar,
@@ -752,7 +758,18 @@ export function finalizePreparedHeadline(
     layout.fontSize,
     state
   );
-  const firstBaseline = anchorY;
+  // mk/535: الكتلةُ (شارة · عنوان · مصدر) يجب أن تبقى داخل الهامش الآمن.
+  // قبله: 6 أسطر على 1080×1080 ⇒ source baseline خارج الإطار. الآن: نرفع
+  // anchor حتى تدخل الكتلة. clamping no-op لعنوانٍ يتّسع ⇒ صفر تغيّر بايت
+  // لِـbreaking.md5 وسائر اللقطات القائمة.
+  const safeArea = getVerticalSafeArea(args.brand, args.size);
+  const reserveTop = badgeReserveAbove(args.template, args.brand);
+  const reserveBottom = sourceReserveBelow(args.template, args.brand, layout.fontSize);
+  const clamped = clampHeadlineAnchorToSafeArea(
+    anchorY, args.size, nLines, layout.lineHeight, layout.fontSize,
+    safeArea, reserveTop, reserveBottom
+  );
+  const firstBaseline = clamped.firstBaseline;
   const lastBaseline = firstBaseline + (nLines - 1) * layout.lineHeight;
 
   const bounds: HeadlineBounds = {
