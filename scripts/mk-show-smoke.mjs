@@ -112,7 +112,11 @@ if (target === 'custom') {
   STUDIO_PORT = process.env.MK_SMOKE_STUDIO_PORT || die(99, 'MK_SMOKE_STUDIO_PORT مطلوب لـcustom');
   OWNER_EMAIL = process.env.MK_SMOKE_OWNER_EMAIL || 'mk@primeflow.co';
 } else if (target === 'show' || target === 'shownext') {
-  TREE = join(homedir(), 'MediaKit', target === 'show' ? 'pf-mediakit-show' : 'pf-mediakit-shownext');
+  // mk/536: MK_SMOKE_TREE يتجاوز الافتراض — يُستعمل في CI وverify-smoke-config
+  // (لا worktree pf-mediakit-show هناك · نُشير إلى جذر المستودع نفسه الذي
+  // يحمل bin/mk-show بايت-بايت).
+  TREE = process.env.MK_SMOKE_TREE ||
+    join(homedir(), 'MediaKit', target === 'show' ? 'pf-mediakit-show' : 'pf-mediakit-shownext');
   API_PORT = readMkShowVar(TREE, 'API_PORT');
   STUDIO_PORT = readMkShowVar(TREE, 'STUDIO_PORT');
   OWNER_EMAIL = readMkShowVar(TREE, 'OWNER_EMAIL') || 'mk@primeflow.co';
