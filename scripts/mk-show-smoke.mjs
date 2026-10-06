@@ -71,6 +71,10 @@ function readMkShowVar(treePath, key) {
       v = v.slice(1, -1);
     }
     v = v.trim();
+    // mk/536: أيّ قيمة تحوي `${` هي تعبيرٌ bash غير محلول
+    // (مثال: `${OWNER_EMAIL_OVERRIDE:-mk@primeflow.co}` السطر 97 في mk-show).
+    // رفضُها هنا = حمايةٌ ثانية حين لا يُمرِّر run_smoke الـMK_SMOKE_* الصحيحة.
+    if (v.includes('${')) continue;
     if (v !== '') lastNonEmpty = v;
   }
   return lastNonEmpty;
@@ -108,7 +112,11 @@ if (target === 'custom') {
   STUDIO_PORT = process.env.MK_SMOKE_STUDIO_PORT || die(99, 'MK_SMOKE_STUDIO_PORT مطلوب لـcustom');
   OWNER_EMAIL = process.env.MK_SMOKE_OWNER_EMAIL || 'mk@primeflow.co';
 } else if (target === 'show' || target === 'shownext') {
-  TREE = join(homedir(), 'MediaKit', target === 'show' ? 'pf-mediakit-show' : 'pf-mediakit-shownext');
+  // mk/536: MK_SMOKE_TREE يتجاوز الافتراض — يُستعمل في CI وverify-smoke-config
+  // (لا worktree pf-mediakit-show هناك · نُشير إلى جذر المستودع نفسه الذي
+  // يحمل bin/mk-show بايت-بايت).
+  TREE = process.env.MK_SMOKE_TREE ||
+    join(homedir(), 'MediaKit', target === 'show' ? 'pf-mediakit-show' : 'pf-mediakit-shownext');
   API_PORT = readMkShowVar(TREE, 'API_PORT');
   STUDIO_PORT = readMkShowVar(TREE, 'STUDIO_PORT');
   OWNER_EMAIL = readMkShowVar(TREE, 'OWNER_EMAIL') || 'mk@primeflow.co';
@@ -122,11 +130,30 @@ if (target === 'custom') {
 // طفرات env تتجاوز القيَم أعلاه:
 API_PORT = process.env.MK_SMOKE_API_PORT || API_PORT;
 STUDIO_PORT = process.env.MK_SMOKE_STUDIO_PORT || STUDIO_PORT;
+// mk/536: كانت MK_SMOKE_OWNER_EMAIL تُقرَأ لـcustom فقط. run_smoke يمرِّرها
+// في 535ب لكنّ الطفرة لم تُطبَّق لـshow/shownext ⇒ القيمةُ الخام من
+// readMkShowVar (`${OWNER_EMAIL_OVERRIDE:-mk@primeflow.co}`) تذهب حرفيّاً
+// إلى login payload ⇒ 400 «الباب مقفول».
+OWNER_EMAIL = process.env.MK_SMOKE_OWNER_EMAIL || OWNER_EMAIL;
 STUDIO_URL = process.env.MK_SMOKE_STUDIO_URL || `http://127.0.0.1:${STUDIO_PORT}/`;
 PW_FILE = process.env.MK_SMOKE_PW_FILE || join(homedir(), 'MediaKit', '.show-owner-password');
 
 const API_BASE = `http://127.0.0.1:${API_PORT}`;
 const EXPECTED_LOCAL = `127.0.0.1:${API_PORT}`;
+
+// mk/536: وضعٌ جافّ — يطبع الإعدادَ المحسوم ويخرج 0 بلا أيّ طلبِ شبكة.
+// استعمال: `node scripts/mk-show-smoke.mjs show --print-config`.
+if (process.argv.includes('--print-config')) {
+  console.log(`target        = ${target}`);
+  console.log(`tree          = ${TREE}`);
+  console.log(`api_port      = ${API_PORT}`);
+  console.log(`studio_port   = ${STUDIO_PORT}`);
+  console.log(`studio_url    = ${STUDIO_URL}`);
+  console.log(`owner_email   = ${OWNER_EMAIL}`);
+  console.log(`pw_file       = ${PW_FILE}`);
+  console.log(`api_base      = ${API_BASE}`);
+  process.exit(0);
+}
 
 log(`▶ mk-show-smoke · target=${target} · api=${API_BASE} · studio=${STUDIO_URL}`);
 

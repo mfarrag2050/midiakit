@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-10-05 · **HEAD:** `d2c171c` (`fix/mk-535-vertical-fit`)
+> **تاريخ التوليد:** 2026-10-06 · **HEAD:** `af6b5ed` (`fix/mk-536-smoke-email`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -56,7 +56,7 @@ description: |
 
 ### الفحوص الآلية — من main (`package.json`)
 
-- **main (98):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:builtin-fonts-license` · `check:builtin-fonts-license:self-test` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dark-safe-overlays` · `check:dark-safe-overlays:self-test` · `check:dashboard-not-published` · `check:dev-doors-guard` · `check:dev-doors-guard:self-test` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:error-code-mirror` · `check:fetch-states` · `check:fetch-states:self-test` · `check:isolation-completeness` · `check:jsx-i18n-keys` · `check:jsx-i18n-keys:self-test` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:migration-timestamp-collision` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:renderer-error-codes` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:snapshots-not-all-copies` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:test-wiring` · `check:typecheck` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `check:user-facing-devlang` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:headline-rendered` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:vertical-fit` · `verify:workflows`
+- **main (99):** `check:auth-coverage` · `check:brand-editor-labels` · `check:brand-editor-labels:self-test` · `check:brand-kit-patch-coverage` · `check:builtin-fonts-license` · `check:builtin-fonts-license:self-test` · `check:ci-no-env-file` · `check:control-plane-policies` · `check:dark-safe-overlays` · `check:dark-safe-overlays:self-test` · `check:dashboard-not-published` · `check:dev-doors-guard` · `check:dev-doors-guard:self-test` · `check:digit-style-isolation` · `check:doc-paths` · `check:docker-context` · `check:docs-bundle-fresh` · `check:engine-purity` · `check:error-code-coverage` · `check:error-code-mirror` · `check:fetch-states` · `check:fetch-states:self-test` · `check:isolation-completeness` · `check:jsx-i18n-keys` · `check:jsx-i18n-keys:self-test` · `check:lessons-sequence` · `check:locale-parity` · `check:logical-props` · `check:migration-timestamp-collision` · `check:no-ai-provider-outside-ai` · `check:no-brand-leak` · `check:no-brand-url-fetch` · `check:no-git-internals` · `check:no-paddle-outside-payments` · `check:numerals-consistency` · `check:observe-import-scope` · `check:plan-sync` · `check:renderer-error-codes` · `check:response-envelope` · `check:script-paths` · `check:skill-fresh` · `check:snapshots-not-all-copies` · `check:template-drift` · `check:template-sync` · `check:templates-render-ready` · `check:test-wiring` · `check:typecheck` · `check:ui-enum-leaks` · `check:ui-enum-leaks:self-test` · `check:ui-keys` · `check:user-facing-devlang` · `verify:a18-5` · `verify:a18-6` · `verify:a21` · `verify:a22` · `verify:a23` · `verify:a24` · `verify:a25` · `verify:a28` · `verify:alerts-wire` · `verify:all` · `verify:assets` · `verify:audio-gate` · `verify:auth` · `verify:bk-numerals` · `verify:brand-kits` · `verify:breaking-video` · `verify:caption-kashida-stability` · `verify:control-plane` · `verify:debt1` · `verify:headline-rendered` · `verify:image-fixture` · `verify:image-layer` · `verify:limits1` · `verify:media-track-gate` · `verify:multilang` · `verify:perf` · `verify:plan-all-templates` · `verify:plan-values` · `verify:plans` · `verify:projects` · `verify:render-video-all-templates` · `verify:renders` · `verify:revisions` · `verify:smart-crop` · `verify:smoke-config` · `verify:snapshot` · `verify:svg` · `verify:tashkil-collision` · `verify:templates` · `verify:tenant` · `verify:tenant-isolation` · `verify:text-contrast` · `verify:text-tracks-gate` · `verify:transitions-gate` · `verify:tts` · `verify:users` · `verify:vertical-fit` · `verify:workflows`
 
 ### الدروس — من main (`docs/LESSONS.md`)
 
@@ -89,24 +89,30 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `feat/api` | `54a5951` | 0 | 9 | 653 |
-| `feat/ci` | `ecc2673` | 0 | 110 | 552 |
-| `feat/reels` | `bd064d2` | 0 | 67 | 595 |
-| `feat/studio` | `4e16731` | 0 | 31 | 631 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 48 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 46 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 44 | 618 |
-| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 21 | 641 |
-| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 19 | 643 |
-| `fix/mk-535-vertical-fit` | `d2c171c` | 2 | 0 | 664 |
-| `merge/521` | `59e4bfa` | 0 | 50 | 612 |
-| `origin/aa-internal` | `ee178ca` | 0 | 661 | 1 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 44 | 619 |
-| `origin/feat/api` | `54a5951` | 0 | 9 | 653 |
-| `origin/feat/ci` | `ecc2673` | 0 | 110 | 552 |
-| `origin/feat/reels` | `bd064d2` | 0 | 67 | 595 |
-| `origin/feat/studio` | `4e16731` | 0 | 31 | 631 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 33 | 633 |
+| `cx/601-reel-export` | `32da924` | 3 | 2 | 668 |
+| `cx/603-dev-restore` | `a844a58` | 0 | 2 | 665 |
+| `feat/api` | `54a5951` | 0 | 14 | 653 |
+| `feat/ci` | `ecc2673` | 0 | 115 | 552 |
+| `feat/reels` | `bd064d2` | 0 | 72 | 595 |
+| `feat/studio` | `4e16731` | 0 | 36 | 631 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 53 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 51 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 49 | 618 |
+| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 26 | 641 |
+| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 24 | 643 |
+| `fix/mk-536-smoke-email` | `af6b5ed` | 3 | 2 | 668 |
+| `merge/521` | `59e4bfa` | 0 | 55 | 612 |
+| `origin/aa-internal` | `ee178ca` | 0 | 666 | 1 |
+| `origin/cx/600-project-download` | `0dac94e` | 1 | 2 | 666 |
+| `origin/cx/601-reel-export` | `0b20b3e` | 2 | 2 | 667 |
+| `origin/cx/602-gate-cwd` | `e88ce34` | 1 | 2 | 666 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 49 | 619 |
+| `origin/feat/api` | `54a5951` | 0 | 14 | 653 |
+| `origin/feat/ci` | `ecc2673` | 0 | 115 | 552 |
+| `origin/feat/reels` | `bd064d2` | 0 | 72 | 595 |
+| `origin/feat/studio` | `4e16731` | 0 | 36 | 631 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 38 | 633 |
+| `origin/merge/mk-536` | `9989fa2` | 2 | 2 | 667 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 

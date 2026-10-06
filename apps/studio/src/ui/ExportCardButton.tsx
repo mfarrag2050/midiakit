@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { Alert, Button } from '@pf-mediakit/ui';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, projects, renders } from '@/src/api';
+import { downloadBlob } from '../lib/download-blob';
 
 // ExportCardButton — نفس مكوّن `150-EXPORT-BUTTON` مغلَّف كي يُعاد
 // استعماله في محرّر الهويّة والمؤلّف (`160-BREAKING-COMPOSER`) بلا
@@ -203,15 +204,8 @@ export function ExportCardButton({
         }
         blob = await resp.blob();
       }
-      const objectUrl = URL.createObjectURL(blob);
       const filename = `${brandKitName}-${new Date().toISOString().slice(0, 10)}.png`;
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
+      downloadBlob(blob, filename);
       // 6. النجاح بعد وصول البلوب.
       setSuccessKey('pages.brandKits.editor.export.success');
       setStepKey(null);

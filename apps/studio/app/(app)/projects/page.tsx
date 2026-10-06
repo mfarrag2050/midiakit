@@ -21,6 +21,7 @@ import type { ProjectSummary } from '@/src/api/endpoints/projects';
 import { REEL_TEMPLATE_ENABLED } from '@/src/config/features';
 import { formatDateTime } from '@/src/format/datetime';
 import { useDigitStyle } from '@/src/format/settings';
+import { ProjectLastExport } from '@/src/ui/ProjectLastExport';
 
 // S12 — قائمة المشاريع + إنشاء + حذف. المحرّر في /projects/[id].
 // **العقد المرجعي:** docs/16 §7.1 §7.3 §7.5 · §11.6 (currentState).
@@ -240,6 +241,11 @@ export default function ProjectsPage(): JSX.Element {
           {formatDateTime(r.updatedAt, { style: digitStyle, locale })}
         </span>
       ),
+    },
+    {
+      key: 'lastExport',
+      headerKey: 'pages.projects.lastExport',
+      render: (r) => <ProjectLastExport projectId={r.id} />,
     },
     {
       key: 'actions',

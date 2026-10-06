@@ -47,6 +47,7 @@ import type { AssetListItem } from '@/src/api/endpoints/assets';
 import { RenderFailureAlert } from '@/src/ui/RenderFailureAlert';
 import { RenderPendingAlert } from '@/src/ui/RenderPendingAlert';
 import { RenderEtaLine } from '@/src/ui/RenderEtaLine';
+import { RenderDownload } from '@/src/ui/RenderDownload';
 
 // S12 — محرّر المشروع. حقول المحتوى مُشتقّة من template.definition.fields.
 // PATCH يمرّر updatedAt كـIf-Match (§12). 409 STALE_UPDATE يعيد التحميل
@@ -699,7 +700,7 @@ export default function ProjectEditorPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/projects" className="text-xs text-fg-subtle hover:text-fg">
             ← {t('pages.projects.editor.back')}
@@ -734,7 +735,7 @@ export default function ProjectEditorPage(): JSX.Element {
         className="flex flex-wrap items-center gap-4 rounded border border-border bg-surface-2 p-3 text-xs"
         data-testid="workspace-toolbar"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-fg-subtle">
             {t('pages.projects.workspace.sizeLabel')}:
           </span>
@@ -769,7 +770,7 @@ export default function ProjectEditorPage(): JSX.Element {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-fg-subtle">
             {t('pages.projects.workspace.formatLabel')}:
           </span>
@@ -794,7 +795,7 @@ export default function ProjectEditorPage(): JSX.Element {
             );
           })}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-fg-subtle">
             {t('pages.projects.workspace.contentLocaleLabel')}:
           </span>
@@ -1171,15 +1172,8 @@ export default function ProjectEditorPage(): JSX.Element {
                 <RenderEtaLine renderId={renderRow.id} status={renderRow.status} />
               </>
             )}
-            {renderRow?.status === 'succeeded' && renderRow.output_url && (
-              <div className="text-xs text-fg-muted">
-                <a
-                  href={renderRow.output_url}
-                  className="text-accent hover:underline"
-                >
-                  {t('pages.projects.editor.renderReady')}
-                </a>
-              </div>
+            {renderRow?.status === 'succeeded' && (
+              <RenderDownload key={renderRow.id} row={renderRow} />
             )}
             {renderRow?.status === 'failed' && (
               <RenderFailureAlert row={renderRow} />
