@@ -1,5 +1,6 @@
 // /v1/renders — docs/16 §8. brand_snapshot + template_snapshot ذرّيان.
 
+import type { Timeline } from '@pf-mediakit/shared';
 import { request, requestPage, type Page } from '../client';
 import { record as recordEta } from '../renderEtaStore';
 
@@ -55,6 +56,7 @@ export function create(
     readonly size: 'x' | 'instagram' | 'reel' | 'video';
     readonly format: 'png' | 'mp4';
     readonly priority?: 'urgent' | 'normal';
+    readonly timeline?: Timeline;
   },
   idempotencyKey?: string
 ): Promise<RenderCreated> {
