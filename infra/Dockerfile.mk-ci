@@ -1,6 +1,12 @@
 FROM node:20.18.1-bookworm-slim
 WORKDIR /work
-RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 > /dev/null 2>&1
+RUN apt-get update -qq > /dev/null 2>&1 && apt-get install -qq -y --no-install-recommends git ffmpeg python3 ca-certificates > /dev/null 2>&1
+# Match puppeteer-core 23.11.1; newer CDP versions are not its tested pairing.
+# Debian provides the matching arm64 build (Chrome for Testing is x86 Linux).
+RUN echo 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20241222T101506Z bookworm-security main' > /etc/apt/sources.list.d/ci-chromium.list \
+    && apt-get update -qq \
+    && apt-get install -qq -y --no-install-recommends chromium=131.0.6778.204-1~deb12u1 chromium-common=131.0.6778.204-1~deb12u1
+ENV CHROME_PATH=/usr/bin/chromium
 RUN corepack enable > /dev/null 2>&1 && corepack prepare pnpm@9.15.4 --activate > /dev/null 2>&1
 COPY . /work/
 RUN pnpm install --frozen-lockfile

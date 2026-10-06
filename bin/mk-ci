@@ -281,6 +281,7 @@ cp "${MK_CI_IGNORE_CI}" "${MK_CI_IGNORE_ROOT}"
 docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${ROOT}"
 restore_ignore
 
+docker image inspect pf-mediakit-ci-image --format 'CI image size (bytes): {{.Size}}'
 echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (الصورة المبنيّة)"
 echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · بدون ربط المضيف (عزل كامل)"
 echo ""
@@ -318,7 +319,7 @@ docker run --rm \
     echo "[mk-ci · حاوية] pnpm db:migrate …"
     pnpm db:migrate 2>&1 | tail -20
     echo "[mk-ci · حاوية] pnpm test …"
-    pnpm test
+    bash infra/ci-studio.sh pnpm test
   '
 MK_CI_EXIT=$?
 
