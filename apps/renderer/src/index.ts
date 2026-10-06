@@ -148,6 +148,16 @@ function rgbaBufferOf(canvas: Canvas): Buffer {
 }
 
 export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoResult> {
+  // Optional content-backed badges have no label when their field is absent or blank.
+  // Filter before both planning and adaptation so layer indices stay aligned.
+  const template: Template = {
+    ...args.template,
+    layers: args.template.layers.filter(layer => {
+      if (layer.type !== 'badge' || layer.field === undefined) return true;
+      const label = args.content[layer.field];
+      return label != null && (typeof label !== 'string' || label.trim().length > 0);
+    }),
+  };
   const fps = args.timeline?.fps ?? args.fps ?? 30;
 
   const canvas = new Canvas(args.size.w, args.size.h);
@@ -160,21 +170,29 @@ export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoRes
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ctx: ctx as any,
     size: args.size,
-    template: args.template,
+    template,
     brand: args.brand,
     content: args.content,
     fps,
   });
   const headlineLineCount = plan.headline?.linesJustified.length ?? 1;
 
-  // Preserve the editor's timeline; legacy callers still derive it from the template.
-  const timeline = args.timeline ?? templateToTimeline({
-    template: args.template,
+  const templateTimeline = templateToTimeline({
+    template,
     brand: args.brand,
     content: args.content,
     headlineLineCount,
     fps,
   });
+  // resolveAt sorts by index, so appending alone would interleave the layers.
+  const timeline: Timeline = args.timeline ? {
+    ...args.timeline,
+    tracks: [
+      ...templateTimeline.tracks,
+      ...args.timeline.tracks.filter(track => track.type === 'text')
+        .sort((a, b) => a.index - b.index),
+    ].map((track, index) => ({ ...track, index })),
+  } : templateTimeline;
   const frameCount = Math.ceil(timeline.duration * fps);
 
   const ffmpeg: ChildProcessWithoutNullStreams = spawn(
@@ -197,7 +215,7 @@ drawTimelineAt({
         ctx: ctx as any,
         size: args.size,
         timeline,
-        template: args.template,
+        template,
         brand: args.brand,
         content: args.content,
         ...(plan.headline && { headlinePrep: plan.headline }),
