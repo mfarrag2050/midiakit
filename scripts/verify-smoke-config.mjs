@@ -43,9 +43,12 @@ function readDryConfig(target) {
 
 /** ينفّذ smoke --print-config ويعيد `{api_port, studio_port, owner_email, …}`. */
 function readSmokeConfig(target, env = {}) {
+  // mk/536: نمرِّر MK_SMOKE_TREE=ROOT · في CI لا يوجد worktree pf-mediakit-show،
+  // وجذر المستودع يحمل bin/mk-show نفسه. محلّيّاً أيضاً لا ضرر — يقرأ القيَم
+  // من المصدر الواحد (bin/mk-show في هذا الـworktree).
   const r = spawnSync('node', [SMOKE, target, '--print-config'], {
     encoding: 'utf8',
-    env: { ...process.env, ...env },
+    env: { ...process.env, MK_SMOKE_TREE: ROOT, ...env },
   });
   if (r.status !== 0) throw new Error(`mk-show-smoke ${target} --print-config فشل: ${r.stderr || r.stdout}`);
   const kv = {};
