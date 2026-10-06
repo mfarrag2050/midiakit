@@ -24,6 +24,8 @@
 
 set -euo pipefail
 
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/../scripts/lib/show-ci.sh"
+
 # ═════ 403ب · TWO-TARGET SELECTOR — أداةٌ واحدة · طقمان · لا افتراضَ صامت ═════
 # الاستعمال: bin/mk-show <target> <command> [args]
 # الأهداف: show (الحيّ · 19070/19071) · shownext (خلفٌ · 19086/19087)
@@ -846,37 +848,12 @@ cmd_gate() {
 
   # ── فحص 1/4 · CI السلسلة كاملة خضراء على SHA بالذات ──────────────────
   echo "[gate] 1/4 · CI check-runs على $sha_short …"
-  local nonpass runs_ok
-  runs_ok=1
-  # جرّب gh api. عند فشل الشبكة/الوصول نُبلغ صراحة، لا نعطي pass صامتاً.
-  if ! nonpass="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" \
-        --jq '[.check_runs[] | select(.conclusion != "success" and .conclusion != "skipped") | {name, conclusion}]' 2>/dev/null)"; then
-    reasons+=("1. تعذّر الاستعلام عن CI (gh api فشل — تحقّق من الاتّصال + المصادقة)")
-    runs_ok=0
-  fi
-  if [[ "$runs_ok" == "1" ]]; then
-    local nonpass_count
-    nonpass_count="$(printf '%s' "$nonpass" | jq 'length' 2>/dev/null || echo -1)"
-    if [[ "$nonpass_count" == "0" ]]; then
-      # تحقّق إضافيّ: هل يوجد check-run أصلاً على هذا SHA؟ صفر check-runs
-      # يعني CI لم يعمل عليه — لا يجوز pass صامت.
-      local total
-      total="$(gh api "repos/{owner}/{repo}/commits/$sha/check-runs" --jq '.check_runs | length' 2>/dev/null || echo 0)"
-      if [[ "$total" == "0" ]]; then
-        reasons+=("1. لا check-runs على $sha_short — CI لم يعمل على هذا الالتزام")
-        echo "[gate]   ✗ لا check-runs."
-      else
-        echo "[gate]   ✓ $total check-run كلّها نجحت."
-      fi
-    elif [[ "$nonpass_count" == "-1" ]]; then
-      reasons+=("1. تعذّر تحليل استجابة check-runs (jq فشل)")
-      echo "[gate]   ✗ فشل تحليل استجابة check-runs."
-    else
-      local names
-      names="$(printf '%s' "$nonpass" | jq -r '.[] | "\(.name) [\(.conclusion // "pending")]"' 2>/dev/null | head -3 | tr '\n' '؛' | sed 's/؛$//')"
-      reasons+=("1. CI: $nonpass_count check-run لم تنجح — $names")
-      echo "[gate]   ✗ $nonpass_count check-run لم تنجح: $names"
-    fi
+  local ci_result
+  if ci_result="$(show_ci_check_runs "$DEV_ROOT" "$sha")"; then
+    echo "[gate]   ✓ $ci_result"
+  else
+    reasons+=("1. $ci_result")
+    echo "[gate]   ✗ $ci_result"
   fi
 
   # ── فحص 2/4 · SHA على origin/main (لا فرع جانبيّ) ─────────────────────
