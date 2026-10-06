@@ -10,6 +10,7 @@
 import { Queue, type ConnectionOptions } from 'bullmq';
 import IORedis, { type Redis } from 'ioredis';
 import { config } from '../config.js';
+import type { Timeline } from '@pf-mediakit/shared';
 
 // ── اتصال Redis ─────────────────────────────────────
 let sharedConn: Redis | null = null;
@@ -70,6 +71,7 @@ export interface RenderJobPayload {
   brandSnapshot: Record<string, unknown>; // frozen at POST
   templateSnapshot: Record<string, unknown>;
   content: Record<string, unknown>;
+  timeline?: Timeline;
 }
 
 // ── الحصة العادلة ───────────────────────────────────

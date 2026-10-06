@@ -11,6 +11,7 @@
     "./queues": "./src/queues.ts",
     "./api-worker": "./src/api-worker.ts",
     "./validate": "./src/validate.ts",
+    "./timeline-output": "./src/timeline-output.ts",
     "./observe": "./src/observe.ts",
     "./alerts": "./src/alerts.ts"
   },

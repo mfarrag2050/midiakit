@@ -14,7 +14,7 @@
 //     يرمي إن فشل FFmpeg (exit != 0) أو إن انقطع الأنبوب.
 
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import type { BrandKit } from '@pf-mediakit/shared';
+import type { BrandKit, Timeline } from '@pf-mediakit/shared';
 import type { Template } from '@pf-mediakit/templates';
 import {
   buildRenderPlan,
@@ -41,6 +41,7 @@ export interface RenderAssetsInput {
 }
 
 export interface RenderVideoArgs {
+  readonly timeline?: Timeline;
   readonly template: Template;
   readonly brand: BrandKit;
   readonly content: Readonly<Record<string, unknown>>;
@@ -147,7 +148,7 @@ function rgbaBufferOf(canvas: Canvas): Buffer {
 }
 
 export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoResult> {
-  const fps = args.fps ?? 30;
+  const fps = args.timeline?.fps ?? args.fps ?? 30;
 
   const canvas = new Canvas(args.size.w, args.size.h);
   const ctx = canvas.getContext('2d');
@@ -166,8 +167,8 @@ export async function renderVideo(args: RenderVideoArgs): Promise<RenderVideoRes
   });
   const headlineLineCount = plan.headline?.linesJustified.length ?? 1;
 
-  // Timeline v2 من القالب الموروث.
-  const timeline = templateToTimeline({
+  // Preserve the editor's timeline; legacy callers still derive it from the template.
+  const timeline = args.timeline ?? templateToTimeline({
     template: args.template,
     brand: args.brand,
     content: args.content,
