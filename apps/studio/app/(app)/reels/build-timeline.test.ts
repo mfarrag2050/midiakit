@@ -144,8 +144,9 @@ it('disables MP4 export without a project or clips and submits the edited timeli
 
     rejectOutput = false;
     delayOutput = true;
+    const responsePromise = page.waitForResponse((response) => response.url().endsWith('/render-test-4'));
     await page.click('[data-testid="reels-export"]');
-    await page.waitForResponse((response) => response.url().endsWith('/render-test-4'));
+    await responsePromise;
     await vi.waitFor(() => expect(releaseOutput).toBeDefined());
     delayOutput = false;
     await page.click('[data-testid="reels-export"]');
