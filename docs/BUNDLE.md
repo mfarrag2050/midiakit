@@ -9,7 +9,7 @@
 > السكيل معاً — رفع أحدهما دون الآخر يترك Opus بوثائق قديمة.
 >
 > **تاريخ التوليد:** 2026-10-06
-> **HEAD (main):** `24d48c0`
+> **HEAD (main):** `af6b5ed`
 > **HEAD (origin/feat/api):** `54a5951`
 > **HEAD (origin/feat/studio):** `4e16731`
 > **HEAD (origin/feat/reels):** `bd064d2`
@@ -44,7 +44,7 @@
 | `docs/PROJECT_INSTRUCTIONS.md` | 49 | `587836b75f5e` | local |
 | `docs/RUNBOOK.md` | 182 | `eb0a632bede2` | local |
 | `docs/SHOWROOM.md` | 167 | `ee2ed8e56bdc` | local |
-| `docs/SKILL-mediakit.md` | 416 | `b0f1c1e107b0` | local |
+| `docs/SKILL-mediakit.md` | 417 | `3f24d94b6ebb` | local |
 | `PHASES.md` | 1641 | `da3f0214844b` | local (main) |
 | `CLAUDE.md` | 241 | `0f6912f54519` | local (main) |
 | `PHASES-api.md` | 964 | `75ff5b63d310` | git show origin/feat/api |
@@ -11339,7 +11339,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-10-06 · **HEAD:** `24d48c0` (`fix/mk-536-smoke-email`)
+> **تاريخ التوليد:** 2026-10-06 · **HEAD:** `af6b5ed` (`fix/mk-536-smoke-email`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -11401,7 +11401,7 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `cx/601-reel-export` | `0b20b3e` | 2 | 2 | 667 |
+| `cx/601-reel-export` | `32da924` | 3 | 2 | 668 |
 | `cx/603-dev-restore` | `a844a58` | 0 | 2 | 665 |
 | `feat/api` | `54a5951` | 0 | 14 | 653 |
 | `feat/ci` | `ecc2673` | 0 | 115 | 552 |
@@ -11412,7 +11412,7 @@ description: |
 | `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 49 | 618 |
 | `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 26 | 641 |
 | `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 24 | 643 |
-| `fix/mk-536-smoke-email` | `24d48c0` | 1 | 2 | 666 |
+| `fix/mk-536-smoke-email` | `af6b5ed` | 3 | 2 | 668 |
 | `merge/521` | `59e4bfa` | 0 | 55 | 612 |
 | `origin/aa-internal` | `ee178ca` | 0 | 666 | 1 |
 | `origin/cx/600-project-download` | `0dac94e` | 1 | 2 | 666 |
@@ -11424,6 +11424,7 @@ description: |
 | `origin/feat/reels` | `bd064d2` | 0 | 72 | 595 |
 | `origin/feat/studio` | `4e16731` | 0 | 36 | 631 |
 | `origin/merge/mk-486c` | `348e63e` | 4 | 38 | 633 |
+| `origin/merge/mk-536` | `9989fa2` | 2 | 2 | 667 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
