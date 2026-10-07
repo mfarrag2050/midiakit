@@ -23,6 +23,10 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3
 import pg from 'pg';
 import { Canvas, FontLibrary } from 'skia-canvas';
 import { deriveFontIdentity, applyRuntimeFontIdentity } from './lib/font-identity.js';
+import {
+  registerBuiltinFonts,
+  assertBuiltinFontRegistered,
+} from './lib/builtin-font-registry.js';
 import { mkdirSync, writeFileSync, existsSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -54,6 +58,12 @@ import { getTempSpaceLimitBytes } from './alerts.js';
 const execFileAsync = promisify(execFile);
 
 const { Pool } = pg;
+
+// 610a · تسجيل الخطوط المدمَجة قبل أيّ رندر.
+// بدونها: `applyRuntimeFontIdentity` يحقن `mk-builtin-<slug>` في brand
+// لكنّ `FontLibrary` لا يعرف الاسم ⇒ skia-canvas يسقط صامتاً إلى خطّ
+// النظام. راجع `lib/builtin-font-registry.ts` للشرح الكامل.
+registerBuiltinFonts();
 
 // ── إعدادات ─────────────────────────────────────────
 const DATABASE_URL_APP = process.env['DATABASE_URL_APP'];
@@ -340,6 +350,16 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     const { resolveBrand } = await import('@pf-mediakit/engine');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const brand = applyRuntimeFontIdentity(resolveBrand(brandSnapshot as any));
+
+    // 610a · لا سقوط صامت — إن طلب brand عائلةَ `mk-builtin-*` غير مسجَّلة
+    // (مثلاً عقد جديد يحمل خطّاً مدمجاً لم يُضَف لمصدر الحقيقة)، نرمي بصوت.
+    // الخطوط المرفوعة (`mk-<assetId>`) تُسجَّل أدناه حين تنزل من S3.
+    assertBuiltinFontRegistered(brand.fonts.primary.family);
+    if (brand.fonts.byLocale) {
+      for (const fam of Object.values(brand.fonts.byLocale)) {
+        if (fam?.family) assertBuiltinFontRegistered(fam.family);
+      }
+    }
 
     // 4. size mapping
     const dims = SIZE_MAP[size];
