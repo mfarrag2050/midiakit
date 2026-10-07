@@ -30,6 +30,8 @@ const SCAN_FILES = [
   'apps/renderer/src/api-worker.ts',
   'apps/renderer/src/video-gate.ts',
   'apps/renderer/src/ink-gate.ts',
+  // 610a: الـregistry يرمي FONT_NOT_REGISTERED و BUILTIN_FONT_FILE_MISSING
+  'apps/renderer/src/lib/builtin-font-registry.ts',
 ];
 
 // بادئاتٌ نستخرجها من الأنماط: `throw new Error(\`?CODE:` أو `throw new UnrecoverableError(\`?CODE:`.

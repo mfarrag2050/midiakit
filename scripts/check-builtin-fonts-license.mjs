@@ -21,12 +21,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
+// 610a: المصدر انتقل إلى packages/shared ليستورده العامل أيضاً.
 const SRC_PATH = join(
   ROOT,
-  'apps',
-  'studio',
+  'packages',
+  'shared',
   'src',
-  'lib',
   'builtin-fonts.ts'
 );
 const FONTS_DIR = join(ROOT, 'assets', 'fonts');

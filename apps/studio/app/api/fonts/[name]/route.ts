@@ -17,6 +17,22 @@ const ALLOWED = new Set([
   'Almarai-Regular.ttf',
   'Almarai-Light.ttf',
   'Almarai-ExtraBold.ttf',
+  // 610 §1 · 2026-10-07 — الخمسة الجدد (OFL-1.1، instanced من المتغيّرات)
+  'NotoSansArabic-Light.ttf',
+  'NotoSansArabic-Regular.ttf',
+  'NotoSansArabic-Bold.ttf',
+  'Cairo-Light.ttf',
+  'Cairo-Regular.ttf',
+  'Cairo-Bold.ttf',
+  'Tajawal-Light.ttf',
+  'Tajawal-Regular.ttf',
+  'Tajawal-Bold.ttf',
+  'NotoNaskhArabic-Light.ttf',
+  'NotoNaskhArabic-Regular.ttf',
+  'NotoNaskhArabic-Bold.ttf',
+  'NotoKufiArabic-Light.ttf',
+  'NotoKufiArabic-Regular.ttf',
+  'NotoKufiArabic-Bold.ttf',
 ]);
 
 export async function GET(

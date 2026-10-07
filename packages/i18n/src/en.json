@@ -557,7 +557,10 @@
           "builtinGroup": "Bundled fonts",
           "uploadedGroup": "Uploaded fonts",
           "uploadOwn": "Upload my own font…",
-          "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name."
+          "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name.",
+          "uploadingLabel": "Uploading font…",
+          "uploadSuccess": "Uploaded · font selected",
+          "uploadAcceptHint": "ttf · otf · woff2"
         },
         "font": {
           "weightsAvailable": "Weights available",
@@ -1021,6 +1024,8 @@
     "INVALID_SIZE": "Requested size is not supported — pick one from the list.",
     "FONT_ASSET_MISSING": "Brand font isn't uploaded — re-upload from brand settings.",
     "FONT_ASSET_FETCH_FAILED": "Could not load the brand font — try again, and contact support if it persists.",
+    "FONT_NOT_REGISTERED": "The selected brand font isn't recognised by the renderer — pick it again or re-upload.",
+    "BUILTIN_FONT_FILE_MISSING": "A core font file is missing on the server — please contact support.",
     "IMAGE_ASSET_MISSING": "The image used isn't available — re-upload it or pick another.",
     "IMAGE_ASSET_FETCH_FAILED": "Could not load the image — try again, and contact support if it persists.",
     "MP4_UNSUPPORTED_TEMPLATE": "This template cannot be exported as video — pick PNG or change the template.",

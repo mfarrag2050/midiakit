@@ -21,9 +21,9 @@ import { getStorage } from '../../storage/index.js';
 import { toAssetResponse, type DbAssetRow } from './shared/mapper.js';
 import {
   NotFound, UploadNotCompleted, LicenseAckMustBeTrue, InvalidSvgWithTextWarning,
-  InvalidFontMetrics,
+  InvalidFontFile, InvalidFontMetrics,
 } from '../../errors.js';
-import { extractFontMetrics } from '../../services/font-metrics.js';
+import { readFont } from '../../services/font-metrics.js';
 
 import { commitTx } from '../../plugins/tenant-tx.js';
 
@@ -91,15 +91,20 @@ const route: FastifyPluginAsync = async (fastify) => {
       }
     }
 
-    // 4-ب. FONT metrics — kind=font (90-FONT-METRICS-UPLOAD).
+    // 4-ب. FONT metrics — kind=font (90-FONT-METRICS-UPLOAD · 610 §3).
     // القياس يجري مرّة واحدة عند الرفع خارج مسار الرسم — لا يعبر إلى المحرك
-    // إلّا أعداد. غياب OS/2/hhea/head ⇒ رفض عند الباب (422 INVALID_FONT_METRICS).
+    // إلّا أعداد. التفريق:
+    //   parse_fail ⇒ INVALID_FONT_FILE (400) · الملفّ ليس TTF/OTF/WOFF2 صالحاً
+    //   missing    ⇒ INVALID_FONT_METRICS (422) · قُرئ لكن بلا OS/2/hhea/head
     let fontMetrics: { ascent: number; descent: number; unitsPerEm: number; source: string } | null = null;
     if (asset.kind === 'font') {
       const buf = await getStorage().getObjectBuffer(asset.storage_key);
-      const m = extractFontMetrics(buf);
-      if (!m) throw InvalidFontMetrics();
-      fontMetrics = m;
+      const r = readFont(buf);
+      if (!r.ok) {
+        if (r.reason === 'parse_fail') throw InvalidFontFile();
+        throw InvalidFontMetrics();
+      }
+      fontMetrics = r.metrics;
     }
 
     // 5. UPDATE finalize

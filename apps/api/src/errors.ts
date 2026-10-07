@@ -91,6 +91,8 @@ export type ErrorCode =
   | 'INVALID_SIZE'                                 // 370 · size غير معروف في SIZE_MAP
   | 'FONT_ASSET_MISSING'                           // 370 · أصل خط في content غير موجود في DB
   | 'FONT_ASSET_FETCH_FAILED'                      // 370 · فشل تحميل خط من S3
+  | 'FONT_NOT_REGISTERED'                          // 610a · brand يطلب mk-builtin-* غير مسجَّل في FontLibrary
+  | 'BUILTIN_FONT_FILE_MISSING'                    // 610a · ملفّ خطّ مدمج مفقود من assets/fonts عند الإقلاع
   | 'IMAGE_ASSET_MISSING'                          // 370 · أصل صورة في content غير موجود في DB
   | 'IMAGE_ASSET_FETCH_FAILED'                     // 370 · فشل تحميل صورة من S3
   | 'MP4_UNSUPPORTED_TEMPLATE'                     // 370 · قالب بلا video block · format=mp4
