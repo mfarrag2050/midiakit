@@ -27,7 +27,7 @@ description: |
 ## مولَّد تلقائياً — لا تحرِّر يدوياً
 
 > **مصدر كل سطر:** ملف أو أمر. يُنتَج بـ`pnpm skill:build`.
-> **تاريخ التوليد:** 2026-10-07 · **HEAD:** `5052d91` (`fix/mk-536-smoke-email`)
+> **تاريخ التوليد:** 2026-10-07 · **HEAD:** `9fddf8d` (`fix/mk-536-smoke-email`)
 >
 > **قراءة النطاق:** كل عنوان قسم يحمل نطاقه — «من main» يخصّ حالة
 > الفرع الرئيسي فقط · «على feat/api و feat/studio» بيانٌ عبر ريف
@@ -89,32 +89,35 @@ description: |
 
 | الفرع | HEAD | أمام main | خلف main | الإجمالي |
 |---|---|---:|---:|---:|
-| `cx/601-reel-export` | `bc9e9ef` | 0 | 9 | 673 |
-| `cx/603-dev-restore` | `a844a58` | 0 | 17 | 665 |
-| `feat/api` | `54a5951` | 0 | 29 | 653 |
-| `feat/ci` | `ecc2673` | 0 | 130 | 552 |
-| `feat/fonts-610` | `9135c7c` | 0 | 11 | 671 |
-| `feat/reels` | `bd064d2` | 0 | 87 | 595 |
-| `feat/reels-601m-i18n` | `5052d91` | 0 | 0 | 682 |
-| `feat/studio` | `4e16731` | 0 | 51 | 631 |
-| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 68 | 614 |
-| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 66 | 616 |
-| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 64 | 618 |
-| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 41 | 641 |
-| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 39 | 643 |
-| `fix/mk-536-smoke-email` | `5052d91` | 0 | 0 | 682 |
-| `merge/521` | `59e4bfa` | 0 | 70 | 612 |
-| `origin/aa-internal` | `ee178ca` | 0 | 681 | 1 |
-| `origin/cx/600-project-download` | `0dac94e` | 1 | 17 | 666 |
-| `origin/cx/601-reel-export` | `bc9e9ef` | 0 | 9 | 673 |
-| `origin/cx/602-gate-cwd` | `e88ce34` | 1 | 17 | 666 |
-| `origin/exp/486-threads1` | `1a9eb73` | 1 | 64 | 619 |
-| `origin/feat/api` | `54a5951` | 0 | 29 | 653 |
-| `origin/feat/ci` | `ecc2673` | 0 | 130 | 552 |
-| `origin/feat/reels` | `5052d91` | 0 | 0 | 682 |
-| `origin/feat/reels-601m-i18n` | `612e3ca` | 0 | 1 | 681 |
-| `origin/feat/studio` | `4e16731` | 0 | 51 | 631 |
-| `origin/merge/mk-486c` | `348e63e` | 4 | 53 | 633 |
+| `cx/601-reel-export` | `bc9e9ef` | 0 | 19 | 673 |
+| `cx/603-dev-restore` | `a844a58` | 0 | 27 | 665 |
+| `feat/api` | `54a5951` | 0 | 39 | 653 |
+| `feat/ci` | `ecc2673` | 0 | 140 | 552 |
+| `feat/fonts-610` | `47cadbf` | 0 | 3 | 689 |
+| `feat/reels` | `bd064d2` | 0 | 97 | 595 |
+| `feat/reels-601m-i18n` | `5052d91` | 0 | 10 | 682 |
+| `feat/studio` | `4e16731` | 0 | 61 | 631 |
+| `fix/611-deflake` | `4896201` | 0 | 1 | 691 |
+| `fix/mk-524b-headline-urgent-swap` | `4750a8c` | 0 | 78 | 614 |
+| `fix/mk-526-scripts-and-icon` | `cd42774` | 0 | 76 | 616 |
+| `fix/mk-528-ci-tolerance` | `d1365e8` | 0 | 74 | 618 |
+| `fix/mk-529p-perf-tolerance` | `4b2b228` | 0 | 51 | 641 |
+| `fix/mk-529q-perf-advisory` | `6b5208f` | 0 | 49 | 643 |
+| `fix/mk-536-smoke-email` | `9fddf8d` | 0 | 0 | 692 |
+| `merge/521` | `59e4bfa` | 0 | 80 | 612 |
+| `origin/aa-internal` | `ee178ca` | 0 | 691 | 1 |
+| `origin/cx/600-project-download` | `0dac94e` | 1 | 27 | 666 |
+| `origin/cx/601-reel-export` | `bc9e9ef` | 0 | 19 | 673 |
+| `origin/cx/602-gate-cwd` | `e88ce34` | 1 | 27 | 666 |
+| `origin/exp/486-threads1` | `1a9eb73` | 1 | 74 | 619 |
+| `origin/feat/api` | `54a5951` | 0 | 39 | 653 |
+| `origin/feat/ci` | `ecc2673` | 0 | 140 | 552 |
+| `origin/feat/fonts-610` | `47cadbf` | 0 | 3 | 689 |
+| `origin/feat/reels` | `5052d91` | 0 | 10 | 682 |
+| `origin/feat/reels-601m-i18n` | `612e3ca` | 0 | 11 | 681 |
+| `origin/feat/studio` | `4e16731` | 0 | 61 | 631 |
+| `origin/fix/611-deflake` | `4896201` | 0 | 1 | 691 |
+| `origin/merge/mk-486c` | `348e63e` | 4 | 63 | 633 |
 
 ### الفحوص الآلية — على feat/api و feat/studio (`git show <ref>:package.json`)
 
