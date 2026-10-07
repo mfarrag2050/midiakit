@@ -558,7 +558,10 @@
           "builtinGroup": "Bundled fonts",
           "uploadedGroup": "Uploaded fonts",
           "uploadOwn": "ارفع خطّي…",
-          "assetIdHint": "Bundled fonts جاهزة · uploaded fonts معرَّفة بـassetId، لا بالاسم."
+          "assetIdHint": "Bundled fonts جاهزة · uploaded fonts معرَّفة بـassetId، لا بالاسم.",
+          "uploadingLabel": "جارٍ uploading font…",
+          "uploadSuccess": "تمّ · font selected",
+          "uploadAcceptHint": "ttf · otf · woff2"
         },
         "font": {
           "weightsAvailable": "الأوزان المتاحة",

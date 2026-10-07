@@ -557,7 +557,10 @@
           "builtinGroup": "Bundled fonts",
           "uploadedGroup": "Uploaded fonts",
           "uploadOwn": "Upload my own font…",
-          "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name."
+          "assetIdHint": "Bundled fonts are ready to use · uploaded fonts are keyed by asset id, not by name.",
+          "uploadingLabel": "Uploading font…",
+          "uploadSuccess": "Uploaded · font selected",
+          "uploadAcceptHint": "ttf · otf · woff2"
         },
         "font": {
           "weightsAvailable": "Weights available",

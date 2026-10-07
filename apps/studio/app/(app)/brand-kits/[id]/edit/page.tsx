@@ -296,6 +296,10 @@ export default function BrandKitEditorPage(): JSX.Element {
     | { readonly kind: 'asset'; readonly id: string };
   const [draftFontChoice, setDraftFontChoice] = useState<FontChoice>({ kind: 'unset' });
   const [initialFontChoice, setInitialFontChoice] = useState<FontChoice>({ kind: 'unset' });
+  // 610 §3 · رفعُ خطّ مخصّص داخل المحرّر (بلا قفزةٍ إلى /assets).
+  // الحالتان مستقلّتان عن منطق الشعار — المستخدم قد يرفع الاثنين بالتوازي.
+  const [fontUploading, setFontUploading] = useState(false);
+  const [fontUploadErrorKey, setFontUploadErrorKey] = useState<string | null>(null);
   const router = useRouter();
   // §140/§150 مغلَّفان في `LiveCardPreview` و`ExportCardButton`
   // (§160 §١: مكوّن واحد لكلّ وظيفة). نبقي فقط `breakingTemplateId`
@@ -538,6 +542,77 @@ export default function BrandKitEditorPage(): JSX.Element {
       setDraftLogo(null);
     } finally {
       setLogoUploading(false);
+    }
+  }
+
+  // 610 §3 — رفعُ خطٍّ مخصّص inline.
+  //
+  // المسار: upload-url → PUT إلى presigned URL → finalize (مع licenseAck=true،
+  // إلزاميّ لـkind='font'). عند النجاح: نضيف الأصل إلى `availableFonts`
+  // ونختاره تلقائياً عبر `draftFontChoice`. المستخدم يضغط «حفظ» ليُثبِّت.
+  //
+  // الأخطاء المتوقَّعة من الخادم (بالعربيّة من `errors.*.json`):
+  //   • UNSUPPORTED_CONTENT_TYPE_FOR_KIND — ليس ttf/otf/woff2 (من upload-url)
+  //   • SIZE_TOO_LARGE                   — تجاوز سقف الخطّة (من uploader)
+  //   • INVALID_FONT_FILE                — ملفٌّ غير مقروء كخطّ (من finalize)
+  //   • INVALID_FONT_METRICS            — قُرِئ لكن بلا OS/2 (نادر لـTTF حديث)
+  //   • LICENSE_ACK_MUST_BE_TRUE        — لن يُرمى (نُرسل true دائماً هنا)
+  //
+  // لا validation عميل بـopentype.js: الـfont-metrics محصورةٌ في apps/api
+  // (packages/engine لا يستورد opentype — راجع رأس services/font-metrics.ts).
+  // الخادم يحكم · ونعرض خطأه بالعربيّة في مكان الزرّ.
+  async function handleFontFile(file: File): Promise<void> {
+    setFontUploadErrorKey(null);
+    const nameLower = file.name.toLowerCase();
+    // استدلال content-type من الامتداد إن غاب (بعض المتصفّحات لا تعرفه للخطوط).
+    const contentType =
+      file.type ||
+      (nameLower.endsWith('.ttf') ? 'font/ttf' :
+       nameLower.endsWith('.otf') ? 'font/otf' :
+       nameLower.endsWith('.woff2') ? 'font/woff2' :
+       nameLower.endsWith('.woff') ? 'font/woff' :
+       'application/octet-stream');
+    setFontUploading(true);
+    try {
+      const up = await assets.requestUploadUrl({
+        kind: 'font',
+        filename: file.name,
+        contentType,
+        sizeBytes: file.size,
+      });
+      // PUT إلى presigned URL. فشل الشبكة ⇒ ApiError مرمَّز من uploader؛
+      // في بيئة mock الـURL يبدأ بـmock:// فالـfetch المباشر يُجدي.
+      try {
+        await fetch(up.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': contentType } });
+      } catch { /* mock://: fetch يفشل بالتصميم · finalize يُثبّت الأصل */ }
+      // finalize: licenseAck=true إلزاميّ لـfont (راجع finalize.ts:66-71).
+      // الخادم يستخرج المتريكات هنا؛ إن فشل readFont ⇒ INVALID_FONT_FILE.
+      const asset = await assets.finalize(up.assetId, {
+        licenseAck: true,
+        meta: { label: file.name },
+      });
+      // أضف إلى القائمة واختره فوراً — بلا رحلة شبكة ثانية.
+      // `Asset` من finalize يحمل حقولاً إضافيّة · نُسقِطها لتطابق `AssetListItem`.
+      setAvailableFonts((prev) => {
+        if (prev.some((a) => a.id === asset.id)) return prev;
+        const listItem: AssetListItem = {
+          id: asset.id,
+          kind: asset.kind,
+          filename: asset.filename,
+          sizeBytes: asset.sizeBytes,
+          createdAt: asset.createdAt,
+          ...(asset.licenseAck !== undefined ? { licenseAck: asset.licenseAck } : {}),
+          ...(asset.meta !== undefined ? { meta: asset.meta } : {}),
+        };
+        return [listItem, ...prev];
+      });
+      setDraftFontChoice({ kind: 'asset', id: asset.id });
+    } catch (err) {
+      setFontUploadErrorKey(
+        err instanceof ApiError ? err.messageKey : 'errors.UPLOAD_FAILED'
+      );
+    } finally {
+      setFontUploading(false);
     }
   }
 
@@ -932,18 +1007,46 @@ export default function BrandKitEditorPage(): JSX.Element {
             </>
           )}
 
-          <div className="mt-4 flex items-center gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => router.push('/assets')}
-              disabled={saving}
-            >
+          {/* 610 §3 — رفعٌ inline داخل المحرّر (بلا قفزةٍ إلى /assets).
+             المسار: upload-url → PUT → finalize عبر `handleFontFile` أعلاه. */}
+          <div className="mt-4 space-y-2">
+            <label className="block text-xs text-fg-muted">
               {t('pages.brandKits.editor.fontPicker.uploadOwn')}
-            </Button>
-            <span className="text-xs text-fg-subtle">
-              {t('pages.brandKits.editor.fontPicker.assetIdHint')}
-            </span>
+              <span className="ms-2 text-fg-subtle" dir="ltr">
+                ({t('pages.brandKits.editor.fontPicker.uploadAcceptHint')})
+              </span>
+            </label>
+            <input
+              id="font-file-input"
+              type="file"
+              accept=".ttf,.otf,.woff2,font/ttf,font/otf,font/woff2"
+              disabled={fontUploading || saving}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleFontFile(f);
+                // أمسح قيمة الإدخال كي يُسمح باختيار نفس الملفّ ثانيةً بعد الخطأ.
+                e.target.value = '';
+              }}
+              className="block w-full text-xs text-fg-muted file:me-3 file:rounded file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:text-fg-inverse hover:file:bg-accent/90 disabled:opacity-50"
+              aria-label={t('pages.brandKits.editor.fontPicker.uploadOwn')}
+            />
+            {fontUploading && (
+              <p className="text-xs text-fg-muted">
+                {t('pages.brandKits.editor.fontPicker.uploadingLabel')}
+              </p>
+            )}
+            {fontUploadErrorKey && !fontUploading && (
+              <Alert kind="danger" titleKey={fontUploadErrorKey}>
+                <div className="mt-1 text-xs text-fg-muted">
+                  <span dir="ltr">field: font</span>
+                </div>
+              </Alert>
+            )}
+            {!fontUploading && !fontUploadErrorKey && (
+              <span className="text-xs text-fg-subtle">
+                {t('pages.brandKits.editor.fontPicker.assetIdHint')}
+              </span>
+            )}
           </div>
         </div>
         <div className="mt-3 space-y-1 border-t border-fg-subtle/10 pt-3">

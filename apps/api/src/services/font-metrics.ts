@@ -35,24 +35,40 @@ export interface ExtractedMetrics {
 }
 
 /**
- * يستخرج المتريكات من buffer خام (ttf/otf/woff/woff2). يعيد `null` إن كان
- * الملفّ غير مقروء أو يفتقد كلا مصدرَي المتريكات — لا يرمي، المستدعي يقرّر
- * سياسة الفشل (رفض HTTP بالأسفل).
+ * نتيجة محاولة قراءة الخطّ — تفرّق بين:
+ *   • parse_fail  — الملفّ غير مقروء (ليس TTF/OTF/WOFF2 صالحاً) ⇒ عميلٌ يرى INVALID_FONT_FILE.
+ *   • missing    — قُرئ لكنّه بلا OS/2/hhea/head ⇒ INVALID_FONT_METRICS.
+ *   • ok         — المتريكات متاحة.
+ */
+export type FontReadResult =
+  | { readonly ok: true; readonly metrics: ExtractedMetrics }
+  | { readonly ok: false; readonly reason: 'parse_fail' | 'missing' };
+
+/**
+ * يستخرج المتريكات من buffer خام (ttf/otf/woff/woff2). يعيد `null` للتوافق
+ * مع المستدعين القدامى (CLI measure-font). للمسار الجديد (finalize) استعمل
+ * `readFont(buf)` الذي يفرّق بين parse_fail و missing.
  */
 export function extractFontMetrics(buf: Buffer): ExtractedMetrics | null {
+  const r = readFont(buf);
+  return r.ok ? r.metrics : null;
+}
+
+/** قراءة الخطّ مع التمييز بين سبب الفشل. المصدر الحقيقيّ للمنطق. */
+export function readFont(buf: Buffer): FontReadResult {
   let font: opentype.Font;
   try {
     // opentype.parse يقبل ArrayBuffer فقط — نبني view دقيق من buffer
     font = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   } catch {
-    return null;
+    return { ok: false, reason: 'parse_fail' };
   }
 
   const os2 = font.tables['os2'] as { sTypoAscender?: number; sTypoDescender?: number } | undefined;
   const hhea = font.tables['hhea'] as { ascender?: number; descender?: number } | undefined;
   const head = font.tables['head'] as { unitsPerEm?: number } | undefined;
 
-  if (!head || typeof head.unitsPerEm !== 'number') return null;
+  if (!head || typeof head.unitsPerEm !== 'number') return { ok: false, reason: 'missing' };
 
   let ascent: number;
   let descent: number;
@@ -67,15 +83,15 @@ export function extractFontMetrics(buf: Buffer): ExtractedMetrics | null {
     descent = Math.abs(hhea.descender);
     source = 'hhea';
   } else {
-    return null;
+    return { ok: false, reason: 'missing' };
   }
 
   if (!Number.isFinite(ascent) || !Number.isFinite(descent) || !Number.isFinite(head.unitsPerEm)) {
-    return null;
+    return { ok: false, reason: 'missing' };
   }
   if (head.unitsPerEm <= 0 || ascent <= 0 || descent < 0) {
-    return null;
+    return { ok: false, reason: 'missing' };
   }
 
-  return { ascent, descent, unitsPerEm: head.unitsPerEm, source };
+  return { ok: true, metrics: { ascent, descent, unitsPerEm: head.unitsPerEm, source } };
 }

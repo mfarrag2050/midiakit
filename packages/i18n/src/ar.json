@@ -536,7 +536,10 @@
           "builtinGroup": "خطوط مدمَجة",
           "uploadedGroup": "خطوط مرفوعة",
           "uploadOwn": "ارفع خطّي…",
-          "assetIdHint": "المدمَجة جاهزة للاستعمال · المرفوعة معرَّفة بمعرِّف الأصل، لا بالاسم."
+          "assetIdHint": "المدمَجة جاهزة للاستعمال · المرفوعة معرَّفة بمعرِّف الأصل، لا بالاسم.",
+          "uploadingLabel": "جارٍ رفع الخطّ…",
+          "uploadSuccess": "تمّ الرفع · تمّ تحديد الخطّ",
+          "uploadAcceptHint": "ttf · otf · woff2"
         },
         "font": {
           "weightsAvailable": "الأوزان المتاحة",
