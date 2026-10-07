@@ -138,6 +138,10 @@ it('disables MP4 export without a project or clips and submits the edited timeli
 
     rejectOutput = true;
     await page.click('[data-testid="reels-export"]');
+    // 611: الانتظار على شرطٍ حتميّ — رابط التنزيل السابق (render-test-2) يُمسح
+    // عبر setOutputUrl(null) في exportMp4 قبل أوّل await. React قد لا يكون
+    // قد flushed قبل $() السريع ⇒ assertion يتعطّل بـstale element.
+    await page.waitForSelector('[data-testid="reels-export-download"]', { hidden: true });
     expect(await page.$('[data-testid="reels-export-download"]')).toBeNull();
     await page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE);
     expect(await page.evaluate(() => document.body.textContent)).not.toContain('RAW_OUTPUT_ERROR');
@@ -149,6 +153,12 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     await responsePromise;
     await vi.waitFor(() => expect(releaseOutput).toBeDefined());
     delayOutput = false;
+    // 611: `vi.waitFor(releaseOutput defined)` يُثبت أنّ طلبَ /output اعتُرِض،
+    // لكن ذلك يحدث بعد `setRenderRow(row)` مباشرةً · قبل أن تنعكس حالة
+    // succeeded في React (renderActive→false ⇒ canExport→true). النقرُ
+    // الفوريّ قد يصطدم بزرٍّ لم يُعَد تمكينه ⇒ onClick لا يفعل شيئاً ⇒
+    // waitForSelector التالي يُعلَّق إلى 30s. ننتظر الزرَّ ممكَّناً أوّلاً.
+    await page.waitForSelector('[data-testid="reels-export"]:not(:disabled)');
     await page.click('[data-testid="reels-export"]');
     await page.waitForSelector('[data-testid="reels-export-download"]');
     await releaseOutput!();
