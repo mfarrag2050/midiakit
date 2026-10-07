@@ -97,6 +97,149 @@ export const BUILTIN_FONTS: readonly BuiltinFont[] = [
       },
     },
   },
+  // 610 §1 — الخمسة الجديدة. المصدر: google/fonts @ 7085eb89.
+  // التنصيف للمتغيّرات تمّ بـ`fontTools.varLib.instancer` 4.66.1 (المسار
+  // في تقرير 610 — scripts/610-instance-fonts.py).
+  {
+    family: 'Noto Sans Arabic',
+    nameAr: 'نوتو سانس عربي',
+    license: 'OFL-1.1',
+    licenseFile: 'OFL-NotoSansArabic.txt',
+    sampleAr: 'الوكالة تُعلن — خبرٌ عاجلٌ من ميدان الحدث',
+    weights: {
+      light: {
+        file: 'NotoSansArabic-Light.ttf',
+        value: 300,
+        labelKey: 'pages.brandKits.editor.font.weight.light',
+        metrics: { ascent: 1374, descent: 738, unitsPerEm: 1000 },
+      },
+      regular: {
+        file: 'NotoSansArabic-Regular.ttf',
+        value: 400,
+        labelKey: 'pages.brandKits.editor.font.weight.regular',
+        metrics: { ascent: 1374, descent: 738, unitsPerEm: 1000 },
+      },
+      bold: {
+        file: 'NotoSansArabic-Bold.ttf',
+        value: 700,
+        labelKey: 'pages.brandKits.editor.font.weight.bold',
+        metrics: { ascent: 1374, descent: 738, unitsPerEm: 1000 },
+      },
+    },
+  },
+  {
+    family: 'Cairo',
+    nameAr: 'القاهرة',
+    license: 'OFL-1.1',
+    licenseFile: 'OFL-Cairo.txt',
+    sampleAr: 'الوكالة تُعلن — خبرٌ عاجلٌ من ميدان الحدث',
+    weights: {
+      light: {
+        file: 'Cairo-Light.ttf',
+        value: 300,
+        labelKey: 'pages.brandKits.editor.font.weight.light',
+        metrics: { ascent: 1303, descent: 571, unitsPerEm: 1000 },
+      },
+      regular: {
+        file: 'Cairo-Regular.ttf',
+        value: 400,
+        labelKey: 'pages.brandKits.editor.font.weight.regular',
+        metrics: { ascent: 1303, descent: 571, unitsPerEm: 1000 },
+      },
+      bold: {
+        file: 'Cairo-Bold.ttf',
+        value: 700,
+        labelKey: 'pages.brandKits.editor.font.weight.bold',
+        metrics: { ascent: 1303, descent: 571, unitsPerEm: 1000 },
+      },
+    },
+  },
+  {
+    family: 'Tajawal',
+    nameAr: 'تجوال',
+    license: 'OFL-1.1',
+    licenseFile: 'OFL-Tajawal.txt',
+    sampleAr: 'الوكالة تُعلن — خبرٌ عاجلٌ من ميدان الحدث',
+    weights: {
+      // Tajawal — ملفّات ثابتة أصلاً (ليست variable). المتريكات تختلف
+      // قليلاً بين الـLight وأخويه (BASELINE-A يحمل الحقل على مستوى الوزن).
+      light: {
+        file: 'Tajawal-Light.ttf',
+        value: 300,
+        labelKey: 'pages.brandKits.editor.font.weight.light',
+        metrics: { ascent: 645, descent: 355, unitsPerEm: 1000 },
+      },
+      regular: {
+        file: 'Tajawal-Regular.ttf',
+        value: 400,
+        labelKey: 'pages.brandKits.editor.font.weight.regular',
+        metrics: { ascent: 643, descent: 357, unitsPerEm: 1000 },
+      },
+      bold: {
+        file: 'Tajawal-Bold.ttf',
+        value: 700,
+        labelKey: 'pages.brandKits.editor.font.weight.bold',
+        metrics: { ascent: 643, descent: 357, unitsPerEm: 1000 },
+      },
+    },
+  },
+  {
+    family: 'Noto Naskh Arabic',
+    // ملاحظة صريحة (التذكرة §1): نطاق wght لـNotoNaskhArabic هو 400-700،
+    // لا 300. فـ`light` هنا نسخة من `regular` (wght=400) — ليستقرّ العقد
+    // على ثلاثة أوزان دائماً. المستخدم الذي يختار «خفيف» سيرى regular.
+    nameAr: 'نوتو نسخ عربي (خفيف ≡ عادي؛ نطاق المتغيّر 400–700)',
+    license: 'OFL-1.1',
+    licenseFile: 'OFL-NotoNaskhArabic.txt',
+    sampleAr: 'الوكالة تُعلن — خبرٌ عاجلٌ من ميدان الحدث',
+    weights: {
+      light: {
+        file: 'NotoNaskhArabic-Light.ttf',
+        value: 400, // = Regular; wght 400 أدنى في المتغيّر الأصل
+        labelKey: 'pages.brandKits.editor.font.weight.light',
+        metrics: { ascent: 1069, descent: 634, unitsPerEm: 1000 },
+      },
+      regular: {
+        file: 'NotoNaskhArabic-Regular.ttf',
+        value: 400,
+        labelKey: 'pages.brandKits.editor.font.weight.regular',
+        metrics: { ascent: 1069, descent: 634, unitsPerEm: 1000 },
+      },
+      bold: {
+        file: 'NotoNaskhArabic-Bold.ttf',
+        value: 700,
+        labelKey: 'pages.brandKits.editor.font.weight.bold',
+        metrics: { ascent: 1069, descent: 634, unitsPerEm: 1000 },
+      },
+    },
+  },
+  {
+    family: 'Noto Kufi Arabic',
+    nameAr: 'نوتو كوفي عربي',
+    license: 'OFL-1.1',
+    licenseFile: 'OFL-NotoKufiArabic.txt',
+    sampleAr: 'الوكالة تُعلن — خبرٌ عاجلٌ من ميدان الحدث',
+    weights: {
+      light: {
+        file: 'NotoKufiArabic-Light.ttf',
+        value: 300,
+        labelKey: 'pages.brandKits.editor.font.weight.light',
+        metrics: { ascent: 1282, descent: 615, unitsPerEm: 1000 },
+      },
+      regular: {
+        file: 'NotoKufiArabic-Regular.ttf',
+        value: 400,
+        labelKey: 'pages.brandKits.editor.font.weight.regular',
+        metrics: { ascent: 1282, descent: 615, unitsPerEm: 1000 },
+      },
+      bold: {
+        file: 'NotoKufiArabic-Bold.ttf',
+        value: 700,
+        labelKey: 'pages.brandKits.editor.font.weight.bold',
+        metrics: { ascent: 1282, descent: 615, unitsPerEm: 1000 },
+      },
+    },
+  },
 ];
 
 /** خريطة العائلة → أسماء ملفّات الأوزان الثلاثة · التوقيع القديم

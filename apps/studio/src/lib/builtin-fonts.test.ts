@@ -1,8 +1,8 @@
 // 360b (بعد الموعد) · حارس مصدرٍ واحد للحقيقة.
 //
 // **ما يتحقّق منه هذا الاختبار:**
-//   1. `BUILTIN_FONTS` يذكر عائلتَين اثنتَين: IBM Plex Sans Arabic + Almarai
-//      (تجميدٌ للحال الحاليّة · تُحدَّث حين تُضاف عائلة).
+//   1. `BUILTIN_FONTS` يذكر العائلات المتوقَّعة بالترتيب (تجميدٌ للحال
+//      الحاليّة · تُحدَّث حين تُضاف عائلة · 610 §1 · 2026-10-07).
 //   2. كلّ ملفّ TTF في `weights.*` موجودٌ فعلاً في `assets/fonts/`.
 //   3. كلّ ملفّ TTF في `weights.*` مُدرَجٌ في قائمة السماح
 //      (`apps/studio/app/api/fonts/[name]/route.ts`) — بدون ذلك تفشل
@@ -26,8 +26,16 @@ const API_ROUTE_PATH = resolve(
 );
 
 describe('BUILTIN_FONTS · single source of truth (360b · بعد الموعد)', () => {
-  it('يذكر عائلتَين اثنتَين حصراً · IBM Plex Sans Arabic + Almarai', () => {
-    expect(BUILTIN_FONT_FAMILIES).toEqual(['IBM Plex Sans Arabic', 'Almarai']);
+  it('يذكر العائلات السبع بالترتيب (610 §1 · 2026-10-07)', () => {
+    expect(BUILTIN_FONT_FAMILIES).toEqual([
+      'IBM Plex Sans Arabic',
+      'Almarai',
+      'Noto Sans Arabic',
+      'Cairo',
+      'Tajawal',
+      'Noto Naskh Arabic',
+      'Noto Kufi Arabic',
+    ]);
   });
 
   it('كلّ عائلة تحمل ثلاثة أوزان بالضبط (light · regular · bold)', () => {
