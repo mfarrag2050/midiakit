@@ -17,7 +17,6 @@
 // **الوحدة سفليّة فقط:** `apps/renderer` لا `packages/engine` —
 //   المحرّك خالصٌ ولا يستورد skia-canvas.
 
-import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FontLibrary } from 'skia-canvas';
@@ -41,7 +40,14 @@ export interface RegisteredBuiltinFont {
  * يُسجّل كلّ الخطوط المدمَجة في `FontLibrary`. idempotent — إعادة
  * الاستدعاء آمنة (`FontLibrary.use` تستبدل التسجيل بنفس الاسم).
  *
- * @throws `BUILTIN_FONT_FILE_MISSING` إن غاب أحد ملفّات الأوزان على القرص.
+ * **لا existsSync عمداً:** `FontLibrary.use` من skia-canvas يرمي
+ * `FontLibrary: can't open font file ...` إن غاب الملفّ — نترك هذا
+ * الرمي يظهر بمساره الكامل. سبقه بـ`node:fs.existsSync` يتعارض مع
+ * اختبارات 601c التي تُقنّع `node:fs` كاملاً (`existsSync: () => false`
+ * لعزل processApiJob عن fs الحقيقيّ). skia-canvas لا يقرأ عبر `node:fs`
+ * فيبقى سليماً.
+ *
+ * السقوط عند الملفّ المفقود يبقى بصوت — عبر `FontLibrary` لا عبرنا.
  */
 export function registerBuiltinFonts(): readonly RegisteredBuiltinFont[] {
   const results: RegisteredBuiltinFont[] = [];
@@ -52,18 +58,20 @@ export function registerBuiltinFonts(): readonly RegisteredBuiltinFont[] {
       join(FONTS_DIR, font.weights.regular.file),
       join(FONTS_DIR, font.weights.bold.file),
     ];
-    for (const path of files) {
-      if (!existsSync(path)) {
-        const err = new Error(
-          `BUILTIN_FONT_FILE_MISSING: family=${font.family} path=${path}`
-        );
-        (err as Error & { code: string }).code = 'BUILTIN_FONT_FILE_MISSING';
-        throw err;
-      }
+    try {
+      FontLibrary.use(runtime, files);
+      registered.add(runtime);
+      results.push({ family: font.family, runtime, files });
+    } catch (err) {
+      // skia-canvas رمى — غالباً ملفٌّ مفقود. نُعيد الرمي بمفتاح
+      // `BUILTIN_FONT_FILE_MISSING` ليدخل القاموس.
+      const msg = err instanceof Error ? err.message : String(err);
+      const next = new Error(
+        `BUILTIN_FONT_FILE_MISSING: family=${font.family} · ${msg}`
+      );
+      (next as Error & { code: string }).code = 'BUILTIN_FONT_FILE_MISSING';
+      throw next;
     }
-    FontLibrary.use(runtime, files);
-    registered.add(runtime);
-    results.push({ family: font.family, runtime, files });
   }
   return results;
 }
