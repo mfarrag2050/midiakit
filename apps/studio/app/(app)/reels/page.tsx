@@ -127,6 +127,10 @@
 // التذكرة، فالتسميةُ تغليفٌ هنا.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildTimeline } from './build-timeline';
+import * as projects from '@/src/api/endpoints/projects';
+import * as renders from '@/src/api/endpoints/renders';
+import { ApiError } from '@/src/api/errors';
 import { itemName } from '@/src/reels/item-name';
 import { useLocale, Ltr } from '@pf-mediakit/i18n';
 import { arrowKeyStep, timelineDirFor } from '@/src/reels/direction';
@@ -319,6 +323,87 @@ export default function ReelsTimelinePage(): JSX.Element {
   >({});
 
   const present = history.present;
+  const exportTimeline = useMemo(() => buildTimeline(present), [present]);
+  const [projectList, setProjectList] = useState<readonly projects.ProjectSummary[] | null>(null);
+  const [projectId, setProjectId] = useState('');
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const submitLock = useRef(false);
+  const [renderId, setRenderId] = useState<string | null>(null);
+  const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const exportGeneration = useRef(0);
+  const [renderRow, setRenderRow] = useState<renders.RenderRow | null>(null);
+  const renderActive = renderId !== null &&
+    (renderRow === null || !['succeeded', 'failed', 'cancelled'].includes(renderRow.status));
+  const canExport = exportTimeline !== null &&
+    !!projectList?.some((project) => project.id === projectId) && !submitting && !renderActive;
+
+  useEffect(() => {
+    let cancelled = false;
+    void projects.list({ limit: 50 }).then((page) => {
+      if (cancelled) return;
+      setProjectList(page.data);
+      setProjectId(page.data[0]?.id ?? '');
+    }).catch((error: unknown) => {
+      if (!cancelled) setProjectError(error instanceof ApiError ? `errors.${error.code}` : 'errors.UNKNOWN');
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!renderId) return;
+    let cancelled = false;
+    const generation = exportGeneration.current;
+    const isStale = () => cancelled || generation !== exportGeneration.current;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const poll = async (): Promise<void> => {
+      try {
+        const row = await renders.get(renderId);
+        if (isStale()) return;
+        setRenderRow(row);
+        if (row.status === 'succeeded') {
+          const output = await renders.getOutput(renderId);
+          if (isStale()) return;
+          setOutputUrl(output.url);
+        }
+        setExportError(null);
+        if (['succeeded', 'failed', 'cancelled'].includes(row.status)) return;
+      } catch (error) {
+        if (isStale()) return;
+        setExportError(error instanceof ApiError ? `errors.${error.code}` : 'errors.UNKNOWN');
+      }
+      timer = setTimeout(() => { void poll(); }, 1000);
+    };
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [renderId]);
+
+  async function exportMp4(): Promise<void> {
+    if (!canExport || !exportTimeline || submitLock.current) return;
+    submitLock.current = true;
+    exportGeneration.current += 1;
+    setOutputUrl(null);
+    setSubmitting(true);
+    setExportError(null);
+    setRenderRow(null);
+    setRenderId(null);
+    try {
+      const created = await renders.create({
+        project_id: projectId,
+        size: 'reel',
+        format: 'mp4',
+        timeline: exportTimeline,
+      });
+      setRenderId(created.id);
+    } catch (error) {
+      setExportError(error instanceof ApiError ? `errors.${error.code}` : 'errors.UNKNOWN');
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
+    }
+  }
+
 
   // الاختيار قد يفقد عنصره (حذف · تراجع) — يتراجعُ إلى مساره لا أن
   // يُعلَّق؛ وإن فقدَ المسارَ نفسَه يُنسف. (468: الاختيارُ مساريّ.)
@@ -931,16 +1016,47 @@ export default function ReelsTimelinePage(): JSX.Element {
       <h1 className="text-lg font-semibold text-fg">
         {t('pages.projects.workspace.size.reel')}
       </h1>
-      {/* (475 §٢) الوسمُ الصادق: الصفحةُ مدخلٌ رئيسيٌّ في القائمةِ
-          وسطحُها لا يحفظُ ولا يُصدّرُ بعد — الخطُّ الزمنيُّ وأصولُ العيّنةِ
-          ثابتةٌ محليّاً. الوسمُ ظاهرٌ لا تلميح،
-          بمفتاحٍ واحدٍ في القواميسِ الثلاثة: حين يصيرُ الحفظُ حقيقةً
-          يُحذَفُ بسطرٍ واحد. */}
-      <p
-        data-testid="reels-preview-notice"
-        className="mt-2 inline-block rounded-sm border border-warning bg-surface-2 px-2 py-1 text-xs text-warning"
-      >
-        {t('pages.reels.previewNotice')}
+      <section className="mt-4 flex flex-wrap items-end gap-3" aria-label={t('pages.reels.workspace.export.button')}>
+        <label className={fieldLbl}>
+          <span>{t('pages.renders.col.project')}</span>
+          <select
+            data-testid="reels-export-project"
+            className={fieldIn}
+            value={projectId}
+            disabled={!projectList?.length || submitting || renderActive}
+            onChange={(event) => { setProjectId(event.target.value); }}
+          >
+            {!projectList?.length ? <option value="">—</option> : null}
+            {projectList?.map((project) => (
+              <option key={project.id} value={project.id}>{project.title}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" data-testid="reels-export" className={btn}
+          disabled={!canExport} onClick={() => { void exportMp4(); }}>
+          {submitting ? t('pages.reels.workspace.export.busy') : t('pages.reels.workspace.export.button')}
+        </button>
+        {projectList?.length === 0 ? <p lang="ar">أنشئ مشروعاً أوّلاً</p> : null}
+        {projectList === null && !projectError ? <p>{t('common.loading')}</p> : null}
+        {projectError ? <p role="alert">{t(projectError)}</p> : null}
+        {exportError ? <p role="alert">{t(exportError)}</p> : null}
+        {renderId ? (
+          <div role="status" data-testid="reels-export-status" className="w-full text-sm">
+            {t(`pages.renders.status.${renderRow?.status ?? 'queued'}`)}
+            {renderRow?.status === 'failed' ? (
+              <p role="alert">{t(renderRow.error ? `errors.${renderRow.error.code}` : 'errors.UNKNOWN')}</p>
+            ) : null}
+            {renderRow?.status === 'succeeded' && outputUrl ? (
+              <a href={outputUrl} target="_blank" rel="noopener noreferrer"
+                className="ms-3 underline" data-testid="reels-export-download">
+                {t('pages.reels.workspace.export.success')}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+      <p className="mt-2 text-xs text-fg-muted">
+        {t('pages.reels.workspace.export.hint')}
       </p>
 
       <section className="mt-6">

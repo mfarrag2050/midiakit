@@ -53,5 +53,10 @@
       "mode": "handle",
       "handleField": "sourceHandle"
     }
-  ]
+  ],
+  "video": {
+    "animation": [],
+    "outro": "brand.motion.outro",
+    "easing": "easeOutCubic"
+  }
 }

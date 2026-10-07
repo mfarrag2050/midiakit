@@ -32,6 +32,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { renderVideo, type RenderAssetsInput } from './index.js';
+import type { Timeline } from '@pf-mediakit/shared';
+import { TIMELINE_OUTPUT } from './timeline-output.js';
 import { loadImage } from 'skia-canvas';
 import { supportCodeFor } from '@pf-mediakit/shared/support-code';
 import {
@@ -170,6 +172,7 @@ interface ApiRenderJobPayload {
   brandSnapshot: Record<string, unknown>;
   templateSnapshot: Record<string, unknown>;
   content: Record<string, unknown>;
+  timeline?: Timeline;
 }
 function isApiJob(data: unknown): data is ApiRenderJobPayload {
   return typeof data === 'object' && data !== null && 'renderId' in data && 'brandSnapshot' in data;
@@ -306,7 +309,7 @@ function extractFontAssetIds(brand: Record<string, unknown>): Array<{ family: st
 
 // ── API job processor ────────────────────────────
 async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
-  const { renderId, tenantId, brandSnapshot, templateSnapshot, content, size, format } = job.data;
+  const { renderId, tenantId, brandSnapshot, templateSnapshot, content, size, format, timeline } = job.data;
   const tmpDir = join(tmpdir(), `mk-render-${renderId}`);
   const startedAt = new Date();
   await updateRender(tenantId, renderId, { status: 'running', started_at: startedAt });
@@ -362,7 +365,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     }
 
     // 4. size mapping
-    const dims = SIZE_MAP[size];
+    const dims = timeline ? TIMELINE_OUTPUT[timeline.size].dimensions : SIZE_MAP[size];
     if (!dims) throw new Error(`INVALID_SIZE: ${size}`);
 
     // IMAGE-VERTICAL: حلّ أصول الصور — يُلقي بصوت إن كان content يشير إلى
@@ -391,6 +394,7 @@ async function processApiJob(job: Job<ApiRenderJobPayload>): Promise<void> {
     if (format === 'mp4') {
       const videoResult = await renderVideo({
         template, brand, content, size: dims, outPath,
+        ...(timeline && { timeline }),
         ...(imageAssets && { assets: imageAssets }),
       });
 

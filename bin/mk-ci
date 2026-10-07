@@ -70,6 +70,43 @@ PG_ADMIN_PASS="ci_bootstrap_only_ephemeral"
 # migration_user / app_user كلماتهما من infra/postgres/init/01-roles.sql
 # (dev_migration_pass / dev_app_pass) — نفس السكربت يُنشئهما عبر init mount.
 
+# Build from an independent repository: a worktree's .git points at the host.
+# Keep HEAD, the index, and working-tree edits distinct for the Git-based guards.
+STAGE=""
+BUILD_CONTEXT=""
+cleanup_stage() {
+  if [[ -n "${STAGE}" ]]; then
+    rm -rf -- "${STAGE}"
+  fi
+}
+trap cleanup_stage EXIT
+
+prepare_build_context() {
+  local head path
+  head="$(git -C "${ROOT}" rev-parse HEAD)"
+  STAGE="$(mktemp -d /tmp/mk-ci-stage.XXXXXX)"
+  BUILD_CONTEXT="${STAGE}/work"
+  git clone --quiet --local --no-hardlinks --no-checkout "${ROOT}" "${BUILD_CONTEXT}"
+  git -C "${BUILD_CONTEXT}" checkout --quiet --detach "${head}"
+
+  git -C "${ROOT}" diff --cached --binary --full-index --no-ext-diff --no-textconv HEAD > "${STAGE}/index.patch"
+  if [[ -s "${STAGE}/index.patch" ]]; then
+    git -C "${BUILD_CONTEXT}" apply --index "${STAGE}/index.patch"
+  fi
+  git -C "${ROOT}" ls-files -mo --exclude-standard -z > "${STAGE}/paths"
+  while IFS= read -r -d '' path; do
+    # Remove the destination first so a tracked symlink is never followed.
+    rm -f -- "${BUILD_CONTEXT}/${path}"
+    if [[ -e "${ROOT}/${path}" || -L "${ROOT}/${path}" ]]; then
+      mkdir -p -- "$(dirname "${BUILD_CONTEXT}/${path}")"
+      cp -pP -- "${ROOT}/${path}" "${BUILD_CONTEXT}/${path}"
+    fi
+  done < "${STAGE}/paths"
+
+  # Classic builder reads the context's root ignore file; leave ROOT untouched.
+  cp "${ROOT}/infra/Dockerfile.mk-ci.dockerignore" "${BUILD_CONTEXT}/.dockerignore"
+}
+
 if [[ "${1:-}" == "--regen-refs" ]]; then
   echo "[mk-ci --regen-refs] Linux container · preview.mjs × 4 (2 هويّتَين × 2 وضعَي دلالي)"
   echo "[mk-ci --regen-refs] المسار: preview.mjs → out/{nosemantic,semantic}/ → snapshots/ و snapshots-semantic/"
@@ -77,16 +114,11 @@ if [[ "${1:-}" == "--regen-refs" ]]; then
   set +e
   
   echo "[regen · حاوية] بناء صورة الحاوية..."
-  # mk/516b: مبادلةُ .dockerignore الجذر بنسخةِ CI لحظةَ البناء.
-  # المتغيّرات معرَّفة أدنى (خارج فرع --regen-refs) — نُعرِّفها هنا كذلك.
-  MK_CI_IGNORE_ROOT_R="${ROOT}/.dockerignore"
-  MK_CI_IGNORE_BAK_R="${ROOT}/.dockerignore.mk-ci-bak"
-  MK_CI_IGNORE_CI_R="${ROOT}/infra/Dockerfile.mk-ci.dockerignore"
-  cp "${MK_CI_IGNORE_ROOT_R}" "${MK_CI_IGNORE_BAK_R}"
-  cp "${MK_CI_IGNORE_CI_R}" "${MK_CI_IGNORE_ROOT_R}"
-  docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${ROOT}"
+  set -e
+  prepare_build_context
+  set +e
+  docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${BUILD_CONTEXT}"
   build_exit=$?
-  mv "${MK_CI_IGNORE_BAK_R}" "${MK_CI_IGNORE_ROOT_R}"
   [ "$build_exit" -eq 0 ] || { echo "[regen] فشل البناء (رمز=$build_exit)" ; exit "$build_exit" ; }
 
   docker run --rm \
@@ -120,24 +152,10 @@ if [[ "${1:-}" == "--regen-refs" ]]; then
   exit $exit_code
 fi
 
-# mk/516b: مبادلةُ .dockerignore حول البناء — العزلُ نفسُه دون buildx.
-# BuildKit مفقودٌ على مضيف هذه البيئة؛ classic builder لا يقرأ إلّا
-# .dockerignore الجذر. نستبدلُه بنسخةِ CI (بلا .git) لحظةَ البناء ونعيدُه
-# فوراً. الاستعادة عبر trap لضمانها حتى مع فشل البناء أو Ctrl-C.
-MK_CI_IGNORE_ROOT="${ROOT}/.dockerignore"
-MK_CI_IGNORE_BAK="${ROOT}/.dockerignore.mk-ci-bak"
-MK_CI_IGNORE_CI="${ROOT}/infra/Dockerfile.mk-ci.dockerignore"
-
-restore_ignore() {
-  if [ -f "${MK_CI_IGNORE_BAK}" ]; then
-    mv "${MK_CI_IGNORE_BAK}" "${MK_CI_IGNORE_ROOT}"
-  fi
-}
-
 # ── trap · تنظيف بلا استثناء ───────────────────────
 cleanup() {
   local ec=$?
-  restore_ignore
+  cleanup_stage
   echo ""
   echo "[mk-ci · cleanup] هدم الحاويات والشبكة (رمز الخروج=${ec})..."
   docker rm -f "${PG_CI_CONTAINER}" > /dev/null 2>&1 || true
@@ -274,13 +292,10 @@ JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("c
 PLATFORM_JWT=$(openssl rand -hex 32 2>/dev/null || node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
 
 echo "[mk-ci] بناء صورة الحاوية..."
-# mk/516b: مبادلةُ .dockerignore الجذر بنسخةِ CI لحظةَ البناء (يُدخل .git،
-# لا يدخل .venv). الاستعادةُ عبر trap.
-cp "${MK_CI_IGNORE_ROOT}" "${MK_CI_IGNORE_BAK}"
-cp "${MK_CI_IGNORE_CI}" "${MK_CI_IGNORE_ROOT}"
-docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${ROOT}"
-restore_ignore
+prepare_build_context
+docker build -t pf-mediakit-ci-image -f "${ROOT}/infra/Dockerfile.mk-ci" "${BUILD_CONTEXT}"
 
+docker image inspect pf-mediakit-ci-image --format 'CI image size (bytes): {{.Size}}'
 echo "[mk-ci] تشغيل السلسلة داخل حاوية Linux (الصورة المبنيّة)"
 echo "[mk-ci] الحاوية: --rm · اسم ${CI_CONTAINER} · بدون ربط المضيف (عزل كامل)"
 echo ""
@@ -318,7 +333,7 @@ docker run --rm \
     echo "[mk-ci · حاوية] pnpm db:migrate …"
     pnpm db:migrate 2>&1 | tail -20
     echo "[mk-ci · حاوية] pnpm test …"
-    pnpm test
+    bash infra/ci-studio.sh pnpm test
   '
 MK_CI_EXIT=$?
 

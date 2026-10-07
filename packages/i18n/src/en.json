@@ -119,6 +119,14 @@
       }
     },
     "reels": {
+      "workspace": {
+        "export": {
+          "button": "Export reel",
+          "busy": "Exporting…",
+          "hint": "Changes on this page are not saved; exporting sends the current timeline using the selected project’s brand kit.",
+          "success": "Exported · Download the file."
+        }
+      },
       "names": {
         "clip": "Clip {n}",
         "title": "Title {n}",

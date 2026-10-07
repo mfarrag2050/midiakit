@@ -104,7 +104,7 @@ jobs:
       #         verify:audio-gate + ffprobe · verify:media-track-gate ·
       #         verify:text-tracks-gate · verify:transitions-gate
       # python3: msgpackr-extract postinstall (يوقف تحذيراً)
-      - name: apt install (ca-certificates + git + ffmpeg + python3) داخل الحاوية
+      - name: apt install (ca-certificates + git + ffmpeg + python3 + chromium) داخل الحاوية
         # ca-certificates: بلاها git يفشل بـ«server certificate verification failed»
         #                  عند actions/checkout (bookworm-slim بلاها افتراضاً).
         # git: actions/checkout + check:skill-fresh + check:docs-bundle-fresh.
@@ -118,6 +118,13 @@ jobs:
           git --version
           ffmpeg -version | head -1
           node --version
+
+          # Match Chromium in infra/Dockerfile.mk-ci (puppeteer-core 23.11.1).
+          echo 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian-security/20241222T101506Z bookworm-security main' > /etc/apt/sources.list.d/ci-chromium.list
+          apt-get update -qq
+          apt-get install -qq -y --no-install-recommends \
+            chromium=131.0.6778.204-1~deb12u1 chromium-common=131.0.6778.204-1~deb12u1
+          /usr/bin/chromium --version
 
       # ── (2) Checkout ────────────────────────────────────────
       - name: "Checkout (fetch-depth 0 — لـcheck:skill-fresh)"
@@ -240,7 +247,7 @@ jobs:
           # · AI_KEY_ENCRYPTION_KEY. لها defaults غير صالحة في CI: DATABASE_URL_PLATFORM
           # (يشير إلى 127.0.0.1:19041). **قيَم test-only معلَنة صراحةً · لا سرّ حقيقيّ ·
           # لا اشتقاق من إنتاج · لا ترخيص فحص ليقبل الغياب** — نصّ 271 §١.
-          NODE_ENV: test
+          CHROME_PATH: /usr/bin/chromium
           # 276 §٣ · اتّصال المنتج (api / vitest fastify inject) = app_user
           # حصراً (NOSUPERUSER · محكوم بـRLS + FORCE ROW LEVEL SECURITY).
           # قياس (أ) بـsuperuser أعطى 6 test failed. قياس (ب) بـapp_user
@@ -267,6 +274,10 @@ jobs:
           S3_ACCESS_KEY_ID: ci_test_only_minio_user
           S3_SECRET_ACCESS_KEY: ci_test_only_minio_password_placeholder_min_20_chars
         run: |
+          # Build/serve Studio once; ci-studio.sh traps EXIT/INT/TERM for cleanup.
+          # Set test mode only in the gate process, after the production build.
+          bash infra/ci-studio.sh bash <<'CI_GATES'
+          export NODE_ENV=test
           export PATH="$PWD/node_modules/.bin:$PATH"
           GATES=$(node -e "
             const p = JSON.parse(require('fs').readFileSync('package.json', 'utf8'));
@@ -293,6 +304,7 @@ jobs:
             exit 1
           fi
           echo "✓ كلّ البوابات ($TOTAL) اجتازت."
+          CI_GATES
 
       # ── (8) 20 verifier خارج pnpm test (70-CI-WIRE §1) ────────
       # قرار مالك (70-CI-WIRE-VERIFIERS §1): «الكلّ في pnpm test، إلّا

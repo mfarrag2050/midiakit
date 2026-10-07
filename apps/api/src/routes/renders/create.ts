@@ -14,6 +14,8 @@
  */
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { TIMELINE_OUTPUT } from '@pf-mediakit/renderer/timeline-output';
+import { timelineSchema } from './timeline-schema.js';
 import { requireRoleIn } from '../../shared/role-guard.js';
 import { enqueueRender } from '../../queues/index.js';
 import { getQueuedRenderEta } from '../../queues/render-eta.js';
@@ -38,6 +40,7 @@ const bodySchema = z.object({
   size: z.enum(['x', 'instagram', 'feed', 'reel']),
   format: z.enum(['png', 'mp4']),
   priority: z.enum(['urgent', 'normal']).optional().default('normal'),
+  timeline: timelineSchema.optional(),
 });
 
 interface ProjectRow {
@@ -64,6 +67,7 @@ const route: FastifyPluginAsync = async (fastify) => {
   fastify.post('/', { preHandler: fastify.authenticated }, async (req, reply) => {
     requireRoleIn(req, ['owner', 'admin', 'writer']);
     const body = bodySchema.parse(req.body);
+    const size = body.timeline ? TIMELINE_OUTPUT[body.timeline.size].apiSize : body.size;
     const idempotencyKey = req.headers['idempotency-key']
       ? String(req.headers['idempotency-key']).slice(0, 200)
       : null;
@@ -193,7 +197,7 @@ const route: FastifyPluginAsync = async (fastify) => {
        VALUES ($1, $2, $3, $4, 'queued', $5::jsonb, $6::jsonb, $7, $8)
        RETURNING id, created_at`,
       [
-        req.auth!.tenantId, body.project_id, body.size, body.format,
+        req.auth!.tenantId, body.project_id, size, body.format,
         JSON.stringify(brand), JSON.stringify(template),
         req.auth!.userId, idempotencyKey,
       ],
@@ -206,11 +210,12 @@ const route: FastifyPluginAsync = async (fastify) => {
         renderId: r.id,
         tenantId: req.auth!.tenantId,
         projectId: body.project_id,
-        size: body.size,
+        size,
         format: body.format,
         brandSnapshot: brand,
         templateSnapshot: template,
         content: proj.content ?? {},
+        ...(body.timeline && { timeline: body.timeline }),
       }, body.priority);
     } catch (err) {
       req.log.error({ err, renderId: r.id }, 'enqueue failed');
