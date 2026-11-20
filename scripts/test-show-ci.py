@@ -75,6 +75,23 @@ exit "$API_EXIT"
         ('pending', '{"check_runs":[{"name":"build","conclusion":null}]}', 0, False, 'pending'),
         ('later-page-failed', success + '\n{"check_runs":[{"name":"lint","conclusion":"failure"}]}', 0, False, 'lint [failure]'),
         ('skipped', '{"check_runs":[{"name":"build","conclusion":"skipped"}]}', 0, True, '1 check-run'),
+        # 546: آخر محاولة لكلّ اسم هي الحَكَم.
+        ('rerun-fail-then-success',
+         '{"check_runs":[{"id":1,"name":"build","conclusion":"failure","started_at":"2026-11-20T10:00:00Z"},'
+         '{"id":2,"name":"build","conclusion":"success","started_at":"2026-11-20T11:00:00Z"}]}', 0, True, '1 check-run'),
+        ('rerun-success-then-fail',
+         '{"check_runs":[{"id":2,"name":"build","conclusion":"failure","started_at":"2026-11-20T11:00:00Z"},'
+         '{"id":1,"name":"build","conclusion":"success","started_at":"2026-11-20T10:00:00Z"}]}', 0, False, 'build [failure]'),
+        ('rerun-pending-latest',
+         '{"check_runs":[{"id":1,"name":"build","conclusion":"success","started_at":"2026-11-20T10:00:00Z"},'
+         '{"id":2,"name":"build","conclusion":null,"started_at":"2026-11-20T11:00:00Z"}]}', 0, False, 'build [pending]'),
+        ('rerun-other-name-still-fails',
+         '{"check_runs":[{"id":1,"name":"build","conclusion":"failure","started_at":"2026-11-20T10:00:00Z"},'
+         '{"id":2,"name":"build","conclusion":"success","started_at":"2026-11-20T11:00:00Z"},'
+         '{"id":3,"name":"lint","conclusion":"failure","started_at":"2026-11-20T11:00:00Z"}]}', 0, False, 'lint [failure]'),
+        ('rerun-same-start-id-tiebreak',
+         '{"check_runs":[{"id":5,"name":"build","conclusion":"success","started_at":"2026-11-20T10:00:00Z"},'
+         '{"id":4,"name":"build","conclusion":"failure","started_at":"2026-11-20T10:00:00Z"}]}', 0, True, '1 check-run'),
         ('malformed-run', '{"check_runs":[42]}', 0, False, 'تعذّر تحليل'),
         ('malformed', '{"message":"unexpected"}', 0, False, 'تعذّر تحليل'),
     ]
@@ -89,4 +106,4 @@ exit "$API_EXIT"
             assert message in result.stdout, (name, result.stdout)
         print(f'PASS CI {name}: outside + unrelated repo -> {"accept" if passes else "reject"}')
 
-print('PASS: 6 remote formats, 3 rejected remotes, 12 CI scenarios × 2 caller directories')
+print('PASS: 6 remote formats, 3 rejected remotes, 17 CI scenarios × 2 caller directories')
