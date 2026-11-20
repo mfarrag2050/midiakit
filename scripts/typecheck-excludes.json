@@ -5,11 +5,11 @@
   "_ratchet": "max_errors سقفٌ لا يُتجاوَز — يمنع الزيادة. لا يُصفَّر شهراً · يُخفَّض حين نُغلق. حدٌّ لا يعلو أنفعُ من حدٍّ يُصفَّر بعد شهر.",
   "_expires_policy": "٢٠٢٦-١٠-١٥ (٣٠ يوماً من ٣٢٠). عند انقضاء التاريخ يفشل الفحص — إمّا يُخفَّض max_errors (بعد إغلاق أخطاء) أو يُمَدَّد بمبرِّرٍ محدَّث. «كما كان» ليست مبرِّراً. · ٥٤٤ (٢٠٢٦-١١-٢٠): مُدِّد إلى ٢٠٢٦-١٢-١٥ — المقيس ١٢٤ خطأ (> ٣٠ عتبة الإصلاح في الجلسة) · منها ١٣ خطأً في مصدر packages/engine تتكرّر في خمس حزم تستوردها · المحرّك مقفل على mk-main من هذه التذكرة · خُفِّضت السقوف إلى المقيس.",
   "apps/renderer": {
-    "reason": "٤٠ خطأ على main · معظمها imports/exports ناقصة + optional chaining على PreparedHeadline (render.ts:739 · firstBaseline?) · ٥٤٤: مقيس 32 على main@d8dba2b",
+    "reason": "٤٠ خطأ على main · معظمها imports/exports ناقصة + optional chaining على PreparedHeadline (render.ts:739 · firstBaseline?) · ٥٤٤: مقيس 32 على main@d8dba2b · ٥٤٤ب: 22 بعد إصلاح cli.ts · validate.ts · alerts.ts · tenant-cap.test.ts — الباقي 9× Redis/ConnectionOptions (تعارض نسخ ioredis) + مصدر engine",
     "owner": "mediakit",
     "expires": "2026-12-15",
     "close_ticket": "412",
-    "max_errors": 32
+    "max_errors": 22
   },
   "apps/api": {
     "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع) · ٥٤٤: مقيس 26 على main@d8dba2b",
