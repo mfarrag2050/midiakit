@@ -7,6 +7,7 @@
  *   - id, createdAt, updatedAt, tenantId, version (محسوبة/auto-managed)
  *   - assets.version (عبر §5.7 فقط)
  *   - fonts.primary.licenseAck (عبر §5.5)
+ *   - fonts.secondary.licenseAck (البند 4 · نفس القاعدة)
  *   - attribution.logoAcks[*].licenseAck (عبر §5.6)
  * أيّ محاولة → 400 IMMUTABLE_FIELD مع field يشير للمسار.
  *
@@ -40,6 +41,7 @@ const BLOCKED_PATHS = [
   'version',                      // BrandKit.version — auto-managed
   'assets.version',
   'fonts.primary.licenseAck',
+  'fonts.secondary.licenseAck',   // البند 4 — نفس قاعدة primary
   'attribution.logoAcks.*.licenseAck',
 ];
 
@@ -149,7 +151,7 @@ async function injectFontMetricsFromAssets(
   const patchFonts = patch['fonts'];
   if (!patchFonts || typeof patchFonts !== 'object' || Array.isArray(patchFonts)) return;
 
-  const familyKeys = ['primary'] as const;
+  const familyKeys = ['primary', 'secondary'] as const; // البند 4: secondary يُحقَن متريكاته كـprimary
   // نمرّ على primary أوّلاً، ثم على byLocale.<group> إن وُجدت
   const patchFamilies: [string[], JsonObject][] = [];
   for (const k of familyKeys) {

@@ -12,6 +12,7 @@ import {
   Table,
   type Column,
 } from '@pf-mediakit/ui';
+import { templateDisplayName } from '@/src/lib/template-name';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, templates } from '@/src/api';
 import type {
@@ -37,7 +38,7 @@ const KINDS: readonly (TemplateKind | 'all')[] = REEL_TEMPLATE_ENABLED
   : KINDS_FULL.filter((k) => k !== 'video');
 
 export default function TemplatesPage(): JSX.Element {
-  const { t } = useLocale();
+  const { t, has } = useLocale();
   const [rows, setRows] = useState<TemplateListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<TemplateScope | 'all'>('all');
@@ -112,7 +113,7 @@ export default function TemplatesPage(): JSX.Element {
       headerKey: 'pages.templates.col.name',
       render: (r) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium">{r.name}</span>
+          <span className="font-medium">{templateDisplayName(r, { t, has })}</span>
           {r.scope === 'global' && (
             <Badge tone="neutral">{t('pages.templates.readOnly')}</Badge>
           )}
