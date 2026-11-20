@@ -134,6 +134,12 @@ export interface BrandFonts {
    * حين لا يوجد `byLocale[<group>]` للمحتوى الحالي.
    */
   readonly primary: FontFamily;
+  /**
+   * البند 4 · عائلة ثانية اختياريّة بالشكل نفسه (متريكات لكلّ وزن ·
+   * BASELINE-A). يختارها الدور بـ`family: 'secondary'` (`RoleFontChoice`).
+   * `licenseAck` محجوب عن PATCH كما في primary.
+   */
+  readonly secondary?: FontFamily;
   readonly fallback: string;
   readonly capabilities: FontCaps;
   /**
@@ -209,7 +215,23 @@ export interface BrandLogo {
 
 // ── الطباعة ────────────────────────────────────────────
 
-export interface TypographyHeadline {
+/**
+ * البند 4 (خطّ ثانٍ لكلّ دور) · أيّ عائلة يرسم بها الدور الطباعيّ.
+ * الغياب = `primary` — الهويّات القائمة لا تتغيّر. `secondary` يشير إلى
+ * `BrandFonts.secondary`؛ غيابه هناك ⇒ يرتدّ إلى `primary`.
+ *
+ * **العقد فقط حتّى الآن:** المحرّك لا يقرأ هذا الحقل بعد (تذكرة محرّك
+ * معلّقة عند المالك). لذا لا تعرضه الواجهة — «لا تُعرض قيمة لا يرسمها
+ * المحرّك» (قسم التشغيل 2026-11-20).
+ */
+export type FontRoleFamily = 'primary' | 'secondary';
+
+/** يُمزَج في كلّ دور يرسم نصّاً. القوالب تشير إلى الدور لا إلى الخطّ (القاعدة 3). */
+export interface RoleFontChoice {
+  readonly family?: FontRoleFamily;
+}
+
+export interface TypographyHeadline extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   readonly lineHeight: number;
@@ -225,7 +247,7 @@ export interface TypographyHeadline {
  */
 export type WrapMode = 'uniform' | 'alternating';
 
-export interface TypographyBreaking {
+export interface TypographyBreaking extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   readonly lineHeight: number;
@@ -282,7 +304,7 @@ export interface TypographyBreaking {
   readonly boxWidthRange: readonly [number, number];
 }
 
-export interface TypographyKicker {
+export interface TypographyKicker extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   readonly weight: number;
@@ -290,7 +312,7 @@ export interface TypographyKicker {
   readonly gapBelow: number;
 }
 
-export interface TypographyTitle3L {
+export interface TypographyTitle3L extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   /**
@@ -302,12 +324,12 @@ export interface TypographyTitle3L {
   readonly preferredLines: number;
 }
 
-export interface TypographySource {
+export interface TypographySource extends RoleFontChoice {
   readonly size: number;
   readonly weight: number;
 }
 
-export interface TypographyReelTitle {
+export interface TypographyReelTitle extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   readonly maxLines: number;
@@ -364,7 +386,7 @@ export type CaptionHighlightMode =
  */
 export type CaptionJustifyMode = 'inherit' | 'none';
 
-export interface TypographyCaption {
+export interface TypographyCaption extends RoleFontChoice {
   readonly max: number;
   readonly min: number;
   readonly lineHeight: number;
