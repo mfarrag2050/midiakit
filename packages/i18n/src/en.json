@@ -602,6 +602,14 @@
       "delete": "Delete",
       "confirmDelete": "Confirm template deletion",
       "confirmDeleteBody": "Deletion is permanent. Templates in use by projects can't be deleted.",
+      "names": {
+        "breaking": "Breaking card",
+        "card_bottom": "Bottom card",
+        "card_centered": "Centered card",
+        "card_kicker": "Kicker card",
+        "plain": "Plain card",
+        "reel": "Reel"
+      },
       "scope": {
         "label": "Scope",
         "all": "All",

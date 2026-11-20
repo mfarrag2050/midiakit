@@ -15,6 +15,7 @@ import {
   Table,
   type Column,
 } from '@pf-mediakit/ui';
+import { templateDisplayName } from '@/src/lib/template-name';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, brandKits, projects, templates } from '@/src/api';
 import type { ProjectSummary } from '@/src/api/endpoints/projects';
@@ -38,7 +39,7 @@ const STATE_TONE: Record<string, 'neutral' | 'success' | 'accent' | 'warning'> =
 };
 
 export default function ProjectsPage(): JSX.Element {
-  const { t, locale } = useLocale();
+  const { t, has, locale } = useLocale();
   const { style: digitStyle } = useDigitStyle();
   const router = useRouter();
 
@@ -62,7 +63,7 @@ export default function ProjectsPage(): JSX.Element {
   // تُحمَّل مع أوّل عرض للقائمة، ويصبح fallback عند غياب الاسم شرطةً لا
   // مفتاحَ قاعدة (docs/17 · L-XX «عمودٌ غائبٌ خيرٌ من عمودٍ يفضح البنية»).
   const [bkOptions, setBkOptions] = useState<{ id: string; name: string }[]>([]);
-  const [tplOptions, setTplOptions] = useState<{ id: string; name: string }[]>([]);
+  const [tplOptions, setTplOptions] = useState<{ id: string; name: string; key?: string | null }[]>([]);
   const [pickerErrorKey, setPickerErrorKey] = useState<string | null>(null);
 
   // delete dialog
@@ -96,7 +97,7 @@ export default function ProjectsPage(): JSX.Element {
         ? tplPage.data
         : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
-      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
+      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name, key: tt.key ?? null }))]);
     } catch {
       // fallback عند فشل التحميل: يبقى الجدول قابلاً للقراءة — الاسم يظهر شرطة
       // لا UUID خام (§١). سبب الفشل يُعرَض للمستخدم عند فتح حوار الإنشاء.
@@ -129,7 +130,7 @@ export default function ProjectsPage(): JSX.Element {
         ? tplPage.data
         : tplPage.data.filter((tt) => tt.kind !== 'video');
       setBkOptions([...bkPage.data.map((k) => ({ id: k.id, name: k.name }))]);
-      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name }))]);
+      setTplOptions([...visibleTemplates.map((tt) => ({ id: tt.id, name: tt.name, key: tt.key ?? null }))]);
       setNewBrandKit((prev) => prev || bkPage.data[0]?.id || '');
       setNewTemplate((prev) => prev || visibleTemplates[0]?.id || '');
     } catch (err) {
@@ -173,8 +174,8 @@ export default function ProjectsPage(): JSX.Element {
   }
 
   const tplName = useMemo(
-    () => new Map(tplOptions.map((tt) => [tt.id, tt.name])),
-    [tplOptions]
+    () => new Map(tplOptions.map((tt) => [tt.id, templateDisplayName(tt, { t, has })])),
+    [tplOptions, t, has]
   );
   const bkName = useMemo(
     () => new Map(bkOptions.map((k) => [k.id, k.name])),
@@ -374,7 +375,7 @@ export default function ProjectsPage(): JSX.Element {
             >
               {tplOptions.map((tt) => (
                 <option key={tt.id} value={tt.id}>
-                  {tt.name}
+                  {templateDisplayName(tt, { t, has })}
                 </option>
               ))}
             </select>

@@ -1293,6 +1293,10 @@ export async function handleMock(
         id: t.id,
         scope: t.scope,
         name: t.name,
+        // 549 · نفس قاعدة الخادم: definition.id للعامّ فقط.
+        key: t.scope === 'global' && typeof (t.definition as { id?: unknown })?.id === 'string'
+          ? (t.definition as { id: string }).id
+          : null,
         kind: t.kind,
         createdAt: t.createdAt,
       }));
