@@ -12,11 +12,11 @@
     "max_errors": 22
   },
   "apps/api": {
-    "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع) · ٥٤٤: مقيس 26 على main@d8dba2b",
+    "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع) · ٥٤٤: مقيس 26 على main@d8dba2b · ٥٤٤ب: 23 مقيس في CI (PR #37) بعد إصلاح validate.ts/alerts.ts في renderer",
     "owner": "mk-api",
     "expires": "2026-12-15",
     "close_ticket": "412 · أو تذكرة mk-api لاحقة",
-    "max_errors": 26
+    "max_errors": 23
   },
   "packages/engine": {
     "reason": "٢٩ خطأ على main · محرّك — render.ts + text/layout-balanced.ts + text/index.ts + layers/svg.ts · جوهرُها في timeline كانت أُغلقت في ٣٠٠ · الباقي يشمل render.ts:739 firstBaseline · ٥٤٤: مقيس 21 على main@d8dba2b",
@@ -33,11 +33,11 @@
     "max_errors": 23
   },
   "apps/dashboard": {
-    "reason": "٢٦ خطأ على main · لوحة الإدارة (dev-only حسب check:dashboard-not-published) · ٥٤٤: مقيس 15 على main@d8dba2b",
+    "reason": "٢٦ خطأ على main · لوحة الإدارة (dev-only حسب check:dashboard-not-published) · ٥٤٤: مقيس 15 على main@d8dba2b · ٥٤٤ب: 14 مقيس في CI (PR #37) بعد إصلاح alerts.ts في renderer",
     "owner": "mediakit",
     "expires": "2026-12-15",
     "close_ticket": "412",
-    "max_errors": 15
+    "max_errors": 14
   },
   "packages/tts": {
     "reason": "٧ أخطاء على main · نصّ إلى صوت · صغيرة العدد · مطابقةٌ لسقف mkci الأصليّ · ٥٤٤: مقيس 7 على main@d8dba2b",
