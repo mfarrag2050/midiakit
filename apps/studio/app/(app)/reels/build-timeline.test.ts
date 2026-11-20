@@ -109,22 +109,36 @@ it('disables MP4 export without a project or clips and submits the edited timeli
       void request.respond({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await page.goto('http://127.0.0.1:19081/reels');
-    await page.waitForFunction(() => document.body.textContent?.includes('أنشئ مشروعاً أوّلاً'));
+    // 545: كلّ انتظار يحمل اسم خطوته — TimeoutError من puppeteer لا يحمل سطر
+    // الاختبار في الـstack، فبلا اسمٍ لا نعرف أين علِق.
+    const step = async <T>(label: string, run: () => Promise<T>): Promise<T> => {
+      try { return await run(); } catch (error) {
+        throw new Error(`[545 step: ${label}] ${(error as Error).message}`, { cause: error });
+      }
+    };
+    // 545: كلّ نقرة على التصدير تنتظر الزرّ ممكَّناً — النقر على زرٍّ لم تُعِد
+    // React تمكينه بعد (نهاية تصديرٍ سابق) لا يفعل شيئاً ⇒ الانتظار التالي يُعلَّق
+    // 30s. ٦١١ أغلق هذا عند نقرةٍ واحدة؛ هنا يُغلق عند الأربع.
+    const clickExport = async (label: string) => {
+      await step(`${label}: export enabled`, () => page.waitForSelector('[data-testid="reels-export"]:not(:disabled)'));
+      await page.click('[data-testid="reels-export"]');
+    };
+    await step('no-project notice', () => page.waitForFunction(() => document.body.textContent?.includes('أنشئ مشروعاً أوّلاً')));
     expect(await page.$eval('[data-testid="reels-export"]', (el) => (el as HTMLButtonElement).disabled)).toBe(true);
     expect(submitted).toHaveLength(0);
 
     hasProject = true;
     await page.reload();
-    await page.waitForSelector('[data-testid="reels-export"]:not(:disabled)');
+    await step('project loaded: export enabled', () => page.waitForSelector('[data-testid="reels-export"]:not(:disabled)'));
     await page.click('[data-testid="reels-item-title-01"]');
     await page.$eval('[data-testid="reels-prop-value"]', (el) => {
       const input = el as HTMLTextAreaElement;
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, 'عنوان التصدير المعدّل');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    await page.click('[data-testid="reels-export"]');
+    await clickExport('export#1 (403)');
     const ar = (await import('../../../../../packages/i18n/src/ar.json')).default;
-    await page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE);
+    await step('export#1: role error shown', () => page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE));
     expect(await page.evaluate(() => document.body.textContent)).not.toContain('RAW_SERVER_TEXT');
     expect(submitted).toHaveLength(1);
     expect(submitted[0]).toMatchObject({ project_id: 'project-test', format: 'mp4' });
@@ -132,25 +146,25 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     expect(submitted[0]?.timeline.duration).toBe(32);
 
     rejectExport = false;
-    await page.click('[data-testid="reels-export"]');
-    await page.waitForSelector('[data-testid="reels-export-download"]');
+    await clickExport('export#2 (ok)');
+    await step('export#2: download link', () => page.waitForSelector('[data-testid="reels-export-download"]'));
     expect(await page.$eval('[data-testid="reels-export-download"]', (el) => el.getAttribute('href'))).toBe('http://127.0.0.1:19088/render-test-2.mp4');
 
     rejectOutput = true;
-    await page.click('[data-testid="reels-export"]');
+    await clickExport('export#3 (output 403)');
     // 611: الانتظار على شرطٍ حتميّ — رابط التنزيل السابق (render-test-2) يُمسح
     // عبر setOutputUrl(null) في exportMp4 قبل أوّل await. React قد لا يكون
     // قد flushed قبل $() السريع ⇒ assertion يتعطّل بـstale element.
-    await page.waitForSelector('[data-testid="reels-export-download"]', { hidden: true });
+    await step('export#3: old download cleared', () => page.waitForSelector('[data-testid="reels-export-download"]', { hidden: true }));
     expect(await page.$('[data-testid="reels-export-download"]')).toBeNull();
-    await page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE);
+    await step('export#3: role error shown', () => page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE));
     expect(await page.evaluate(() => document.body.textContent)).not.toContain('RAW_OUTPUT_ERROR');
 
     rejectOutput = false;
     delayOutput = true;
     const responsePromise = page.waitForResponse((response) => response.url().endsWith('/render-test-4'));
-    await page.click('[data-testid="reels-export"]');
-    await responsePromise;
+    await clickExport('export#4 (held output)');
+    await step('export#4: render polled', () => responsePromise);
     await vi.waitFor(() => expect(releaseOutput).toBeDefined());
     delayOutput = false;
     // 611: `vi.waitFor(releaseOutput defined)` يُثبت أنّ طلبَ /output اعتُرِض،
@@ -158,11 +172,15 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     // succeeded في React (renderActive→false ⇒ canExport→true). النقرُ
     // الفوريّ قد يصطدم بزرٍّ لم يُعَد تمكينه ⇒ onClick لا يفعل شيئاً ⇒
     // waitForSelector التالي يُعلَّق إلى 30s. ننتظر الزرَّ ممكَّناً أوّلاً.
-    await page.waitForSelector('[data-testid="reels-export"]:not(:disabled)');
-    await page.click('[data-testid="reels-export"]');
-    await page.waitForSelector('[data-testid="reels-export-download"]');
+    await clickExport('export#5 (while #4 held)');
+    await step('export#5: download link', () => page.waitForSelector('[data-testid="reels-export-download"]'));
+    // 545: كان waitForNetworkIdle — يحتاج 500ms بلا طلبات، والاستطلاع قد يمنعه
+    // فيُعلَّق 30s (1/20 في mk-ci). ننتظر الاستجابة المُحرَّرة نفسها ثمّ إطاراً
+    // كي تنعكس في React. السباق هنا لا يُنتج إلّا نجاحاً زائفاً، لا تعطّلاً.
+    const staleOutput = page.waitForResponse((response) => response.url().endsWith('/render-test-4/output'));
     await releaseOutput!();
-    await page.waitForNetworkIdle();
+    await step('export#4: stale output delivered', () => staleOutput);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))));
     expect(await page.$eval('[data-testid="reels-export-download"]', (el) => el.getAttribute('href'))).toBe('http://127.0.0.1:19088/render-test-5.mp4');
     while (await page.$('[data-testid^="reels-item-"]')) {
       await page.$eval('[data-testid^="reels-item-"]', (el) => (el as HTMLButtonElement).click());
