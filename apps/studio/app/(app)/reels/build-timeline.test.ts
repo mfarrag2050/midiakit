@@ -54,6 +54,18 @@ describe('buildTimeline', () => {
 });
 
 // 601e: run with the owned Studio at 19081; HTTP is intercepted, never the editor.
+// 612 · كلّ انتظار يحمل وسم سطره في origin/main@d8dba2b: مهلة 30s في CI كانت تُطبَع
+// بمكدّس puppeteer الداخليّ فقط ⇒ لا يُعرَف أيّ انتظار عُلِّق. الوسم
+// يجعل الفشل يسمّي الخطوة، ومعه الزمن المنقضي.
+async function step<T>(label: string, p: Promise<T>): Promise<T> {
+  const t0 = Date.now();
+  try {
+    return await p;
+  } catch (e) {
+    throw new Error(`[step ${label} · ${Date.now() - t0}ms] ${(e as Error).message}`, { cause: e });
+  }
+}
+
 it('disables MP4 export without a project or clips and submits the edited timeline', async () => {
   const { default: puppeteer } = await import('puppeteer-core');
   const browser = await puppeteer.launch({
@@ -109,13 +121,13 @@ it('disables MP4 export without a project or clips and submits the edited timeli
       void request.respond({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await page.goto('http://127.0.0.1:19081/reels');
-    await page.waitForFunction(() => document.body.textContent?.includes('أنشئ مشروعاً أوّلاً'));
+    await step("L112", page.waitForFunction(() => document.body.textContent?.includes('أنشئ مشروعاً أوّلاً')));
     expect(await page.$eval('[data-testid="reels-export"]', (el) => (el as HTMLButtonElement).disabled)).toBe(true);
     expect(submitted).toHaveLength(0);
 
     hasProject = true;
     await page.reload();
-    await page.waitForSelector('[data-testid="reels-export"]:not(:disabled)');
+    await step("L118", page.waitForSelector('[data-testid="reels-export"]:not(:disabled)'));
     await page.click('[data-testid="reels-item-title-01"]');
     await page.$eval('[data-testid="reels-prop-value"]', (el) => {
       const input = el as HTMLTextAreaElement;
@@ -124,7 +136,7 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     });
     await page.click('[data-testid="reels-export"]');
     const ar = (await import('../../../../../packages/i18n/src/ar.json')).default;
-    await page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE);
+    await step("L127", page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE));
     expect(await page.evaluate(() => document.body.textContent)).not.toContain('RAW_SERVER_TEXT');
     expect(submitted).toHaveLength(1);
     expect(submitted[0]).toMatchObject({ project_id: 'project-test', format: 'mp4' });
@@ -133,7 +145,7 @@ it('disables MP4 export without a project or clips and submits the edited timeli
 
     rejectExport = false;
     await page.click('[data-testid="reels-export"]');
-    await page.waitForSelector('[data-testid="reels-export-download"]');
+    await step("L136", page.waitForSelector('[data-testid="reels-export-download"]'));
     expect(await page.$eval('[data-testid="reels-export-download"]', (el) => el.getAttribute('href'))).toBe('http://127.0.0.1:19088/render-test-2.mp4');
 
     rejectOutput = true;
@@ -141,28 +153,28 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     // 611: الانتظار على شرطٍ حتميّ — رابط التنزيل السابق (render-test-2) يُمسح
     // عبر setOutputUrl(null) في exportMp4 قبل أوّل await. React قد لا يكون
     // قد flushed قبل $() السريع ⇒ assertion يتعطّل بـstale element.
-    await page.waitForSelector('[data-testid="reels-export-download"]', { hidden: true });
+    await step("L144", page.waitForSelector('[data-testid="reels-export-download"]', { hidden: true }));
     expect(await page.$('[data-testid="reels-export-download"]')).toBeNull();
-    await page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE);
+    await step("L146", page.waitForFunction((message) => document.body.textContent?.includes(message), {}, ar.errors.INSUFFICIENT_ROLE));
     expect(await page.evaluate(() => document.body.textContent)).not.toContain('RAW_OUTPUT_ERROR');
 
     rejectOutput = false;
     delayOutput = true;
     const responsePromise = page.waitForResponse((response) => response.url().endsWith('/render-test-4'));
     await page.click('[data-testid="reels-export"]');
-    await responsePromise;
-    await vi.waitFor(() => expect(releaseOutput).toBeDefined());
+    await step("L153", responsePromise);
+    await step("L154", vi.waitFor(() => expect(releaseOutput).toBeDefined()));
     delayOutput = false;
     // 611: `vi.waitFor(releaseOutput defined)` يُثبت أنّ طلبَ /output اعتُرِض،
     // لكن ذلك يحدث بعد `setRenderRow(row)` مباشرةً · قبل أن تنعكس حالة
     // succeeded في React (renderActive→false ⇒ canExport→true). النقرُ
     // الفوريّ قد يصطدم بزرٍّ لم يُعَد تمكينه ⇒ onClick لا يفعل شيئاً ⇒
     // waitForSelector التالي يُعلَّق إلى 30s. ننتظر الزرَّ ممكَّناً أوّلاً.
-    await page.waitForSelector('[data-testid="reels-export"]:not(:disabled)');
+    await step("L161", page.waitForSelector('[data-testid="reels-export"]:not(:disabled)'));
     await page.click('[data-testid="reels-export"]');
-    await page.waitForSelector('[data-testid="reels-export-download"]');
+    await step("L163", page.waitForSelector('[data-testid="reels-export-download"]'));
     await releaseOutput!();
-    await page.waitForNetworkIdle();
+    await step("L165", page.waitForNetworkIdle());
     expect(await page.$eval('[data-testid="reels-export-download"]', (el) => el.getAttribute('href'))).toBe('http://127.0.0.1:19088/render-test-5.mp4');
     while (await page.$('[data-testid^="reels-item-"]')) {
       await page.$eval('[data-testid^="reels-item-"]', (el) => (el as HTMLButtonElement).click());
