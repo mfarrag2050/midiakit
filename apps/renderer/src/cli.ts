@@ -63,9 +63,9 @@ function parseArgs(): CliArgs {
   const args: CliArgs = { brand: 'default', template: 'breaking', fps: 30, size: 'portrait' };
   for (const arg of process.argv.slice(2)) {
     const m = arg.match(/^--([^=]+)=(.+)$/);
-    if (!m) continue;
-    const key = m[1];
-    const value = m[2];
+    const key = m?.[1];
+    const value = m?.[2];
+    if (key === undefined || value === undefined) continue;
     if (key === 'brand') args.brand = value;
     else if (key === 'template') args.template = value;
     else if (key === 'out') args.out = value;

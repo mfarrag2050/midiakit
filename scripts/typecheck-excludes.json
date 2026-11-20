@@ -3,47 +3,46 @@
   "_policy": "أُنشئ 2026-09-15 من ٣٢٠. سُقوفٌ رُفعت في ٤١٢ إلى **الرقم الحقيقيّ على main** (٣٤٠ · قياس mkci) — كانت السُقوف السابقة من feat/ci وحده. أيّ زيادةٍ عن هذا السقف تفشل الفحص. حين تُغلَق أخطاء تُخفَّض القيمة يدويّاً.",
   "_baseline_source": "pnpm typecheck على main بعد إصلاح render.ts:739 firstBaseline (٤١٢ · ٢٠٢٦-٠٩-١٥). سابقاً ١٦٧ (٣٤٠ § ١) · حاليّاً ١٦٢ (سقط ٥ لأنّ الإصلاح في packages/engine ينعكس على كلّ تطبيقٍ يستورد منها).",
   "_ratchet": "max_errors سقفٌ لا يُتجاوَز — يمنع الزيادة. لا يُصفَّر شهراً · يُخفَّض حين نُغلق. حدٌّ لا يعلو أنفعُ من حدٍّ يُصفَّر بعد شهر.",
-  "_expires_policy": "٢٠٢٦-١٠-١٥ (٣٠ يوماً من ٣٢٠). عند انقضاء التاريخ يفشل الفحص — إمّا يُخفَّض max_errors (بعد إغلاق أخطاء) أو يُمَدَّد بمبرِّرٍ محدَّث. «كما كان» ليست مبرِّراً.",
-
+  "_expires_policy": "٢٠٢٦-١٠-١٥ (٣٠ يوماً من ٣٢٠). عند انقضاء التاريخ يفشل الفحص — إمّا يُخفَّض max_errors (بعد إغلاق أخطاء) أو يُمَدَّد بمبرِّرٍ محدَّث. «كما كان» ليست مبرِّراً. · ٥٤٤ (٢٠٢٦-١١-٢٠): مُدِّد إلى ٢٠٢٦-١٢-١٥ — المقيس ١٢٤ خطأ (> ٣٠ عتبة الإصلاح في الجلسة) · منها ١٣ خطأً في مصدر packages/engine تتكرّر في خمس حزم تستوردها · المحرّك مقفل على mk-main من هذه التذكرة · خُفِّضت السقوف إلى المقيس.",
   "apps/renderer": {
-    "reason": "٤٠ خطأ على main · معظمها imports/exports ناقصة + optional chaining على PreparedHeadline (render.ts:739 · firstBaseline?)",
+    "reason": "٤٠ خطأ على main · معظمها imports/exports ناقصة + optional chaining على PreparedHeadline (render.ts:739 · firstBaseline?) · ٥٤٤: مقيس 32 على main@d8dba2b · ٥٤٤ب: 22 بعد إصلاح cli.ts · validate.ts · alerts.ts · tenant-cap.test.ts — الباقي 9× Redis/ConnectionOptions (تعارض نسخ ioredis) + مصدر engine",
     "owner": "mediakit",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412",
-    "max_errors": 39
+    "max_errors": 22
   },
   "apps/api": {
-    "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع)",
+    "reason": "٣٨ خطأ على main · تحت مسؤوليّة feat/api (تراكم قبل الدمج · قياس ٣٤٠: 1693 على الفرع) · ٥٤٤: مقيس 26 على main@d8dba2b · ٥٤٤ب: 23 مقيس في CI (PR #37) بعد إصلاح validate.ts/alerts.ts في renderer",
     "owner": "mk-api",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412 · أو تذكرة mk-api لاحقة",
-    "max_errors": 37
+    "max_errors": 23
   },
   "packages/engine": {
-    "reason": "٢٩ خطأ على main · محرّك — render.ts + text/layout-balanced.ts + text/index.ts + layers/svg.ts · جوهرُها في timeline كانت أُغلقت في ٣٠٠ · الباقي يشمل render.ts:739 firstBaseline",
+    "reason": "٢٩ خطأ على main · محرّك — render.ts + text/layout-balanced.ts + text/index.ts + layers/svg.ts · جوهرُها في timeline كانت أُغلقت في ٣٠٠ · الباقي يشمل render.ts:739 firstBaseline · ٥٤٤: مقيس 21 على main@d8dba2b",
     "owner": "mediakit",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412",
-    "max_errors": 28
+    "max_errors": 21
   },
   "apps/studio": {
-    "reason": "٢٦ خطأ على main بعد إصلاح render.ts:739 (كان ٢٧) · تحت مسؤوليّة feat/studio",
+    "reason": "٢٦ خطأ على main بعد إصلاح render.ts:739 (كان ٢٧) · تحت مسؤوليّة feat/studio · ٥٤٤: مقيس 23 على main@d8dba2b",
     "owner": "mk-studio",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412 · أو تذكرة mk-studio لاحقة",
-    "max_errors": 26
+    "max_errors": 23
   },
   "apps/dashboard": {
-    "reason": "٢٦ خطأ على main · لوحة الإدارة (dev-only حسب check:dashboard-not-published)",
+    "reason": "٢٦ خطأ على main · لوحة الإدارة (dev-only حسب check:dashboard-not-published) · ٥٤٤: مقيس 15 على main@d8dba2b · ٥٤٤ب: 14 مقيس في CI (PR #37) بعد إصلاح alerts.ts في renderer",
     "owner": "mediakit",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412",
-    "max_errors": 25
+    "max_errors": 14
   },
   "packages/tts": {
-    "reason": "٧ أخطاء على main · نصّ إلى صوت · صغيرة العدد · مطابقةٌ لسقف mkci الأصليّ",
+    "reason": "٧ أخطاء على main · نصّ إلى صوت · صغيرة العدد · مطابقةٌ لسقف mkci الأصليّ · ٥٤٤: مقيس 7 على main@d8dba2b",
     "owner": "mediakit",
-    "expires": "2026-10-15",
+    "expires": "2026-12-15",
     "close_ticket": "412",
     "max_errors": 7
   }

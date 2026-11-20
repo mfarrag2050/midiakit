@@ -67,6 +67,11 @@ show_ci_verdict() {
     echo 'لا check-runs — CI لم يعمل على هذا الالتزام'
     return 1
   fi
+  # 546: يُحكَم بآخر محاولةٍ لكلّ اسم فحص — إعادة تشغيلٍ ناجحة تُبطل فشلاً أقدم
+  # بالاسم نفسه. الترتيب: started_at ثمّ id (check-run ids تصاعديّة).
+  # آخر محاولةٍ معلّقة (conclusion=null) تبقى حاجبة.
+  runs="$(printf '%s' "$runs" | jq '[group_by(.name)[] | max_by([(.started_at // ""), (.id // 0)])]')"
+  total="$(printf '%s' "$runs" | jq 'length')"
   nonpass="$(printf '%s' "$runs" | jq '[.[] | select(.conclusion != "success" and .conclusion != "skipped")]')"
   if [[ "$nonpass" != '[]' ]]; then
     names="$(printf '%s' "$nonpass" | jq -r '.[0:3] | map("\(.name) [\(.conclusion // "pending")]") | join("؛")')"
