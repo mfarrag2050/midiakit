@@ -173,8 +173,16 @@ it('disables MP4 export without a project or clips and submits the edited timeli
     await step("L161", page.waitForSelector('[data-testid="reels-export"]:not(:disabled)'));
     await page.click('[data-testid="reels-export"]');
     await step("L163", page.waitForSelector('[data-testid="reels-export-download"]'));
+    // 612: كان هنا `waitForNetworkIdle()` — انتظارٌ على «لا طلب في الطريق
+    // 500ms» في الصفحة كلّها. CI run 44747388804 (attempt 2) أمسكه:
+    // `[step L165 · 30017ms] Timed out` ⇒ طلبٌ ما بقي مفتوحاً (لم يُقَس أيّها).
+    // ما نحرسه فعلاً أضيق: ردُّ /output المتأخّر لـrender-test-4 (جيلٌ قديم)
+    // لا يكتب فوق رابط render-test-5. ننتظر ذلك الردَّ بعينه، ثمّ إطارَين
+    // كي تُنهي الصفحة `await` + فحص `isStale()` + أيَّ commit لـReact.
+    const staleOutput = page.waitForResponse((r) => r.url().endsWith('/v1/renders/render-test-4/output'));
     await releaseOutput!();
-    await step("L165", page.waitForNetworkIdle());
+    await step("L165", staleOutput);
+    await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
     expect(await page.$eval('[data-testid="reels-export-download"]', (el) => el.getAttribute('href'))).toBe('http://127.0.0.1:19088/render-test-5.mp4');
     while (await page.$('[data-testid^="reels-item-"]')) {
       await page.$eval('[data-testid^="reels-item-"]', (el) => (el as HTMLButtonElement).click());
