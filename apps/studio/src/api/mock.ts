@@ -201,6 +201,17 @@ const IMAGE_LAYERS: unknown[] = [
     justify: 'brand.typography.justify',
   },
 ];
+// 551 · `definition.id` كما في packages/templates/src/templates/*.json —
+// منه يُشتقّ `key` في القائمة (نفس قاعدة الخادم)، والاستوديو يختار قالب
+// العاجل بـ`key === 'breaking'` لا بالاسم.
+const MOCK_DEFINITION_ID: Readonly<Record<string, string>> = {
+  'بطاقة بسيطة': 'plain',
+  'بطاقة ذات كيكر': 'card_kicker',
+  'بطاقة سفلية': 'card_bottom',
+  'بطاقة متمركزة': 'card_centered',
+  'بطاقة عاجل': 'breaking',
+  'ريلز': 'reel',
+};
 SEED_TEMPLATES.forEach(([name, kind, fields], i) => {
   const id = `tpl_mock_g${i}`;
   // IMAGE-VERTICAL: أضِف حقل صورة اختياريّاً إلى القالب الأول ("بسيط")
@@ -214,7 +225,7 @@ SEED_TEMPLATES.forEach(([name, kind, fields], i) => {
     scope: 'global',
     name,
     kind,
-    definition: { fields: withImage, layers, sizes: ['x', 'instagram', 'feed'] },
+    definition: { id: MOCK_DEFINITION_ID[name], fields: withImage, layers, sizes: ['x', 'instagram', 'feed'] },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
