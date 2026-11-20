@@ -33,7 +33,8 @@ for i in $(seq 1 "$N"); do
     FAIL=$((FAIL+1))
     # استخرج موضع التوقّف من الـlog (أوّل TimeoutError أو AssertionError + السطر إن وُجد).
     WHERE=$(grep -m1 -E 'TimeoutError|AssertionError|Error:' "$LOG" | head -1 | tr -d '\r' | cut -c1-200)
-    AT=$(grep -m1 -E 'build-timeline\.test\.ts:[0-9]+' "$LOG" | head -1 | sed 's/.*\(build-timeline\.test\.ts:[0-9]*\).*/\1/' || echo '?')
+    # 545: اسم الخطوة أدقّ من السطر — stack الـpuppeteer لا يحمل سطر الاختبار.
+    AT=$(grep -m1 -oE '\[545 step: [^]]+\]' "$LOG" || grep -m1 -oE 'build-timeline\.test\.ts:[0-9]+' "$LOG" || echo '?')
     FAIL_LINES+=("run $i → $AT · $WHERE")
     echo "  ✗ fail at $AT · $WHERE"
   fi
