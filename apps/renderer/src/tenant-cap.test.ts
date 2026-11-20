@@ -149,7 +149,7 @@ describe('tenant-cap · دورة BullMQ كاملة (٣٦٠)', () => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       const counts = await queue.getJobCounts('waiting', 'active', 'delayed', 'completed', 'failed');
-      const terminal = counts.completed + counts.failed;
+      const terminal = (counts.completed ?? 0) + (counts.failed ?? 0);
       if (terminal >= expectedTotal && counts.waiting === 0 && counts.active === 0 && counts.delayed === 0) {
         return counts;
       }

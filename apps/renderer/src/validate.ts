@@ -19,9 +19,10 @@ export class RenderJobValidationError extends Error {
   }
 }
 
-const bail = (field: string, msg: string): never => {
+// 544: function لا arrow — TS يضيّق الأنواع بعد استدعاء never فقط حين يُعلَن صراحةً.
+function bail(field: string, msg: string): never {
   throw new RenderJobValidationError(field, msg);
-};
+}
 
 // ── مدخلات مهمة الرندر ────────────────────────────────
 

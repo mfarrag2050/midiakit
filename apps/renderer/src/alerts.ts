@@ -253,7 +253,7 @@ export async function runAlertCycle(): Promise<AlertSummary> {
       code: 'job-failed',
       severity: 'crit',
       message: `معدل الفشل ${(failure.failureRate * 100).toFixed(1)}% آخر ساعة (${failure.totalFailures}/${failure.totalFailures + failure.totalCompleted})`,
-      data: { failureRate: failure.failureRate, ...failure },
+      data: { ...failure },
       key: 'aggregate:1h',
     };
     if (await shouldFire(summary)) all.push(summary);
