@@ -83,3 +83,16 @@
 - 548 · كما في رسالتي 13:38Z: **مدموج في main أصلاً** (`52c1e83` + `83ddaef` ← `3e984fa`). لا شيء لأبدأه فيه.
 - **ملاحظة قناة:** sync.sh عندي أنشأ 4467c55 بوسم `ops(mkst)`، وهو يحمل outbox/{mk,mkrv,mkst}.md. أي أنّ نصّ ردّكم كان على القرص غير ملتزَم ساعة شغّلتُ sync، فالتقطه التزامي ونُسب إليّ. ثمّ طبع sync «STOP sync failed after 3 tries»، مع أنّ origin/ops/inbox متزامن الآن (bcbe817). المحتوى صادقتُه بقرائن: #35 موجود ويطابق الوصف، والردّ يقرأ حتّى a61457f. لكنّ وسم الالتزام لا يدلّ على كاتبه. أقترح أن يلتزم sync.sh بمسارات جلسته وحدها (`inbox/<جلسة>.md`).
 ما نُشر: — · ما يجري: عقد البند 4 على فرع جديد من origin/main · ما أنتظره وممّن: mkrv لـ#32/#34 · المالك لتذكرة المحرّك · التالي: العقد + الاختباران (1)(4) ثمّ طلب مراجعة.
+
+## 2026-11-20T15:35Z · البند 4 · العقد مرفوع للـCI (#38)
+قرأتُ حتّى 4467c55
+- البند 4 · `feat/item4-secondary-font-contract@56ab1fa` · PR مسودّة #38، ضمن النطاق المُجاز فقط:
+  - shared: `BrandFonts.secondary?: FontFamily` · `RoleFontChoice { family?: 'primary'|'secondary' }` ممزوج في أدوار النصّ السبعة (headline · breaking · kicker · title3l · source · reelTitle · caption). accentBar لا نصّ فيه فلم يُمَسّ.
+  - API: `fonts.secondary.licenseAck` في BLOCKED_PATHS · `familyKeys` = primary + secondary.
+  - (1) `secondary-font-contract.test.ts`: لا هويّة مشحونة (DEFAULT · MARAFI · brands/*.json) تستعمل الحقلين. L-46 [رأيتُه]: حقنتُ `fonts.secondary` في brands/client-demo.json فصار الاختبار أحمر، ثمّ أعدتُ الملفّ (git checkout -- path، والحالة نظيفة) فعاد أخضر 2/2. ثبات md5 يحرسه `verify:snapshot` في CI.
+  - (4) `secondary-font-patch.test.ts`: licenseAck ⇒ 400 IMMUTABLE_FIELD · secondary مدمَج + `typography.source.family` ⇒ 200 وprimary لا يُمَسّ · assetId غير موجود في secondary ⇒ 422 (يثبت familyKeys). اختبار DB [لم أُشغّله محلّيّاً]: ينتظر CI.
+  - محلّيّاً: brand-kit-patch-coverage · test-wiring · engine-purity · numerals-consistency ✓.
+- **فجوة أُعلنها:** لا مسار font-ack لـsecondary. خطّ ثانٍ **مرفوع** (custom) لا يمكن الإقرار برخصته اليوم، أمّا المدمَج فلا يحتاج إقراراً. أظنّه يتبع تذكرة المحرّك أو الواجهة، ولم أبنِه لأنّه خارج المُجاز.
+ينتظر المالك:
+- تذكرة المحرّك للبند 4 (قائم) · استثناء typecheck (قائم) · شاهد عين Cairo (قائم).
+ما نُشر: — · ما يجري: CI على #38 · ما أنتظره وممّن: mkrv لـ#32 و#34، ثمّ #38 بعد CI · قسم التشغيل: إغلاق #36 · التالي: قائمتي فرغت بعد #38. أقترح بنوداً ليليّة لا تحتاج المالك (NIGHT-1)، وأنتظر إسنادها: (أ) لقطة الواجهة الإنجليزيّة لـ549 على مستأجر خاصّ في shownext، (ب) جرد أماكن عرض أسماء القوالب الباقية (`breaking/page.tsx:55` و`brand-kits/[id]/edit:339` تبحث بالاسم العربيّ «عاجل»، وهذا هشّ الآن بعد وجود `key`).
