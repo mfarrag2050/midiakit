@@ -11,6 +11,7 @@ import type {
 import { TEMPLATES } from '@pf-mediakit/templates';
 import { LiveCardPreview } from '@/src/ui/LiveCardPreview';
 import { ExportCardButton } from '@/src/ui/ExportCardButton';
+import { loadBreakingTemplateId } from '@/src/lib/breaking-template';
 
 // شاشة تأليف بطاقة عاجل (`160-BREAKING-COMPOSER`).
 // المسار: اختيار هوية → عنوان + مصدر → معاينة حيّة → تصدير.
@@ -42,20 +43,13 @@ export default function BreakingComposerPage(): JSX.Element {
     setLoading(true);
     setLoadErrorKey(null);
     try {
-      const [kitsPage, tplPage] = await Promise.all([
+      const [kitsPage, breakingId] = await Promise.all([
         brandKits.list(),
-        templates
-          .list()
-          .catch(() => ({ data: [], nextCursor: null, hasMore: false })),
+        // 551: القالب العامّ بمفتاحه — لا نسخة مستأجر، ولا يضيع خلف 20 قالباً.
+        loadBreakingTemplateId(templates.list).catch(() => null),
       ]);
       setKits([...kitsPage.data]);
-      // القالب: نبحث عن «بطاقة عاجل» — من قوالب mk (mock أو الخادم).
-      const breaking = tplPage.data.find(
-        (tt) =>
-          tt.name.includes('عاجل') ||
-          tt.name.toLowerCase().includes('breaking')
-      );
-      setBreakingTemplateId(breaking?.id ?? null);
+      setBreakingTemplateId(breakingId);
       // ملء افتراضيّ: أوّل هوية.
       if (kitsPage.data.length > 0 && kitsPage.data[0]) {
         setSelectedKitId(kitsPage.data[0].id);

@@ -12,6 +12,7 @@ import {
   Input,
   PageHeader,
 } from '@pf-mediakit/ui';
+import { loadBreakingTemplateId } from '@/src/lib/breaking-template';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, assets, brandKits, templates } from '@/src/api';
 import type { BrandKitFull } from '@/src/api/endpoints/brand-kits';
@@ -324,21 +325,17 @@ export default function BrandKitEditorPage(): JSX.Element {
     setLoading(true);
     setLoadErrorKey(null);
     try {
-      const [k, fontsPage, tplPage] = await Promise.all([
+      const [k, fontsPage, breakingId] = await Promise.all([
         brandKits.get(id),
         assets
           .list({ filter: { kind: 'font' } })
           .catch(() => ({ data: [] as AssetListItem[], nextCursor: null, hasMore: false })),
-        templates
-          .list()
-          .catch(() => ({ data: [], nextCursor: null, hasMore: false })),
+        // 551: القالب العامّ بمفتاحه — لا نسخة مستأجر، ولا يضيع خلف 20 قالباً.
+        loadBreakingTemplateId(templates.list).catch(() => null),
       ]);
-      // §150-EXPORT-BUTTON: نبحث عن قالب «بطاقة عاجل» (breaking) لأنّه ما
-      // تعرضه المعاينة. إن غاب يبقى الزرّ معطَّلاً · لا تصدير أعمى.
-      const breaking = tplPage.data.find(
-        (t) => t.name.includes('عاجل') || t.name.toLowerCase().includes('breaking')
-      );
-      setBreakingTemplateId(breaking?.id ?? null);
+      // §150-EXPORT-BUTTON: قالب «بطاقة عاجل» لأنّه ما تعرضه المعاينة.
+      // إن غاب يبقى الزرّ معطَّلاً · لا تصدير أعمى.
+      setBreakingTemplateId(breakingId);
       setKit(k);
       setDraftName(k.name);
       const cfg = k.config as ConfigLike;
