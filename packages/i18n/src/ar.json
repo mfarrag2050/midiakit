@@ -581,6 +581,14 @@
       "delete": "حذف",
       "confirmDelete": "تأكيد حذف القالب",
       "confirmDeleteBody": "الحذف نهائي. القالب المستعمَل في مشاريع لا يُحذف.",
+      "names": {
+        "breaking": "بطاقة عاجل",
+        "card_bottom": "بطاقة سفلية",
+        "card_centered": "بطاقة متمركزة",
+        "card_kicker": "بطاقة ذات كيكر",
+        "plain": "بطاقة بسيطة",
+        "reel": "ريلز"
+      },
       "scope": {
         "label": "النطاق",
         "all": "الكل",

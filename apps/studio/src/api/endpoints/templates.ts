@@ -14,6 +14,8 @@ export interface TemplateListItem {
   readonly id: string;
   readonly scope: TemplateScope;
   readonly name: string;
+  /** 549 · مفتاح ثابت للقوالب العامّة (`definition.id`) · null لقوالب المستأجر. */
+  readonly key?: string | null;
   readonly kind: TemplateKind;
   readonly createdAt: string;
 }

@@ -11,6 +11,7 @@ import {
   Table,
   type Column,
 } from '@pf-mediakit/ui';
+import { templateDisplayName } from '@/src/lib/template-name';
 import { useLocale } from '@pf-mediakit/i18n';
 import { ApiError, exports as exportsApi, renders, templates } from '@/src/api';
 import type {
@@ -71,7 +72,7 @@ function fmtDate(iso: string, locale: string): string {
 }
 
 export default function ExportsPage(): JSX.Element {
-  const { t, locale } = useLocale();
+  const { t, has, locale } = useLocale();
   const [rows, setRows] = useState<ExportRow[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [hasMore, setHasMore] = useState<boolean>(false);
@@ -85,7 +86,7 @@ export default function ExportsPage(): JSX.Element {
   // 290-v3 · خريطة templateId → name من `templates.list` (نداءٌ واحد على mount).
   // بيان يعود من الخادم (endpoint آخر) — إثراء لا اختراع.
   // فشل جلب القوالب لا يمنع عرض السجلّ — نُواصل بـfallback إلى UUID.
-  const [templateNames, setTemplateNames] = useState<Map<string, string>>(
+  const [templateNames, setTemplateNames] = useState<Map<string, { name: string; key: string | null }>>(
     () => new Map()
   );
 
@@ -131,8 +132,8 @@ export default function ExportsPage(): JSX.Element {
   async function loadTemplateNames(): Promise<void> {
     try {
       const page = await templates.list({ limit: 100 });
-      const m = new Map<string, string>();
-      for (const t of page.data) m.set(t.id, t.name);
+      const m = new Map<string, { name: string; key: string | null }>();
+      for (const tpl of page.data) m.set(tpl.id, { name: tpl.name, key: tpl.key ?? null });
       setTemplateNames(m);
     } catch {
       // صامت مقصود — عمود القالب سيسقط على UUID · لا يُعطَّل السجلّ لأجل اسم.
@@ -190,7 +191,8 @@ export default function ExportsPage(): JSX.Element {
         // 290-v3 · اسم القالب من templates.list (بيان الخادم من endpoint آخر).
         // fallback إلى UUID المختصر إن لم يُعثَر على الاسم (mkapi قد يعيد
         // templateId لقالب حُذف · أو نداء templates.list فشل).
-        const name = r.templateId ? templateNames.get(r.templateId) : null;
+        const tpl = r.templateId ? templateNames.get(r.templateId) : undefined;
+        const name = tpl ? templateDisplayName(tpl, { t, has }) : null;
         if (name) {
           return (
             <div className="flex flex-col">

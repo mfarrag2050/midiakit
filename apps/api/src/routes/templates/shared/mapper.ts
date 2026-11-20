@@ -23,8 +23,21 @@ export interface TemplateSummary {
   id: string;
   scope: 'global' | 'tenant';
   name: string;
+  /**
+   * 549 · مفتاح ثابت للقوالب العامّة = `definition.id` (مثل `breaking`).
+   * الواجهة تترجم اسم العرض به (`pages.templates.names.<key>`)، لأنّ
+   * `name` قيمة عربيّة مخزَّنة. قوالب المستأجر ⇒ null: اسمها محتوى
+   * المستخدم، لا يُترجَم.
+   */
+  key: string | null;
   kind: string;
   createdAt: string;
+}
+
+function globalKey(row: DbTemplateRow): string | null {
+  if (row.scope !== 'global') return null;
+  const k = row.definition?.['id'];
+  return typeof k === 'string' && k.length > 0 ? k : null;
 }
 
 export interface TemplateFull extends TemplateSummary {
@@ -37,6 +50,7 @@ export function toSummary(row: DbTemplateRow): TemplateSummary {
     id: row.id,
     scope: row.scope,
     name: row.name,
+    key: globalKey(row),
     kind: row.kind,
     createdAt: row.created_at.toISOString(),
   };
