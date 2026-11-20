@@ -15,6 +15,7 @@
     "@pf-mediakit/shared": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "20.17.10",
     "typescript": "5.6.3",
     "vitest": "2.1.9"
   }

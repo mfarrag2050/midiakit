@@ -38,12 +38,5 @@
     "expires": "2026-12-15",
     "close_ticket": "412",
     "max_errors": 14
-  },
-  "packages/tts": {
-    "reason": "٧ أخطاء على main · نصّ إلى صوت · صغيرة العدد · مطابقةٌ لسقف mkci الأصليّ · ٥٤٤: مقيس 7 على main@d8dba2b",
-    "owner": "mediakit",
-    "expires": "2026-12-15",
-    "close_ticket": "412",
-    "max_errors": 7
   }
 }

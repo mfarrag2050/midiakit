@@ -5,7 +5,8 @@
     "baseUrl": ".",
     "paths": {
       "@pf-mediakit/shared": ["../shared/src/index.ts"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

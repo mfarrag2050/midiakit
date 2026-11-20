@@ -51,7 +51,7 @@ export class TtsError extends Error {
   constructor(
     message: string,
     public readonly provider: TtsProviderName,
-    public readonly cause?: unknown
+    public override readonly cause?: unknown
   ) {
     super(message);
     this.name = 'TtsError';
